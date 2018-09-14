@@ -7,7 +7,11 @@ Intel(R) Software Guard Extensions (Intel(R) SGX) Data Center Attestation Primit
 
 License
 -------
-See [License.txt](License.txt), [ThirdPartyLicenses.txt](QuoteGeneration/ThirdPartyLicenses.txt) and [ThirdPartyLicenses.txt](QuoteVerification/ThirdPartyLicenses.txt) for details.
+This project is BSD license. See [License.txt](License.txt)
+
+But driver code is licensed under GPL v2. See [License.txt](driver/License.txt) 
+
+Third-party code is also used in this project. See [ThirdPartyLicenses.txt](QuoteGeneration/ThirdPartyLicenses.txt) and [ThirdPartyLicenses.txt](QuoteVerification/ThirdPartyLicenses.txt) for details.
 
 Contributing
 -------
