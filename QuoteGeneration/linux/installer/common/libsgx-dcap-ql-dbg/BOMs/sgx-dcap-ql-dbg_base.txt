@@ -1,0 +1,3 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/build/linux/libsgx_dcap_ql.so.debug	<installdir>/package/lib64/libsgx_dcap_ql.so.debug	0	main	STP
+<deliverydir>/linux/installer/common/libsgx-dcap-ql-dbg/Makefile	<installdir>/Makefile	0	main	STP

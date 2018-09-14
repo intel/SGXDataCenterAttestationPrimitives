@@ -1,0 +1,5 @@
+NGA_VERSION="1.0"
+TARBALL_NAME=libsgx-dcap-ql_1.0.orig.tar.gz
+NGA_PKG_NAME=libsgx-dcap-ql
+
+LIB_DIR=lib64

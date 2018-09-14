@@ -1,0 +1,3 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/sgx_report.h	<installdir>/package/include/sgx_report.h	0	main	STP
+<deliverydir>/sgx_key.h	<installdir>/package/include/sgx_key.h	0	main	STP

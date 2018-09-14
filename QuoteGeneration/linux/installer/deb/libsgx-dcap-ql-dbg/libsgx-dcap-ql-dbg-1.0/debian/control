@@ -1,0 +1,15 @@
+Source: libsgx-dcap-ql-dbg
+Section: libs
+Priority: optional
+Maintainer: <xiangquan.liu@intel.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.4
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/libsgx-dcap-ql-dbg.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/libsgx-dcap-ql-dbg.git;a=summary
+
+Package: libsgx-dcap-ql-dbg
+Architecture: i386 ia64 amd64
+Pre-Depends: libsgx-dcap-ql
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Debug Symbols for Intel(R) Software Guard Extensions Data Center Attestation Primitives
