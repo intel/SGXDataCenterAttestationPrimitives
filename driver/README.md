@@ -1,11 +1,11 @@
 Intel(R) Software Guard Extensions for Linux\* OS
 ================================================
 
-# SGX Linux Driver with Launch Enclave(LE) for NGSA
+# SGX Linux Driver with Launch Enclave(LE) for Intel(R) SGX DCAP
 
 Introduction
 ------------
-This Intel(R) SGX driver package is for NGSA and is derived from the upstream version of the SGX driver, including the in-driver Launch Enclave.
+This Intel(R) SGX driver package is for Intel(R) SGX DCAP and is derived from the upstream version of the SGX driver, including the in-driver Launch Enclave.
 
 
 Documentation
@@ -20,6 +20,8 @@ Build and Install the Intel(R) SGX Driver
 - Ensure that you have the following required operating systems:  
   * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
   * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
+  * Ubuntu* 18.04 LTS Desktop 64bits
+  * Ubuntu* 18.04 LTS Server 64bits
 - Ensure that you have the following required hardware:  
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
