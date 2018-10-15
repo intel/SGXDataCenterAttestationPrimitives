@@ -59,20 +59,8 @@ SRC := $(wildcard *.cpp)
 OBJ := $(SRC:.cpp=.o)
 OBJS := $(sort $(OBJ) version.o)
 
-KEYFILE := qe3_private.pem
-AENAME_OUT := libsgx_qe3.signed.so
-QE3_COPY_OUT := $(AENAME_OUT)
-
 .PHONY: all
-all: $(AENAME_OUT) | $(BUILD_DIR)
-	@$(CP) $(QE3_COPY_OUT) $|
-
-$(AENAME_OUT): $(SONAME) $(KEYFILE) $(CONFIG)
-	@echo ------------------------------------------------------
-	@echo Signing $<...
-	@$(SGX_ENCLAVE_SIGNER) sign -key $(KEYFILE) -enclave $< -out $@ -config $(CONFIG)
-	@echo Signed Enclave: $@
-	@echo Enclave mode: $(MODE)
+all: $(SONAME)
 
 $(SONAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS) -fno-exceptions -fno-rtti
@@ -84,9 +72,6 @@ quoting_enclave_3.o: $(AENAME)_t.c
 
 $(AENAME)_t.c: $(AENAME).edl
 	@$(SGX_EDGER8R) --trusted $<
-
-$(BUILD_DIR):
-	@$(MKDIR) $@
 
 .PHONY: clean
 clean:
