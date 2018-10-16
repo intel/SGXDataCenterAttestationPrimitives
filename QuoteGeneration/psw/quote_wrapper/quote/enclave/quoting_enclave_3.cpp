@@ -47,15 +47,6 @@
 #include "sgx_tcrypto.h"
 #include "sgx_trts.h"
 
-#include "ipp_wrapper.h"
-#include "ssl_wrapper.h"
-#ifdef USE_SGXSSL
-#include <openssl/bn.h>
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
-#include <openssl/ec.h>
-#include <openssl/err.h>
-#endif
 #include "qe3.h"
 #include "user_types.h"
 #include "sgx_pce.h"
@@ -253,24 +244,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     uint8_t hash_drg_output[HASH_DRBG_OUT_LEN];
     uint32_t i;
     qe3_error_t ret = REFQE3_ERROR_CRYPTO;
-#ifdef USE_SGXSSL
-    EC_GROUP* ec_group = NULL;
-    EC_POINT *pub_ec_point = NULL;
-    BIGNUM *bn_o = NULL;
-    BIGNUM *bn_x = NULL;
-    BIGNUM *bn_y = NULL;
-    BN_CTX *tmp = NULL;
-#else
-    IppsECCPState* p_ecc_state = NULL;
-    int ctx_size = 0;
-    int point_size = 0;
-    IppsECCPPointState* public_key = NULL;
-    IppsBigNumState*    bn_o = NULL;
-    IppsBigNumState*    bn_x = NULL;
-    IppsBigNumState*    bn_y = NULL;
-    sgx_ec256_private_t att_priv_key_be;
-    uint8_t* p_temp;
-#endif
+
     // Defense-in-depth.  This function is only called internally so should never be NULL
     if((NULL == p_att_priv_key) ||
        (NULL == p_att_pub_key) ||
@@ -383,158 +357,11 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
         ret = REFQE3_ERROR_CRYPTO;
         goto ret_point;
         }
-#ifdef USE_SGXSSL
-
-    do {
-        //create empty BNs
-        //bn_o = BN_new();
-        bn_x = BN_new();
-        if (NULL == bn_x) {
-            ret = REFQE3_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-        bn_y = BN_new();
-        if (NULL == bn_y) {
-            ret = REFQE3_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-        tmp = BN_CTX_new();
-        if (NULL == tmp) {
-            ret = REFQE3_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-
-        //init bn_o with private key value
-        bn_o = BN_lebin2bn((const unsigned char*)p_att_priv_key, (int)sizeof(sgx_ec256_private_t), bn_o);
-        BN_CHECK_BREAK(bn_o);
-
-        //create a new ecc group and initialize it to NID_X9_62_prime256v1 curve
-        //
-        ec_group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-        if (ec_group == NULL) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-
-        //create a new EC point
-        //
-        pub_ec_point = EC_POINT_new(ec_group);
-        if (pub_ec_point == NULL) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-
-        //calculate public key (point) based on private key. (pub = priv * curve_griup)
-        //
-        if (!EC_POINT_mul(ec_group, pub_ec_point, bn_o, NULL, NULL, tmp)) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-
-        //retrieve x and y coordinates into BNs
-        //
-        if (!EC_POINT_get_affine_coordinates_GFp(ec_group, pub_ec_point, bn_x, bn_y, tmp)) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-
-        //convert the absolute value of BNs into big-endian buffers
-        //
-        if (!BN_bn2bin(bn_x, p_att_pub_key->gx)) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-        if (!BN_bn2bin(bn_y, p_att_pub_key->gy)) {
-            ret = REFQE3_ERROR_CRYPTO;
-            break;
-        }
-
-        ret = REFQE3_SUCCESS;
-    } while (0);
-    BN_clear_free(bn_o);
-    BN_clear_free(bn_x);
-    BN_clear_free(bn_y);
-    BN_CTX_free(tmp);
-    EC_GROUP_clear_free(ec_group);
-    EC_POINT_clear_free(pub_ec_point);
-#else //USE_SGXSSL
-
-    do {
-        if (ippsECCPGetSize(256, &ctx_size) != ippStsNoErr) {
-            break;
-        }
-
-        p_ecc_state = (IppsECCPState*)(malloc(ctx_size));
-        if(NULL == p_ecc_state) {
-            ret = REFQE3_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-
-        if (ippsECCPInit(256, p_ecc_state) != ippStsNoErr) {
-            break;
-        }
-
-        if (ippsECCPSetStd(IppECCPStd256r1, p_ecc_state) != ippStsNoErr) {
-            break;
-        }
-
-        if (ippsECCPPointGetSize(256, &point_size) != ippStsNoErr) {
-            break;
-        }
-
-        public_key = (IppsECCPPointState*)(malloc(point_size));
-        if(NULL == public_key) {
-            ret = REFQE3_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-
-        if (ippsECCPPointInit(256, public_key) != ippStsNoErr) {
-            break;
-        }
-        //init bn_o with private key value
-        if (sgx_ipp_newBN(NULL, sizeof(sgx_ec256_private_t), &bn_o) != ippStsNoErr) {
-            break;
-        }
-        p_temp = (uint8_t*)p_att_priv_key;
-        for (i = 0; i<sizeof(att_priv_key_be); i++) {
-            att_priv_key_be.r[i] = *(p_temp + sizeof(att_priv_key_be) - 1 - i); //create big endian e
-        }
-        if (ippsSetOctString_BN(reinterpret_cast<Ipp8u *>(&att_priv_key_be), sizeof(sgx_ec256_private_t), bn_o) != ippStsNoErr) {
-            break;
-        }
-
-        if (ippsECCPPublicKey(bn_o, public_key, p_ecc_state) != ippStsNoErr) {
-            break;
-        }
-
-        if (sgx_ipp_newBN(NULL, sizeof(sgx_ec256_private_t), &bn_x) != ippStsNoErr) {
-            break;
-        }
-
-        if (sgx_ipp_newBN(NULL, sizeof(sgx_ec256_private_t), &bn_y) != ippStsNoErr) {
-            break;
-        }
-
-        if (ippsECCPGetPoint(bn_x, bn_y, public_key, p_ecc_state) != ippStsNoErr) {
-            break;
-        }
-
-        if (ippsGetOctString_BN(reinterpret_cast<Ipp8u *>(p_att_pub_key->gx), sizeof(sgx_ec256_private_t), bn_x) != ippStsNoErr) { //output data in bigendian order
-            break;
-        }
-        if (ippsGetOctString_BN(reinterpret_cast<Ipp8u *>(p_att_pub_key->gy), sizeof(sgx_ec256_private_t), bn_y) != ippStsNoErr) { //output data in bigendian order
-            break;
-        }
-        ret = REFQE3_SUCCESS;
-    } while (0);
-
-    CLEAR_FREE_MEM(p_ecc_state, ctx_size);
-    CLEAR_FREE_MEM(public_key, point_size);
-    sgx_ipp_secure_free_BN(bn_o, sizeof(sgx_ec256_private_t));
-    sgx_ipp_secure_free_BN(bn_x, sizeof(sgx_ec256_private_t));
-    sgx_ipp_secure_free_BN(bn_y, sizeof(sgx_ec256_private_t));
-
-#endif //USE_SGXSSL
+	
+	if (sgx_ecc256_calculate_pub_from_priv(p_att_priv_key, p_att_pub_key) != SGX_SUCCESS) {
+		ret = REFQE3_ERROR_CRYPTO;
+        goto ret_point;
+	}
 
 ret_point:
     //clear and free objects
