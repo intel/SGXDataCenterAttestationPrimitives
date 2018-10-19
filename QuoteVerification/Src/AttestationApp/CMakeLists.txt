@@ -46,7 +46,7 @@ add_library(AppCore
 
 target_link_libraries(AppCore
         AttestationLibrary
-        cmdline
+        argtable3
         )
 
 add_executable(${PROJECT_NAME} src/main.cpp)

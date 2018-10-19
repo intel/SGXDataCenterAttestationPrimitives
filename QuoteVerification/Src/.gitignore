@@ -1,3 +1,5 @@
 Version/include
 .idea
 Build
+cmake-build-debug
+.vscode

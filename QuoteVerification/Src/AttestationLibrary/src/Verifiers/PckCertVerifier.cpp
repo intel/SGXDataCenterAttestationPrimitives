@@ -33,33 +33,44 @@
 
 namespace intel { namespace sgx { namespace qvl {
 
+PckCertVerifier::PckCertVerifier() : _commonVerifier(new CommonVerifier()),
+                                     _crlVerifier(new PckCrlVerifier())
+{
+}
+
+PckCertVerifier::PckCertVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier,
+                                 std::unique_ptr<PckCrlVerifier>&& _crlVerifier)
+                                 : _commonVerifier(std::move(_commonVerifier)), _crlVerifier(std::move(_crlVerifier))
+{
+}
+
 Status PckCertVerifier::verify(const CertificateChain &chain, const pckparser::CrlStore &rootCaCrl, const pckparser::CrlStore &intermediateCrl, const pckparser::CertStore &rootCa) const
 {
-    const auto x509InChainRootCa = chain.get(constants::ROOT_CA_SUBJECT);
-    if(!x509InChainRootCa)
+    const auto x509InChainRootCa = chain.getRootCert();
+    if(!x509InChainRootCa || !_baseVerifier.commonNameContains(x509InChainRootCa->getSubject(), constants::SGX_ROOT_CA_CN_PHRASE))
     {
         return STATUS_SGX_ROOT_CA_MISSING;
     }
-    const auto x509IntermediateCaPlatform = chain.get(constants::PLATFORM_CA_SUBJECT);
-    const auto x509IntermediateCaProcessor = chain.get(constants::PROCESSOR_CA_SUBJECT);
-    const auto x509InChainIntermediateCa = x509IntermediateCaPlatform ? x509IntermediateCaPlatform : x509IntermediateCaProcessor;
-    if(!x509InChainIntermediateCa)
+
+    const auto x509InChainIntermediateCa = chain.getIntermediateCert();
+    if(!x509InChainIntermediateCa || !_baseVerifier.commonNameContains(x509InChainIntermediateCa->getSubject(), constants::SGX_INTERMEDIATE_CN_PHRASE))
     {
         return STATUS_SGX_INTERMEDIATE_CA_MISSING;
     }
-    const auto x509InChainPckCert = chain.get(constants::PCK_SUBJECT);
-    if(!x509InChainPckCert)
+
+    const auto x509InChainPckCert = chain.getTopmostCert();
+    if(!x509InChainPckCert || !_baseVerifier.commonNameContains(x509InChainPckCert->getSubject(), constants::SGX_PCK_CN_PHRASE))
     {
         return STATUS_SGX_PCK_MISSING;
     }
 
-    const auto rootVerificationStatus = _commonVerifier.verifyRootCACert(*x509InChainRootCa);
+    const auto rootVerificationStatus = _commonVerifier->verifyRootCACert(*x509InChainRootCa);
     if(rootVerificationStatus != STATUS_OK)
     {
         return rootVerificationStatus;
     }
 
-    const auto intermediateVerificationStatus = _commonVerifier.verifyIntermediate(*x509InChainIntermediateCa, *x509InChainRootCa);
+    const auto intermediateVerificationStatus = _commonVerifier->verifyIntermediate(*x509InChainIntermediateCa, *x509InChainRootCa);
     if(intermediateVerificationStatus != STATUS_OK)
     {
         return intermediateVerificationStatus;
@@ -71,7 +82,7 @@ Status PckCertVerifier::verify(const CertificateChain &chain, const pckparser::C
         return pckVerificationStatus;
     } 
 
-    if(rootCa.getSubject() != constants::ROOT_CA_SUBJECT)
+    if(rootCa.getSubject() != rootCa.getIssuer())
     {
         return STATUS_TRUSTED_ROOT_CA_INVALID;
     }
@@ -84,13 +95,13 @@ Status PckCertVerifier::verify(const CertificateChain &chain, const pckparser::C
     // 
     // begin of CRL verification
     //
-    const auto checkRootCaCrlCorrectness = _crlVerifier.verify(rootCaCrl, *x509InChainRootCa);
+    const auto checkRootCaCrlCorrectness = _crlVerifier->verify(rootCaCrl, *x509InChainRootCa);
     if(checkRootCaCrlCorrectness != STATUS_OK)
     {
         return checkRootCaCrlCorrectness;
     } 
 
-    const auto checkIntermediateCrlCorrectness = _crlVerifier.verify(intermediateCrl, *x509InChainIntermediateCa);
+    const auto checkIntermediateCrlCorrectness = _crlVerifier->verify(intermediateCrl, *x509InChainIntermediateCa);
     if(checkIntermediateCrlCorrectness != STATUS_OK)
     {
         return checkIntermediateCrlCorrectness;
@@ -119,7 +130,7 @@ Status PckCertVerifier::verifyPCKCert(const pckparser::CertStore &pckCert, const
     } 
 
     if(pckCert.getIssuer() != intermediate.getSubject()
-        || !crypto::verifySignature(pckCert, intermediate.getPubKey()))
+        || !_commonVerifier->checkSignature(pckCert, intermediate))
     {
         return STATUS_SGX_PCK_INVALID_ISSUER;
     }
@@ -129,18 +140,14 @@ Status PckCertVerifier::verifyPCKCert(const pckparser::CertStore &pckCert, const
 
 Status PckCertVerifier::verifyPCKCert(const pckparser::CertStore &pckCert) const
 {
-    if(pckCert.getSubject() != constants::PCK_SUBJECT)
-    {
-        return STATUS_SGX_PCK_MISSING;
-    }
 
     if(pckCert.expired())
     {
         return STATUS_SGX_PCK_INVALID;
     }
 
-    if(!_commonVerifier.checkStandardExtensions(pckCert.getExtensions(), constants::PCK_REQUIRED_EXTENSIONS)
-        || !_commonVerifier.checkSGXExtensions(pckCert.getSGXExtensions(), constants::PCK_REQUIRED_SGX_EXTENSIONS))
+    if(!_commonVerifier->checkStandardExtensions(pckCert.getExtensions(), constants::PCK_REQUIRED_EXTENSIONS)
+        || !_commonVerifier->checkSGXExtensions(pckCert.getSGXExtensions(), constants::PCK_REQUIRED_SGX_EXTENSIONS))
     {
         return STATUS_SGX_PCK_INVALID_EXTENSIONS;
     }

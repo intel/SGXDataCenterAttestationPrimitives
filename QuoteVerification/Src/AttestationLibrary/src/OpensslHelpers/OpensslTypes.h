@@ -100,17 +100,17 @@ static inline void freeEVP_MD_CTX(EVP_MD_CTX* evp_md_ctx)
 }
 static inline void freeSTACK_OF_X509_EXTENSION(STACK_OF(X509_EXTENSION)* x509_extension_stack)
 {
-    sk_X509_EXTENSION_free(x509_extension_stack);
+    sk_X509_EXTENSION_pop_free(x509_extension_stack, X509_EXTENSION_free);
 }
 
 static inline void freeSTACK_OF_X509(STACK_OF(X509)* x509_stack)
 {
-    sk_X509_free(x509_stack);
+    sk_X509_pop_free(x509_stack, X509_free);
 }
 
 static inline void freeSTACK_OF_ASN1TYPE(STACK_OF(ASN1_TYPE)* asn1type_stack)
 {
-    sk_ASN1_TYPE_free(asn1type_stack);
+    sk_ASN1_TYPE_pop_free(asn1type_stack, ASN1_TYPE_free);
 }
 
 static inline void freeOPENSSL(void *ptr)

@@ -31,6 +31,7 @@
 
 
 #include <OpensslHelpers/Bytes.h>
+#include <OpensslHelpers/OpensslTypes.h>
 #include <openssl/asn1.h>
 
 namespace intel { namespace sgx { namespace qvl { namespace pckparser {
@@ -69,12 +70,14 @@ public:
     };
 
     SgxExtension();
+    SgxExtension(const SgxExtension&);
+    SgxExtension(SgxExtension&&) noexcept;
     SgxExtension(qvl::pckparser::SgxExtension::Type type,
                  std::vector<uint8_t> data,
                  const ASN1_TYPE& asn1Data,
                  std::vector<qvl::pckparser::SgxExtension> subsequence,
                  std::string oidStr);
-    explicit SgxExtension(const ASN1_TYPE& asn1Object);
+    explicit SgxExtension(crypto::ASN1_TYPE_uptr asn1Object);
 
     static SgxExtension createFromRawSequence(const ASN1_TYPE& asn1Object, std::string oid);
 
@@ -87,6 +90,7 @@ public:
     int64_t asInt() const;
     const std::vector<SgxExtension>& asSequence() const;
 
+    SgxExtension& operator=(const SgxExtension&);
     bool operator==(const SgxExtension&) const;
     bool operator!=(const SgxExtension&) const;
 
@@ -100,7 +104,7 @@ private:
     static std::string getSGXExtensionsOID(const ASN1_TYPE& oidAsn1Type);
 
     std::vector<uint8_t> bytes {};
-    ASN1_TYPE asn1Data {};
+    crypto::ASN1_INTEGER_uptr asn1Integer = crypto::make_unique(ASN1_INTEGER_new());
     std::vector<SgxExtension> sequence {};
     std::string oidString {};
 };

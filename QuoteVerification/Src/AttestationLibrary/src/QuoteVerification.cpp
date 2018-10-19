@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -37,6 +37,10 @@
 #include "Verifiers/PckCrlVerifier.h"
 #include "Verifiers/TCBInfoVerifier.h"
 #include "Verifiers/TCBInfoJsonVerifier.h"
+#include "Verifiers/QEIdentityVerifier.h"
+#include "Verifiers/QEIdentityJsonVerifier.h"
+#include "Verifiers/EnclaveIdentityJsonVerifier.h"
+#include "Verifiers/EnclaveReportVerifier.h"
 #include "Verifiers/QuoteVerifier.h"
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
@@ -178,7 +182,44 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     return qvl::TCBInfoVerifier{}.verify(tcbiJsonVerifier, chain, rootCaCrl, trustedRootCa);
 }
 
-Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, const char *pemPckCertificate, const char* pckCrl, const char* tcbInfoJson)
+Status sgxAttestationVerifyQEIdentity(const char *qeIdentity, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate)
+{
+    if(!qeIdentity ||
+       !pemCertChain ||
+       !pemRootCaCrl ||
+       !pemRootCaCertificate)
+    {
+        return STATUS_UNSUPPORTED_CERT_FORMAT;
+    }
+
+    qvl::QEIdentityJsonVerifier qeidJsonVerifier;
+    const auto jsonParseStatus = qeidJsonVerifier.parse(qeIdentity);
+    if(jsonParseStatus != STATUS_OK)
+    {
+        return jsonParseStatus;
+    }
+
+    qvl::CertificateChain chain;
+    if(!chain.parse(pemCertChain) || chain.length() != EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN)
+    {
+        return STATUS_UNSUPPORTED_CERT_FORMAT;
+    }
+
+    qvl::pckparser::CertStore trustedRootCa;
+    if(!trustedRootCa.parse(pemRootCaCertificate))
+    {
+        return STATUS_UNSUPPORTED_CERT_FORMAT;
+    }
+
+    qvl::pckparser::CrlStore rootCaCrl;
+    if(!rootCaCrl.parse(pemRootCaCrl))
+    {
+        return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
+    }
+    return qvl::QEIdentityVerifier{}.verify(qeidJsonVerifier, chain, rootCaCrl, trustedRootCa);
+}
+
+Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, const char *pemPckCertificate, const char* pckCrl, const char* tcbInfoJson, const char* qeIdentityJson)
 {
     if(!rawQuote ||
        !pemPckCertificate ||
@@ -210,14 +251,42 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         return STATUS_UNSUPPORTED_PCK_RL_FORMAT;
     }
 
-    
     qvl::TCBInfoJsonVerifier tcbiJsonVerifier;
     if(STATUS_OK != tcbiJsonVerifier.parse(tcbInfoJson))
     {
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
 
-    return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbiJsonVerifier);
+    qvl::QEIdentityJsonVerifier qeIdentityJsonVerifier;
+    if (qeIdentityJson != nullptr && STATUS_OK != qeIdentityJsonVerifier.parse(qeIdentityJson)) {
+        return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
+    }
+
+    return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbiJsonVerifier, qeIdentityJsonVerifier, qvl::EnclaveReportVerifier());
+}
+
+Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const char* enclaveIdentity)
+{
+    if(!enclaveReport || !enclaveIdentity)
+    {
+        return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
+    }
+
+    const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + qvl::constants::ENCLAVE_REPORT_BYTE_LEN);
+    qvl::Quote quote;
+    if(!quote.parseEnclaveReport(vecEnclaveReport))
+    {
+        return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
+    }
+
+    qvl::EnclaveIdentityJsonVerifier enclaveReportJsonVerifier;
+    const auto jsonParseStatus = enclaveReportJsonVerifier.parse(enclaveIdentity);
+    if(jsonParseStatus != STATUS_OK)
+    {
+        return jsonParseStatus;
+    }
+
+    return qvl::EnclaveReportVerifier{}.verify(enclaveReportJsonVerifier, quote.getBody());
 }
 
 Status sgxAttestationGetQECertificationDataSize(

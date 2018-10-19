@@ -1,6 +1,5 @@
-
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -28,6 +27,7 @@
 */
 
 #include <CertVerification/CertificateChain.h>
+#include <X509CertGenerator.h>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -43,46 +43,19 @@ struct CertificateValidityTests : public Test
 
     // special never expire time: https://tools.ietf.org/html/rfc5280#section-4.1.2.5
     const std::string NEVER_EXPIRE_TIME_STRING = "99991231235959Z";
+
+    test::X509CertGenerator certGenerator;
+
+    crypto::X509_uptr generateSelfSignedCertificate(const long adjustNotBeforeTimeSeconds, const long adjustNotAfterTimeSeconds)
+    {
+        Bytes sn {0x00, 0x45};
+        auto key = certGenerator.generateEcKeypair();
+        pckparser::Subject subject = {"", "root cert", "UN", "Org", "Location", "State"};
+        pckparser::Issuer issuer = {"", "root cert", "UN", "Org", "Location", "State"};
+        return certGenerator.generateCaCert(2, sn, adjustNotBeforeTimeSeconds, adjustNotAfterTimeSeconds, key.get(),
+                                            key.get(), subject, issuer);
+    }
 };
-
-namespace { // anonymous namespace
-
-crypto::X509_uptr generateSelfSignedCertificate(const long adjustNotBeforeTimeSeconds, const long adjustNotAfterTimeSeconds)
-{
-    // 1. Generate the key
-    auto ecKey = crypto::make_unique<EC_KEY>(EC_KEY_new());
-    auto ecGroup = crypto::make_unique<EC_GROUP>(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
-
-    if(1 != EC_KEY_set_group(ecKey.get(), ecGroup.get()))
-    {
-        return crypto::make_unique<X509>(nullptr);
-    }
-
-    if(1 != EC_KEY_generate_key(ecKey.get()))
-    {
-        return crypto::make_unique<X509>(nullptr);
-    }
-
-    auto pkey = crypto::make_unique<EVP_PKEY>(EVP_PKEY_new());
-    EVP_PKEY_assign_EC_KEY(pkey.get(), ecKey.release()); // EVP_PKEY takes ownership of the EC_KEY*
-
-    // 2. Generate certificate
-    auto x509 = crypto::make_unique<X509>(X509_new());
-
-    ASN1_INTEGER_set(X509_get_serialNumber(x509.get()), 1);
-
-    X509_gmtime_adj(X509_get_notBefore(x509.get()), adjustNotBeforeTimeSeconds);
-    X509_gmtime_adj(X509_get_notAfter(x509.get()), adjustNotAfterTimeSeconds);
-
-    X509_set_pubkey(x509.get(), pkey.get());
-
-    // 3. Self-sign the certificate
-    X509_sign(x509.get(), pkey.get(), EVP_sha1());
-
-    return x509;
-}
-
-} // end of anonymous namespace
 
 TEST_F(CertificateValidityTests, validityOfCertificate_inBetweenValidDates_shouldBeTrue)
 {

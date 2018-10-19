@@ -45,31 +45,29 @@ namespace intel { namespace sgx { namespace qvl {
 
 Status TCBInfoJsonVerifier::parse(const std::string& input)
 {
-    if(input.empty())
-    {
-        return STATUS_UNSUPPORTED_CERT_FORMAT;
-    }
-
-    ::rapidjson::Document jsonDoc;
-    jsonDoc.Parse(input.c_str());
-    if(jsonDoc.HasParseError() || !jsonDoc.IsObject()
-        || !jsonDoc.HasMember("tcbInfo") || !jsonDoc.HasMember("signature"))
+    if(!jsonParser.parse(input))
     {
         return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
     }
 
-    const Status tcbInfoStatus = parseTCBInfo(jsonDoc["tcbInfo"]);
+    const auto* tcbInfo = jsonParser.getField("tcbInfo");
+    const auto* signature = jsonParser.getField("signature");
+    if(tcbInfo == nullptr || signature == nullptr)
+    {
+        return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
+    }
+
+    const Status tcbInfoStatus = parseTCBInfo(*tcbInfo);
     if(tcbInfoStatus != STATUS_OK)
     {
         return tcbInfoStatus;
     }
 
-    const ::rapidjson::Value& signature_v = jsonDoc["signature"];
-    if(!signature_v.IsString() || signature_v.GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
+    if(!signature->IsString() || signature->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
     {
         return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
     }
-    tcbInfoSignature = hexStringToBytes(signature_v.GetString());
+    tcbInfoSignature = hexStringToBytes(signature->GetString());
 
     return STATUS_OK;
 }
@@ -81,8 +79,9 @@ Status TCBInfoJsonVerifier::parseTCBInfo(const ::rapidjson::Value& tcbInfo)
         return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
     }
 
-    if(!checkVersion(tcbInfo) || !checkDate(tcbInfo, "issueDate") || !checkDate(tcbInfo, "nextUpdate")
-       || !parseFmspc(tcbInfo) || !parsePceId(tcbInfo) || !parseTcbLevels(tcbInfo))
+    if(!checkVersion(tcbInfo)
+        || !jsonParser.checkDateFieldOf(tcbInfo, "issueDate") || !jsonParser.checkDateFieldOf(tcbInfo, "nextUpdate")
+        || !parseFmspc(tcbInfo) || !parsePceId(tcbInfo) || !parseTcbLevels(tcbInfo))
     {
         return STATUS_SGX_TCB_INFO_INVALID;
     }
@@ -98,71 +97,27 @@ Status TCBInfoJsonVerifier::parseTCBInfo(const ::rapidjson::Value& tcbInfo)
 
 bool TCBInfoJsonVerifier::parseFmspc(const ::rapidjson::Value& tcbInfo)
 {
-    if(!tcbInfo.HasMember("fmspc"))
-    {
-        return false;
-    }
+    bool parseSuccessful = false;
     static constexpr size_t FMSPC_LENGTH = constants::FMSPC_BYTE_LEN * 2;
-    const ::rapidjson::Value& fmspc_v = tcbInfo["fmspc"];
-    if(!fmspc_v.IsString())
-    {
-        return false;
-    }
-
-    const std::string fmspcStr = fmspc_v.GetString();
-    if(fmspcStr.length() == FMSPC_LENGTH && isValidHexstring(fmspcStr))
-    {
-        fmspc = hexStringToBytes(fmspcStr);
-        return true;
-    }
-    return false;
+    std::tie(fmspc, parseSuccessful) = jsonParser.getHexstringFieldOf(tcbInfo, "fmspc", FMSPC_LENGTH);
+    return parseSuccessful;
 }
 
 bool TCBInfoJsonVerifier::parsePceId(const ::rapidjson::Value& tcbInfo)
 {
-    if(!tcbInfo.HasMember("pceId"))
-    {
-        return false;
-    }
+    bool parseSuccessful = false;
     static constexpr size_t PCEID_LENGTH = constants::PCEID_BYTE_LEN * 2;
-    const ::rapidjson::Value& pceId_v = tcbInfo["pceId"];
-    if(!pceId_v.IsString())
-    {
-        return false;
-    }
-
-    const std::string pceIdStr = pceId_v.GetString();
-    if(pceIdStr.length() == PCEID_LENGTH && isValidHexstring(pceIdStr))
-    {
-        pceId = hexStringToBytes(pceIdStr);
-        return true;
-    }
-    return false;
-}
-
-bool TCBInfoJsonVerifier::checkDate(const ::rapidjson::Value& tcbInfo, const std::string fieldName) const
-{
-    if(!tcbInfo.HasMember(fieldName.c_str()))
-    {
-        return false;
-    }
-    const ::rapidjson::Value& issueDate_v = tcbInfo[fieldName.c_str()];
-    return issueDate_v.IsString() && isValidTimeString(issueDate_v.GetString());
+    std::tie(pceId, parseSuccessful) = jsonParser.getHexstringFieldOf(tcbInfo, "pceId", PCEID_LENGTH);
+    return parseSuccessful;
 }
 
 bool TCBInfoJsonVerifier::checkVersion(const ::rapidjson::Value& tcbInfo) const
 {
-    if(!tcbInfo.HasMember("version"))
-    {
-        return false;
-    }
     static const int SUPPORTED_TCB_INFO_VERSION = 1;
-    const ::rapidjson::Value& version_v = tcbInfo["version"];
-    if(!version_v.IsInt())
-    {
-        return false;
-    }
-    return version_v.GetInt() == SUPPORTED_TCB_INFO_VERSION;
+    int version = 0;
+    bool status = false;
+    std::tie(version, status) = jsonParser.getIntFieldOf(tcbInfo, "version");
+    return status && (version == SUPPORTED_TCB_INFO_VERSION);
 }
 
 std::string TCBInfoJsonVerifier::extractTcbLevelStatus(const ::rapidjson::Value& tcbLevel) const
@@ -213,33 +168,16 @@ std::vector<uint8_t> TCBInfoJsonVerifier::extractTcbLevelCpusvn(const ::rapidjso
     for(const auto &componentName : sgxTcbSvnComponentsNames)
     {
         const auto componentNameRaw = componentName.data();
-        if(!tcb.HasMember(componentNameRaw))
+        bool status = false;
+        uint componentValue = 0u;
+        std::tie(componentValue, status) = jsonParser.getUintFieldOf(tcb, componentNameRaw);
+        if(!status)
         {
             return {};
         }
-        const ::rapidjson::Value& component_v = tcb[componentNameRaw];
-        if(!component_v.IsUint())
-        {
-            return {};
-        }
-        combinedCpusvn.push_back(static_cast<uint8_t>(component_v.GetUint()));
+        combinedCpusvn.push_back(static_cast<uint8_t>(componentValue));
     }
     return combinedCpusvn;
-}
-
-std::pair<unsigned int, bool> TCBInfoJsonVerifier::extractTcbLevelPcesvn(const ::rapidjson::Value& tcb) const
-{
-    static const auto EXTRACTION_FAILED = std::make_pair(unsigned(), false);
-    if(!tcb.HasMember("pcesvn"))
-    {
-        return EXTRACTION_FAILED;
-    }
-    const ::rapidjson::Value& pcesvn_v = tcb["pcesvn"];
-    if(!pcesvn_v.IsUint())
-    {
-        return EXTRACTION_FAILED;
-    }
-    return {pcesvn_v.GetUint(), true};
 }
 
 bool TCBInfoJsonVerifier::parseTcbLevel(const ::rapidjson::Value& tcbLevel)
@@ -270,7 +208,7 @@ bool TCBInfoJsonVerifier::parseTcbLevel(const ::rapidjson::Value& tcbLevel)
 
     unsigned int pcesvn = {};
     bool pcesvnValid = false;
-    std::tie(pcesvn, pcesvnValid) = extractTcbLevelPcesvn(tcb);
+    std::tie(pcesvn, pcesvnValid) = jsonParser.getUintFieldOf(tcb, "pcesvn");
     if(!pcesvnValid)
     {
         return false;
@@ -302,46 +240,12 @@ bool TCBInfoJsonVerifier::parseTcbLevels(const ::rapidjson::Value& tcbInfo)
         }
     }
 
-    auto latestTcb = findLatest("UpToDate");
-    if(latestTcb != tcbs.cend())
-    {
-        latestCpuSvn = latestTcb->cpusvn;
-        latestPcesvn = latestTcb->pcesvn;
-    }
-
-    auto latestRevokedTcb = findLatest("Revoked");
-    if(latestRevokedTcb != tcbs.cend())
-    {
-        latestRevokedCpuSvn = latestRevokedTcb->cpusvn;
-        latestRevokedPcesvn = latestRevokedTcb->pcesvn;
-    }
-
-    if(latestTcb == tcbs.cend() && latestRevokedTcb == tcbs.cend())
+    if(tcbs.empty())
     {
         return false;
     }
 
     return true;
-}
-
-bool TCBInfoJsonVerifier::isValidHexstring(const std::string& hexString) const
-{
-    return std::find_if(hexString.cbegin(), hexString.cend(),
-        [](const char c){return !std::isxdigit(c);}) == hexString.cend();
-}
-
-bool TCBInfoJsonVerifier::isValidTimeString(const std::string& timeString) const
-{
-    std::tm time{};
-    return strptime(timeString.c_str(), "%Y-%m-%dT%H:%M:%SZ", &time) != nullptr;
-}
-
-std::set<TCBInfoJsonVerifier::TcbLevel>::const_iterator TCBInfoJsonVerifier::findLatest(const std::string& status) const
-{
-    return std::find_if(tcbs.cbegin(), tcbs.cend(), [&status](const TcbLevel& e)-> bool
-        {
-            return e.status == status;
-        });
 }
 
 const std::vector<uint8_t>& TCBInfoJsonVerifier::getInfoBody() const
@@ -364,24 +268,9 @@ const std::vector<uint8_t>& TCBInfoJsonVerifier::getPceId() const
     return pceId;
 }
 
-const std::vector<uint8_t>& TCBInfoJsonVerifier::getLatestCpusvn() const
+const std::set<TCBInfoJsonVerifier::TcbLevel, std::greater<>>& TCBInfoJsonVerifier::getTcbLevels() const
 {
-    return latestCpuSvn;
-}
-
-unsigned int TCBInfoJsonVerifier::getLatestPcesvn() const
-{
-    return latestPcesvn;
-}
-
-const std::vector<uint8_t>& TCBInfoJsonVerifier::getRevokedCpusvn() const
-{
-    return latestRevokedCpuSvn;
-}
-
-unsigned int TCBInfoJsonVerifier::getRevokedPcesvn() const
-{
-    return latestRevokedPcesvn;
+    return tcbs;
 }
 
 }}} // namespace intel { namespace sgx { namespace qvl {

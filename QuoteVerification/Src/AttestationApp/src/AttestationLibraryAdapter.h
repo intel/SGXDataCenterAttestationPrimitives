@@ -37,12 +37,27 @@ class AttestationLibraryAdapter : public IAttestationLibraryAdapter
 {
 public:
     std::string getVersion() const override;
-    Status verifyQuote(const std::vector<uint8_t>& quote, const std::string& pckCertChain, const std::string& pckCrl,
-        const std::string& tcbInfo) const override;
-    Status verifyPCKCertificate(const std::string& pemCertChain, const std::string& pemRootCaCRL, const std::string& intermediateCaCRL,
-        const std::string& pemTrustedRootCaCertificate) const override;
-    Status verifyTCBInfo(const std::string& tcbInfo, const std::string& pemSigningChain, const std::string& pemRootCaCrl,
-        const std::string& pemtrustedRpemTrustedRootCaCertificateootCaCertificate) const override;
+
+    Status verifyQuote(const std::vector<uint8_t>& quote,
+                       const std::string& pckCertChain,
+                       const std::string& pckCrl,
+                       const std::string& tcbInfo,
+                       const std::string& qeIdentity = std::string{}) const override;
+
+    Status verifyPCKCertificate(const std::string& pemCertChain,
+                                const std::string& pemRootCaCRL,
+                                const std::string& intermediateCaCRL,
+                                const std::string& pemTrustedRootCaCertificate) const override;
+
+    Status verifyTCBInfo(const std::string& tcbInfo,
+                         const std::string& pemSigningChain,
+                         const std::string& pemRootCaCrl,
+                         const std::string& pemtrustedRpemTrustedRootCaCertificateootCaCertificate) const override;
+
+    Status verifyQeIdentity(const std::string& qeIdentity,
+                            const std::string& pemSigningChain,
+                            const std::string& pemRootCaCrl,
+                            const std::string& pemtrustedRpemTrustedRootCaCertificateootCaCertificate) const override;
 };
 
 }}}

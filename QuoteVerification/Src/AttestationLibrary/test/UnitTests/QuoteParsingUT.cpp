@@ -27,7 +27,7 @@
 */
 
 
-#include "TestUtils/QuoteGenerator.h"
+#include "QuoteGenerator.h"
 #include <QuoteVerification/Quote.h>
 
 #include <gtest/gtest.h>

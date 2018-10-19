@@ -30,7 +30,7 @@
 #include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include "TestUtils/QuoteGenerator.h"
+#include "QuoteGenerator.h"
 #include <numeric>
 
 using namespace testing;

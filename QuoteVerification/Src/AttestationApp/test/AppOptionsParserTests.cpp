@@ -46,18 +46,19 @@ struct AppOptionsParserTests: public Test
     const std::string tcbInfoDefaultPath = "tcbInfo.json";
     const std::string rootCaCrlDefaultPath = "rootCaCrl.pem";
     const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
+    const std::string qeIdentityDefaultPath = "qeIdentity.json";
 
-    const std::string helpOutput = "usage: ./AppCommand [options] ... \n"
-            "options:\n"
-            "      --trustedRootCaCert    Trusted root CA Certificate file path, PEM format (string [=trustedRootCaCert.pem])\n"
-            "      --pckSignChain         PCK Signing Certificate chain file path, PEM format (string [=pckSignChain.pem])\n"
-            "      --pckCert              PCK Certificate file path, PEM format (string [=pckCert.pem])\n"
-            "      --tcbSignChain         TCB Signing Certificate chain file path, PEM format (string [=tcbSignChain.pem])\n"
-            "      --tcbInfo              TCB Info file path, JSON format (string [=tcbInfo.json])\n"
-            "      --rootCaCrl            Root Ca CRL file path, PEM format (string [=rootCaCrl.pem])\n"
-            "      --intermediateCaCrl    Intermediate Ca CRL file path, PEM format (string [=intermediateCaCrl.pem])\n"
-            "      --quote                Quote file path, binary format (string [=quote.dat])\n"
-            "  -h, --help                 print this message\n";
+    const std::string helpOutput = "Usage: [-h] [--trustedRootCaCert=<string>] [--pckSignChain=<string>] [--pckCert=<string>] [--tcbSignChain=<string>] [--tcbInfo=<string>] [--qeIdentity=<string>] [--rootCaCrl=<string>] [--intermediateCaCrl=<string>] [--quote=<string>]\n\n"
+            "--trustedRootCaCert=<string>             Trusted root CA Certificate file path, PEM format [=trustedRootCaCert.pem]\n"
+            "--pckSignChain=<string>                  PCK Signing Certificate chain file path, PEM format [=pckSignChain.pem]\n"
+            "--pckCert=<string>                       PCK Certificate file path, PEM format [=pckCert.pem]\n"
+            "--tcbSignChain=<string>                  TCB Signing Certificate chain file path, PEM format [=tcbSignChain.pem]\n"
+            "--tcbInfo=<string>                       TCB Info file path, JSON format [=tcbInfo.json]\n"
+            "--qeIdentity=<string>                    QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]\n"
+            "--rootCaCrl=<string>                     Root Ca CRL file path, PEM format [=rootCaCrl.pem]\n"
+            "--intermediateCaCrl=<string>             Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]\n"
+            "--quote=<string>                         Quote file path, binary format [=quote.dat]\n"
+            "-h, --help                               Print this message\n";
 };
 
 TEST_F(AppOptionsParserTests, ReturnsDefaultValuesWhenNoArgumentsGivenPrintsNothing)
@@ -161,11 +162,15 @@ TEST_F(AppOptionsParserTests, ReturnsNothingWhenHelpTypedPrintsHelp)
     std::vector<const char*> vec {"./AppCommand", "--help"};
     std::ostringstream logger;
 
+    testing::internal::CaptureStdout();
+
     auto options = parser.parse(vec.size(), const_cast<char**>(vec.data()), logger);
 
+    std::string output = testing::internal::GetCapturedStdout();
+
     EXPECT_TRUE(options == nullptr);
-    EXPECT_FALSE(logger.str().empty());
-    EXPECT_EQ(logger.str(), helpOutput);
+    EXPECT_TRUE(logger.str().empty());
+    EXPECT_EQ(output, helpOutput);
 }
 
 TEST_F(AppOptionsParserTests, ReturnsNothingWhenUnsupportedParamPrintsErrorAndHelp)
@@ -173,10 +178,14 @@ TEST_F(AppOptionsParserTests, ReturnsNothingWhenUnsupportedParamPrintsErrorAndHe
     std::vector<const char*> vec {"./AppCommand", "--unsupportedParam"};
     std::ostringstream logger;
 
+    testing::internal::CaptureStdout();
+
     auto options = parser.parse(vec.size(), const_cast<char**>(vec.data()), logger);
 
+    std::string output = testing::internal::GetCapturedStdout();
+
     EXPECT_TRUE(options == nullptr);
-    EXPECT_FALSE(logger.str().empty());
-    EXPECT_TRUE(logger.str().find("undefined option: --unsupportedParam") != std::string::npos);
-    EXPECT_TRUE(logger.str().find(helpOutput) != std::string::npos);
+    EXPECT_TRUE(logger.str().empty());
+    EXPECT_TRUE(output.find("Sample app: invalid option \"--unsupportedParam\"") != std::string::npos);
+    EXPECT_TRUE(output.find(helpOutput) != std::string::npos);
 }

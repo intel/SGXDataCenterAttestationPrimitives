@@ -11,7 +11,7 @@ Library is exposed via C-like API and is implemented in a thread-safe-manner to 
 
 ## SGX QVL Sample App
 This repository contains also a sample application meant to present the way dynamic-link QVL application is implemented.
-Sample Application can be used to perform quote verification using QVL. 
+Sample Application can be used to perform quote verification using QVL.
 
 ## Build
 Currently only unix like system are supported out of the box.
@@ -65,7 +65,7 @@ $ cd Src
 $ ./runUT
 ````
 
-### Run code coverage analysis 
+### Run code coverage analysis
 (requires Bullseye to be installed on the system)
 
 Default Bullseye install location is `/opt/bullseye`, but you can specify a different one using a '-b' option:

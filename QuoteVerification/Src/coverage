@@ -35,9 +35,9 @@ if getopts b: BULLSEYE_LOC; then
     BULLSEYE_PARAM="-DBULLSEYE_PATH=$OPTARG"
 fi
 
-mkdir -p Build/Coverage && pushd Build/Coverage
+mkdir -p Build/Coverage && pushd Build/Coverage &&
 cmake ../../ -DBUILD_ATTESTATION_LIBRARY=$BUILD_ATTESTATION_LIBRARY -DBUILD_ATTESTATION_APP=$BUILD_ATTESTATION_APP \
     -DBUILD_TESTS=$BUILD_TESTS -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Coverage $BULLSEYE_PARAM \
-    && make code-coverage
+    && make code-coverage &&
 
 popd
