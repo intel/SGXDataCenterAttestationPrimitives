@@ -30,13 +30,14 @@
 #include "ByteOperands.h"
 
 #include <algorithm>
+#include "QuoteConstants.h"
 
 namespace intel { namespace sgx { namespace qvl {
 
 namespace {
+using namespace constants;
 
 constexpr size_t HEADER_BYTE_LEN = 48;
-constexpr size_t ENCLAVE_REPORT_BYTE_LEN = 384;
 constexpr size_t BODY_BYTE_LEN = ENCLAVE_REPORT_BYTE_LEN;
 constexpr size_t AUTH_DATA_SIZE_BYTE_LEN = 4;
 
@@ -157,6 +158,28 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     authData = localQuoteAuth;
     signedData = getDataToSignatureVerification(rawQuote);
      
+    return true;
+}
+
+bool Quote::parseEnclaveReport(const std::vector<uint8_t> &enclaveReport)
+{
+    if(enclaveReport.size() < qvl::constants::ENCLAVE_REPORT_BYTE_LEN)
+    {
+        return false;
+    }
+
+    EnclaveReport localBody;
+    auto from = enclaveReport.cbegin();
+    auto end = enclaveReport.cend();
+    copyAndAdvance(localBody, from, BODY_BYTE_LEN, end);
+
+    if(from != end)
+    {
+        return false;
+    }
+
+    body = localBody;
+
     return true;
 }
 

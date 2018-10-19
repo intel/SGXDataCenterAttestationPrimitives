@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -68,15 +68,6 @@ const pckparser::Subject PLATFORM_CA_SUBJECT
     "CA"                            // stateName
 };
 
-const std::vector<int> PLATFORM_CA_REQUIRED_EXTENSIONS
-{
-    NID_authority_key_identifier,
-    NID_crl_distribution_points,
-    NID_subject_key_identifier,
-    NID_key_usage,
-    NID_basic_constraints
-};
-
 const pckparser::Subject PROCESSOR_CA_SUBJECT
 {
     "CN=Intel SGX PCK Processor CA, O=Intel Corporation, L=Santa Clara, ST=CA, C=US",
@@ -88,7 +79,7 @@ const pckparser::Subject PROCESSOR_CA_SUBJECT
     "CA"                            // stateName
 };
 
-const std::vector<int> PROCESSOR_CA_REQUIRED_EXTENSIONS
+const std::vector<int> INTERMEDIATE_REQUIRED_EXTENSIONS
 {
     NID_authority_key_identifier,
     NID_crl_distribution_points,
@@ -203,6 +194,11 @@ const pckparser::Issuer PCK_PROCESSOR_CRL_ISSUER =
 
 const std::vector<pckparser::Issuer> CRL_VALID_ISSUERS = {ROOT_CA_CRL_ISSUER, PCK_PLATFORM_CRL_ISSUER, PCK_PROCESSOR_CRL_ISSUER};
 
+const std::string SGX_ROOT_CA_CN_PHRASE = "SGX Root CA";
+const std::string SGX_INTERMEDIATE_CN_PHRASE = "CA";
+const std::string SGX_PCK_CN_PHRASE = "SGX PCK Certificate";
+const std::string SGX_TCB_SIGNING_CN_PHRASE = "SGX TCB Signing";
+
 const std::vector<int> CRL_REQUIRED_EXTENSIONS
 {
     NID_crl_number,
@@ -218,6 +214,10 @@ const size_t DYNAMIC_PLATFORM_BYTE_LEN = 1;
 const size_t CACHED_KEYS_BYTE_LEN = 1;
 const size_t SGX_TYPE_BYTE_LEN = 1;
 const size_t TCB_SEQUENCE_LEN = 18;
+const size_t MISCSELECT_BYTE_LEN = 4;
+const size_t ATTRIBUTES_BYTE_LEN = 16;
+const size_t MRSIGNER_BYTE_LEN = 32;
+const size_t MRENCLAVE_BYTE_LEN = 32;
 
 }}}} // namespace intel { namespace sgx { namespace qvl { namespace constants {
 

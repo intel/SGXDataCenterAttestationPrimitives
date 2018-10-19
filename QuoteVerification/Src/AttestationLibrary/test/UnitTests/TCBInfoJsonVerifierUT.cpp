@@ -42,7 +42,7 @@ struct TCBInfoJsonVerifierTests : public Test
 
 TEST_F(TCBInfoJsonVerifierTests, shouldFailWhenInitializedWithEmptyString)
 {
-    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, TCBInfoJsonVerifier{}.parse(""));
+    EXPECT_EQ(STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT, TCBInfoJsonVerifier{}.parse(""));
 }
 
 TEST_F(TCBInfoJsonVerifierTests, shouldFailWHenInitializedWithInvalidJSON)
@@ -59,8 +59,10 @@ TEST_F(TCBInfoJsonVerifierTests, shouldSuccessfullyParseWhenAllRequiredDataProvi
     TCBInfoJsonVerifier verifier{};
 
     EXPECT_EQ(STATUS_OK, verifier.parse(tcbInfoJson));
-    EXPECT_EQ(expectedCpusvn, verifier.getLatestCpusvn());
-    EXPECT_EQ(expectedPcesvn, verifier.getLatestPcesvn());
+    EXPECT_EQ(1, verifier.getTcbLevels().size());
+    EXPECT_EQ(expectedCpusvn, verifier.getTcbLevels().begin()->cpusvn);
+    EXPECT_EQ(expectedPcesvn, verifier.getTcbLevels().begin()->pcesvn);
+    EXPECT_EQ("UpToDate", verifier.getTcbLevels().begin()->status);
 }
 
 TEST_F(TCBInfoJsonVerifierTests, shouldSuccessfullyParseMultipleTcbLevels)
@@ -137,10 +139,15 @@ TEST_F(TCBInfoJsonVerifierTests, shouldSuccessfullyParseMultipleTcbLevels)
 
     TCBInfoJsonVerifier verifier{};
     EXPECT_EQ(STATUS_OK, verifier.parse(tcbInfoJson));
-    EXPECT_EQ(expectedCpusvn, verifier.getLatestCpusvn());
-    EXPECT_EQ(expectedPcesvn, verifier.getLatestPcesvn());
-    EXPECT_EQ(expectedRevokedCpusvn, verifier.getRevokedCpusvn());
-    EXPECT_EQ(expectedRevokedPcesvn, verifier.getRevokedPcesvn());
+    EXPECT_EQ(4, verifier.getTcbLevels().size());
+    auto iterator = verifier.getTcbLevels().begin();
+    EXPECT_EQ(expectedCpusvn, iterator->cpusvn);
+    EXPECT_EQ(expectedPcesvn, iterator->pcesvn);
+    EXPECT_EQ("UpToDate", iterator->status);
+    std::advance(iterator, 2);
+    EXPECT_EQ(expectedRevokedCpusvn, iterator->cpusvn);
+    EXPECT_EQ(expectedRevokedPcesvn, iterator->pcesvn);
+    EXPECT_EQ("Revoked", iterator->status);
 }
 
 TEST_F(TCBInfoJsonVerifierTests, shouldSuccessfullyParseMultipleRevokedTcbLevels)
@@ -215,8 +222,12 @@ TEST_F(TCBInfoJsonVerifierTests, shouldSuccessfullyParseMultipleRevokedTcbLevels
 
     TCBInfoJsonVerifier verifier{};
     EXPECT_EQ(STATUS_OK, verifier.parse(tcbInfoJson));
-    EXPECT_EQ(expectedRevokedCpusvn, verifier.getRevokedCpusvn());
-    EXPECT_EQ(expectedRevokedPcesvn, verifier.getRevokedPcesvn());
+    EXPECT_EQ(4, verifier.getTcbLevels().size());
+    auto iterator = verifier.getTcbLevels().begin();
+    std::advance(iterator, 0);
+    EXPECT_EQ(expectedRevokedCpusvn, iterator->cpusvn);
+    EXPECT_EQ(expectedRevokedPcesvn, iterator->pcesvn);
+    EXPECT_EQ("Revoked", iterator->status);
 }
 
 TEST_F(TCBInfoJsonVerifierTests, shouldSucceedWhenTcbLevelsContainsOnlyRevokedTcbs)
@@ -269,36 +280,17 @@ TEST_F(TCBInfoJsonVerifierTests, shouldSucceedWhenTcbLevelsContainsOnlyRevokedTc
 
     TCBInfoJsonVerifier verifier{};
     EXPECT_EQ(STATUS_OK, verifier.parse(tcbInfoJson));
-    EXPECT_TRUE(verifier.getLatestCpusvn().empty());
-    EXPECT_EQ(0, verifier.getLatestPcesvn());
-    EXPECT_EQ(expectedRevokedCpusvn, verifier.getRevokedCpusvn());
-    EXPECT_EQ(expectedRevokedPcesvn, verifier.getRevokedPcesvn());
+    EXPECT_EQ(2, verifier.getTcbLevels().size());
+    auto iterator = verifier.getTcbLevels().begin();
+    std::advance(iterator, 0);
+    EXPECT_EQ(expectedRevokedCpusvn, iterator->cpusvn);
+    EXPECT_EQ(expectedRevokedPcesvn, iterator->pcesvn);
+    EXPECT_EQ("Revoked", iterator->status);
 }
 
-TEST_F(TCBInfoJsonVerifierTests, shouldFailWhenTcbLevelsContainsNoUpToDateOrRevokedTcbs)
+TEST_F(TCBInfoJsonVerifierTests, shouldFailWhenTcbLevelsContainsNoTcbs)
 {
-    const std::string otherTcb = R"json(
-    "tcb": {
-        "sgxtcbcomp01svn": 44,
-        "sgxtcbcomp02svn": 0,
-        "sgxtcbcomp03svn": 0,
-        "sgxtcbcomp04svn": 1,
-        "sgxtcbcomp05svn": 10,
-        "sgxtcbcomp06svn": 0,
-        "sgxtcbcomp07svn": 0,
-        "sgxtcbcomp08svn": 77,
-        "sgxtcbcomp09svn": 200,
-        "sgxtcbcomp10svn": 200,
-        "sgxtcbcomp11svn": 250,
-        "sgxtcbcomp12svn": 250,
-        "sgxtcbcomp13svn": 55,
-        "sgxtcbcomp14svn": 2,
-        "sgxtcbcomp15svn": 2,
-        "sgxtcbcomp16svn": 2,
-        "pcesvn": 65
-    })json";
-    const std::string tcbLevels = generateTcbLevel(validTcbLevelTemplate, validTcb, validOutOfDateStatus)
-        + "," + generateTcbLevel(validTcbLevelTemplate, otherTcb, validConfigurationNeededStatus);
+    const std::string tcbLevels = "";
     const auto tcbInfoJson = generateTcbInfo(validTcbInfoTemplate, tcbLevels);
 
     TCBInfoJsonVerifier verifier{};

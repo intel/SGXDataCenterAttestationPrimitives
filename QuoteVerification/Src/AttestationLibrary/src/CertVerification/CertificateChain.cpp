@@ -27,6 +27,7 @@
 */
 
 #include "CertificateChain.h"
+#include "X509Constants.h"
 #include <algorithm>
 
 namespace intel { namespace sgx { namespace qvl {
@@ -59,10 +60,10 @@ bool CertificateChain::parse(const std::string& pemCertChain)
     // find topmost cert, this will be the cert that is not used to sign any of the certificates in the chain
     for(auto const &cert: certs)
     {
-        auto signedCertIter = std::find_if(certs.cbegin(), certs.cend(), [](const std::shared_ptr<const pckparser::CertStore> &cert)
+        auto signedCertIter = std::find_if(certs.cbegin(), certs.cend(), [cert](const std::shared_ptr<const pckparser::CertStore> &found)
         {
-            return cert->getSubject() != cert->getSubject()
-                   && cert->getIssuer() == cert->getSubject();
+            return found->getSubject() != cert->getSubject()
+                   && found->getIssuer() == cert->getSubject();
         });
         if(signedCertIter == certs.cend())
         {
@@ -83,6 +84,20 @@ std::shared_ptr<const pckparser::CertStore> CertificateChain::get(const pckparse
     auto it = std::find_if(certs.cbegin(), certs.cend(), [&subject](const std::shared_ptr<const pckparser::CertStore> &cert)
     {
         return cert->getSubject() == subject;
+    });
+    if(it == certs.end())
+    {
+        return nullptr;
+    }
+    return *it;
+}
+
+std::shared_ptr<const pckparser::CertStore> CertificateChain::getIntermediateCert() const
+{
+    auto verifier = _baseVerifier;
+    auto it = std::find_if(certs.cbegin(), certs.cend(), [&verifier](const std::shared_ptr<const pckparser::CertStore> &cert)
+    {
+        return cert->getSubject() != cert->getIssuer() && verifier.commonNameContains(cert->getSubject(), constants::SGX_INTERMEDIATE_CN_PHRASE);
     });
     if(it == certs.end())
     {

@@ -85,6 +85,7 @@ public:
     MOCK_CONST_METHOD0(length, unsigned long());
     MOCK_CONST_METHOD1(get, std::shared_ptr<const pckparser::CertStore>(const qvl::pckparser::Subject&));
     MOCK_CONST_METHOD0(getRootCert, std::shared_ptr<const pckparser::CertStore>());
+    MOCK_CONST_METHOD0(getIntermediateCert, std::shared_ptr<const pckparser::CertStore>());
     MOCK_CONST_METHOD0(getTopmostCert, std::shared_ptr<const pckparser::CertStore>());
 };
 

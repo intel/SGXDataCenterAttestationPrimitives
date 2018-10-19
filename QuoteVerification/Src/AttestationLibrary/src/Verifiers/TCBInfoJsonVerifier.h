@@ -36,35 +36,12 @@
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <set>
+#include <Utils/JsonParser.h>
 
 namespace intel { namespace sgx { namespace qvl {
 
 class TCBInfoJsonVerifier {
 public:
- 
-    TCBInfoJsonVerifier() = default;
-    virtual ~TCBInfoJsonVerifier() = default;
-
-    TCBInfoJsonVerifier(const TCBInfoJsonVerifier&) = default;
-    TCBInfoJsonVerifier(TCBInfoJsonVerifier&&) = default;
-
-    TCBInfoJsonVerifier& operator=(const TCBInfoJsonVerifier&) = default;
-    TCBInfoJsonVerifier& operator=(TCBInfoJsonVerifier&&) = default;
-
-    virtual Status parse(const std::string& tcbInfo);
-
-    virtual const std::vector<uint8_t>& getInfoBody() const;  
-    virtual const std::vector<uint8_t>& getSignature() const;
-    
-    virtual const std::vector<uint8_t>& getFmspc() const;
-    virtual const std::vector<uint8_t>& getPceId() const;
-    virtual const std::vector<uint8_t>& getLatestCpusvn() const;
-    virtual unsigned int getLatestPcesvn() const;
-
-    virtual const std::vector<uint8_t>& getRevokedCpusvn() const;
-    virtual unsigned int getRevokedPcesvn() const;
-
-private:
     struct TcbLevel
     {
         const std::vector<uint8_t> cpusvn;
@@ -77,34 +54,57 @@ private:
             {
                 return pcesvn > other.pcesvn;
             }
-            return cpusvn > other.cpusvn;
+            return isGreater(other.cpusvn);
+        }
+
+        bool isGreater(const std::vector<uint8_t>& other) const
+        {
+            for (int i = 0; i < cpusvn.size(); ++i)
+            {
+                if (other[i] < cpusvn[i])
+                {
+                    // if other has at least one lower value then other is lower
+                    return true;
+                }
+            }
+            return false;
         }
     };
 
+    TCBInfoJsonVerifier() = default;
+    virtual ~TCBInfoJsonVerifier() = default;
+
+    TCBInfoJsonVerifier(const TCBInfoJsonVerifier&) = default;
+    TCBInfoJsonVerifier(TCBInfoJsonVerifier&&) = default;
+
+    TCBInfoJsonVerifier& operator=(const TCBInfoJsonVerifier&) = default;
+    TCBInfoJsonVerifier& operator=(TCBInfoJsonVerifier&&) = default;
+
+    virtual Status parse(const std::string& tcbInfo);
+
+    virtual const std::vector<uint8_t>& getInfoBody() const;
+    virtual const std::vector<uint8_t>& getSignature() const;
+
+    virtual const std::vector<uint8_t>& getFmspc() const;
+    virtual const std::vector<uint8_t>& getPceId() const;
+    virtual const std::set<TCBInfoJsonVerifier::TcbLevel, std::greater<>>& getTcbLevels() const;
+
+private:
     Status parseTCBInfo(const ::rapidjson::Value& tcbInfo);
     bool parseFmspc(const ::rapidjson::Value& tcbInfo);
     bool parsePceId(const ::rapidjson::Value& tcbInfo);
-    bool checkDate(const ::rapidjson::Value& tcbInfo, const std::string fieldName) const;
     bool checkVersion(const ::rapidjson::Value& tcbInfo) const;
     bool parseTcbLevels(const ::rapidjson::Value& tcbInfo);
     bool parseTcbLevel(const ::rapidjson::Value& tcbLevel);
     std::string extractTcbLevelStatus(const ::rapidjson::Value& tcbLevel) const;
     std::vector<uint8_t> extractTcbLevelCpusvn(const ::rapidjson::Value& tcb) const;
-    std::pair<unsigned int, bool> extractTcbLevelPcesvn(const ::rapidjson::Value& tcb) const;
-    bool isValidHexstring(const std::string& hexString) const;
-    bool isValidTimeString(const std::string& timeString) const;
 
-    std::set<TcbLevel>::const_iterator findLatest(const std::string& status) const;
-
+    JsonParser jsonParser;
     std::vector<uint8_t> tcbInfoBody;
     std::vector<uint8_t> tcbInfoSignature;
     std::vector<uint8_t> fmspc;
     std::vector<uint8_t> pceId;
     std::set<TcbLevel, std::greater<>> tcbs;
-    std::vector<uint8_t> latestCpuSvn;
-    unsigned int latestPcesvn;
-    std::vector<uint8_t> latestRevokedCpuSvn;
-    unsigned int latestRevokedPcesvn;
 
 };
 

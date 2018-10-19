@@ -29,20 +29,17 @@
 #ifndef SGXECDSAATTESTATION_APPOPTIONSPARSER_H
 #define SGXECDSAATTESTATION_APPOPTIONSPARSER_H
 
-#include <cmdline.h>
 #include <memory>
 #include "AppOptions.h"
+#include <argtable3.h>
 
 namespace intel { namespace sgx { namespace qvl {
 
 class AppOptionsParser {
 public:
-    AppOptionsParser();
-
     std::unique_ptr<AppOptions> parse(int argc, char **argv, std::ostream& logger);
-
 private:
-    cmdline::parser _parser;
+    void printHelp(void** argtable);
 };
 
 }}}

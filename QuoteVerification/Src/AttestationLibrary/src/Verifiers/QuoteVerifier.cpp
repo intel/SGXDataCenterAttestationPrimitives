@@ -27,6 +27,8 @@
 */
 
 #include "QuoteVerifier.h"
+#include "EnclaveReportVerifier.h"
+#include "PckParser/FormatException.h"
 
 #include <OpensslHelpers/DigestUtils.h>
 #include <OpensslHelpers/SignatureVerification.h>
@@ -48,7 +50,7 @@ pckparser::SgxExtension extension(pckparser::SgxExtension::Type type, const std:
             ext.cend(), [&](const pckparser::SgxExtension& ext){
                 return ext.type == type;
             });
-    
+
     if(ret == ext.cend())
     {
         return {};
@@ -112,11 +114,10 @@ pckparser::SgxExtension tcbSvnComponent(const pckparser::CertStore& pck, size_t 
     return extension(componentId, extension(pckparser::SgxExtension::Type::TCB, pck.getSGXExtensions()).asSequence());
 }
 
-constexpr int CPUSVN_LOWER = -1;
-constexpr int CPUSVN_HIGHER = 1;
-constexpr int CPUSVN_EQUAL = 0;
+constexpr int CPUSVN_LOWER = false;
+constexpr int CPUSVN_EQUAL_OR_HIGHER = true;
 
-int compareCpusvn(const pckparser::CertStore& pckCert, const Bytes& cpusvnToCompare)
+bool isCpuSvnHigherOrEqual(const pckparser::CertStore& pckCert, const Bytes& cpusvnToCompare)
 {
     for(size_t index = 0; index < cpusvnToCompare.size(); ++index)
     {
@@ -124,74 +125,75 @@ int compareCpusvn(const pckparser::CertStore& pckCert, const Bytes& cpusvnToComp
         const auto otherComponentValue = cpusvnToCompare.at(index);
         if(componentValue < otherComponentValue)
         {
+            // If *ANY* CPUSVN component is lower then CPUSVN is considered lower
             return CPUSVN_LOWER;
         }
-        if(componentValue > otherComponentValue)
+    }
+    // but for CPUSVN to be considered higher it requires that *EVERY* CPUSVN component to be higher or equal
+    return CPUSVN_EQUAL_OR_HIGHER;
+}
+
+const std::string getMatchingTcbLevel(const std::set<TCBInfoJsonVerifier::TcbLevel, std::greater<>> &tcbs,
+                                      const pckparser::CertStore &pckCert)
+{
+    const auto certPceSvn = pcesvn(pckCert);
+
+    for (const auto& tcb : tcbs)
+    {
+        if (tcb.cpusvn.size() != constants::CPUSVN_BYTE_LEN)
         {
-            return CPUSVN_HIGHER;
+            throw pckparser::FormatException("Invalid size of CPUSVN in TCB Info");
+        }
+
+        if(isCpuSvnHigherOrEqual(pckCert, tcb.cpusvn) && certPceSvn.asUInt() >= tcb.pcesvn)
+        {
+            return tcb.status;
         }
     }
-    return CPUSVN_EQUAL;
+
+    throw std::runtime_error("Could not match PCK cert to provided TCB levels in TCB info");
 }
 
-bool isCpusvnLower(const pckparser::CertStore& pckCert, const Bytes& cpusvnToCompare)
+Status checkTcbLevel(const TCBInfoJsonVerifier& tcbInfoJson, const pckparser::CertStore& pckCert)
 {
-    return compareCpusvn(pckCert, cpusvnToCompare) == CPUSVN_LOWER;
-}
-
-bool isCpusvnHigher(const pckparser::CertStore& pckCert, const Bytes& cpusvnToCompare)
-{
-    return compareCpusvn(pckCert, cpusvnToCompare) == CPUSVN_HIGHER;
-}
-
-Status checkRevocation(const TCBInfoJsonVerifier& tcbInfoJson, const pckparser::CertStore& pckCert)
-{
-    if(tcbInfoJson.getRevokedCpusvn().empty())
-    { 
-        return STATUS_OK;  
-    }
-    
-    if(tcbInfoJson.getRevokedCpusvn().size() != constants::CPUSVN_BYTE_LEN)
+    try
     {
-        return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
+        const auto tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson.getTcbLevels(), pckCert);
+
+        if (tcbLevelStatus == "OutOfDate")
+        {
+            return STATUS_TCB_OUT_OF_DATE;
+        }
+
+        if (tcbLevelStatus == "Revoked")
+        {
+            return STATUS_TCB_REVOKED;
+        }
+
+        if (tcbLevelStatus == "ConfigurationNeeded")
+        {
+            return STATUS_TCB_CONFIGURATION_NEEDED;
+        }
+
+        if (tcbLevelStatus == "UpToDate")
+        {
+            return STATUS_OK;
+        }
     }
-
-    const auto certPceSvn = pcesvn(pckCert);
-
-
-    if(certPceSvn.asUInt() <= tcbInfoJson.getRevokedPcesvn() &&
-       !isCpusvnHigher(pckCert, tcbInfoJson.getRevokedCpusvn()))
+    catch (const std::runtime_error &e)
     {
-        return STATUS_TCB_REVOKED;
+        return STATUS_TCB_NOT_SUPPORTED;
     }
 
-    return STATUS_OK;
-}
-
-Status areLatestElementsOutOfDate(const TCBInfoJsonVerifier& tcbInfoJson, const pckparser::CertStore& pckCert)
-{
-    if(tcbInfoJson.getLatestCpusvn().size() != constants::CPUSVN_BYTE_LEN)
-    {
-        return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
-    }
-
-    const auto certPceSvn = pcesvn(pckCert);
-
-    if(certPceSvn.asUInt() < tcbInfoJson.getLatestPcesvn() ||
-       isCpusvnLower(pckCert, tcbInfoJson.getLatestCpusvn()))
-    {
-        return STATUS_TCB_OUT_OF_DATE;
-    }
-
-    return STATUS_OK;
+    return STATUS_TCB_UNRECOGNIZED_STATUS;
 }
 
 }//anonymous namespace
 
-Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pckCert, const pckparser::CrlStore& crl, const TCBInfoJsonVerifier& tcbInfoJson)
+Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pckCert, const pckparser::CrlStore& crl, const TCBInfoJsonVerifier& tcbInfoJson, const QEIdentityJsonVerifier& qeIdentityJson, const EnclaveReportVerifier& enclaveReportVerifier)
 {
-    
-    if(STATUS_OK != PckCertVerifier{}.verifyPCKCert(pckCert))
+
+    if(STATUS_OK != PckCertVerifier{}.verifyPCKCert(pckCert) || !_baseVerififer.commonNameContains(pckCert.getSubject(), constants::SGX_PCK_CN_PHRASE))
     {
         return STATUS_INVALID_PCK_CERT;
     }
@@ -211,16 +213,17 @@ Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pck
         return STATUS_TCB_INFO_MISMATCH;
     }
 
-    const auto revocationStatus = checkRevocation(tcbInfoJson, pckCert);
-    if(STATUS_OK != revocationStatus)
+    try
     {
-        return revocationStatus;
+        const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert);
+        if(STATUS_OK != tcbLevelStatus)
+        {
+            return tcbLevelStatus;
+        }
     }
-
-    const auto outOfDateStatus = areLatestElementsOutOfDate(tcbInfoJson, pckCert);
-    if(STATUS_OK != outOfDateStatus)
+    catch (const pckparser::FormatException &e)
     {
-        return outOfDateStatus;
+        return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
 
     const auto qeCertData = quote.getQuoteAuthData().qeCertData;
@@ -244,10 +247,10 @@ Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pck
 
     const auto hashedConcatOfAttestKeyAndQeReportData = [&]() -> std::vector<uint8_t>
     {
-        const auto attestKeyData = quote.getQuoteAuthData().ecdsaAttestationKey.pubKey; 
+        const auto attestKeyData = quote.getQuoteAuthData().ecdsaAttestationKey.pubKey;
         const auto qeAuthData = quote.getQuoteAuthData().qeAuthData.data;
         std::vector<uint8_t> ret;
-        ret.reserve(attestKeyData.size() + qeAuthData.size()); 
+        ret.reserve(attestKeyData.size() + qeAuthData.size());
         std::copy(attestKeyData.begin(), attestKeyData.end(), std::back_inserter(ret));
         std::copy(qeAuthData.begin(), qeAuthData.end(), std::back_inserter(ret));
 
@@ -255,8 +258,8 @@ Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pck
     }();
 
     if(!std::equal(hashedConcatOfAttestKeyAndQeReportData.begin(),
-                hashedConcatOfAttestKeyAndQeReportData.end(),
-                quote.getQuoteAuthData().qeReport.reportData.begin()))
+                   hashedConcatOfAttestKeyAndQeReportData.end(),
+                   quote.getQuoteAuthData().qeReport.reportData.begin()))
     {
         return STATUS_INVALID_QE_REPORT_DATA;
     }
@@ -267,6 +270,16 @@ Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pck
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
+
+    if(STATUS_OK == qeIdentityJson.getStatus())
+    {
+        Status qeIdentityStatus = verifyQeIdentity(quote, qeIdentityJson, enclaveReportVerifier);
+        if(STATUS_OK != qeIdentityStatus)
+        {
+            return qeIdentityStatus;
+        }
+    }
+
     if(!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().ecdsa256BitSignature.signature,
                                            quote.getSignedData(),
                                            *attestKey))
@@ -274,8 +287,7 @@ Status QuoteVerifier::verify(const Quote& quote, const pckparser::CertStore& pck
         return STATUS_INVALID_QUOTE_SIGNATURE;
     }
 
-
-    return STATUS_OK; 
+    return STATUS_OK;
 }
 
 Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) const
@@ -286,5 +298,25 @@ Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) cons
     }
     return STATUS_OK;
 }
+
+Status QuoteVerifier::verifyQeIdentity(const Quote& quote, const QEIdentityJsonVerifier& qeIdentityJson, const EnclaveReportVerifier& enclaveReportVerifier)
+{
+    Status status = enclaveReportVerifier.verify(qeIdentityJson, quote.getQuoteAuthData().qeReport);
+    if(status == STATUS_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE)
+    {
+        return STATUS_QE_IDENTITY_OUT_OF_DATE;
+    }
+
+    if(status == STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH
+        || status == STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH
+        || status == STATUS_SGX_ENCLAVE_REPORT_MRENCLAVE_MISMATCH
+        || status == STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH
+        || status == STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH
+        || status == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
+    {
+        return STATUS_QE_IDENTITY_MISMATCH;
+    }
+    return status;
+};
 
 }}} // namespace intel { namespace sgx { namespace qvl {

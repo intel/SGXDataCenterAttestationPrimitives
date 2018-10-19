@@ -40,53 +40,78 @@ namespace {
     static const std::string tcbInfoDefaultPath = "tcbInfo.json";
     static const std::string rootCaCrlDefaultPath = "rootCaCrl.pem";
     static const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
-}
-
-AppOptionsParser::AppOptionsParser()
-{
-    // 1st argument is long name
-    // 2nd argument is short name (no short name if '\0' specified)
-    // 3rd argument is description
-    // 4th argument is mandatory (optional. default is false)
-    // 5th argument is default value  (optional. it used when mandatory is false)
-    _parser.add("trustedRootCaCert", '\0', "Trusted root CA Certificate file path, PEM format", false, trustedRootDefaultPath);
-    _parser.add("pckSignChain", '\0', "PCK Signing Certificate chain file path, PEM format", false, pckSigningChainDefaultPath);
-    _parser.add("pckCert", '\0', "PCK Certificate file path, PEM format", false, pckCertDefaultPath);
-    _parser.add("tcbSignChain", '\0', "TCB Signing Certificate chain file path, PEM format", false, tcbSignChainDefaultPath);
-    _parser.add("tcbInfo", '\0', "TCB Info file path, JSON format", false, tcbInfoDefaultPath);
-    _parser.add("rootCaCrl", '\0', "Root Ca CRL file path, PEM format", false, rootCaCrlDefaultPath);
-    _parser.add("intermediateCaCrl", '\0', "Intermediate Ca CRL file path, PEM format", false, intermediateCaCrlDefaultPath);
-    _parser.add("quote", '\0', "Quote file path, binary format", false, quoteDefaultPath);
-    _parser.add("help", 'h', "print this message");
+    static const std::string qeIdentityDefaultPath = "";
 }
 
 std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::ostream& logger)
 {
-    if(!_parser.parse(argc, const_cast<const char* const*>(argv)))
+    auto trustedRootCACertificateFile = arg_str0(NULL, "trustedRootCaCert", NULL, "Trusted root CA Certificate file path, PEM format [=trustedRootCaCert.pem]");
+    auto pckSigningChainFile = arg_str0(NULL, "pckSignChain", NULL, "PCK Signing Certificate chain file path, PEM format [=pckSignChain.pem]");
+    auto pckCertificateFile = arg_str0(NULL, "pckCert", NULL, "PCK Certificate file path, PEM format [=pckCert.pem]");
+    auto tcbSigningChainFile = arg_str0(NULL, "tcbSignChain", NULL, "TCB Signing Certificate chain file path, PEM format [=tcbSignChain.pem]");
+    auto tcbInfoFile = arg_str0(NULL, "tcbInfo", NULL, "TCB Info file path, JSON format [=tcbInfo.json]");
+    auto qeIdentityFile = arg_str0(NULL, "qeIdentity", NULL, "QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]");
+    auto rootCaCrlFile = arg_str0(NULL, "rootCaCrl", NULL, "Root Ca CRL file path, PEM format [=rootCaCrl.pem]");
+    auto intermediateCaCrlFile = arg_str0(NULL, "intermediateCaCrl", NULL, "Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]");
+    auto quoteFile = arg_str0(NULL, "quote", NULL, "Quote file path, binary format [=quote.dat]");
+    struct arg_lit* help = arg_lit0("h", "help", "Print this message");
+    auto end = arg_end(20);
+
+    void *argtable[] = {trustedRootCACertificateFile, pckSigningChainFile, pckCertificateFile,
+                        tcbSigningChainFile, tcbInfoFile, qeIdentityFile,
+                        rootCaCrlFile, intermediateCaCrlFile, quoteFile, help, end};
+
+    if (arg_nullcheck(argtable) != 0)
     {
-        if(!_parser.error_full().empty())
-        {
-            logger << term::color::fg::red << _parser.error_full() << term::color::fg::reset << std::endl;
-        }
-        logger << _parser.usage();
-        return nullptr;
-    }
-    if(_parser.exist("help"))
-    {
-        logger << _parser.usage();
+        logger << term::color::fg::red << "Can't create argtable" << term::color::fg::reset << std::endl;
         return nullptr;
     }
 
-    auto options = std::unique_ptr<AppOptions>(new AppOptions());
-    options->trustedRootCACertificateFile = _parser.get<std::string>("trustedRootCaCert");
-    options->pckSigningChainFile = _parser.get<std::string>("pckSignChain");
-    options->pckCertificateFile = _parser.get<std::string>("pckCert");
-    options->tcbSigningChainFile = _parser.get<std::string>("tcbSignChain");
-    options->tcbInfoFile = _parser.get<std::string>("tcbInfo");
-    options->rootCaCrlFile = _parser.get<std::string>("rootCaCrl");
-    options->intermediateCaCrlFile = _parser.get<std::string>("intermediateCaCrl");
-    options->quoteFile = _parser.get<std::string>("quote");
+    trustedRootCACertificateFile->sval[0] = trustedRootDefaultPath.c_str();
+    pckSigningChainFile->sval[0] = pckSigningChainDefaultPath.c_str();
+    pckCertificateFile->sval[0] = pckCertDefaultPath.c_str();
+    tcbSigningChainFile->sval[0] = tcbSignChainDefaultPath.c_str();
+    tcbInfoFile->sval[0] = tcbInfoDefaultPath.c_str();
+    qeIdentityFile->sval[0] = qeIdentityDefaultPath.c_str();
+    rootCaCrlFile->sval[0] = rootCaCrlDefaultPath.c_str();
+    intermediateCaCrlFile->sval[0] = intermediateCaCrlDefaultPath.c_str();
+    quoteFile->sval[0] = quoteDefaultPath.c_str();
+
+    auto nerrors = arg_parse(argc, argv, argtable);
+    if (nerrors > 0)
+    {
+        arg_print_errors(stdout, end, "Sample app");
+        printHelp(argtable);
+        arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+        return nullptr;
+    }
+    if (help->count > 0)
+    {
+        printHelp(argtable);
+        arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+        return nullptr;
+    }
+
+    auto options = std::make_unique<AppOptions>();
+    options->trustedRootCACertificateFile = std::string(trustedRootCACertificateFile->sval[0]);
+    options->pckSigningChainFile = std::string(pckSigningChainFile->sval[0]);
+    options->pckCertificateFile = std::string(pckCertificateFile->sval[0]);
+    options->tcbSigningChainFile = std::string(tcbSigningChainFile->sval[0]);
+    options->tcbInfoFile = std::string(tcbInfoFile->sval[0]);
+    options->qeIdentityFile = std::string(qeIdentityFile->sval[0]);
+    options->rootCaCrlFile = std::string(rootCaCrlFile->sval[0]);
+    options->intermediateCaCrlFile = std::string(intermediateCaCrlFile->sval[0]);
+    options->quoteFile = std::string(quoteFile->sval[0]);
+
+    arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+
     return options;
+}
+
+void AppOptionsParser::printHelp(void** argtable) {
+    printf("Usage:");
+    arg_print_syntax(stdout, argtable, "\n\n");
+    arg_print_glossary(stdout, argtable, "%-40s %s\n");
 }
 
 }}}

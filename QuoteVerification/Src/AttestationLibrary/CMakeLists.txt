@@ -54,6 +54,7 @@ file(GLOB SOURCE_FILES src/*.cpp
     src/CertVerification/*.cpp
     src/QuoteVerification/*.cpp
     src/Verifiers/*.cpp
+    src/Utils/*.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})

@@ -575,14 +575,10 @@ long getVersion(const X509_CRL& crl)
 
 std::vector<uint8_t> getSerialNumber(X509& x509)
 {
-    // both internal pointer, must not be freed
     const ASN1_INTEGER *serialNumber = X509_get_serialNumber(&x509);
-    const BIGNUM *bn = ASN1_INTEGER_to_BN(serialNumber, nullptr);
+    const crypto::BIGNUM_uptr bn = crypto::make_unique(ASN1_INTEGER_to_BN(serialNumber, nullptr));
 
-    std::vector<uint8_t> vec = bn2Vec(bn);
-    BN_free((BIGNUM*)bn);
-
-    return vec;
+    return bn2Vec(bn.get());
 }
 
 Subject getSubject(const X509& x509)

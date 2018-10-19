@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Intel Corporation
+# Copyright (c) 2017-2018, Intel Corporation
 #
 
 # Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ set(COMMON_TEST_UTILS_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/test/CommonTest
 
 file(GLOB SOURCE_FILES *.cpp
     TestUtils/*.cpp
-    ${COMMON_TEST_UTILS_DIR}/TcbInfoGenerator.cpp
+    ${COMMON_TEST_UTILS_DIR}/*.cpp
 )
 
 add_executable(${SUBPROJECT_NAME} ${SOURCE_FILES})

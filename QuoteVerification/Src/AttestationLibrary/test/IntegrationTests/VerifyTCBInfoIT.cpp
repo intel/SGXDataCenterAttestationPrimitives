@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, Intel Corporation
+* Copyright (c) 2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -30,357 +30,124 @@
 #include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include <TcbInfoGenerator.h>
-#include "ReadFile.h"
+#include <CertVerification/X509Constants.h>
+#include <EcdsaSignatureGenerator.h>
+#include "X509CertGenerator.h"
+#include "X509CrlGenerator.h"
+#include "TcbInfoJsonGenerator.h"
 
 using namespace testing;
+using namespace intel::sgx::qvl::test;
+using namespace intel::sgx::qvl;
 
-struct TCBInfoVerificationTests : public Test
+struct VerifyTCBInfoIT : public Test
 {
-    const char placeholder[8] = "1234567";
+    X509CertGenerator certGenerator;
+    X509CrlGenerator crlGenerator;
 
-    std::string tcbSigning;
-    std::string pemRootCrl;
-    std::string pemRoot;
+    Bytes rootSerial {0x00, 0x45};
 
-    void readNonEmptyTextFile(std::string &destination, const std::string &path) const
+    crypto::X509_uptr rootCaCert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_uptr tcbSigningCert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_CRL_uptr rootCaCrl = crypto::make_unique<X509_CRL>(nullptr);
+
+    crypto::EVP_PKEY_uptr rootKeys = crypto::make_unique<EVP_PKEY>(nullptr);
+    crypto::EVP_PKEY_uptr tcbSigningKey = crypto::make_unique<EVP_PKEY>(nullptr);
+
+    int timeNow = 0;
+    int timeOneHour = 3600;
+
+    const Bytes serialNumber {0x23, 0x45};
+
+
+    VerifyTCBInfoIT()
     {
-        destination = readTextFile(path);
-        ASSERT_FALSE(destination.empty()) << "File at path: " << path << " is either empty or inaccessible";
+        rootKeys = certGenerator.generateEcKeypair();
+        tcbSigningKey = certGenerator.generateEcKeypair();
+
+        rootCaCert = certGenerator.generateCaCert(2, rootSerial, timeNow, timeOneHour, rootKeys.get(), rootKeys.get(),
+                                                  constants::ROOT_CA_SUBJECT, constants::ROOT_CA_CRL_ISSUER);
+        tcbSigningCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, tcbSigningKey.get(), rootKeys.get(),
+                                                           constants::TCB_SUBJECT, constants::ROOT_CA_CRL_ISSUER);
+        rootCaCrl = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, timeNow, timeOneHour, rootCaCert, std::vector<Bytes>{});
+    }
+
+    std::string GenerateTCBInfoJSON() const
+    {
+        const auto tcbInfoBody = tcbInfoJsonBody(
+                1,                      //version
+                "2018-07-22T10:09:10Z", //issueDate
+                "2118-08-23T10:09:10Z", //nextUpdate
+                "04F34445AA00",         //fmspc
+                "0000",                 //pceId
+                getRandomTcb(),         //tcb
+                0,                      //pcesvn
+                "UpToDate"              //status
+        );
+
+        auto tcbInfoBodyBytes = Bytes{};
+        tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), tcbInfoBody.begin(), tcbInfoBody.end());
+        auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, tcbSigningKey.get());
+
+        return tcbInfoJsonGenerator(tcbInfoBody, EcdsaSignatureGenerator::signatureToHexString(signature));
     }
 };
 
-TEST_F(TCBInfoVerificationTests, nullptrArgumentsShouldReturnUnsupportedCertStatus)
+TEST_F(VerifyTCBInfoIT, shouldReturnCertUnsupportedFormatWhenInvalidInput)
 {
-    ASSERT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(nullptr, nullptr, nullptr, nullptr));
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(nullptr, nullptr, nullptr, nullptr));
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(nullptr, "str", "str", "str"));
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", nullptr, "str", "str"));
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", "str", nullptr, "str"));
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", "str", "str", nullptr));
 }
 
-TEST_F(TCBInfoVerificationTests, nullptrTCBInfoShoudReturnUnsupportedCertStatus)
+TEST_F(VerifyTCBInfoIT, verifyTCBInfoShouldReturnStatusOk)
 {
-    ASSERT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(nullptr, placeholder, placeholder, placeholder));
+    const auto rootCaCertPem = certGenerator.x509ToString(rootCaCert.get());
+    const auto tcbSigningPem = certGenerator.x509ToString(tcbSigningCert.get());
+    const auto certChain = rootCaCertPem  + tcbSigningPem;
+    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+
+    const auto tcbInfoJSON = GenerateTCBInfoJSON();
+
+    ASSERT_EQ(STATUS_OK,
+            sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCaCertPem.c_str()));
 }
 
-TEST_F(TCBInfoVerificationTests, nullptrCertChainShoudReturnUnsupportedCertStatus)
+TEST_F(VerifyTCBInfoIT, shouldReturnUnsupportedCertFormatWhenInvalidCertChain)
 {
-    ASSERT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(placeholder, nullptr, placeholder, placeholder));
+    const auto trustedRootCaCert = certGenerator.x509ToString(rootCaCert.get());
+    const auto invalidCertChainPem = "No a valid X509 CERT CHAIN PEM";
+    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+
+    const auto tcbInfoJSON = GenerateTCBInfoJSON();
+
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT,
+            sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), invalidCertChainPem, rootCaCrlPem.c_str(), trustedRootCaCert.c_str()));
 }
 
-TEST_F(TCBInfoVerificationTests, nullptrRootCrlShoudReturnUnsupportedCertStatus)
+TEST_F(VerifyTCBInfoIT, shouldReturnUnsupportedCertFormatWhenInvalidTrustedRootCaCert)
 {
-    ASSERT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(placeholder, placeholder, nullptr, placeholder));
+    const auto certChain = certGenerator.x509ToString(rootCaCert.get());
+    const auto invalidTrustedRootCaCert = "No a valid X509 CERT PEM";
+    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+
+    const auto tcbInfoJSON = GenerateTCBInfoJSON();
+
+    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT,
+            sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), invalidTrustedRootCaCert));
 }
 
-TEST_F(TCBInfoVerificationTests, nullptrRootCertShoudReturnUnsupportedCertStatus)
+TEST_F(VerifyTCBInfoIT, shouldReturnCrlUnsupportedFormatWhenInvalidRootCaCrl)
 {
-    ASSERT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo(placeholder, placeholder, placeholder, nullptr));
-}
+    const auto rootCaCertPem = certGenerator.x509ToString(rootCaCert.get());
+    const auto tcbSigningPem = certGenerator.x509ToString(tcbSigningCert.get());
+    const auto certChain = rootCaCertPem  + tcbSigningPem;
+    const auto invalidRootCaCrlPem = "No a valid X509 CRL PEM";
 
-TEST_F(TCBInfoVerificationTests, nonJsonStringAsTCBInfoShouldReturnUnsupportedFormatStatus)
-{
-    const char invalidTcbInfo[] = "Just a plain string.";
-    ASSERT_EQ(STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT, sgxAttestationVerifyTCBInfo(invalidTcbInfo, placeholder, placeholder, placeholder));
-}
+    const auto tcbInfoJSON = GenerateTCBInfoJSON();
 
-TEST_F(TCBInfoVerificationTests, positive)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/valid_tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/valid_root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/valid_root.pem");
-    const char tcbInfoSignatureTemplate[] = R"json("signature": "62f2eb97227d906c158e8500964c8d10029e1a318e0e95054fbc1b9636913555d7147ceefe07c4cb7ac1ac700093e2ee3fd4f7d00c7caf135dc5243be51e1def")json";
-    auto tcbInfoJson = generateTcbInfo(validTcbInfoTemplate, generateTcbLevel(), tcbInfoSignatureTemplate);
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_OK, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBInfoIsNotAValidJson)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/valid_tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/valid_root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/valid_root.pem");
-    const char invalidTcbInfo[] = R"json(tcbInfo: {"issueDate": "2017-10-04T11:10:45Z"}")json";
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(invalidTcbInfo, tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBInfoHasIncorrectSignature)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/valid_tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/valid_root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/valid_root.pem");
-    const char tcbInfoSignatureTemplate[] = R"json("signature": "0000000000000000000000000000000000000000074c282930032dca36cdb5a771eb18156a31426e9b7f8e0cf5b62958feb24cb61557c26e666a1620cc4d7d9a")json";
-    const auto tcbInfoJson = generateTcbInfo(validTcbInfoTemplate, generateTcbLevel(), tcbInfoSignatureTemplate);
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_TCB_INFO_INVALID_SIGNATURE, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertChainIsTooLong)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertChainTooLong/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertChainTooLong/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertChainTooLong/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertIsCorrupted)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertCorrupted/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertCorrupted/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertCorrupted/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertSubjectIsInvalid)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertInvalidSubject/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertInvalidSubject/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertInvalidSubject/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_MISSING, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertIsExpired)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningExpired/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningExpired/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningExpired/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_INVALID, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertIsMissingRequiredExtensions)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertWithoutRequiredExtensions/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertWithoutRequiredExtensions/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertWithoutRequiredExtensions/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertIssuerNameIsIncorrect)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertIncorrectIssuer/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertIncorrectIssuer/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertIncorrectIssuer/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertHasIncorrectSignature)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertIncorrectSignature/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertIncorrectSignature/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertIncorrectSignature/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertChainRootCertIsDifferentThanTrustedCert)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TCBSigningCertChainUntrusted/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TCBSigningCertChainUntrusted/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TCBSigningCertChainUntrusted/root.pem");
-    const char tcbInfoSignatureTemplate[] = R"json("signature": "62f2eb97227d906c158e8500964c8d10029e1a318e0e95054fbc1b9636913555d7147ceefe07c4cb7ac1ac700093e2ee3fd4f7d00c7caf135dc5243be51e1def")json";
-    const auto tcbInfoJson = generateTcbInfo(validTcbInfoTemplate, generateTcbLevel(), tcbInfoSignatureTemplate);
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertChainRootCertHasInvalidFormat)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCertInvalidFormat/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCertInvalidFormat/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCertInvalidFormat/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenTCBSigningCertChainRootCertHasInvalidSubject)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCertInvalidSubject/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCertInvalidSubject/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCertInvalidSubject/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_ROOT_CA_MISSING, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasInvalidFormat)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlCorrupted/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlCorrupted/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlCorrupted/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_CRL_UNSUPPORTED_FORMAT, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasIssuerDifferentThanRootCertSubject)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlIncorrectIssuer/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlIncorrectIssuer/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlIncorrectIssuer/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_CRL_UNKNOWN_ISSUER, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasInvalidSignature)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlIncorrectSignature/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlIncorrectSignature/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlIncorrectSignature/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_CRL_INVALID_SIGNATURE, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasExpired)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlExpired/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlExpired/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlExpired/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_CRL_INVALID, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasNoNecessaryExtensions)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlWithoutRequiredExtensions/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlWithoutRequiredExtensions/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlWithoutRequiredExtensions/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_CRL_INVALID_EXTENSIONS, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldFailWhenRootCrlHasRevokedTcbSigningCertificate)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlRevokedTCBSigningCert/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlRevokedTCBSigningCert/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlRevokedTCBSigningCert/root.pem");
-    const auto tcbInfoJson = generateTcbInfo();
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_SGX_TCB_SIGNING_CERT_REVOKED, verificationResult);
-}
-
-TEST_F(TCBInfoVerificationTests, shouldSucceedWhenRootCrlHasUnrelatedRevokedEntries)
-{
-    // GIVEN
-    readNonEmptyTextFile(tcbSigning, "VerifyTCBInfo/TrustedRootCrlUnrelatedRevokedCerts/tcb.pem");
-    readNonEmptyTextFile(pemRootCrl, "VerifyTCBInfo/TrustedRootCrlUnrelatedRevokedCerts/root_crl.pem");
-    readNonEmptyTextFile(pemRoot, "VerifyTCBInfo/TrustedRootCrlUnrelatedRevokedCerts/root.pem");
-    const char tcbInfoSignatureTemplate[] = R"json("signature": "62f2eb97227d906c158e8500964c8d10029e1a318e0e95054fbc1b9636913555d7147ceefe07c4cb7ac1ac700093e2ee3fd4f7d00c7caf135dc5243be51e1def")json";
-    const auto tcbInfoJson = generateTcbInfo(validTcbInfoTemplate, generateTcbLevel(), tcbInfoSignatureTemplate);
-
-    // WHEN
-    const auto verificationResult = sgxAttestationVerifyTCBInfo(tcbInfoJson.data(), tcbSigning.c_str(), pemRootCrl.c_str(), pemRoot.c_str());
-
-    // THEN
-    EXPECT_EQ(STATUS_OK, verificationResult);
+    EXPECT_EQ(STATUS_SGX_CRL_UNSUPPORTED_FORMAT,
+            sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), invalidRootCaCrlPem, rootCaCertPem.c_str()));
 }
