@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Intel Corporation
+# Copyright (c) 2017-2018, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -30,7 +30,6 @@ set(SUBPROJECT_NAME ${PROJECT_NAME}_IT)
 enable_testing()
 
 set(IT_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/templates/Paths.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/Paths.h" @ONLY)
 
 set(QVL_SRC_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/src)
 set(QVL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/include)
@@ -38,7 +37,7 @@ set(COMMON_TEST_UTILS_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/test/CommonTest
 
 file(GLOB SOURCE_FILES *.cpp
         ${CMAKE_SOURCE_DIR}/AttestationLibrary/src/CertVerification/TCBInfoVerification.cpp
-        ${COMMON_TEST_UTILS_DIR}/TcbInfoGenerator.cpp)
+        ${COMMON_TEST_UTILS_DIR}/*.cpp)
 add_executable(${SUBPROJECT_NAME} ${SOURCE_FILES})
 
 include_directories(
@@ -50,7 +49,7 @@ include_directories(
 target_link_libraries(${SUBPROJECT_NAME}
     rapidjson
     gtest
-    AttestationLibrary
+    AttestationLibraryStatic
 )
 
 install(TARGETS ${SUBPROJECT_NAME} DESTINATION bin)

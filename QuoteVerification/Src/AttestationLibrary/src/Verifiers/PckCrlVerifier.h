@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -38,17 +38,17 @@ namespace intel { namespace sgx { namespace qvl {
 class PckCrlVerifier
 {
 public:
-    explicit PckCrlVerifier(const CommonVerifier& commonVerifier);
+    PckCrlVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier);
 
-    PckCrlVerifier() = default;
-    PckCrlVerifier(const PckCrlVerifier&) = default;
-    PckCrlVerifier(PckCrlVerifier&&) = default;
-    ~PckCrlVerifier() = default;
+    PckCrlVerifier();
+    PckCrlVerifier(const PckCrlVerifier&) = delete;
+    PckCrlVerifier(PckCrlVerifier&&) = delete;
+    virtual ~PckCrlVerifier() = default;
 
     PckCrlVerifier& operator=(const PckCrlVerifier&) = default;
     PckCrlVerifier& operator=(PckCrlVerifier&&) = default;
 
-    Status verify(const pckparser::CrlStore &crl, const pckparser::CertStore &crlIssuer) const;
+    virtual Status verify(const pckparser::CrlStore &crl, const pckparser::CertStore &crlIssuer) const;
     Status verify(const pckparser::CrlStore &crl, const CertificateChain &chain, const pckparser::CertStore &trustedRoot) const; 
 
     /**
@@ -63,7 +63,8 @@ public:
     bool checkValidityPeriodAndIssuer(const pckparser::CrlStore& crl);
 
 private:
-    CommonVerifier _commonVerifier;
+    std::unique_ptr<CommonVerifier> _commonVerifier;
+    BaseVerifier _baseVerifier;
 };
 
 }}} // namespace intel { namespace sgx { namespace qvl {

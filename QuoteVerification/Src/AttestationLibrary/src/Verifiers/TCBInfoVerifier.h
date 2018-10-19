@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -32,7 +32,9 @@
 #include "CommonVerifier.h"
 #include "TCBInfoJsonVerifier.h"
 #include "PckCrlVerifier.h"
+#include "TCBSigningChain.h"
 
+#include <CertVerification/CertificateChain.h>
 #include <PckParser/CertStore.h>
 #include <PckParser/CrlStore.h>
 
@@ -41,35 +43,35 @@ namespace intel { namespace sgx { namespace qvl {
 class TCBInfoVerifier
 {
 public:
-    explicit TCBInfoVerifier(const CommonVerifier& commonVerifier);
-
-    TCBInfoVerifier() = default;
-    TCBInfoVerifier(const TCBInfoVerifier&) = default;
-    TCBInfoVerifier(TCBInfoVerifier&&) = default;
+    TCBInfoVerifier();
+    TCBInfoVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier,
+                    std::unique_ptr<TCBSigningChain>&& tcbSigningChain);
+    TCBInfoVerifier(const TCBInfoVerifier&) = delete;
+    TCBInfoVerifier(TCBInfoVerifier&&) = delete;
     ~TCBInfoVerifier() = default;
 
     TCBInfoVerifier& operator=(const TCBInfoVerifier&) = default;
     TCBInfoVerifier& operator=(TCBInfoVerifier&&) = default;
 
+    /**
+     * Verify corectness of TCB info certificate and Json
+     * Checks subject, issuer, validity period, extensions and signature.
+     *
+     * @param tcbJson - TCB info Json verify
+     * @param chain - TCB info chain verify
+     * @param rootCaCrl - root CRL
+     * @param trustedRoot - trusted root certificate
+     * @return Status code of the operation
+     */
     Status verify(
             const TCBInfoJsonVerifier &tcbJson,
             const CertificateChain &chain,
             const pckparser::CrlStore &rootCaCrl,
             const pckparser::CertStore &trustedRoot) const;
 
-    /**
-    * Verify correctness of TCB signing certificate
-    * Checks subject, issuer, validity period, extensions and signature.
-    *
-    * @param tcbCert - TCB certificate to verify
-    * @param rootCaCert - root certificate
-    * @return Status code of the operation
-    */
-    Status verifyTCBCert(const pckparser::CertStore &tcbCert, const pckparser::CertStore &rootCaCert) const;
-
 private:
-    CommonVerifier _commonVerifier;
-    PckCrlVerifier _crlVerifier;
+    std::unique_ptr<CommonVerifier> _commonVerifier;
+    std::unique_ptr<TCBSigningChain> tcbSigningChain;
 };
 
 }}} // namespace intel { namespace sgx { namespace qvl {

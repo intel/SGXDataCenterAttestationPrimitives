@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -33,8 +33,16 @@
 
 namespace intel { namespace sgx { namespace qvl {
 
-TCBInfoVerifier::TCBInfoVerifier(const CommonVerifier& commonVerifier)
-    : _commonVerifier{commonVerifier}
+TCBInfoVerifier::TCBInfoVerifier()
+        : _commonVerifier(new CommonVerifier()),
+          tcbSigningChain(new TCBSigningChain())
+{
+}
+
+TCBInfoVerifier::TCBInfoVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier,
+                                 std::unique_ptr<TCBSigningChain>&& tcbSigningChain)
+        : _commonVerifier(std::move(_commonVerifier)),
+          tcbSigningChain(std::move(tcbSigningChain))
 {
 }
 
@@ -44,78 +52,17 @@ Status TCBInfoVerifier::verify(
         const pckparser::CrlStore &rootCaCrl,
         const pckparser::CertStore &trustedRoot) const
 {
-    const auto rootCert = chain.get(constants::ROOT_CA_SUBJECT);
-    if(!rootCert)
+    const auto status = tcbSigningChain->verify(chain, rootCaCrl, trustedRoot);
+    if (status != STATUS_OK)
     {
-        return STATUS_SGX_ROOT_CA_MISSING;
-    }
-    const auto rootVerificationStatus = _commonVerifier.verifyRootCACert(*rootCert);
-    if(rootVerificationStatus != STATUS_OK)
-    {
-        return rootVerificationStatus;
+        return status;
     }
 
     const auto tcbSigningCert = chain.get(constants::TCB_SUBJECT);
-    if(!tcbSigningCert)
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_MISSING;
-    }
-    const auto tcbCertVerificationStatus = verifyTCBCert(*tcbSigningCert, *rootCert);
-    if(tcbCertVerificationStatus != STATUS_OK)
-    {
-        return tcbCertVerificationStatus;
-    }
-
-    const auto crlVerificationStatus = _crlVerifier.verify(rootCaCrl, *rootCert);
-    if(crlVerificationStatus != STATUS_OK)
-    {
-        return crlVerificationStatus;
-    }
-
-    if(rootCaCrl.isRevoked(*tcbSigningCert))
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_REVOKED;
-    }
-
-    if(!crypto::verifySha256EcdsaSignature(tcbJson.getSignature(), tcbJson.getInfoBody(), tcbSigningCert->getPubKey()))
+    if(!_commonVerifier->checkSha256EcdsaSignature(
+            tcbJson.getSignature(), tcbJson.getInfoBody(), tcbSigningCert->getPubKey()))
     {
         return STATUS_TCB_INFO_INVALID_SIGNATURE;
-    }
-
-    if(trustedRoot.getSubject() != qvl::constants::ROOT_CA_SUBJECT)
-    {
-        return STATUS_TRUSTED_ROOT_CA_INVALID;
-    }
-
-    if(rootCert->getSignature().rawDer != trustedRoot.getSignature().rawDer)
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED;
-    }
-
-    return STATUS_OK;
-}
-
-Status TCBInfoVerifier::verifyTCBCert(const pckparser::CertStore &tcbCert, const pckparser::CertStore &rootCaCert) const
-{
-    if(tcbCert.getSubject() != constants::TCB_SUBJECT)
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_MISSING;
-    }
-
-    if(tcbCert.expired())
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_INVALID;
-    }
-
-    if(!_commonVerifier.checkStandardExtensions(tcbCert.getExtensions(), constants::TCB_REQUIRED_EXTENSIONS))
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS;
-    }
-
-    if(tcbCert.getIssuer() != rootCaCert.getSubject()
-        || !crypto::verifySignature(tcbCert, rootCaCert.getPubKey()))
-    {
-        return STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER;
     }
 
     return STATUS_OK;

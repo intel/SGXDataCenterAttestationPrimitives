@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2017, Intel Corporation
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Copyright (c) 2017-2018, Intel Corporation
 #
 # 1. Redistributions of source code must retain the above copyright notice,
 #    this list of conditions and the following disclaimer.
@@ -26,7 +23,8 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 pushd Build/Debug/dist/bin &&
 # LD_LIBRARY_PATH=../lib gdb ./AttestationLibrary_IT
-gdb ./AttestationLibrary_UT
+gdb ./AttestationLibrary_UT &&
 popd

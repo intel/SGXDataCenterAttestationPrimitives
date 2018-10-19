@@ -48,10 +48,7 @@ public:
     MOCK_CONST_METHOD0(getInfoBody, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getSignature, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getFmspc, const std::vector<uint8_t>&());
-    MOCK_CONST_METHOD0(getLatestCpusvn, const std::vector<uint8_t>&());
-    MOCK_CONST_METHOD0(getLatestPcesvn, unsigned int());
-    MOCK_CONST_METHOD0(getRevokedCpusvn, const std::vector<uint8_t>&());
-    MOCK_CONST_METHOD0(getRevokedPcesvn, unsigned int());
+    MOCK_CONST_METHOD0(getTcbLevels, const std::set<TCBInfoJsonVerifier::TcbLevel, std::greater<>>&());
 };
 
 

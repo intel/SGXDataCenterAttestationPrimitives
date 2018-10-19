@@ -38,9 +38,10 @@ class AttestationLibraryAdapterMock : public qvl::IAttestationLibraryAdapter
 {
 public:
     MOCK_CONST_METHOD0(getVersion, std::string());
-    MOCK_CONST_METHOD4(verifyQuote, Status(const std::vector<uint8_t>&, const std::string&, const std::string&, const std::string&));
+    MOCK_CONST_METHOD5(verifyQuote, Status(const std::vector<uint8_t>&, const std::string&, const std::string&, const std::string&, const std::string&));
     MOCK_CONST_METHOD4(verifyPCKCertificate, Status(const std::string&, const std::string&, const std::string&, const std::string&));
     MOCK_CONST_METHOD4(verifyTCBInfo, Status(const std::string&, const std::string&, const std::string&, const std::string&));
+    MOCK_CONST_METHOD4(verifyQeIdentity, Status(const std::string&, const std::string&, const std::string&, const std::string&));
 };
 }}}}
 

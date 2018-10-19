@@ -41,26 +41,49 @@ namespace intel { namespace sgx { namespace qvl { namespace pckparser {
 SgxExtension::SgxExtension()
 {}
 
+SgxExtension::SgxExtension(const SgxExtension& other)
+{
+    type = other.type;
+    bytes = other.bytes;
+    sequence = other.sequence;
+    oidString = other.oidString;
+    asn1Integer.reset(ASN1_INTEGER_dup(other.asn1Integer.get()));
+}
+
+SgxExtension::SgxExtension(SgxExtension&& other) noexcept
+{
+    type = other.type;
+    bytes = other.bytes;
+    sequence = other.sequence;
+    oidString = other.oidString;
+    asn1Integer = std::move(other.asn1Integer);
+}
+
 SgxExtension::SgxExtension(qvl::pckparser::SgxExtension::Type type,
                            std::vector<uint8_t> data,
                            const ASN1_TYPE& asn1Data,
                            std::vector<qvl::pckparser::SgxExtension> subsequence,
                            std::string oidStr)
-        : type(type),  bytes(std::move(data)), asn1Data(asn1Data), sequence(std::move(subsequence)), oidString(std::move(oidStr))
-{}
-
-SgxExtension::SgxExtension(const ASN1_TYPE& asn1Object)
+        : type(type),  bytes(std::move(data)), sequence(std::move(subsequence)), oidString(std::move(oidStr))
 {
-    if(asn1Object.type != V_ASN1_SEQUENCE)
+    if(asn1Data.type == V_ASN1_INTEGER)
+    {
+        asn1Integer.reset(ASN1_INTEGER_dup(asn1Data.value.integer));
+    }
+}
+
+SgxExtension::SgxExtension(crypto::ASN1_TYPE_uptr asn1Object)
+{
+    if(asn1Object->type != V_ASN1_SEQUENCE)
     {
         std::stringstream ss;
-        ss << "Unexpected type, expected [" << V_ASN1_SEQUENCE << "] given [" << asn1Object.type << "]";
+        ss << "Unexpected type, expected [" << V_ASN1_SEQUENCE << "] given [" << asn1Object->type << "]";
         throw FormatException(ss.str());
     }
 
-    const unsigned char *data = asn1Object.value.sequence->data;
+    const unsigned char *data = asn1Object->value.sequence->data;
     const auto stack = crypto::make_unique(
-            d2i_ASN1_SEQUENCE_ANY(nullptr, &data, asn1Object.value.sequence->length));
+            d2i_ASN1_SEQUENCE_ANY(nullptr, &data, asn1Object->value.sequence->length));
 
     if(!stack)
     {
@@ -81,9 +104,13 @@ SgxExtension::SgxExtension(const ASN1_TYPE& asn1Object)
     type = oids::str2Type(oidString);
     if(type != SgxExtension::Type::NONE)
     {
-        asn1Data = *sk_ASN1_TYPE_value(stack.get(), 1);
+        auto asn1Data = *sk_ASN1_TYPE_value(stack.get(), 1);
         bytes = getSGXExtensionData(type, asn1Data);
         sequence = getSGXExtensionSubsequence(type, asn1Data);
+        if(asn1Data.type == V_ASN1_INTEGER)
+        {
+            asn1Integer.reset(ASN1_INTEGER_dup(asn1Data.value.integer));
+        }
     }
 }
 
@@ -96,6 +123,16 @@ SgxExtension SgxExtension::createFromRawSequence(const ASN1_TYPE& asn1Object, st
             sgxExtensionsFromSequence(asn1Object),
             oid
     );
+}
+
+SgxExtension& SgxExtension::operator=(const SgxExtension& other)
+{
+    type = other.type;
+    bytes = other.bytes;
+    sequence = other.sequence;
+    oidString = other.oidString;
+    asn1Integer.reset(ASN1_INTEGER_dup(other.asn1Integer.get()));
+    return *this;
 }
 
 bool SgxExtension::operator==(const SgxExtension& other) const
@@ -139,7 +176,7 @@ bool SgxExtension::asBool() const
 uint64_t SgxExtension::asUInt() const
 {
     uint64_t retVal {};
-    auto result = ASN1_INTEGER_get_uint64(&retVal, asn1Data.value.integer);
+    auto result = ASN1_INTEGER_get_uint64(&retVal, asn1Integer.get());
     if(result == 1)
     {
         return retVal;
@@ -150,7 +187,7 @@ uint64_t SgxExtension::asUInt() const
 int64_t SgxExtension::asInt() const
 {
     int64_t retVal {};
-    auto result = ASN1_INTEGER_get_int64(&retVal, asn1Data.value.integer);
+    auto result = ASN1_INTEGER_get_int64(&retVal, asn1Integer.get());
     if(result == 1)
     {
         return retVal;
@@ -220,7 +257,7 @@ std::vector<SgxExtension> SgxExtension::sgxExtensionsFromSequence(const ASN1_TYP
 
     std::vector<SgxExtension> subsequence(static_cast<size_t>(stackEntries));
     std::generate(subsequence.begin(), subsequence.end(),
-                  [&stack]() { return SgxExtension(*sk_ASN1_TYPE_pop(stack.get())); });
+                  [&stack]() { return SgxExtension(crypto::make_unique(sk_ASN1_TYPE_pop(stack.get()))); });
     return subsequence;
 }
 

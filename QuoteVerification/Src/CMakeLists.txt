@@ -117,6 +117,7 @@ set(CMAKE_CXX_FLAGS
         "-Wall"                         #enable all warnings
         "-pthread"
         "${IGNORED_WARNINGS}"           #but ignore some unimportant ones
+        "${CUSTOM_FLAGS}"
         )
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -D_FORTIFY_SOURCE=2 -fvisibility=hidden")

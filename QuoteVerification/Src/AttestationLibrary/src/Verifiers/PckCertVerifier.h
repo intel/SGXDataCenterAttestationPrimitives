@@ -38,13 +38,16 @@ class PckCertVerifier
 {
 public: 
 
-    PckCertVerifier() = default;
-    PckCertVerifier(const PckCertVerifier&) = default;
-    PckCertVerifier(PckCertVerifier&&) = default;
+    PckCertVerifier();
+    PckCertVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier,
+                    std::unique_ptr<PckCrlVerifier>&& _crlVerifier);
+
+    PckCertVerifier(const PckCertVerifier& pckCertVerifier) = delete;
+
     ~PckCertVerifier() = default;
 
-    PckCertVerifier& operator=(const PckCertVerifier&) = default;
-    PckCertVerifier& operator=(PckCertVerifier&&) = default;
+    PckCertVerifier& operator=(const PckCertVerifier&) = delete;
+    PckCertVerifier& operator=(PckCertVerifier&&) = delete;
 
     Status verify(const CertificateChain &chain, const pckparser::CrlStore& rootCaCrl, const pckparser::CrlStore& intermediateCrl, const pckparser::CertStore &trustedRoot) const; 
 
@@ -68,9 +71,9 @@ public:
     Status verifyPCKCert(const pckparser::CertStore &pckCert, const pckparser::CertStore &intermediate) const;
 
 private:
-    CommonVerifier _commonVerifier;
-    PckCrlVerifier _crlVerifier;
-    
+    std::unique_ptr<CommonVerifier> _commonVerifier;
+    std::unique_ptr<PckCrlVerifier> _crlVerifier;
+    BaseVerifier _baseVerifier{};
 };
 
 }}} // namespace intel { namespace sgx { namespace qvl {

@@ -34,6 +34,7 @@
 #include <memory>
 #include <PckParser/CertStore.h>
 #include <PckParser/PckParser.h>
+#include <Verifiers/BaseVerifier.h>
 
 namespace intel { namespace sgx { namespace qvl {
 
@@ -72,6 +73,7 @@ public:
     * @return shared pointer to certificate store
     */
     virtual std::shared_ptr<const pckparser::CertStore> get(const pckparser::Subject &subject) const;
+    virtual std::shared_ptr<const pckparser::CertStore> getIntermediateCert() const;
 
     /**
     * Get root certificate from chain (position 0)
@@ -87,6 +89,7 @@ public:
     */
     virtual std::shared_ptr<const pckparser::CertStore> getTopmostCert() const;
 private:
+    BaseVerifier _baseVerifier{};
     std::vector<std::string> splitChain(const std::string &pemChain) const;
 
     std::vector<std::shared_ptr<const pckparser::CertStore>> certs{};

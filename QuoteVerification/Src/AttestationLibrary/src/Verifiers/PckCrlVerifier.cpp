@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -33,11 +33,14 @@
 
 namespace intel { namespace sgx { namespace qvl {
 
-PckCrlVerifier::PckCrlVerifier(const CommonVerifier& commonVerifier)
-    : _commonVerifier{commonVerifier}
+PckCrlVerifier::PckCrlVerifier() : _commonVerifier(new CommonVerifier())
 {
 }
 
+PckCrlVerifier::PckCrlVerifier(std::unique_ptr<CommonVerifier>&& _commonVerifier)
+    : _commonVerifier(std::move(_commonVerifier))
+{
+}
 
 Status PckCrlVerifier::verify(const pckparser::CrlStore &crl, const pckparser::CertStore &crlIssuer) const
 {
@@ -51,12 +54,12 @@ Status PckCrlVerifier::verify(const pckparser::CrlStore &crl, const pckparser::C
         return STATUS_SGX_CRL_INVALID;
     }
 
-    if(!_commonVerifier.checkStandardExtensions(crl.getExtensions(), qvl::constants::CRL_REQUIRED_EXTENSIONS))
+    if(!_commonVerifier->checkStandardExtensions(crl.getExtensions(), qvl::constants::CRL_REQUIRED_EXTENSIONS))
     {
         return STATUS_SGX_CRL_INVALID_EXTENSIONS;
     }
 
-    if(!crypto::verifySignature(crl, crlIssuer.getPubKey()))
+    if(!_commonVerifier->checkSignature(crl, crlIssuer))
     {
         return STATUS_SGX_CRL_INVALID_SIGNATURE;
     }
@@ -83,18 +86,23 @@ Status PckCrlVerifier::verify(const pckparser::CrlStore &crl, const CertificateC
     {
         return basicVerificationStatus;
     }
-     
-    if(_commonVerifier.verifyRootCACert(trustedRoot) != STATUS_OK)
+
+    if(trustedRoot.getSubject() != constants::ROOT_CA_SUBJECT)
+    {
+        return STATUS_TRUSTED_ROOT_CA_INVALID;
+    }
+
+    if(_commonVerifier->verifyRootCACert(trustedRoot) != STATUS_OK)
     {
         return STATUS_TRUSTED_ROOT_CA_INVALID;
     }
 
     const auto chainRootCert = chain.getRootCert();
-    if(!chainRootCert )
+    if(!chainRootCert)
     {
         return STATUS_SGX_ROOT_CA_MISSING;
     }
-    if(chainRootCert->getSignature().rawDer != trustedRoot.getSignature().rawDer )
+    if(chainRootCert->getSignature().rawDer != trustedRoot.getSignature().rawDer)
     {
         return STATUS_SGX_ROOT_CA_UNTRUSTED;
     }
@@ -110,7 +118,7 @@ Status PckCrlVerifier::verifyCRLIssuerCertChain(const CertificateChain &chain, c
         return STATUS_SGX_ROOT_CA_INVALID;
     }
 
-    if(_commonVerifier.verifyRootCACert(*rootCertFromChain) != STATUS_OK)
+    if(_commonVerifier->verifyRootCACert(*rootCertFromChain) != STATUS_OK)
     {
         return STATUS_SGX_CA_CERT_INVALID;
     }
@@ -135,7 +143,15 @@ Status PckCrlVerifier::verifyCRLIssuerCertChain(const CertificateChain &chain, c
             return STATUS_SGX_INTERMEDIATE_CA_MISSING;
         }
 
-        const auto verifyIntermediateStatus = _commonVerifier.verifyIntermediate(*topmostCert, *rootCertFromChain);
+        const bool processorCa = topmostCert->getSubject() == constants::PROCESSOR_CA_SUBJECT;
+        const bool platformCa = topmostCert->getSubject() == constants::PLATFORM_CA_SUBJECT;
+
+        if(!processorCa && !platformCa)
+        {
+            return STATUS_SGX_CA_CERT_INVALID;
+        }
+
+        const auto verifyIntermediateStatus = _commonVerifier->verifyIntermediate(*topmostCert, *rootCertFromChain);
         if(verifyIntermediateStatus != STATUS_OK)
         {
             return STATUS_SGX_CA_CERT_INVALID;
@@ -152,9 +168,7 @@ Status PckCrlVerifier::verifyCRLIssuerCertChain(const CertificateChain &chain, c
 bool PckCrlVerifier::checkValidityPeriodAndIssuer(const pckparser::CrlStore& crl)
 {
     return
-        !crl.expired() &&
-        (crl.getIssuer() == constants::PCK_PROCESSOR_CRL_ISSUER ||
-         crl.getIssuer() == constants::PCK_PLATFORM_CRL_ISSUER);
+        !crl.expired() && _baseVerifier.commonNameContains(crl.getIssuer(), constants::SGX_INTERMEDIATE_CN_PHRASE);
 }
 
 }}}// namespace intel { namespace sgx { namespace qvl {

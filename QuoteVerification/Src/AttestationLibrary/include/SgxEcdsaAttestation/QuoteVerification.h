@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -49,7 +49,7 @@ extern "C" {
 typedef enum _status
 {
     STATUS_OK = 0,
-    
+
     STATUS_UNSUPPORTED_CERT_FORMAT,
 
     STATUS_SGX_ROOT_CA_MISSING,
@@ -77,7 +77,7 @@ typedef enum _status
     STATUS_SGX_TCB_INFO_INVALID,            // 20
     STATUS_TCB_INFO_INVALID_SIGNATURE,
 
-    STATUS_SGX_TCB_SIGNING_CERT_MISSING, 
+    STATUS_SGX_TCB_SIGNING_CERT_MISSING,
     STATUS_SGX_TCB_SIGNING_CERT_INVALID,
     STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS,
     STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER,
@@ -90,7 +90,7 @@ typedef enum _status
     STATUS_SGX_CRL_INVALID_EXTENSIONS,
     STATUS_SGX_CRL_INVALID_SIGNATURE,
 
-    
+
     STATUS_SGX_CA_CERT_UNSUPPORTED_FORMAT,
     STATUS_SGX_CA_CERT_INVALID,
     STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT,
@@ -103,17 +103,40 @@ typedef enum _status
     STATUS_UNSUPPORTED_PCK_RL_FORMAT,        // 40
     STATUS_INVALID_PCK_CRL,
     STATUS_UNSUPPORTED_TCB_INFO_FORMAT,
-    STATUS_PCK_REVOKED,                 
+    STATUS_PCK_REVOKED,
     STATUS_TCB_INFO_MISMATCH,
     STATUS_TCB_OUT_OF_DATE,
     STATUS_TCB_REVOKED,
-    STATUS_UNSUPPORTED_QE_CERTIFICATION,
+    STATUS_TCB_CONFIGURATION_NEEDED,
+    STATUS_TCB_NOT_SUPPORTED,
+    STATUS_TCB_UNRECOGNIZED_STATUS,
+    STATUS_UNSUPPORTED_QE_CERTIFICATION,     // 50
     STATUS_INVALID_QE_CERTIFICATION_DATA_SIZE,
     STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE,
-    STATUS_PCK_CERT_MISMATCH,               // 50
+    STATUS_PCK_CERT_MISMATCH,
     STATUS_INVALID_QE_REPORT_SIGNATURE,
     STATUS_INVALID_QE_REPORT_DATA,
-    STATUS_INVALID_QUOTE_SIGNATURE          
+    STATUS_INVALID_QUOTE_SIGNATURE,
+
+    STATUS_SGX_QE_IDENTITY_UNSUPPORTED_FORMAT,
+    STATUS_SGX_QE_IDENTITY_INVALID,
+    STATUS_SGX_QE_IDENTITY_INVALID_SIGNATURE,
+
+    STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT,    // 60
+    STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT,
+    STATUS_SGX_ENCLAVE_IDENTITY_INVALID,
+    STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION,
+    STATUS_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE,
+    STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH,
+    STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH,
+    STATUS_SGX_ENCLAVE_REPORT_MRENCLAVE_MISMATCH,
+    STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH,
+    STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH,
+    STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE,   // 70
+
+    STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT,
+    STATUS_QE_IDENTITY_OUT_OF_DATE,
+    STATUS_QE_IDENTITY_MISMATCH
 } Status;
 
 /**
@@ -143,8 +166,28 @@ typedef enum _status
  *      - STATUS_INVALID_QE_REPORT_DATA
  *      - STATUS_INVALID_QUOTE_SIGNATURE
  */
-QVL_API Status sgxAttestationVerifyQuote(const uint8_t* quote, uint32_t quoteSize, const char *pemPckCertificate, const char* intermediateCrl, const char* tcbInfoJson);
+QVL_API Status sgxAttestationVerifyQuote(const uint8_t* quote, uint32_t quoteSize, const char *pemPckCertificate, const char* intermediateCrl, const char* tcbInfoJson, const char* qeIdentityJson);
 
+/**
+ *
+ * @param enclaveReport - Buffer with serialized Enclave Report  structure.
+ * @param enclaveIdentity - Enclave Identity structure in JSON format.
+ * @return Status code of the operation, one of:
+ *      - STATUS_OK
+ *      - STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT
+ *      - STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT
+ *      - STATUS_SGX_ENCLAVE_IDENTITY_INVALID
+ *      - STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION
+ *      - STATUS_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE
+ *      - STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH
+ *      - STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH
+ *      - STATUS_SGX_ENCLAVE_REPORT_MRENCLAVE_MISMATCH
+ *      - STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH
+ *      - STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH
+ *      - STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE
+ */
+
+QVL_API Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const char* enclaveIdentity);
 /**
  * This function returns version information.
  *
@@ -262,6 +305,35 @@ QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, cons
  *      - STATUS_SGX_CRL_INVALID_SIGNATURE
  */
 QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate);
+
+/**
+ * This function is responsible for verifying QE Identity structure.
+ *
+ * @param qeIdentity - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided QE Identity) in PEM format concatenated together.
+ * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
+ * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @return Status code of the operation. One of:
+ *      - STATUS_OK
+ *      - STATUS_SGX_QE_IDENTITY_UNSUPPORTED_FORMAT
+ *      - STATUS_SGX_QE_IDENTITY_INVALID
+ *      - STATUS_SGX_QE_IDENTITY_INVALID_SIGNATURE
+ *      - STATUS_UNSUPPORTED_CERT_FORMAT
+ *      - STATUS_SGX_ROOT_CA_MISSING
+ *      - STATUS_SGX_ROOT_CA_INVALID
+ *      - STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS
+ *      - STATUS_SGX_ROOT_CA_INVALID_ISSUER
+ *      - STATUS_SGX_TCB_SIGNING_CERT_MISSING
+ *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID
+ *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS
+ *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER
+ *      - STATUS_SGX_TCB_SIGNING_CERT_REVOKED
+ *      - STATUS_TRUSTED_ROOT_CA_INVALID
+ *      - STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED
+ *      - STATUS_SGX_CRL_UNSUPPORTED_FORMAT
+
+ */
+QVL_API Status sgxAttestationVerifyQEIdentity(const char *qeIdentity, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate);
 
 /**
  * This function is responsible for verifying Certificate Revocation Lists issued by one of the CA certificates in

@@ -115,6 +115,7 @@ public:
     }; 
 
     bool parse(const std::vector<uint8_t>& rawQuote);
+    bool parseEnclaveReport(const std::vector<uint8_t>& rawQuote);
 
     const Header& getHeader() const;
     const EnclaveReport& getBody() const;

@@ -38,6 +38,7 @@ const uint16_t QUOTE_VERSION = 3;
 const uint16_t ECDSA_256_WITH_P256_CURVE = 1;
 const uint16_t ECDSA_384_WITH_P384_CURVE = 2;
 constexpr size_t ECDSA_P256_SIGNATURE_BYTE_LEN = 64;
+constexpr size_t ENCLAVE_REPORT_BYTE_LEN = 384;
 
 const uint16_t PCK_ID_PLAIN_PPID = 1;
 const uint16_t PCK_ID_ENCRYPTED_PPID_2048 = 2;

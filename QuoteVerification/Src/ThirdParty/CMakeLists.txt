@@ -42,8 +42,7 @@ if(NOT DEFINED OPENSSL_ROOT_DIR)
         LOG_DOWNLOAD ON
     )
 
-    set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/openssl/dist
-        CACHE INTERNAL "${PROJECT_NAME} OpenSSL Root Directory" FORCE)
+    set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/openssl/dist)
 endif()
 add_library(openssl INTERFACE)
 target_include_directories(openssl SYSTEM INTERFACE "${OPENSSL_ROOT_DIR}/include/")
@@ -68,8 +67,7 @@ if (NOT DEFINED GTEST_ROOT_DIR)
         BUILD_COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/gtest/bin && make -j9
         LOG_DOWNLOAD ON
     )
-    set(GTEST_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gtest/dist
-            CACHE INTERNAL "${PROJECT_NAME} GTest Include Directories" FORCE)
+    set(GTEST_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gtest/dist)
 endif()
 add_library(gtest INTERFACE)
 target_include_directories(gtest SYSTEM INTERFACE "${GTEST_ROOT_DIR}/include/")
@@ -90,7 +88,5 @@ file(GLOB RAPIDJSON_SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/r
 target_sources(rapidjson INTERFACE ${RAPIDJSON_SOURCE_FILES})
 target_include_directories(rapidjson INTERFACE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/")
 
-add_library(cmdline INTERFACE)
-file(GLOB CMDLINE_SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmdline/*.h)
-target_sources(cmdline INTERFACE ${CMDLINE_SOURCE_FILES})
-target_include_directories(cmdline INTERFACE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/cmdline/")
+add_library(argtable3 STATIC ${CMAKE_CURRENT_SOURCE_DIR}/argtable3/argtable3.c)
+target_include_directories(argtable3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/argtable3/)

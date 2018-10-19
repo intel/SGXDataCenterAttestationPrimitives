@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -138,10 +138,6 @@ bool CommonVerifier::checkValueFormat(const pckparser::SgxExtension& ext) const
 
 Status CommonVerifier::verifyRootCACert(const pckparser::CertStore &rootCa) const
 {
-    if(rootCa.getSubject() != constants::ROOT_CA_SUBJECT)
-    {
-        return STATUS_SGX_ROOT_CA_MISSING;
-    }
 
     if(rootCa.expired())
     {
@@ -164,24 +160,12 @@ Status CommonVerifier::verifyRootCACert(const pckparser::CertStore &rootCa) cons
 
 Status CommonVerifier::verifyIntermediate(const pckparser::CertStore &intermediate, const pckparser::CertStore &root) const
 {
-    const bool processorCa = intermediate.getSubject() == constants::PROCESSOR_CA_SUBJECT;
-    const bool platformCa = intermediate.getSubject() == constants::PLATFORM_CA_SUBJECT;
-
-    if(!processorCa && !platformCa)
-    {
-        return STATUS_SGX_INTERMEDIATE_CA_MISSING;
-    }
-
     if(intermediate.expired())
     {
         return STATUS_SGX_INTERMEDIATE_CA_INVALID;
     }
 
-    if(processorCa && !checkStandardExtensions(intermediate.getExtensions(), constants::PROCESSOR_CA_REQUIRED_EXTENSIONS))
-    {
-        return STATUS_SGX_INTERMEDIATE_CA_INVALID_EXTENSIONS;
-    }
-    else if(platformCa && !checkStandardExtensions(intermediate.getExtensions(), constants::PLATFORM_CA_REQUIRED_EXTENSIONS))
+    if(!checkStandardExtensions(intermediate.getExtensions(), constants::INTERMEDIATE_REQUIRED_EXTENSIONS))
     {
         return STATUS_SGX_INTERMEDIATE_CA_INVALID_EXTENSIONS;
     }
@@ -193,6 +177,21 @@ Status CommonVerifier::verifyIntermediate(const pckparser::CertStore &intermedia
     }
 
     return STATUS_OK;
+}
+
+bool CommonVerifier::checkSignature(const pckparser::CertStore &pckCert, const pckparser::CertStore &intermediate) const
+{
+    return crypto::verifySignature(pckCert, intermediate.getPubKey());
+}
+
+bool CommonVerifier::checkSignature(const pckparser::CrlStore &crl, const pckparser::CertStore &crlIssuer) const
+{
+    return crypto::verifySignature(crl, crlIssuer.getPubKey());
+}
+
+bool CommonVerifier::checkSha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message,
+                                               const EC_KEY &publicKey) const {
+    return crypto::verifySha256EcdsaSignature(signature, message, publicKey);
 }
 
 }}} // namespace intel { namespace sgx { namespace qvl {

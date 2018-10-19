@@ -40,12 +40,27 @@ struct IAttestationLibraryAdapter
     virtual  ~IAttestationLibraryAdapter() = default;
 
     virtual std::string getVersion() const = 0;
-    virtual Status verifyQuote(const std::vector<uint8_t>& quote, const std::string& pckCertChain, const std::string& pckCrl,
-        const std::string& tcbInfo) const = 0;
 
-    virtual Status verifyPCKCertificate(const std::string& pemCertChain, const std::string& pemRootCaCRL, const std::string& intermediateCaCRL, const std::string& pemRootCaCertificate) const = 0;
-    virtual Status verifyTCBInfo(const std::string& tcbInfo, const std::string& pemSigningChain, const std::string& pemRootCaCrl,
-        const std::string& pemtrustedRootCaCertificate) const = 0;
+    virtual Status verifyQuote(const std::vector<uint8_t>& quote,
+                               const std::string& pckCertChain,
+                               const std::string& pckCrl,
+                               const std::string& tcbInfo,
+                               const std::string& qeIdentity) const = 0;
+
+    virtual Status verifyPCKCertificate(const std::string& pemCertChain,
+                                        const std::string& pemRootCaCRL,
+                                        const std::string& intermediateCaCRL,
+                                        const std::string& pemRootCaCertificate) const = 0;
+
+    virtual Status verifyTCBInfo(const std::string& tcbInfo,
+                                 const std::string& pemSigningChain,
+                                 const std::string& pemRootCaCrl,
+                                 const std::string& pemtrustedRootCaCertificate) const = 0;
+
+    virtual Status verifyQeIdentity(const std::string& qeIdentity,
+                                    const std::string& pemSigningChain,
+                                    const std::string& pemRootCaCrl,
+                                    const std::string& pemtrustedRootCaCertificate) const = 0;
 };
 
 }}}

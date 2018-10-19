@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -30,7 +30,6 @@
 #define INTEL_SGX_QVL_TEST_COMMON_VERIFIER_H_
 
 #include <gmock/gmock.h>
-
 #include <Verifiers/CommonVerifier.h>
 
 namespace intel { namespace sgx { namespace qvl { namespace test {
@@ -49,8 +48,23 @@ public:
                 const std::vector<int>&));
 
     MOCK_CONST_METHOD2(checkSGXExtensions, bool(
-                const std::vector<pckparser::Extension>&,
-                const std::vector<pckparser::SGXExtension::Type>&));
+            const std::vector<pckparser::SgxExtension>&,
+            const std::vector<pckparser::SgxExtension::Type>&));
+
+    MOCK_CONST_METHOD2(checkSignature, bool(
+            const pckparser::CertStore&,
+            const pckparser::CertStore&));
+
+    MOCK_CONST_METHOD2(checkSignature, bool(
+            const pckparser::CrlStore&,
+            const pckparser::CertStore&));
+
+    MOCK_CONST_METHOD3(checkSha256EcdsaSignature, bool(
+            const Bytes&,
+            const std::vector<uint8_t>&,
+            const EC_KEY&));
+
+
 };
 
 }}}}// namespace intel { namespace sgx { namespace qvl { namespace test {

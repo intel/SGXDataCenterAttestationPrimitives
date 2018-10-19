@@ -35,16 +35,21 @@
 #include <PckParser/CrlStore.h>
 #include <Verifiers/TCBInfoJsonVerifier.h>
 #include <QuoteVerification/Quote.h>
+#include "QEIdentityJsonVerifier.h"
+#include "EnclaveReportVerifier.h"
+#include "BaseVerifier.h"
 
 namespace intel { namespace sgx { namespace qvl {
 
 class QuoteVerifier
 {
 public:
-    Status verify(const Quote& quote, const pckparser::CertStore& pckCert, const pckparser::CrlStore& crl, const TCBInfoJsonVerifier& tcbInfoJson);
+    Status verify(const Quote& quote, const pckparser::CertStore& pckCert, const pckparser::CrlStore& crl, const TCBInfoJsonVerifier& tcbInfoJson, const QEIdentityJsonVerifier& qeIdentityJson,  const EnclaveReportVerifier& enclaveReportVerifier);
 
 private:
     Status verifyQeCertData(const Quote::QeCertData& qeCertData) const;
+    Status verifyQeIdentity(const Quote& quote, const QEIdentityJsonVerifier& qeIdentityJson, const EnclaveReportVerifier& enclaveReportVerifier);
+    BaseVerifier _baseVerififer;
 };
 
 }}}// namespace intel { namespace sgx { namespace qvl {

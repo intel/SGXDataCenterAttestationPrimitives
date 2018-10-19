@@ -34,7 +34,6 @@
 #include "IAttestationLibraryAdapter.h"
 #include "StatusPrinter.h"
 
-
 namespace intel { namespace sgx { namespace qvl {
 
 namespace {
@@ -71,18 +70,28 @@ bool AppCore::runVerification(const AppOptions& options, std::ostream& logger) c
         const auto rootCaCrl = fileReader->readContent(options.rootCaCrlFile);
         const auto intermediateCaCrl = fileReader->readContent(options.intermediateCaCrlFile);
         const auto trustedRootCACert = fileReader->readContent(options.trustedRootCACertificateFile);
-        const auto pckStatus = attestationLib->verifyPCKCertificate(pckCertChain, rootCaCrl, intermediateCaCrl, trustedRootCACert);
-        outputResult("PCK certificate chain", pckStatus, logger);
+        const auto pckVerifyStatus = attestationLib->verifyPCKCertificate(pckCertChain, rootCaCrl, intermediateCaCrl, trustedRootCACert);
+        outputResult("PCK certificate chain", pckVerifyStatus, logger);
 
         const auto tcbInfo = fileReader->readContent(options.tcbInfoFile);
         const auto tcbSigningCert = fileReader->readContent(options.tcbSigningChainFile);
-        const auto tcbStatus = attestationLib->verifyTCBInfo(tcbInfo, tcbSigningCert, rootCaCrl, trustedRootCACert);
-        outputResult("TCB info", tcbStatus, logger);
+        const auto tcbVerifyStatus = attestationLib->verifyTCBInfo(tcbInfo, tcbSigningCert, rootCaCrl, trustedRootCACert);
+        outputResult("TCB info", tcbVerifyStatus, logger);
+
+        const auto qeIdentityPresent = !options.qeIdentityFile.empty();
+        std::string qeIdentity = std::string{};
+        Status qeIdentityVerifyStatus = STATUS_OK;
+        if (qeIdentityPresent) {
+            qeIdentity = fileReader->readContent(options.qeIdentityFile);
+            qeIdentityVerifyStatus = attestationLib->verifyQeIdentity(qeIdentity, tcbSigningCert, rootCaCrl, trustedRootCACert);
+            outputResult("QeIdentity", qeIdentityVerifyStatus, logger);
+        }
 
         const auto quote = fileReader->readBinaryContent(options.quoteFile);
-        const auto quoteStatus = attestationLib->verifyQuote(quote, pckCert, intermediateCaCrl, tcbInfo);
-        outputResult("Quote", quoteStatus, logger);
-        return pckStatus == STATUS_OK && tcbStatus == STATUS_OK && quoteStatus == STATUS_OK;
+        const auto quoteVerifyStatus = attestationLib->verifyQuote(quote, pckCert, intermediateCaCrl, tcbInfo, qeIdentity);
+        outputResult("Quote", quoteVerifyStatus, logger);
+
+        return (pckVerifyStatus == STATUS_OK) && (tcbVerifyStatus == STATUS_OK) && (quoteVerifyStatus == STATUS_OK) && (qeIdentityVerifyStatus == STATUS_OK);
     }
     catch (const IFileReader::ReadFileException& e)
     {

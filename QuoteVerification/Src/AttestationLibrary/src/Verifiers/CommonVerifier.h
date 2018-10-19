@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Redistribution and use in source and binary forms, with or without modification,
 * are permitted provided that the following conditions are met:
@@ -33,16 +33,17 @@
 #include <CertVerification/CertificateChain.h>
 
 #include "PckParser/CertStore.h"
+#include "PckParser/CrlStore.h"
 
 namespace intel { namespace sgx { namespace qvl {
 
-class CommonVerifier final
+class CommonVerifier
 {
 public: 
     CommonVerifier() = default;
     CommonVerifier(const CommonVerifier&) = default;
     CommonVerifier(CommonVerifier&&) = default;
-    ~CommonVerifier() = default;
+    virtual ~CommonVerifier() = default;
 
     CommonVerifier& operator=(const CommonVerifier&) = default;
     CommonVerifier& operator=(CommonVerifier&&) = default;
@@ -54,7 +55,7 @@ public:
     * @param rootCa - root certificate to verify
     * @return Status code of the operation
     */
-    Status verifyRootCACert(const pckparser::CertStore &rootCa) const;
+    virtual Status verifyRootCACert(const pckparser::CertStore &rootCa) const;
     
     /**
     * Verify correctness of intermediate PCK certificate
@@ -64,11 +65,15 @@ public:
     * @param root - root certificate
     * @return Status code of the operation
     */ 
-    Status verifyIntermediate(const pckparser::CertStore &intermediate, const pckparser::CertStore &root) const;
+    virtual Status verifyIntermediate(const pckparser::CertStore &intermediate, const pckparser::CertStore &root) const;
 
-    bool checkStandardExtensions(const std::vector<pckparser::Extension> &extensions, const std::vector<int> &opensslExtensionNids) const;
-    bool checkSGXExtensions(const std::vector<pckparser::SgxExtension> &extensions, const std::vector<pckparser::SgxExtension::Type> &requiredSgxExtensions) const;
-    bool checkValueFormat(const pckparser::SgxExtension& ext) const;
+    virtual bool checkStandardExtensions(const std::vector<pckparser::Extension> &extensions, const std::vector<int> &opensslExtensionNids) const;
+    virtual bool checkSGXExtensions(const std::vector<pckparser::SgxExtension> &extensions, const std::vector<pckparser::SgxExtension::Type> &requiredSgxExtensions) const;
+    virtual bool checkValueFormat(const pckparser::SgxExtension& ext) const;
+
+    virtual bool checkSignature(const pckparser::CertStore &pckCert, const pckparser::CertStore &intermediate) const;
+    virtual bool checkSignature(const pckparser::CrlStore &crl, const pckparser::CertStore &crlIssuer) const;
+    virtual bool checkSha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const EC_KEY &publicKey) const;
 };
 
 }}} // namespace intel { namespace sgx { namespace qvl {
