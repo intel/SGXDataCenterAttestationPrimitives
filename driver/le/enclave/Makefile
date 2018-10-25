@@ -55,7 +55,7 @@
 KASAN_SANITIZE := n
 OBJECT_FILES_NON_STANDARD := y
 KCOV_INSTRUMENT := n
-KBUILD_CFLAGS := -Wall -Werror -static -nostdlib -nostartfiles -fPIC \
+KBUILD_CFLAGS := -Wall -Werror -static -nostdlib -nostartfiles -fPIE \
 		 -fno-stack-protector -mrdrnd  -I$(obj)/include -I$(obj)/../include \
 		 -I$(srctree)/arch/x86/include -I$(PWD)/include
 
