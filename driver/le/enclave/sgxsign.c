@@ -753,13 +753,13 @@ int main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-    res = false;
-    if (!strcmp("sign", argv[0])) 
-        res = sign(argc, argv, program);
-    else if (!strcmp("gendata", argv[0])) 
-        res = gendata(argc, argv, program);
-    else if (!strcmp("usesig", argv[0])) 
-        res = usesig(argc, argv, program);
+	res = false;
+	if (!strcmp("sign", argv[0]))
+		res = sign(argc, argv, program);
+	else if (!strcmp("gendata", argv[0]))
+		res = gendata(argc, argv, program);
+	else if (!strcmp("usesig", argv[0]))
+		res = usesig(argc, argv, program);
     
 	if (!res)
 		exit(1);
