@@ -83,5 +83,10 @@ $(obj)/sgx_le_proxy: $(SGX_LE_PROXY_OBJS)
 
 clean:
 	rm -vrf *.o .*.cmd $(clean-files)
+# "make clean" is cleaning also the LE including the signed pre-built sgx_le_blob.h and sgx_le_ss.h.
+# to avoid cleaning them we can use the flag below and call "make clean SKIP_LE_CLEAN=1" - in this 
+# case the LE will not be cleaned and won't be rebuilt. 
+ifneq ($(SKIP_LE_CLEAN),1)
 	$(Q)$(MAKE) -C enclave clean
+endif
 
