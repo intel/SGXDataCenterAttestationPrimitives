@@ -93,22 +93,21 @@ $ make clean
 ``` 
 
 ### Install the Intel(R) SGX Driver
-To install the Intel(R) SGX driver, enter the following command with root privilege:
+The Intel(R) SGX driver supports DKMS installation, to install the driver follow the following steps:  
+- Ensure that the DKMS package is installed, or install it using:
+  ``` $ sudo apt-get install dkms  ```
+- With root priviledge, copy the sources to ``/usr/src/sgx-0.10/``
+- Follow the following steps to add and install the driver into the DKMS tree:
 ```
-$ sudo mkdir -p "/lib/modules/"`uname -r`"/kernel/drivers/intel/sgx"    
-$ sudo cp intel_sgx.ko "/lib/modules/"`uname -r`"/kernel/drivers/intel/sgx"    
-$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"    
-$ echo 'SUBSYSTEM=="sgx",KERNEL=="sgx",RUN+="/bin/chmod 666 /dev/$name"' | sudo tee  /etc/udev/rules.d/10-sgx.rules
-$ sudo /sbin/depmod
+$ sudo dkms add -m sgx -v 0.10
+$ sudo dkms build -m sgx -v 0.10
+$ sudo dkms install -m sgx -v 0.10
 $ sudo /sbin/modprobe intel_sgx
 ```
-
 ### Uninstall the Intel(R) SGX Driver
 To uninstall the Intel(R) SGX driver, enter the following commands with root privilege: 
 ```
 $ sudo /sbin/modprobe -r intel_sgx
-$ sudo rm -rf "/lib/modules/"`uname -r`"/kernel/drivers/intel/sgx"
-$ sudo rm /etc/udev/rules.d/10-sgx.rules
-$ sudo /sbin/depmod
-$ sudo /bin/sed -i '/^intel_sgx$/d' /etc/modules
+$ sudo dkms remove -m sgx -v 0.10 --all
 ```
+You should also remove the sources from ``/usr/src/sgx-0.10/``
