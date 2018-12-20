@@ -35,7 +35,6 @@ set -e
 
 SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../../../"
-BUILD_DIR="${ROOT_DIR}/build/linux"
 LINUX_INSTALLER_DIR="${ROOT_DIR}/linux/installer"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 
@@ -44,17 +43,8 @@ INSTALL_PATH=${SCRIPT_DIR}/output
 # Cleanup
 rm -fr ${INSTALL_PATH}
 
-# Get the architecture of the build from generated binary
-get_arch()
-{
-    local a=$(readelf -h $(find ${BUILD_DIR} -name "*.so*" |head -n 1) | sed -n '2p' | awk '/:/{print $6}')
-    test $a = 02 && echo 'x64' || echo 'x86'
-}
-
-ARCH=$(get_arch)
-
 # Get the configuration for this package
-source ${SCRIPT_DIR}/installConfig.${ARCH}
+source ${SCRIPT_DIR}/installConfig
 
 # Fetch the gen_source script
 cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
@@ -62,7 +52,6 @@ cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 # Copy the files according to the BOM
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_base.txt
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_commoninc.txt --deliverydir=${SGX_SDK}/include  --cleanup=false
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_${ARCH}.txt --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball

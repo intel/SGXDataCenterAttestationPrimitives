@@ -2,4 +2,5 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/psw/quote_wrapper/common/inc/sgx_ql_lib_common.h	<installdir>/package/include/sgx_ql_lib_common.h	0	main	STP
 <deliverydir>/psw/quote_wrapper/ql/src/sgx_dcap_ql_wrapper.h	<installdir>/package/include/sgx_dcap_ql_wrapper.h	0	main	STP
 <deliverydir>/psw/pce_wrapper/inc/sgx_pce.h	<installdir>/package/include/sgx_pce.h	0	main	STP
+<deliverydir>/linux/installer/common/libsgx-dcap-ql-dev/installConfig	<installdir>/installConfig	0	main	STP
 <deliverydir>/linux/installer/common/libsgx-dcap-ql-dev/Makefile	<installdir>/Makefile	0	main	STP

@@ -1,5 +1,8 @@
-libsgx-dcap-ql-dbg (1.0) unstable; urgency=low
+libsgx-dcap-ql (1.0-1) unstable; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * 1.0 Gold release
+  * Provide the Quote Verification Library and sample project. Please note this library is only provided in source code in the Intel® SGX DCAP project repo
+  * Provide the Quote Generation Library and sample project
+  * Provide the sample project for Platform Provider Library
 
- -- TODO <TODO@TODO.com>  Tue, 09 May 2018 11:47:23 +0300
+ -- Xiangquan Liu <xiangquan.liu@intel.com>  Tue, 09 May 2018 11:47:23 +0300

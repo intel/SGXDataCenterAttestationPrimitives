@@ -38,3 +38,4 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/sgx_util.c	<installdir>/package/sgx_util.c	0	main	STP
 <deliverydir>/sgx_vma.c	<installdir>/package/sgx_vma.c	0	main	STP
 <deliverydir>/Makefile	<installdir>/package/Makefile	0	main	STP
+<deliverydir>/dkms.conf	<installdir>/package/dkms.conf	0	main	STP

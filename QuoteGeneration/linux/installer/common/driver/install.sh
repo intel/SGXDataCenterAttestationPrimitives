@@ -39,22 +39,24 @@ source ${SCRIPT_DIR}/installConfig
 DRIVER_DST_PATH=${SGX_PACKAGES_PATH}/${DRIVER_PKG_NAME}
 DRIVER_SOURCE_PATH="${DRIVER_DST_PATH}/package"
 
-trap "rm -fr $DRIVER_DST_PATH 2>/dev/null; /bin/sed -i '/^intel_sgx$/d' /etc/modules; exit 3" HUP INT QUIT TERM EXIT
-
 pushd ${DRIVER_SOURCE_PATH}
-make
 
-# Create the folder where the driver is installed
-INSTALL_PATH="/lib/modules/"`uname -r`"/kernel/drivers/intel/sgx"
-mkdir -p $INSTALL_PATH
+PACKAGE_NAME=`grep PACKAGE_NAME dkms.conf | cut -d= -f2 | sed -e 's/^"//' -e 's/"$//'`
+PACKAGE_VERSION=`grep PACKAGE_VERSION dkms.conf | cut -d= -f2 | sed -e 's/^"//' -e 's/"$//'`
+PACKAGE_PATH="/usr/src/${PACKAGE_NAME}-${PACKAGE_VERSION}"
 
-# Install the driver
-cp intel_sgx.ko $INSTALL_PATH
+trap "rm -fr $DRIVER_DST_PATH 2>/dev/null; rm -fr $PACKAGE_PATH 2>/dev/null; /bin/sed -i '/^intel_sgx$/d' /etc/modules; exit 3" HUP INT QUIT TERM EXIT
+
+rm -fr ${PACKAGE_PATH}
+mkdir -p ${PACKAGE_PATH}
+cp -r * ${PACKAGE_PATH}/
+
+/usr/sbin/dkms build ${PACKAGE_NAME}/${PACKAGE_VERSION}
+/usr/sbin/dkms install ${PACKAGE_NAME}/${PACKAGE_VERSION} --force
 
 # Automatically load the driver on startup
 cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules
 echo 'SUBSYSTEM=="sgx",KERNEL=="sgx",RUN+="/bin/chmod 666 /dev/$name"' | sudo tee /etc/udev/rules.d/10-sgx.rules
-/sbin/depmod
 
 #RHEL auto load
 if [ ! -d "/etc/sysconfig" ]; then
@@ -138,13 +140,11 @@ if [[ \$? != "0" ]]; then
   exit 1
 fi
 
-# Removing the .ko file
-rm -f $INSTALL_PATH/intel_sgx.ko
+/usr/sbin/dkms remove ${PACKAGE_NAME}/${PACKAGE_VERSION} --all
 
-sudo rm /etc/udev/rules.d/10-sgx.rules
+rm -fr ${PACKAGE_PATH}
 
-# Removing from depmod
-/sbin/depmod
+rm -f /etc/udev/rules.d/10-sgx.rules
 
 # Removing from /etc/modules
 /bin/sed -i '/^intel_sgx$/d' /etc/modules

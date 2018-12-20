@@ -40,14 +40,7 @@ include $(TOP_DIR)/buildenv.mk
 WORK_DIR := $(shell pwd)
 AENAME   := $(notdir $(WORK_DIR))
 SONAME  := $(AENAME).so
-ifdef DEBUG
-CONFIG   := config_debug.xml
-else
-CONFIG   := config.xml
-endif
 EDLFILE  := $(wildcard *.edl)
-
-LINUX_EPID := $(LINUX_EXTERNAL_DIR)/epid/lib/linux
 
 EXTERNAL_LIB_NO_CRYPTO = -lsgx_tstdc
 
@@ -57,14 +50,6 @@ EXTERNAL_LIB_NO_CRYPTO += -lsgx_tservice
 
 EXTERNAL_LIB   = $(EXTERNAL_LIB_NO_CRYPTO) -lsgx_tcrypto
 
-INCLUDE := -I$(LINUX_PSW_DIR)/ae/inc \
-           -I$(SGX_SDK)/include                         \
-           -I$(SGX_SDK)/include/tlibc                   \
-           -I$(COMMON_DIR)/inc/internal                \
-           -I$(LINUX_SDK_DIR)/selib                    \
-           -I$(LINUX_SDK_DIR)/trts
-
-KEYFILE   := $(LINUX_SDK_DIR)/sign_tool/sample_sec.pem
 CXXFLAGS  += $(ENCLAVE_CXXFLAGS)
 CFLAGS    += $(ENCLAVE_CFLAGS)
 
@@ -79,7 +64,6 @@ LDTFLAGS_NO_CRYPTO = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--
 LDTFLAGS += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
 LDTFLAGS_NO_CRYPTO += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
 
-DEFINES := -D__linux__
 
 vpath %.cpp $(COMMON_DIR)/src:$(LINUX_PSW_DIR)/ae/common
 

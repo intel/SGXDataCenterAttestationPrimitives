@@ -34,8 +34,6 @@
  * Description: Sample platform library
  */
 
-
-#include <linux/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,57 +64,20 @@ static sgx_cpu_svn_t m_pckcert_cpusvn =
 
 static sgx_isv_svn_t m_pckcert_pce_isvsvn = 0;
 
-int reversecert(char * chain, size_t len, char ** reversedbuf)
-{
-	/* split the content*/
-	const char* begCert = "-----BEGIN CERTIFICATE-----";
-        const char* endCert = "-----END CERTIFICATE-----";
-
-	assert(chain != NULL && len > 0 && reversedbuf != NULL);
-
-        const char* begPos_1 = strstr(chain, begCert);
-        const char* endPos_1 = strstr(chain, endCert);
-	if (!begPos_1 || !endPos_1){
-		return CERT_ERROR_FILE_ACCESS;
-	}
-
-	unsigned int certsize1 = endPos_1 + strlen(endCert) + 1 - begPos_1;
-
-	const char* newPos = endPos_1 + strlen(endCert);
-	const char* begPos_2 = strstr(newPos, begCert);
-        const char* endPos_2 = strstr(newPos, endCert);
-        unsigned int certsize2 = endPos_2 + strlen(endCert) + 1 - begPos_2;
-	if (!begPos_1 || !endPos_1){
-		return CERT_ERROR_FILE_ACCESS;
-	}
-
-	char *certbuf = (char*)malloc(len);
-	if (!certbuf){
-		return CERT_ERROR_UNEXPECTED;
-	}
-
-	memcpy(certbuf, begPos_2, certsize2);
-	memcpy(certbuf + certsize2, begPos_1, certsize1);
-
-	*reversedbuf = certbuf;
-
-	return CERT_SUCCESS;	
-}
-
 int getpckchain(char **certchain, size_t &size, sgx_cpu_svn_t * cpusvn, sgx_isv_svn_t *pce_isvsvn)
 {
 	size_t chainsize, certsize;
-	char * tmp = NULL, *chainbuf = NULL, *certbuf = NULL;
+	char *certbuf = NULL;
 	int ret = CERT_SUCCESS;
 
 	assert((certchain != NULL) && (cpusvn != NULL) &&(pce_isvsvn != NULL));
 
 	FILE *fleafcert = fopen(PCKCERT_FILE, "rb");
-	if (!fleafcert)
+	if (NULL == fleafcert)
 		return CERT_ERROR_FILE_ACCESS;
 
 	FILE *fchain = fopen(CERTCHAIN_FILE, "rb");
-	if (!fchain){
+	if (NULL == fchain) {
 		fclose(fleafcert);
 		return CERT_ERROR_FILE_ACCESS;
 	}
@@ -125,23 +86,16 @@ int getpckchain(char **certchain, size_t &size, sgx_cpu_svn_t * cpusvn, sgx_isv_
 	GET_FILE_SIZE(fchain, chainsize);
 
 	do
-	{
-		tmp = (char *)malloc(chainsize);
-		BREAK_IF(tmp == NULL, CERT_ERROR_UNEXPECTED);
-
-		BREAK_IF(fread(tmp, 1, chainsize, fchain) != chainsize, CERT_ERROR_FILE_ACCESS);
-
-		BREAK_IF(reversecert(tmp, chainsize, &chainbuf) != CERT_SUCCESS, CERT_ERROR_UNEXPECTED);
-
+	{		
 		size = chainsize + certsize;
 
 		certbuf = (char *)malloc(size);
 		BREAK_IF(certbuf == NULL, CERT_ERROR_UNEXPECTED);
 
 		BREAK_IF(fread(certbuf, 1, certsize, fleafcert) != certsize, CERT_ERROR_FILE_ACCESS);
-		
-		memcpy(certbuf + certsize, chainbuf, chainsize);
-		
+
+		BREAK_IF(fread(certbuf + certsize, 1, chainsize, fchain) != chainsize, CERT_ERROR_FILE_ACCESS);
+				
 		*certchain = certbuf;
 
 		memcpy(cpusvn, &m_pckcert_cpusvn, sizeof(sgx_cpu_svn_t));
@@ -150,8 +104,6 @@ int getpckchain(char **certchain, size_t &size, sgx_cpu_svn_t * cpusvn, sgx_isv_
 
 	fclose(fleafcert);
 	fclose(fchain);
-	SAFE_FREE(tmp);
-	SAFE_FREE(chainbuf);
-
+	
 	return ret;
 }

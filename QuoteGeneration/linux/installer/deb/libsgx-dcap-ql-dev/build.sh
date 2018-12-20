@@ -39,7 +39,7 @@ LINUX_INSTALLER_DIR="${ROOT_DIR}/linux/installer"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 LINUX_INSTALLER_COMMON_NGA_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-dcap-ql-dev"
 
-source ${LINUX_INSTALLER_COMMON_NGA_DIR}/installConfig.x64
+source ${LINUX_INSTALLER_COMMON_NGA_DIR}/installConfig
 DEB_FOLDER=${NGA_PKG_NAME}-${NGA_VERSION}
 
 SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
@@ -91,7 +91,7 @@ update_changelog_version() {
     INS_VERSION=$(echo $(dpkg-parsechangelog |grep "Version" | cut -d: -f2))
     DEB_VERSION=$(echo $INS_VERSION | cut -d- -f2)
 
-    sed -i "s/${INS_VERSION}/${SGX_VERSION}-${DEB_VERSION}/" debian/changelog
+    sed -i "s/${INS_VERSION}/${SGX_VERSION}-$(lsb_release -cs)${DEB_VERSION}/" debian/changelog
 
     popd
 }

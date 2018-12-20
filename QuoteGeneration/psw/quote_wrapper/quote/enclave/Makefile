@@ -41,6 +41,7 @@ TCRYPTO_LIB_NAME := sgx_tcrypto
 
 INCLUDE := -I$(SGX_SDK)/include                        \
            -I$(SGX_SDK)/include/tlibc                  \
+           -I$(SGX_SDK)/include/libcxx                 \
            -I$(SGX_SDK)/include/ipp                    \
            -I$(COMMON_DIR)/inc                         \
            -I$(COMMON_DIR)/inc/internal                \
@@ -48,11 +49,8 @@ INCLUDE := -I$(SGX_SDK)/include                        \
            -I../../common/inc                             \
            -I../../../pce_wrapper/inc                     \
            -I..
-ifeq ($(USE_SGXSSL), 1)
-	INCLUDE += -I$(OPENSSL_PACKAGE)/include
-endif
 
-EXTERNAL_LIB = $(EXTERNAL_LIB_NO_CRYPTO) -lsgx_tstdcxx -l$(TCRYPTO_LIB_NAME)
+EXTERNAL_LIB = $(EXTERNAL_LIB_NO_CRYPTO) -lsgx_tcxx -l$(TCRYPTO_LIB_NAME)
 
 SRC := $(wildcard *.cpp)
 

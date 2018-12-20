@@ -39,12 +39,29 @@ if test $(id -u) -ne 0; then
     exit 4
 fi
 
+# Check if dkms is installed.
+dkms --version &> /dev/null || 
+{
+    echo "Package dkms is required. Try sudo apt-get install dkms."
+    exit 4
+}
+
+# Check if the kernel module is in use.
+/sbin/modinfo intel_sgx &> /dev/null &&
+{
+    /sbin/modprobe -r intel_sgx ||
+    {
+        echo "Can't be reinstalled because the kernel module is in use."
+        exit 4
+    }
+}
+
 PATH=/usr/bin:/bin
 umask 022
 
 DRIVERPKG=`mktemp -t sgx-driver-pkg.XXXXXX`
 DRIVER_TEMP_FOLDER=`mktemp -d sgx-driver-XXXXXX -p /tmp`
-trap "rm -fr $DRIVERPKG $DRIVER_TEMP_FOLDER 2>/dev/null; /bin/sed -i '/^isgx$/d' /etc/modules; exit 3" HUP INT QUIT TERM EXIT
+trap "rm -fr $DRIVERPKG $DRIVER_TEMP_FOLDER 2>/dev/null; /bin/sed -i '/^intel_sgx$/d' /etc/modules; exit 3" HUP INT QUIT TERM EXIT
 
 # The number of lines in this script (plus 1).  Using this number to
 # calculate the start address of the payload.
@@ -78,6 +95,11 @@ if test $retcode -ne 0; then
 fi
 
 pushd $DRIVER_TEMP_FOLDER
+
+if [ ! -f package/dkms.conf ]; then
+    echo "File dkms.conf does not exist."
+    exit 1
+fi
 
 source scripts/installConfig
 make install

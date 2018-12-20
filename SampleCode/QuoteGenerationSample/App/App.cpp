@@ -39,27 +39,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sgx_report.h"
+#include "sgx_urts.h"
 #include "sgx_dcap_ql_wrapper.h"
 #include "sgx_pce.h"
 
 #include "Enclave_u.h"
 
 #define ENCLAVE_PATH "enclave.signed.so"
-#define SGX_DEBUG_FLAG 1
-
-typedef uint8_t sgx_launch_token_t[1024];
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-sgx_status_t SGXAPI sgx_create_enclave(const char *file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr);
-
-sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
-#ifdef __cplusplus
-}
-#endif
-
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
