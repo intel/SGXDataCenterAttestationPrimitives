@@ -30,54 +30,179 @@
 #
 
 ######## SGX SDK Settings ########
+DEBUG ?= 0
 
-ifeq ($(SGX_SDK),)
-$(warning "import SGX SDK environment variable")
-export SGX_SDK=/opt/intel/sgxsdk
-endif
+SGX_SDK ?= /opt/intel/sgxsdk
+SGX_ARCH ?= x64
 
-CFLAGS = -Wall -Wfatal-errors -fPIC
-CXXFLAGS = -Wall -Wfatal-errors -fPIC
+SGX_COMMON_CFLAGS := -m64
+SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 
-SGX_SDK_PATH ?= $(SGX_SDK)
 
-ifeq ($(DEBUG), y)
-CFLAGS += -g
-CXXFLAGS += -g
+ifeq ($(DEBUG), 1)
+        SGX_COMMON_CFLAGS += -O0 -g
 else
+        SGX_COMMON_CFLAGS += -O2
 endif
 
 BIN_DIR := bin
-TOPDIR = $(CURDIR)
 
-ifneq ($(BIN_DIR),)
-$(shell mkdir -p $(BIN_DIR))
+######## App Settings ########
+
+DCAP_Library_Name := sgx_dcap_ql
+Urts_Library_Name := sgx_urts
+
+App_Cpp_Files :=  QuoteGen/QuoteGen.cpp
+
+App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes -I$(SGX_SDK)/include
+
+# Two configuration modes - Debug, Release
+#   Debug - Macro DEBUG enabled.
+#   Release - Macro NDEBUG enabled.
+ifeq ($(DEBUG), 1)
+        App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+else
+        App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-CP = cp
+App_Cpp_Flags := $(App_C_Flags) -std=c++11
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread 
 
-export CFLAGS
-export CXXFLAGS
-export TOPDIR
-export BIN_DIR
-export SGX_SDK_PATH
-export CP
 
-SUB_DIR:=QuoteGenerationSample platform_lib
+App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 
-App_Name := quotegen
+App_Name := QuoteGen/quotegen
 
-Quote_Provider := libdcap_quoteprov.so
+########## Quote Provider Settings ##########
+QuoteProvider_Cpp_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes -I$(SGX_SDK)/include
 
-.PHONY: $(SUB_DIR) clean 
+QuoteProvider_Cpp_Files := QuoteProvider/certchain.cpp QuoteProvider/platform.cpp
+QuoteProvider_Cpp_Objects:= $(QuoteProvider_Cpp_Files:.cpp=.o)
+QuoteProvider_Link_Flags := -shared -Wl,--version-script=QuoteProvider/QuoteProvider.lds -Wl,--gc-sections
 
-$(SUB_DIR):
-	@for dir in $(SUB_DIR); do \
-		$(MAKE) -C $$dir; \
-	done 
-	$(CP) cert/*.pem $(BIN_DIR)/
+QuoteProvider_Lib := QuoteProvider/libdcap_quoteprov.so
+
+######## Enclave Settings ########
+Trts_Library_Name := sgx_trts
+Service_Library_Name := sgx_tservice
+Crypto_Library_Name := sgx_tcrypto
+
+Enclave_Cpp_Files := Enclave/Enclave.cpp
+Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
+
+CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
+ifeq ($(CC_BELOW_4_9), 1)
+        Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections -fstack-protector
+else
+        Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections -fstack-protector-strong
+endif
+Enclave_C_Flags += $(Enclave_Include_Paths)
+Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++
+
+# To generate a proper enclave, it is recommended to follow below guideline to link the trusted libraries:
+#    1. Link sgx_trts with the `--whole-archive' and `--no-whole-archive' options,
+#       so that the whole content of trts is included in the enclave.
+#    2. For other libraries, you just need to pull the required symbols.
+#       Use `--start-group' and `--end-group' to link these libraries.
+# Do NOT move the libraries linked with `--start-group' and `--end-group' within `--whole-archive' and `--no-whole-archive' options.
+# Otherwise, you may get some undesirable errors.
+Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+        -Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
+        -Wl,--start-group -lsgx_tstdc -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
+        -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
+        -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
+        -Wl,--defsym,__ImageBase=0 -Wl,--gc-sections   \
+        -Wl,-z,relro,-z,now,-z,noexecstack             \
+        -Wl,--version-script=Enclave/Enclave.lds
+
+Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
+
+Enclave_Name := Enclave/enclave.so
+Signed_Enclave_Name := Enclave/enclave.signed.so
+Enclave_Config_File := Enclave/Enclave.config.xml
+
+ifeq ($(DEBUG), 1)
+        Build_Mode = HW_DEBUG
+else
+        Build_Mode = HW_RELEASE
+endif
+
+
+.PHONY: all target
+
+all: .config_$(Build_Mode)_$(SGX_ARCH)
+	$(MAKE) target
+
+target:	$(App_Name) $(Signed_Enclave_Name) $(QuoteProvider_Lib) | $(BIN_DIR)
+	@cp -f $(App_Name)  		$|
+	@cp -f $(Signed_Enclave_Name) 	$|
+	@cp -f $(QuoteProvider_Lib)   	$|
+	@cp -f cert/*.pem		$|
+	@echo "The project has been built in $(Build_Mode) mode."
+	
+$(BIN_DIR):
+	@mkdir -p $@
+
+######## App Objects ########
+QuoteGen/Enclave_u.c:
+	cd QuoteGen && $(SGX_EDGER8R) --untrusted ../Enclave/Enclave.edl
+	@echo "GEN  =>  $@"
+
+QuoteGen/Enclave_u.o: QuoteGen/Enclave_u.c
+	@$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(App_Cpp_Objects): QuoteGen/Enclave_u.c
+QuoteGen/%.o: QuoteGen/%.cpp
+	@$(CXX) $(App_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
+
+$(App_Name): QuoteGen/Enclave_u.o $(App_Cpp_Objects)
+	$(CXX) $^ -o $@ $(App_Link_Flags)
+	@echo "LINK =>  $@"
+
+.config_$(Build_Mode)_$(SGX_ARCH):
+	@rm -rf $(BIN_DIR) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(QuoteProvider_Lib)
+	@rm -f $(App_Cpp_Objects) $(Enclave_Cpp_Objects) $(QuoteProvider_Cpp_Objects) QuoteGen/Enclave_u.* Enclave/Enclave_t.* .config_*
+	@touch .config_$(Build_Mode)_$(SGX_ARCH)
+
+####### Quote Provider Objects ########
+$(QuoteProvider_Cpp_Objects): QuoteProvider/%.o: QuoteProvider/%.cpp
+	$(CXX) $(QuoteProvider_Cpp_Flags) -c $< -o $@
+	
+$(QuoteProvider_Lib): $(QuoteProvider_Cpp_Objects)
+	$(CXX) $^ $(QuoteProvider_Link_Flags) -o $@
+
+######## Enclave Objects ########
+Enclave/Enclave_t.c:
+	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl
+	@echo "GEN  =>  $@"
+
+Enclave/Enclave_t.o: Enclave/Enclave_t.c
+	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(Enclave_Cpp_Objects): Enclave/Enclave_t.c
+Enclave/%.o: Enclave/%.cpp
+	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
+
+$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
+	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+	@echo "LINK =>  $@"
+
+$(Signed_Enclave_Name): $(Enclave_Name)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@rm -f $(Enclave_Name)
+	@echo "SIGN =>  $@"
+
+
+
+.PHONY: clean
+
 clean:
-	@rm -rf $(BIN_DIR)
-	@for dir in $(SUB_DIR); do \
-		$(MAKE) -C $$dir clean; \
-	done
+	@rm -rf $(BIN_DIR) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(QuoteProvider_Lib)
+	@rm -f $(App_Cpp_Objects) $(Enclave_Cpp_Objects) $(QuoteProvider_Cpp_Objects) QuoteGen/Enclave_u.* Enclave/Enclave_t.* .config_*
+

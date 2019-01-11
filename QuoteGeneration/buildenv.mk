@@ -47,9 +47,6 @@ my-dir = $(realpath $(call parent-dir,$(lastword $(MAKEFILE_LIST))))
 
 ROOT_DIR              := $(call my-dir)
 COMMON_DIR            := $(ROOT_DIR)/common
-LINUX_EXTERNAL_DIR    := $(ROOT_DIR)/external
-LINUX_PSW_DIR         := $(ROOT_DIR)/psw
-LINUX_SDK_DIR         := $(ROOT_DIR)/sdk
 
 SGX_VER:= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
 SGX_MAJOR_VER:= $(shell echo $(SGX_VER) |awk -F. '{print $$1}')

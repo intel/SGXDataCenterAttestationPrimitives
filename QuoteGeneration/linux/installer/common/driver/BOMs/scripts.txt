@@ -1,4 +1,0 @@
-DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/linux/installer/common/driver/Makefile	<installdir>/Makefile	0	main	STP
-<deliverydir>/linux/installer/common/driver/install.sh	<installdir>/scripts/install.sh	0	main	STP
-<deliverydir>/linux/installer/common/driver/installConfig	<installdir>/scripts/installConfig	0	main	STP

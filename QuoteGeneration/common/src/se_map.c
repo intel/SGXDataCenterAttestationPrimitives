@@ -30,11 +30,58 @@
  */
 
 
-
 #include "se_map.h"
 #include "se_trace.h"
 #include <stdlib.h>
 
+#if defined(_MSC_VER)
+
+map_handle_t* map_file(se_file_handle_t file, uint32_t *size)
+{
+    map_handle_t* mh = (map_handle_t *)calloc(1, sizeof(map_handle_t));
+    if (mh == NULL || size == NULL)
+        return NULL;
+
+    // Using GetFileSizeEx instead of GetFileSize.
+    // We do NOT support mapping files larger than max uint32_t with this API
+    LARGE_INTEGER file_size; file_size.QuadPart = 0;
+    if (GetFileSizeEx(file, &file_size) && file_size.HighPart == 0)
+    {
+        *size = file_size.LowPart;
+    }
+    else
+    {
+        return NULL;
+    }
+
+    mh->maph = CreateFileMappingW(file, NULL, PAGE_WRITECOPY | SEC_COMMIT, 0, 0, NULL);
+    if (NULL == mh->maph)
+    {
+        SE_TRACE(SE_TRACE_ERROR, "Couldn't open file mapping with CreateFileMapping()\n");
+        free(mh);
+        return NULL;
+    }
+
+    mh->base_addr = (uint8_t*)MapViewOfFile(mh->maph,FILE_MAP_COPY,0,0,0);
+    if (NULL == mh->base_addr)
+    {
+        CloseHandle(mh->maph);
+        free(mh);
+        SE_TRACE(SE_TRACE_ERROR, "Couldn't map view of file with MapViewOfFile(), error code %x\n", GetLastError());
+        return NULL;
+    }
+
+    return mh;
+}
+
+void unmap_file(map_handle_t* mh)
+{
+    UnmapViewOfFile(mh->base_addr);
+    CloseHandle(mh->maph);
+    free(mh);
+}
+
+#elif defined(__GNUC__)
 map_handle_t* map_file(se_file_handle_t fd, uint32_t *size)
 {
     struct stat st;
@@ -66,4 +113,5 @@ void unmap_file(map_handle_t* mh)
     free(mh);
 }
 
+#endif
 

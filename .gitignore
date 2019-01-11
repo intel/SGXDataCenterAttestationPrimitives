@@ -1,12 +1,17 @@
 #object file
 *.o
+*.obj
 
-#library
+#library and symbol file
 *.a
+*.lib
+*.pdb
 
-#share object
+#share object and dynamic-link library
 *.so
 *.so.*
+*.dll
+*.dll.*
 
 #generated proxy
 *_u.c
@@ -15,4 +20,6 @@
 *_t.h
 
 #output files
-/build/
+/QuoteGeneration/build/
+**/Debug/
+**/Release/

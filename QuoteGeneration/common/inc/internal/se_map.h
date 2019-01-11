@@ -29,16 +29,31 @@
  *
  */
 
+
+#pragma once
+
 #ifndef _SE_MAP_H_
 #define _SE_MAP_H_
 
+#if defined(_MSC_VER)
+#include <windows.h>
+#elif defined(__GNUC__)
 #include <unistd.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
+#endif
 
 #include "se_types.h"
 
+#if defined(_MSC_VER)
+typedef HANDLE se_file_handle_t;
+
+typedef struct {
+    uint8_t* base_addr; // pointer to the mapped area
+    HANDLE   maph;      // the handle to the file mapping object
+} map_handle_t;
+#elif defined(__GNUC__)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -46,9 +61,10 @@
 typedef int   se_file_handle_t;
 
 typedef struct {
-    uint8_t* base_addr; /* pointer to the mapped area */
-    size_t   length;    /* the length of the mapping */
+    uint8_t* base_addr; // pointer to the mapped area
+    size_t   length;    // the length of the mapping
 } map_handle_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {

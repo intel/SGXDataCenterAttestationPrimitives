@@ -76,12 +76,6 @@ App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 
 App_Name := app
 
-
-.PHONY: all run
-
-all: $(App_Name)
-
-
 ######## Enclave Settings ########
 Trts_Library_Name := sgx_trts
 Service_Library_Name := sgx_tservice
@@ -121,7 +115,7 @@ ENCLAVE_LIBRARY_PATH := Enclave/
 
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
-Enclave_Config_File := Enclave/config.xml
+Enclave_Config_File := Enclave/Enclave.config.xml
 
 ifeq ($(DEBUG), 1)
         Build_Mode = HW_DEBUG
@@ -130,13 +124,15 @@ else
 endif
 
 
-.PHONY: all run
+.PHONY: all target run
 
+all: .config_$(Build_Mode)_$(SGX_ARCH)
+	$(MAKE) target
+
+target: $(App_Name) $(Signed_Enclave_Name)
 ifeq ($(Build_Mode), HW_RELEASE)
-all: .config_$(Build_Mode)_$(SGX_ARCH) $(App_Name) $(Signed_Enclave_Name)
 	@echo "The project has been built in release hardware mode."
-else 
-all: .config_$(Build_Mode)_$(SGX_ARCH) $(App_Name) $(Signed_Enclave_Name)
+else
 	@echo "The project has been built in debug hardware mode."
 endif
 
@@ -147,6 +143,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 endif
 
 
+.config_$(Build_Mode)_$(SGX_ARCH):
+	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
+	@touch .config_$(Build_Mode)_$(SGX_ARCH)
 
 ######## App Objects ########
 App/Enclave_u.c:
@@ -157,16 +156,15 @@ App/Enclave_u.o: App/Enclave_u.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+$(App_Cpp_Objects): App/Enclave_u.c
 App/%.o: App/%.cpp
 	@$(CXX) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(App_Link_Flags)
+	$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-.config_$(Build_Mode)_$(SGX_ARCH):
-	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 
 
 ######## Enclave Objects ########
@@ -178,6 +176,7 @@ Enclave/Enclave_t.o: Enclave/Enclave_t.c
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+$(Enclave_Cpp_Objects): Enclave/Enclave_t.c
 Enclave/%.o: Enclave/%.cpp
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
@@ -194,8 +193,7 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 
 
 .PHONY: clean
-
 clean:
-	@rm -f  $(App_Name)  App/*.o 
-	@rm -f  $(Signed_Enclave_Name) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
+	@rm -f  $(App_Name)  App/*.o App/Enclave_u.* .config_*  
+	@rm -f  $(Enclave_Name) $(Signed_Enclave_Name) $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 

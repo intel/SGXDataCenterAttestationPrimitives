@@ -1,2 +1,0 @@
-DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/linux/installer/common/libsgx-dcap-ql-dbg/installConfig.x86	<installdir>/scripts/installConfig	0	main	STP

@@ -2,7 +2,7 @@
 
 ## Issues
 
-GitHub Issues tracks SGX Data Center Attestation Primitives design and development issues, bugs, and feature requests.
+GitHub Issues tracks Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) design and development issues, bugs, and feature requests.
 For usage, installation, or other requests for help, please use the [01.org](https://01.org/intel-software-guard-extensions/forum/forum) forum instead. 
 
 When reporting a bug, please provide the following information, where applicable:

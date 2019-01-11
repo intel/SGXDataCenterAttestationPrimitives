@@ -41,11 +41,11 @@
 
 uint32_t enclave_create_report(const sgx_target_info_t* p_qe3_target, sgx_report_t* p_report)
 {
-	sgx_report_data_t report_data = { 0 };
+    sgx_report_data_t report_data = { 0 };
 
-	// Generate the report for the app_enclave
-        sgx_status_t  sgx_error = sgx_create_report(p_qe3_target, &report_data, p_report);
+    // Generate the report for the app_enclave
+    sgx_status_t  sgx_error = sgx_create_report(p_qe3_target, &report_data, p_report);
 
-	return sgx_error;
+    return sgx_error;
 }
 

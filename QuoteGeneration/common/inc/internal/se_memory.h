@@ -29,9 +29,17 @@
  *
  */
 
+/*
+*	This file is to wrapper memory related API that is different from windows to linux.
+*/
+#pragma once
+
 #ifndef _SE_MEMORY_H_
 #define _SE_MEMORY_H_
 
+#if defined(_MSC_VER)
+#include <windows.h>
+#elif defined(__GNUC__)
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE64_SOURCE 1
 #include <unistd.h>
@@ -58,6 +66,7 @@
 #else
 #define MEM_DECOMMIT 0x4000
 #endif
+#endif //__MSC_VER
 
 #include "se_types.h"
 #include "arch.h"
@@ -106,17 +115,26 @@ Changes the protection on a region of committed pages in the virtual address spa
 @return value:	If the function succeeds, the return value is nonzero.If the function fails, the return value is zero.
 */
 
-#define SGX_PROT_NONE PROT_NONE
+#if defined(_MSC_VER)
+#  define SGX_PROT_NONE PAGE_NOACCESS
+#else
+#  define SGX_PROT_NONE PROT_NONE
+#endif
 
 int se_virtual_protect(void* address, size_t size, uint32_t prot);
 
 
+#if defined(_MSC_VER)
+typedef HANDLE se_proc_t;
+
+#elif defined(__GNUC__)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
 typedef pid_t se_proc_t;
 
+#endif
 /*
 @return value: on success, return TRUE else return FALSE 
 */

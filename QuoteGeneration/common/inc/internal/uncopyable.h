@@ -29,17 +29,19 @@
  *
  */
 
+#pragma once
+
 #ifndef _UNCOPYABLE_H_
 #define _UNCOPYABLE_H_
 
-/* Similiar to boost::noncopyable */
+// Similiar to boost::noncopyable
 class Uncopyable {
 protected:
     Uncopyable() {}
     ~Uncopyable() {}
 
 private:
-    /* Disable copying */
+    // Disable copying
     Uncopyable(const Uncopyable&);
     Uncopyable& operator=(const Uncopyable&);
 };

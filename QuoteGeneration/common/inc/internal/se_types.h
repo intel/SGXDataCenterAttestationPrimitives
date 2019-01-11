@@ -29,9 +29,11 @@
  *
  */
 
+
 /*
  *	This file is to define some types that is platform independent.
 */
+#pragma once
 
 #ifndef _SE_TYPE_H_
 #define _SE_TYPE_H_
@@ -50,6 +52,32 @@ typedef	UINT64	uint64_t;
 
 #else
 
+#if defined(_MSC_VER)
+
+#if _MSC_VER<=1400
+#include <windows.h>
+typedef	INT8	int8_t;
+typedef	UINT8	uint8_t;
+typedef	INT16	int16_t;
+typedef	UINT16	uint16_t;
+typedef	INT32	int32_t;
+typedef	UINT32	uint32_t;
+typedef	INT64	int64_t;
+typedef	UINT64	uint64_t;
+#else
+#include <stdint.h>
+#endif
+
+
+#ifndef TRUE
+#define	TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#elif defined(__GNUC__)
 #include <stdint.h>
 #include <unistd.h>
 
@@ -62,32 +90,33 @@ typedef	UINT64	uint64_t;
 #endif
 
 #endif
+#endif
 
 #if defined(SE_64)
 
-#define	PADDED_POINTER(t, p)        t* p
-#define	PADDED_DWORD(d)             uint64_t d
-#define	PADDED_LONG(l)              int64_t l
-#define REG(name)                   r##name
+#define	PADDED_POINTER(t, p)			t* p
+#define	PADDED_DWORD(d)					uint64_t d
+#define	PADDED_LONG(l)					int64_t l
+#define REG(name)						r##name
 #ifdef SE_SIM_EXCEPTION
-#define REG_ALIAS(name)             R##name
+#define REG_ALIAS(name)					R##name
 #endif
-#define REGISTER(name)              uint64_t REG(name)
+#define REGISTER(name)                  uint64_t REG(name)
 
-#else /* !defined(SE_64) */
+#else // !defined(SE_64)
 
-#define	PADDED_POINTER(t, p) t* p;  void*    ___##p##_pad_to64_bit
-#define	PADDED_DWORD(d)             uint32_t d; uint32_t ___##d##_pad_to64_bit
-#define	PADDED_LONG(l)              int32_t l;  int32_t  ___##l##_pad_to64_bit
+#define	PADDED_POINTER(t, p) t* p;       void*    ___##p##_pad_to64_bit
+#define	PADDED_DWORD(d)      uint32_t d; uint32_t ___##d##_pad_to64_bit
+#define	PADDED_LONG(l)       int32_t l;  int32_t  ___##l##_pad_to64_bit
 
-#define REG(name)                   e##name
+#define REG(name)						e##name
 
 #ifdef SE_SIM_EXCEPTION
-#define REG_ALIAS(name)             E##name
+#define REG_ALIAS(name)					E##name
 #endif
 
-#define REGISTER(name)              uint32_t REG(name); uint32_t ___##e##name##_pad_to64_bit
+#define REGISTER(name) uint32_t REG(name); uint32_t ___##e##name##_pad_to64_bit
 
-#endif /* !defined(SE_64) */
+#endif // !defined(SE_64)
 
 #endif

@@ -38,14 +38,25 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(_MSC_VER)
+#include <Windows.h>
+#include <tchar.h>
+#endif
 
 #include "sgx_urts.h"
+#include "sgx_report.h"
 #include "sgx_dcap_ql_wrapper.h"
 #include "sgx_pce.h"
+#include "sgx_error.h"
 
 #include "Enclave_u.h"
 
+#if defined(_MSC_VER)
+#define ENCLAVE_PATH _T("enclave.signed.dll")
+#else
 #define ENCLAVE_PATH "enclave.signed.so"
+#endif
+
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -55,10 +66,7 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
         sgx_enclave_id_t eid = 0;
         int launch_token_updated = 0;
         sgx_launch_token_t launch_token = { 0 };
-       
 
-        // Get the app enclave report targeting the QE3
-        memset(&launch_token, 0, sizeof(sgx_launch_token_t));
         sgx_status = sgx_create_enclave(ENCLAVE_PATH,
                 SGX_DEBUG_FLAG,
                 &launch_token,
@@ -88,85 +96,82 @@ CLEANUP:
 }
 int main(int argc, char* argv[])
 {
-	uint32_t ret = 0;
-	quote3_error_t qe3_ret = SGX_QL_SUCCESS;
-	uint32_t quote_size = 0;
-	uint8_t* p_quote_buffer = NULL;
-	sgx_target_info_t qe_target_info; 
-	sgx_report_t app_report;
+    (void)(argc);
+    (void)(argv);
 
-        printf("This step is optional: the default enclave load policy is persistent: \n");
-        printf("set the enclave load policy as persistent:");
-	qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
+    int ret = 0;
+    quote3_error_t qe3_ret = SGX_QL_SUCCESS;
+    uint32_t quote_size = 0;
+    uint8_t* p_quote_buffer = NULL;
+    sgx_target_info_t qe_target_info; 
+    sgx_report_t app_report;
+
+    printf("This step is optional: the default enclave load policy is persistent: \n");
+    printf("set the enclave load policy as persistent:");
+    qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
         if(SGX_QL_SUCCESS != qe3_ret) {
                 printf("Error in set enclave load policy: 0x%04x\n", qe3_ret);
-		ret = -1;
-		goto CLEANUP;
-        }
-        printf("succeed!");
+        ret = -1;
+        goto CLEANUP;
+    }
+    printf("succeed!");
         
-	printf("\nStep1: Call sgx_qe_get_target_info:");
-	qe3_ret = sgx_qe_get_target_info(&qe_target_info);
-	if (SGX_QL_SUCCESS != qe3_ret) {
-		printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
+    printf("\nStep1: Call sgx_qe_get_target_info:");
+    qe3_ret = sgx_qe_get_target_info(&qe_target_info);
+    if (SGX_QL_SUCCESS != qe3_ret) {
+        printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
                 ret = -1;
-		goto CLEANUP;
-	}
-        printf("succeed!");
-	printf("\nStep2: Call create_app_report:");
-	if(true != create_app_enclave_report(qe_target_info, &app_report)) {
-		printf("\nCall to create_app_report() failed\n");
-		ret = -1;
-		goto CLEANUP;
-	}
+        goto CLEANUP;
+    }
+    printf("succeed!");
+    printf("\nStep2: Call create_app_report:");
+    if(true != create_app_enclave_report(qe_target_info, &app_report)) {
+        printf("\nCall to create_app_report() failed\n");
+        ret = -1;
+        goto CLEANUP;
+    }
 
-        printf("succeed!");
-	printf("\nStep3: Call sgx_qe_get_quote_size:");
-	qe3_ret = sgx_qe_get_quote_size(&quote_size);
-	if (SGX_QL_SUCCESS != qe3_ret) {
-		printf("Error in sgx_qe_get_quote_size. 0x%04x\n", qe3_ret);
-		ret = -1;
-		goto CLEANUP;
-	}
+    printf("succeed!");
+    printf("\nStep3: Call sgx_qe_get_quote_size:");
+    qe3_ret = sgx_qe_get_quote_size(&quote_size);
+    if (SGX_QL_SUCCESS != qe3_ret) {
+        printf("Error in sgx_qe_get_quote_size. 0x%04x\n", qe3_ret);
+        ret = -1;
+        goto CLEANUP;
+    }
 
-        printf("succeed!");
-	p_quote_buffer = (uint8_t*)malloc(quote_size);
-	if (NULL == p_quote_buffer) {
-		printf("Couldn't allocate quote_buffer\n");
-		ret = -1;
-		goto CLEANUP;
-	}
-	memset(p_quote_buffer, 0, quote_size);
+    printf("succeed!");
+    p_quote_buffer = (uint8_t*)malloc(quote_size);
+    if (NULL == p_quote_buffer) {
+        printf("Couldn't allocate quote_buffer\n");
+        ret = -1;
+        goto CLEANUP;
+    }
+    memset(p_quote_buffer, 0, quote_size);
 
-	// Get the Quote
-	printf("\nStep4: Call sgx_qe_get_quote:");
-	qe3_ret = sgx_qe_get_quote(&app_report,
-		quote_size,
-		p_quote_buffer);
-	if (SGX_QL_SUCCESS != qe3_ret) {
-		printf( "Error in sgx_qe_get_quote. 0x%04x\n", qe3_ret);
-		ret = -1;
-		goto CLEANUP;
-	}
-        printf("succeed!");
+    // Get the Quote
+    printf("\nStep4: Call sgx_qe_get_quote:");
+    qe3_ret = sgx_qe_get_quote(&app_report,
+        quote_size,
+        p_quote_buffer);
+    if (SGX_QL_SUCCESS != qe3_ret) {
+        printf( "Error in sgx_qe_get_quote. 0x%04x\n", qe3_ret);
+        ret = -1;
+        goto CLEANUP;
+    }
+    printf("succeed!");
         
-        printf("\n Clean up the enclave load policy:");
-        qe3_ret = sgx_qe_cleanup_by_policy();
-        if(SGX_QL_SUCCESS != qe3_ret) {
-                printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
-		ret = -1;
-		goto CLEANUP;
-        }
-        printf("succeed!\n");
+    printf("\n Clean up the enclave load policy:");
+    qe3_ret = sgx_qe_cleanup_by_policy();
+    if(SGX_QL_SUCCESS != qe3_ret) {
+        printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
+        ret = -1;
+        goto CLEANUP;
+    }
+    printf("succeed!\n");
 CLEANUP:
-	if (NULL != p_quote_buffer) {
-		free(p_quote_buffer);
-	}
-	return ret;
+    if (NULL != p_quote_buffer) {
+        free(p_quote_buffer);
+    }
+    return ret;
 }
-
-
-
-
-
-

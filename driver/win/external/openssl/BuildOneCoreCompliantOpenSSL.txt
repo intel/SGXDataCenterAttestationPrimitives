@@ -1,0 +1,19 @@
+Build script:build-openssl-1.0.2p.bat
+Patchs:
+openssl-1.0.2p-sgx.patch
+openssl-1.0.2p.patch
+
+Required softwares:
+https://sourceforge.net/projects/dos2unix/
+http://unxutils.sourceforge.net/
+visual studio 2015
+cygwin
+7-Zip
+ActivePerl
+Change add 7z, date, md5sum, patch and dos2unix into PATH
+
+Build:
+1. cd openssl-1.0.2p
+2. patch -p1 < ../openssl-1.0.2p.patch
+3. patch -p1 < ../openssl-1.0.2p-sgx.patch
+2. cd ../ && build-openssl-1.0.2p.bat build all

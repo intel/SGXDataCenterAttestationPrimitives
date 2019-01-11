@@ -31,6 +31,32 @@
 #include "se_thread.h"
 #include "se_types.h"
 
+
+#if defined(_MSC_VER)
+
+void se_mutex_init(se_mutex_t* mutex) { InitializeCriticalSection(mutex); }
+int se_mutex_lock(se_mutex_t* mutex) { EnterCriticalSection(mutex); return TRUE; }
+int se_mutex_unlock(se_mutex_t* mutex) { LeaveCriticalSection(mutex); return TRUE;}
+int se_mutex_destroy(se_mutex_t* mutex) { DeleteCriticalSection(mutex); return TRUE;}
+
+unsigned int se_get_threadid() { return GetCurrentThreadId ();}
+
+//tls functions
+int se_tls_alloc(se_tls_index_t *tls_index)
+{
+    *tls_index = TlsAlloc();
+    if(TLS_OUT_OF_INDEXES == *tls_index)
+        return 0;
+    else
+        return 1;
+}
+int se_tls_free(se_tls_index_t tls_index) { return TlsFree(tls_index); }
+void * se_tls_get_value(se_tls_index_t tls_index) { return TlsGetValue(tls_index); }
+int	se_tls_set_value(se_tls_index_t tls_index, void *tls_value) { return TlsSetValue(tls_index, tls_value); }
+
+
+#elif defined(__GNUC__)
+
 void se_mutex_init(se_mutex_t* mutex)
 {
 #ifdef PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
@@ -66,33 +92,5 @@ int se_tls_alloc(se_tls_index_t *tls_index) { return !pthread_key_create(tls_ind
 int se_tls_free(se_tls_index_t tls_index) { return !pthread_key_delete(tls_index); }
 void * se_tls_get_value(se_tls_index_t tls_index) { return pthread_getspecific(tls_index); }
 int se_tls_set_value(se_tls_index_t tls_index, void *tls_value) { return !pthread_setspecific(tls_index, tls_value); }
-/*
-se_thread_handle_t se_create_thread(size_t stack_size, thread_start_routine_t start_routine, void *param, se_thread_t *thread)
-{
-	pthread_attr_t attr, *attr_ptr = NULL;
-	int ret;
 
-	if(stack_size > 0)
-	{
-		ret = pthread_attr_init(&attr);
-		if(ret)
-			return NULL;
-		ret = pthread_attr_setstacksize(&attr, stack_size);
-		if(ret)
-			return NULL;
-		attr_ptr = &attr;
-	}
-	else
-	{
-		attr_ptr = NULL;
-	}
-	ret = pthread_create(thread, attr_ptr, start_routine, param);
-	if(ret)
-		return NULL;
-	if(attr_ptr)
-		pthread_attr_destroy(&attr);
-
-	return thread;
-
-}
-*/
+#endif 

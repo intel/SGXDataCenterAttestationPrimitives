@@ -31,7 +31,9 @@
 
 CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
-.PHONY: pkg dcap opt_check_failed clean rebuild sdk sample
+.PHONY: all pkg dcap opt_check_failed clean rebuild sdk sample pce_wrapper quote_wrapper
+
+all: pkg deb_pkg
 
 pkg: dcap
 	zip -j linux_dcap_interface.zip                       \
@@ -41,9 +43,9 @@ pkg: dcap
 	$(SGX_SDK)/include/sgx_error.h                        \
 	$(SGX_SDK)/include/sgx_key.h                          \
 	$(SGX_SDK)/include/sgx_report.h                       \
-	psw/pce_wrapper/inc/sgx_pce.h                         \
-	psw/quote_wrapper/ql/src/sgx_dcap_ql_wrapper.h        \
-	psw/quote_wrapper/common/inc/sgx_ql_lib_common.h      \
+	pce_wrapper/inc/sgx_pce.h                             \
+	quote_wrapper/ql/inc/sgx_dcap_ql_wrapper.h            \
+	quote_wrapper/common/inc/sgx_ql_lib_common.h          \
 	build/linux/libsgx_pce_wrapper.so                     \
 	build/linux/libsgx_dcap_ql.so                         \
 	psw/ae/data/prebuilt/libsgx_qe3.signed.so             \
@@ -64,33 +66,55 @@ opt_check_failed:
 	@exit -2
 
 pce_wrapper: 
-	$(MAKE) -C psw/pce_wrapper/src
+	$(MAKE) -C pce_wrapper/linux
 
 quote_wrapper: pce_wrapper 
-	$(MAKE) -C psw/quote_wrapper/ql
+	$(MAKE) -C quote_wrapper/ql/linux
 
 sample: quote_wrapper
 	cd ../SampleCode && zip -r sample.zip ./
 
 deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper
-	./linux/installer/deb/libsgx-dcap-ql/build.sh
+	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
 deb_sgx_dcap_ql_dbg_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper
-	./linux/installer/deb/libsgx-dcap-ql-dbg/build.sh
+ifndef DEBUG
+	./installer/linux/deb/libsgx-dcap-ql-dbg/build.sh
+endif
 
 deb_sgx_dcap_ql_dev_pkg:
-	./linux/installer/deb/libsgx-dcap-ql-dev/build.sh
+	./installer/linux/deb/libsgx-dcap-ql-dev/build.sh
 
 deb_pkg: deb_sgx_dcap_ql_pkg deb_sgx_dcap_ql_dbg_pkg deb_sgx_dcap_ql_dev_pkg
-	@$(RM) -f ./linux/installer/deb/*.deb
-	cp `find ./linux/installer/deb/ -name "*.deb"` ./linux/installer/deb/
+	@$(RM) -f ./installer/linux/deb/*.deb
+	cp `find ./installer/linux/deb/ -name "*.deb"` ./installer/linux/deb/
 
 clean:
-	$(MAKE) -C psw/pce_wrapper/src clean
-	$(MAKE) -C psw/quote_wrapper/ql clean
+	$(MAKE) -C pce_wrapper/linux clean
+	$(MAKE) -C quote_wrapper/ql/linux clean
 	@$(RM) -rf ../SampleCode/sample.zip
 	@$(RM) -rf linux_dcap_interface.zip
-	@$(RM) -f ./linux/installer/deb/*.deb
+	@$(RM) -rf ./build/
+	@$(RM) -f ./installer/linux/deb/*.deb
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql/libsgx-dcap-ql-dbgsym_*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql/libsgx-dcap-ql_*_amd64.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql/libsgx-dcap-ql_*.tar.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql/libsgx-dcap-ql_*.dsc
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dev/libsgx-dcap-ql-dev_*.deb
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dev/libsgx-dcap-ql_*_amd64.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dev/libsgx-dcap-ql_*.tar.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dev/libsgx-dcap-ql_*.dsc
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dbg/libsgx-dcap-ql-dbg_*.deb
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dbg/libsgx-dcap-ql_*_amd64.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dbg/libsgx-dcap-ql_*.tar.*
+	@$(RM) -f ./installer/linux/deb/libsgx-dcap-ql-dbg/libsgx-dcap-ql_*.dsc
+	@$(RM) -f  ./installer/linux/common/libsgx-dcap-ql/gen_source.py
+	@$(RM) -rf ./installer/linux/common/libsgx-dcap-ql/output
+	@$(RM) -f  ./installer/linux/common/libsgx-dcap-ql-dev/gen_source.py
+	@$(RM) -rf ./installer/linux/common/libsgx-dcap-ql-dev/output
+	@$(RM) -f  ./installer/linux/common/libsgx-dcap-ql-dbg/gen_source.py
+	@$(RM) -rf ./installer/linux/common/libsgx-dcap-ql-dbg/output
+
 
 rebuild:
 	$(MAKE) -f $(CUR_MKFILE) clean

@@ -31,7 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ==============================================================
 
-libsgx_pce.signed.so and libsgx_qe3.signed.so is licensed as Intel redistributable binary firmware and other blobs.
+pce.signed.dll and qe3.signed.dll, libsgx_pce.signed.so and libsgx_qe3.signed.so 
+are licensed as Intel redistributable binary firmware and other blobs.
 
  
 Copyright (c) Intel Corporation.

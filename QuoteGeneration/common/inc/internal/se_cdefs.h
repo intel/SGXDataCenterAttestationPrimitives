@@ -30,9 +30,38 @@
  */
 
 
+/*
+ *	This file is to wrapper some compiler key word that is different from windows to linux.
+*/
+#pragma once
+
 #ifndef _SE_CDEFS_H_
 #define _SE_CDEFS_H_
 
+#if defined(_MSC_VER)
+
+#define SGX_WEAK
+
+#define likely(x)	(x)
+#define unlikely(x)	(x)
+
+#ifndef SE_DECLSPEC_EXPORT
+#define SE_DECLSPEC_EXPORT __declspec(dllexport)
+#endif
+
+#ifndef SE_DECLSPEC_IMPORT
+#define SE_DECLSPEC_IMPORT __declspec(dllimport)
+#endif
+
+#ifndef SE_DECLSPEC_ALIGN
+#define SE_DECLSPEC_ALIGN(x)   __declspec(align(x))
+#endif
+
+#ifndef SE_DECLSPEC_THREAD
+#define SE_DECLSPEC_THREAD __declspec(thread)
+#endif
+
+#elif defined(__GNUC__)
 
 #define SGX_WEAK __attribute__((weak))
 
@@ -60,7 +89,7 @@
 #define SE_DECLSPEC_THREAD /*__thread*/
 #endif
 
-/* disable __try, __except on linux */
+//disable __try, __except on linux
 #ifndef __try
 #define __try try
 #endif
@@ -69,9 +98,20 @@
 #define __except(x) catch(...)
 #endif
 
+#endif
 
 #ifndef SE_DRIVER
 
+#if defined(_MSC_VER)
+#	define SE_WIN
+#	ifndef _M_X64	//32bit
+#		define SE_32	
+#		define SE_WIN32
+#	else			//64bit
+#		define SE_64
+#		define SE_WIN64
+#	endif
+#elif defined(__GNUC__)	
 #	define SE_GNU
 #	if defined(__x86_64__)
 #		define SE_64
@@ -80,17 +120,32 @@
 #		define SE_32
 #		define SE_GNU32
 #	endif
+#endif
 
 #endif
 
-	#define INITIALIZER(f) \
-	static void f(void) __attribute__((constructor));
 
 #ifdef __cplusplus
 #define MY_EXTERN extern "C"
 #else
 #define MY_EXTERN extern
 #endif
+
+#if defined(_MSC_VER)
+#pragma section(".CRT$XCU",read)
+#define INITIALIZER(f) \
+	static void __cdecl f(void); \
+	__declspec(allocate(".CRT$XCU")) void (__cdecl*f##_)(void) = f; \
+	static void __cdecl f(void)
+#define SGX_ACCESS_VERSION(libname, num)                    \
+    MY_EXTERN const char *sgx_##libname##_version;          \
+    const char * libname##_access_version_dummy##num()      \
+    {                                                       \
+        return sgx_##libname##_version;                     \
+    } 
+#elif defined(__GNUC__)
+#define INITIALIZER(f) \
+	static void f(void) __attribute__((constructor));
 
 #define SGX_ACCESS_VERSION(libname, num)                    \
     MY_EXTERN char sgx_##libname##_version[];          \
@@ -99,6 +154,7 @@
         sgx_##libname##_version[0] = 's';                                                   \
         return sgx_##libname##_version;                                                     \
     } 
+#endif
 
 
 #endif

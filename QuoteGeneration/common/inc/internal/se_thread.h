@@ -30,11 +30,21 @@
  */
 
 
+/*
+ *	This file is to wrapper thread related API that is different from windows to linux.
+*/
+#pragma once
 
 #ifndef _SE_THREAD_H_
 #define _SE_THREAD_H_
 
 
+#if defined(_MSC_VER)
+#include <windows.h>
+typedef CRITICAL_SECTION se_mutex_t;
+typedef DWORD se_thread_id_t;
+typedef DWORD se_tls_index_t;
+#elif defined(__GNUC__)
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* for PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP */
 #endif
@@ -46,6 +56,7 @@ typedef pthread_mutex_t se_mutex_t;
 typedef pthread_cond_t se_cond_t;
 typedef pid_t se_thread_id_t;
 typedef pthread_key_t se_tls_index_t;
+#endif 
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,13 +69,13 @@ void se_mutex_init(se_mutex_t* mutex);
 int se_mutex_lock(se_mutex_t* mutex);
 int se_mutex_unlock(se_mutex_t* mutex);
 int se_mutex_destroy(se_mutex_t* mutex);
-
+#if defined(__GNUC__)
 void se_thread_cond_init(se_cond_t* cond);
 int se_thread_cond_wait(se_cond_t *cond, se_mutex_t *mutex);
 int se_thread_cond_signal(se_cond_t *cond);
 int se_thread_cond_broadcast(se_cond_t *cond);
 int se_thread_cond_destroy(se_cond_t* cond);
-
+#endif
 unsigned int se_get_threadid(void);
 
 /* tls functions */
@@ -73,7 +84,6 @@ int se_tls_free(se_tls_index_t tls_index);
 void * se_tls_get_value(se_tls_index_t tls_index);
 int se_tls_set_value(se_tls_index_t tls_index, void *tls_value);
 
-/* se_thread_handle_t se_create_thread(size_t stack_size, thread_start_routine_t start_routine, void *param, se_thread_t* thread); */
 
 #ifdef __cplusplus
 }

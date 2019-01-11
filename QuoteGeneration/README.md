@@ -1,6 +1,46 @@
-Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Generation Library for Linux Quick Start Guide
+Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Generation Library Quick Start Guide
 ================================================
 
+For Windows* OS
+----------------- 
+## Prerequisites
+- Ensure that you have the following required operating systems:
+   * Windows* Server 2016 (Long-Term Servicing Channel)
+   * Windows* Server 2019 (Long-Term Servicing Channel)
+- Ensure that you have the following required hardware:
+  * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
+  * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
+- Configure the system with the **SGX hardware enabled** option.
+- Ensure that you have installed Microsoft Visual C++ Compiler* version 14.14 or higher provided by Microsoft Visual Studio* 2017 version 15.7
+- Ensure that you have installed latest Intel(R) SGX SDK Installer which could be downloaded from the [Intel(R) SGX SDK](https://software.intel.com/en-us/sgx-sdk/download)
+- Use the script to download prebuilt binaries to prebuilt folder:
+```
+    download_prebuilt.bat
+```
+
+## How to build
+- Open the Microsoft Visual Studio* solution and run a build.
+- The Intel(R) SGX DCAP NuGet* package generation depends on a standalone tool `nuget.exe`. To build the Intel(R) SGX DCAP NuGet* package:
+   1.  Download the standalone tool `nuget.exe` from [nuget.org/downloads](https://nuget.org/downloads) and put it to `installer\win\` folder or add the folder where you placed `nuget.exe` to your PATH environment variable. 
+   2.  Go to `installer\win\` folder and enter the following command:
+```
+    DCAP_Components.bat
+```
+   The target NuGet* package `DCAP_Components.<version>.nupkg` will be generated in the same folder.
+- To build the Intel(R) SGX DCAP INF installers, go to `installer\win\Dcap\` folder and enter the following commands:
+```
+    dcap_copy_file.bat
+    dcap_generate.bat <version>
+```
+  The target INF installers `sgx_dcap.inf` and `sgx_dcap_dev.inf` will be generated in the same folder. 
+**NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
+
+## How to install
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](TODO-ref-link) to install the right packages on your platform.
+
+
+For Linux* OS
+-----------------
 ## Prerequisites
 - Ensure that you have the following required operating systems:
   * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
