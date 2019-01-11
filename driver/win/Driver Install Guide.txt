@@ -1,2 +1,0 @@
-1. install the drivers by commands:
-	devcon install sgxPleDev.inf root\SgxPLEDevice
