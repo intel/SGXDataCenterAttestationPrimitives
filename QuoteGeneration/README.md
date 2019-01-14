@@ -96,7 +96,7 @@ The target package named ``linux_dcap_interface.zip`` will be generated.
 ```
   $ make deb_pkg
 ```
-The installers will be generated in ./linux/installer/deb/.
+The installers will be generated in ./installer/linux/deb/.
 
 
 ## Install the Intel(R) SGX DCAP Quote Generation Library Package
