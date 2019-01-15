@@ -12,6 +12,7 @@ For Windows* OS
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.
 - Ensure that you have installed Microsoft Visual C++ Compiler* version 14.14 or higher provided by Microsoft Visual Studio* 2017 version 15.7
+- Ensure that you have installed Windows Driver Kit for Win 10, version 10.0.17763.
 - Ensure that you have installed latest Intel(R) SGX SDK Installer which could be downloaded from the [Intel(R) SGX SDK](https://software.intel.com/en-us/sgx-sdk/download)
 - Use the script to download prebuilt binaries to prebuilt folder:
 ```
@@ -22,12 +23,12 @@ For Windows* OS
 - Open the Microsoft Visual Studio* solution and run a build.
 - The Intel(R) SGX DCAP NuGet* package generation depends on a standalone tool `nuget.exe`. To build the Intel(R) SGX DCAP NuGet* package:
    1.  Download the standalone tool `nuget.exe` from [nuget.org/downloads](https://nuget.org/downloads) and put it to `installer\win\` folder or add the folder where you placed `nuget.exe` to your PATH environment variable. 
-   2.  Go to `installer\win\` folder and enter the following command:
+   2.  Go to `installer\win\` folder and run the following command from the Command Prompt:
 ```
     DCAP_Components.bat
 ```
    The target NuGet* package `DCAP_Components.<version>.nupkg` will be generated in the same folder.
-- To build the Intel(R) SGX DCAP INF installers, go to `installer\win\Dcap\` folder and enter the following commands:
+- To build the Intel(R) SGX DCAP INF installers, go to `installer\win\Dcap\` folder and run the following commands from the Visual Studio Command Prompt:
 ```
     dcap_copy_file.bat
     dcap_generate.bat <version>
