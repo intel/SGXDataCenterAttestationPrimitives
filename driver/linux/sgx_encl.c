@@ -192,8 +192,13 @@ static bool sgx_process_add_page_req(struct sgx_add_page_req *req,
 		return false;
 	}
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	ret = vmf_insert_pfn(vma, addr, SGX_EPC_PFN(epc_page));
+	if (ret != VM_FAULT_NOPAGE) {
+#else
 	ret = vm_insert_pfn(vma, addr, SGX_EPC_PFN(epc_page));
 	if (ret) {
+#endif
 		sgx_put_backing(backing, 0);
 		return false;
 	}
