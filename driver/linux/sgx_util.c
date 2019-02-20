@@ -314,8 +314,13 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 	epc_page = NULL;
 	list_add_tail(&entry->list, &encl->load_list);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	rc = vmf_insert_pfn(vma, addr, SGX_EPC_PFN(entry->epc_page));
+	if (rc != VM_FAULT_NOPAGE) {
+#else
 	rc = vm_insert_pfn(vma, addr, SGX_EPC_PFN(entry->epc_page));
 	if (rc) {
+#endif
 		/* Kill the enclave if vm_insert_pfn fails; failure only occurs
 		 * if there is a driver bug or an unrecoverable issue, e.g. OOM.
 		 */

@@ -60,6 +60,7 @@
 #include <linux/platform_device.h>
 #include <linux/suspend.h>
 #include <linux/version.h>
+#include <linux/mman.h>
 #include "sgx.h"
 #include "le/enclave/sgx_le_ss.h"
 
@@ -251,7 +252,7 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 					   unsigned long pgoff,
 					   unsigned long flags)
 {
-	if (len < 2 * PAGE_SIZE || (len & (len - 1)))
+	if (len < 2 * PAGE_SIZE || (len & (len - 1)) || flags & MAP_PRIVATE)
 		return -EINVAL;
 
 	/* On 64-bit architecture, allow mmap() to exceed 32-bit encl
