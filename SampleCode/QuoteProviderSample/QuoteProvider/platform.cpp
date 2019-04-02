@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -153,6 +153,10 @@ extern "C" quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_
 
     p_ql_config = (sgx_ql_config_t *)malloc(sizeof(*p_ql_config));
     if (!p_ql_config){
+        if (p_certdata){
+            free(p_certdata);
+            p_certdata = NULL;
+        }
         ret_val = SGX_QL_ERROR_OUT_OF_MEMORY;
         goto CLEANUP;
     }

@@ -1,5 +1,5 @@
 ;/*
-;Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+;Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 ;
 ;Redistribution and use in source and binary forms, with or without
 ;modification, are permitted provided that the following conditions
@@ -42,11 +42,14 @@ DriverVer   = 04/17/2018,1.0.0.2
 [SourceDisksFiles]
 sgx_lc_msr.sys         = 1,,
 sgx_launch.dll = 1
+License.txt = 1
+ThirdPartyLicenses.txt = 1
 
 [DestinationDirs]
 DefaultDestDir     = 12
 FLCDrv_CopyFiles   = 13      ; copy to Driver store
 UMDriver_CopyFiles = 13      ; copy to Driver store
+License_CopyFiles  = 13      ; copy to Driver store
 
 [Manufacturer]
 %StdMfg%=SGXPSW,NTamd64.10.0.1..16299      ;;; 1 for Client
@@ -72,6 +75,7 @@ AddComponent = psw_installer,, PswInstaller_component
 [SGXPSW_LC_Device]
 CopyFiles = UMDriver_CopyFiles
 CopyFiles = FLCDrv_CopyFiles
+CopyFiles = License_CopyFiles
 
 [SGXPSW_LC_Device.HW]
 AddReg = SGXPSW_LC_Device_AddReg
@@ -118,6 +122,10 @@ sgx_launch.dll
 
 [FLCDrv_CopyFiles]
 sgx_lc_msr.sys
+
+[License_CopyFiles]
+License.txt
+ThirdPartyLicenses.txt
 
 [PswInstaller_component]
 ComponentIds = VEN_INT&DEV_0E0C

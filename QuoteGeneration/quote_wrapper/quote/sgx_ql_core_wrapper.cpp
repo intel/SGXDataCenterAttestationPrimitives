@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,9 +45,14 @@
 #include "sgx_ql_core_wrapper.h"
 #include "qe3.h"
 
-///todo: Modify this for production.
+#ifdef USE_DEBUG_MRSIGNER
+// This is the mrsigner for debug key
 uint8_t g_qe_mrsigner[32] = { 0xe4, 0xbd, 0x9f, 0xc2, 0x12, 0x98, 0x35, 0xba, 0x1d, 0xcc, 0xa1, 0x93, 0x9d, 0x57, 0xd0, 0x8e,
-                              0x88, 0x56, 0x1b, 0x34, 0x74, 0x0d, 0x59, 0x40, 0x59, 0x72, 0xd4, 0xba, 0x25, 0xa7, 0xe5, 0xf7 };
+							  0x88, 0x56, 0x1b, 0x34, 0x74, 0x0d, 0x59, 0x40, 0x59, 0x72, 0xd4, 0xba, 0x25, 0xa7, 0xe5, 0xf7 };
+#else
+uint8_t g_qe_mrsigner[32] = { 0x8c, 0x4f, 0x57, 0x75, 0xd7, 0x96, 0x50, 0x3e, 0x96, 0x13, 0x7f, 0x77, 0xc6, 0x8a, 0x82, 0x9a,
+                              0x00, 0x56, 0xac, 0x8d, 0xed, 0x70, 0x14, 0x0b, 0x08, 0x1b, 0x09, 0x44, 0x90, 0xc5, 0x7b, 0xff };
+#endif
 uint8_t g_qe_ext_prod_id[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t g_qe_config_id[64] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // QE's Config ID 
                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                      
@@ -58,15 +63,21 @@ uint8_t g_qe_family_id[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 
 
 /* Set the default Attestation Key Identity for the DCAP Quoting Library.  This is the ECDSA QE3's identity and
-   ECDSA-256  //todo:  Modify this for production. */
+   ECDSA-256 */
 const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
 {
     0,                                                                                                   // ID
     0,                                                                                                   // Version
     32,                                                                                                  // Number of bytes in MRSIGNER
+#ifdef USE_DEBUG_MRSIGNER
     { 0xe4, 0xbd, 0x9f, 0xc2, 0x12, 0x98, 0x35, 0xba, 0x1d, 0xcc, 0xa1, 0x93, 0x9d, 0x57, 0xd0, 0x8e,
-      0x88, 0x56, 0x1b, 0x34, 0x74, 0x0d, 0x59, 0x40, 0x59, 0x72, 0xd4, 0xba, 0x25, 0xa7, 0xe5, 0xf7,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // QE3's MRSIGNER ///todo: Change at production signing time.
+	  0x88, 0x56, 0x1b, 0x34, 0x74, 0x0d, 0x59, 0x40, 0x59, 0x72, 0xd4, 0xba, 0x25, 0xa7, 0xe5, 0xf7,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // DEBUG QE3's MRSIGNER
+#else
+    { 0x8c, 0x4f, 0x57, 0x75, 0xd7, 0x96, 0x50, 0x3e, 0x96, 0x13, 0x7f, 0x77, 0xc6, 0x8a, 0x82, 0x9a,
+      0x00, 0x56, 0xac, 0x8d, 0xed, 0x70, 0x14, 0x0b, 0x08, 0x1b, 0x09, 0x44, 0x90, 0xc5, 0x7b, 0xff,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // Production QE3's MRSIGNER
+#endif	  
     1,                                                                                                   // QE3's Legacy Prod ID
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // QE's extended_prod_id
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // QE's Config ID
@@ -130,9 +141,8 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
  * sgx_ql_att_key_id_t.  When this API is not called, the p_att_key_id in the subsequent quoting API's should be NULL 
  * to notify the library it should use its default QE and algorithm. 
  *  
- * @param p_att_key_id_list [In] List of the supported attestation key IDs provided by the quote verifier.  May be 
- *                          NULL.  If NULL, the API will return the default QE identity and algorithm in
- *                          pp_selected_key_id.  Otherwise, it will use the p_att_key_id_list and compare it with the
+ * @param p_att_key_id_list [In] List of the supported attestation key IDs provided by the quote verifier. Can not be 
+ *                          NULL. it will use the p_att_key_id_list and compare it with the
  *                          supported values.
  * @param pp_selected_key_id [In, Out] Pointer to the selected attestation key in the list.  This should be used by the 
  *                           application as input to the quoting and remote attestation APIs.  Must not be NULL.  Note,
@@ -141,8 +151,8 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
  *  
  * @return SGX_QL_SUCCESS Successfully selected an attestation key.  The pp_selected_key_id will point an entry in the 
  *         p_att_key_id_list.
- * @return SGX_QL_ERROR_INVALID_PARAMETER  Invalid parameter if pp_selected_key_id is NULL, list header is incorrect,
- *         or the number of key IDs in the list exceed the maximum.
+ * @return SGX_ERROR_INVALID_PARAMETER  Invalid parameter if p_att_key_id_list, pp_selected_key_id is NULL,
+ *         list header is incorrect, or the number of key IDs in the list exceed the maximum.
  * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support any of the keys in the
  *         list.  This can be because it doesn't carry the QE that owns the attestation key or the platform is in a
  *         mode that doesn't allow any of the listed keys; for example, for privacy reasons.
@@ -224,8 +234,7 @@ extern "C" quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_a
  *  
  * 
  * @param p_att_key_id The selected att_key_id from the quote verifier's list.  It includes the QE identity as 
- *                     well as the attestation key's algorithm type.  If it is NULL, the quoting library will
- *                     select it's default attestaion key.
+ *                     well as the attestation key's algorithm type. It cannot be NULL.
  * @param p_qe_target_info Pointer to QE's target info required by the application to generate an enclave REPORT
  *                         targeting the selected QE.  Must not be NULL when p_pub_key_id is not NULL.
  * @param refresh_att_key A flag indicating the attestation key owner should re-generated and certify or 
@@ -263,8 +272,8 @@ extern "C" quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_a
  *         public key ID size in p_pub_key_id_size when p_pub_key_id is passed in as NULL.  When p_pub_key_id is
  *         not NULL, p_qe_target_info will contain the attestation key's QE target info for REPORT generation
  *         and p_pub_key_id will contain the attestation's public key ID.
- * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter if p_pub_key_id_size is NULL.  If p_pub_key_size is 
- *         not NULL, the other parameters must be valid.
+ * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter if p_pub_key_id_size is NULL, p_att_key_id is NULL.
+ *         If p_pub_key_size is not NULL, the other parameters must be valid.
  * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error. 
  * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described 
  *         in p_att_key_id.
@@ -434,16 +443,14 @@ extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
  * attestation key. 
  *
  * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE 
- *                     identity as well as the attestation key's algorithm type. May be NULL.  If it is not
- *                     NULL, the API will use the QE and algorithm described in *p_att_key_id if supported.
- *                     If it is NULL, the API will use the Quoting Library's default QE and algorithm.
+ *                     identity as well as the attestation key's algorithm type. It cannot be NULL.
  * @param p_quote_size Pointer to the location where the required quote buffer size will be returned. Must 
  *                     not be NULL.
  *  
  * @return SGX_QL_SUCCESS Successfully calculated the required quote size. The required size in bytes is returned in the 
  *         memory pointed to by p_quote_size.
  * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error.
- * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter.  p_quote_size must not be NULL. 
+ * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter.  p_quote_size and p_att_key_id must not be NULL. 
  * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation 
  *         key available to generate quotes.  sgx_ql_init_quote() must be called again.
  * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key 
@@ -591,9 +598,7 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
  * @param p_app_report Pointer to the enclave report that needs the quote. The report needs to be generated using the 
  *                     QE's target info returned by the sgx_ql_init_quote() API.  Must not be NULL.
  * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE identity as 
- *                     well as the attestation key's algorithm type. May be NULL.  If it is not NULL, the API will use
- *                     the QE and algorithm described in *p_att_key_id if supported.  If it is NULL, the API will use
- *                     the Quoting Library's default QE and algorithm.
+ *                     well as the attestation key's algorithm type. It cannot be NULL.
  * @param p_qe_report_info Pointer to a data structure that will contain the information required for the QE to generate 
  *                         a REPORT that can be verified by the application enclave.  The inputted data structure
  *                         contains the application's TARGET_INFO, a nonce and a buffer to hold the generated report.
@@ -608,7 +613,7 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
  * @return SGX_QL_SUCCESS Successfully generated the quote. 
  * @return SGX_QL_ERROR_UNEXPECTED An unexpected internal error occurred.
  * @return SGX_QL_ERROR_INVALID_PARAMETER If either p_app_report or p_quote is null. Or, if quote_size isn't large 
- *         enough. if p_att_key_id is not NULL, then its contents doesn't match the supported QE in this library.
+ *         enough, p_att_key_id is NULL.
  * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation key 
  *         available to generate quotes.  sgx_ql_init_quote() must be called again.
  * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described in 

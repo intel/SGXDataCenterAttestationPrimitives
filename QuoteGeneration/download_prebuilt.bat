@@ -1,4 +1,4 @@
-@REM  Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+@REM  Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 @REM 
 @REM  Redistribution and use in source and binary forms, with or without
 @REM  modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 
 @echo off
 
-set ae_file_name=prebuilt_dcap_1.0.1_windows.zip
-set checksum_file=SHA256SUM_prebuilt_dcap_1.0.1_windows.txt
-set server_url_path=https://download.01.org/intel-sgx/dcap-1.0.1-Windows/
+set ae_file_name=prebuilt_windows_dcap_1.1.zip
+set checksum_file=SHA256SUM_prebuilt_windows_dcap_1.1.txt
+set server_url_path=https://download.01.org/intel-sgx/dcap-1.1/windows
 set server_ae_url=%server_url_path%/%ae_file_name%
 set server_checksum_url=%server_url_path%/%checksum_file%
 

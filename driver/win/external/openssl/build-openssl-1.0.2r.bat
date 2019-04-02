@@ -84,7 +84,7 @@ SET PATCH_CMD=patch
 
 :: Set here the patch command
 :: Use an absolute path to the patch.exe utility or append its directory in your PATH.
-SET DOS2UNIX_CMD=dos2unix.exe
+SET DOS2UNIX_CMD=D:\\work\\tool\\UnxUtils\\usr\\local\\wbin\\dos2unix.exe
 
 rem ========================================================================================================
 
@@ -92,12 +92,12 @@ rem ============================================================================
 SET BUILD_PROJECT=openssl
 
 :: Set this to the version of the project you are building
-SET PROJECT_VERSION=1.0.2p
+SET PROJECT_VERSION=1.0.2r
 
 :: SET PROJECT_SRC_DIR=D:\opensource\!BUILD_PROJECT!-!PROJECT_VERSION!
-SET PROJECT_SRC_DIR=C:\sgx\trunk\external\openssl\!BUILD_PROJECT!-!PROJECT_VERSION!
+SET PROJECT_SRC_DIR=D:\openssl\!BUILD_PROJECT!-!PROJECT_VERSION!
 
-SET PROJECT_INSTALL_DIR=C:\sgx\trunk\external\openssl\!BUILD_PROJECT!-dist-!PROJECT_VERSION!-vs!VS_VERSION!
+SET PROJECT_INSTALL_DIR=D:\openssl\!BUILD_PROJECT!-dist-!PROJECT_VERSION!-vs!VS_VERSION!
 
 rem ========================================================================================================
 rem == PLEASE DO NOT EDIT BELOW THIS LINE

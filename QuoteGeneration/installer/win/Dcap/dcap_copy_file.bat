@@ -4,6 +4,8 @@ set BUILDNUM="0"
 set TOOLSFOLDER="..\Tools"
 set RELEASEFILEFOLDER="..\..\..\x64\Release"
 set PREBUILTFILEFOLDER=..\..\..\psw\ae\data\prebuilt\win
+set LICENSEFOLDER="..\..\..\..\"
+set THIRDPARTYLICENSEFOLDER="..\..\..\"
 
 :START
 
@@ -26,6 +28,8 @@ echo **************************************************
 copy /y "%PREBUILTFILEFOLDER%\pce.signed.dll" "%~dp0output\pce.signed.dll"
 copy /y "%PREBUILTFILEFOLDER%\qe3.signed.dll" "%~dp0output\qe3.signed.dll"
 copy /y "%RELEASEFILEFOLDER%\sgx_dcap_ql.dll" "%~dp0output\sgx_dcap_ql.dll"
+copy /y "%LICENSEFOLDER%\License.txt" "%~dp0output\License.txt"
+copy /y "%THIRDPARTYLICENSEFOLDER%\ThirdPartyLicenses.txt" "%~dp0output\ThirdPartyLicenses.txt"
 
 echo **************************************************
 echo * Signing components files *

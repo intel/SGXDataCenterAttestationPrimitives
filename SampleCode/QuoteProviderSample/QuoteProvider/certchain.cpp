@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,15 +108,21 @@ int getpckchain(char **certchain, size_t &size, sgx_cpu_svn_t * cpusvn, sgx_isv_
         BREAK_IF(fread(certbuf, 1, certsize, fleafcert) != certsize, CERT_ERROR_FILE_ACCESS);
 
         BREAK_IF(fread(certbuf + certsize, 1, chainsize, fchain) != chainsize, CERT_ERROR_FILE_ACCESS);
-
-        *certchain = certbuf;
-
-        memcpy(cpusvn, &m_pckcert_cpusvn, sizeof(sgx_cpu_svn_t));
-        memcpy(pce_isvsvn, &m_pckcert_pce_isvsvn, sizeof(sgx_isv_svn_t));
     }while (0);
 
     fclose(fleafcert);
     fclose(fchain);
+
+    if (ret != CERT_SUCCESS)
+    {
+        SAFE_FREE(certbuf);    
+    }
+    else
+    {
+        *certchain = certbuf;
+        memcpy(cpusvn, &m_pckcert_cpusvn, sizeof(sgx_cpu_svn_t));
+        memcpy(pce_isvsvn, &m_pckcert_pce_isvsvn, sizeof(sgx_isv_svn_t));
+    }
 
     return ret;
 }

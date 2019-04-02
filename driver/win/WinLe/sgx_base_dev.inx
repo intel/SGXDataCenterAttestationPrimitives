@@ -1,5 +1,5 @@
 ;/*
-;Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+;Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 ;
 ;Redistribution and use in source and binary forms, with or without
 ;modification, are permitted provided that the following conditions
@@ -49,6 +49,7 @@ DriverVer   = 04/18/2018,1.0.0.0
 [SgxLCDev_Install]
 CopyFiles = UMDriver_CopyFiles
 CopyFiles = SGXLCDrv_CopyFiles
+CopyFiles = License_CopyFiles
 
 [SgxLCDev_Install.HW]
 AddReg = SgxLCDev_AddReg
@@ -92,9 +93,15 @@ sgx_launch.dll
 [SGXLCDrv_CopyFiles]
 sgx_lc_msr.sys
 
+[License_CopyFiles]
+License.txt
+ThirdPartyLicenses.txt
+
 [SourceDisksFiles]
 sgx_lc_msr.sys         = 1,,
 sgx_launch.dll = 1
+License.txt = 1
+ThirdPartyLicenses.txt = 1
 
 [SourceDisksNames]
 1 = %DiskName%
@@ -103,6 +110,7 @@ sgx_launch.dll = 1
 DefaultDestDir     = 12
 SGXLCDrv_CopyFiles = 13      ; copy to driver store
 UMDriver_CopyFiles = 12,UMDF ; copy to drivers\umdf
+License_CopyFiles = 13      ; copy to driver store
 
 [Strings]
 INTC                    = "Intel Corporation"

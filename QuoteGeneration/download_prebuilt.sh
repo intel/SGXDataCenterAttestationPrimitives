@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,9 +32,9 @@
 
 top_dir=`dirname $0`
 out_dir=$top_dir
-ae_file_name=prebuilt_dcap_1.0.1.tar.gz
-checksum_file=SHA256SUM_prebuilt_dcap_1.0.1.txt
-server_url_path=https://download.01.org/intel-sgx/dcap-1.0.1/
+ae_file_name=prebuilt_dcap_1.1.tar.gz
+checksum_file=SHA256SUM_prebuilt_dcap_1.1.txt
+server_url_path=https://download.01.org/intel-sgx/dcap-1.1/linux
 server_ae_url=$server_url_path/$ae_file_name
 server_checksum_url=$server_url_path/$checksum_file
 

@@ -8,7 +8,7 @@ How to Build/Execute the Sample Code
 On Windows:
 ==========
 1. Open the solution "QuoteProviderSample.sln" with Microsoft Visual Studio
-2. Install Intel(R)_SGX_Windows_SDK_2.2.xxx.xxx, NuGet package DCAP_Components.1.0.100.1.nupkg, DCAP INF installer,
+2. Install Intel(R)_SGX_Windows_SDK_${version}, NuGet package DCAP_Components.${version}.nupkg, DCAP INF installer,
 3. Build and execute it directly
 
 On Linux:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -154,7 +154,7 @@ extern "C" quote3_error_t sgx_qe_get_target_info(sgx_target_info_t *p_qe_target_
     }
     if (pub_key_id_size_out != 0) {
         SE_TRACE(SE_TRACE_DEBUG, "sgx_ql_init_quote used ECDSA_ID:\n");
-        PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &pub_key_id_out, pub_key_id_size_out);
+        PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, (uint8_t*)&pub_key_id_out, pub_key_id_size_out);
     }
 
     CLEANUP:

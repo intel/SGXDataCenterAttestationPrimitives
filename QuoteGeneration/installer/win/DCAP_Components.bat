@@ -3,7 +3,7 @@ echo off
 set HEADERFILEFOLDER="..\..\"
 set DEBUGFILEFOLDER="..\..\x64\Debug\"
 set RELEASEFILEFOLDER="..\..\x64\Release\"
-set PACKAGETNAME=DCAP_Components.1.0.100.1
+set PACKAGETNAME=DCAP_Components.1.1.100.1
 set pwd=%~dp0DCAP_Components
 
 pushd "%~dp0"

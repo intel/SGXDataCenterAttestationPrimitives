@@ -8,6 +8,6 @@ Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
 
 Package: libsgx-dcap-ql-dbg
 Architecture: i386 ia64 amd64
-Pre-Depends: libsgx-dcap-ql
+Pre-Depends: libsgx-dcap-ql (= @dep_version@)
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Debug Symbols for Intel(R) Software Guard Extensions Data Center Attestation Primitives

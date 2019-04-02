@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,14 +42,6 @@
 
 #define SGX_QL_MAX_ATT_KEY_IDS 10
 
-///todo: Before release, change this to use the 
-//PPID_RSA3072_ENCRYPTED.  Cleartext only for 
-//validation.  When we have a key for 
-//encryption that valdiation can use, we can 
-//put this in the enclave and update the quote 
-//verification code with this same key. 
-//#define SGX_QL_CERT_TYPE PPID_CLEARTEXT
-//#define SGX_QL_QUOTE_CERT_TYPE PPID_RSA2048_ENCRYPTED 
 #define SGX_QL_CERT_TYPE PPID_RSA3072_ENCRYPTED 
 
 #if defined(__cplusplus)

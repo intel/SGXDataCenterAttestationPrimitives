@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -38,9 +38,6 @@ endif
 include $(TOP_DIR)/buildenv.mk
 
 WORK_DIR := $(shell pwd)
-AENAME   := $(notdir $(WORK_DIR))
-SONAME  := $(AENAME).so
-EDLFILE  := $(wildcard *.edl)
 
 EXTERNAL_LIB_NO_CRYPTO = -lsgx_tstdc
 
@@ -55,11 +52,11 @@ CFLAGS    += $(ENCLAVE_CFLAGS)
 
 LDTFLAGS  = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \
             -Wl,--start-group $(EXTERNAL_LIB) -Wl,--end-group                    \
-            -Wl,--version-script=$(ROOT_DIR)/build-scripts/enclave.lds $(ENCLAVE_LDFLAGS)
+            -Wl,--version-script=$(WORK_DIR)/enclave.lds $(ENCLAVE_LDFLAGS)
 
 LDTFLAGS_NO_CRYPTO = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \
             -Wl,--start-group $(EXTERNAL_LIB_NO_CRYPTO) -Wl,--end-group                    \
-            -Wl,--version-script=$(ROOT_DIR)/build-scripts/enclave.lds $(ENCLAVE_LDFLAGS)
+            -Wl,--version-script=$(WORK_DIR)/enclave.lds $(ENCLAVE_LDFLAGS)
 
 LDTFLAGS += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
 LDTFLAGS_NO_CRYPTO += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
@@ -69,5 +66,5 @@ vpath %.cpp $(COMMON_DIR)/src:$(LINUX_PSW_DIR)/ae/common
 
 .PHONY : version
 
-version.o: $(LINUX_PSW_DIR)/ae/common/version.cpp
-	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $(LINUX_PSW_DIR)/ae/common/version.cpp -o $@
+version.o: $(TOP_DIR)/ae/common/version.cpp
+	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $(TOP_DIR)/ae/common/version.cpp -o $@

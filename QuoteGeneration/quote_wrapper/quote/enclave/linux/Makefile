@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,7 +33,8 @@
 TOP_DIR := ../../../..
 include $(TOP_DIR)/ae/buildenv.mk
 
-AENAME = qe3
+AENAME := qe3
+SONAME := $(AENAME).so
 
 
 CONFIG := config.xml
@@ -45,13 +46,16 @@ INCLUDE := -I$(SGX_SDK)/include                        \
            -I$(COMMON_DIR)/inc/internal                \
            -I$(COMMON_DIR)/inc/internal/linux          \
            -I$(TOP_DIR)/ae/inc/internal                \
-           -I../../common/inc                             \
-           -I../../../pce_wrapper/inc                     \
-           -I..
+           -I../../inc                                 \
+           -I../../../common/inc                       \
+           -I../../../../pce_wrapper/inc               \
+           -I..                                        \
+           -I.
 
 EXTERNAL_LIB = $(EXTERNAL_LIB_NO_CRYPTO) -lsgx_tcxx -l$(TCRYPTO_LIB_NAME)
 
-SRC := $(wildcard *.cpp)
+vpath %.cpp .. .
+SRC := quoting_enclave_3.cpp
 
 OBJ := $(SRC:.cpp=.o)
 OBJS := $(sort $(OBJ) version.o)
@@ -67,7 +71,7 @@ quoting_enclave_3.o: $(AENAME)_t.c
 %.o:%.cpp 
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(DEFINES) -fno-exceptions -c $< -o $@
 
-$(AENAME)_t.c: $(AENAME).edl
+$(AENAME)_t.c: ../$(AENAME).edl
 	@$(SGX_EDGER8R) --trusted $<
 
 .PHONY: clean

@@ -91,11 +91,19 @@
       <UmdfVersionNumber>2.15.0</UmdfVersionNumber>
       <TimeStamp>$(SGX_BUILD_VERSION)</TimeStamp>
     </Inf>
+    <PreBuildEvent>
+      <Command>xcopy /Y $(SolutionDir)License.txt "$(TargetPath)\"
+xcopy /Y $(SolutionDir)ThirdPartyLicenses.txt "$(TargetPath)\"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Inf>
       <UmdfVersionNumber>2.15.0</UmdfVersionNumber>
     </Inf>
+    <PreBuildEvent>
+      <Command>xcopy /Y $(SolutionDir)License.txt "$(TargetPath)\"
+xcopy /Y $(SolutionDir)ThirdPartyLicenses.txt "$(TargetPath)\"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

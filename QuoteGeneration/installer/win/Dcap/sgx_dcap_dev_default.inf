@@ -1,5 +1,5 @@
 ;/*
-;   Copyright(C) 2011-2018 Intel Corporation All Rights Reserved.
+;   Copyright(C) 2011-2019 Intel Corporation All Rights Reserved.
 ;
 ;   The source code, information  and  material ("Material") contained herein is
 ;   owned  by Intel Corporation or its suppliers or licensors, and title to such
@@ -41,7 +41,7 @@ DriverVer   = 11/01/2018,1.0.0.0
 [SgxDCAPComponentsDev.NTamd64.10.0...16299]
 
 [SgxDCAPComponentsDevice.NT]
-CopyFiles = SgxDCAPComponentsDevice_CopyFiles
+CopyFiles = SgxDCAPComponentsDevice_CopyFiles, License_CopyFiles
 
 [SgxDCAPComponentsDevice.NT.Services]
 AddService = , %SPSVCINST_ASSOCSERVICE%
@@ -51,18 +51,26 @@ sgx_dcap_ql.dll
 qe3.signed.dll
 pce.signed.dll
 
+[License_CopyFiles]
+License.txt
+ThirdPartyLicenses.txt
+
 [SourceDisksFiles]
 sgx_dcap_ql.dll = 1
 qe3.signed.dll = 1
 pce.signed.dll = 1
+License.txt = 1
+ThirdPartyLicenses.txt = 1
 
 [SourceDisksNames]
 1 = %DiskName%
 
 ;;;;;;;;;;;;;;;;;;https://docs.microsoft.com/en-us/windows-hardware/drivers/install/using-dirids
 ; 11 is %SystemRoot%\system32
+; 13 is FileRepository 
 [DestinationDirs]
 DefaultDestDir = 11
+License_CopyFiles = 13
 
 [Strings]
 SPSVCINST_ASSOCSERVICE = 0x00000002
