@@ -76,7 +76,7 @@
 #endif
 
 #define DRV_DESCRIPTION "Intel SGX Driver"
-#define DRV_VERSION "0.10"
+#define DRV_VERSION "1.10"
 
 MODULE_DESCRIPTION("Intel SGX Driver");
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
