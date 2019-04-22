@@ -30,6 +30,8 @@
 #ifndef _SYS_ELF_COMMON_H_
 #define	_SYS_ELF_COMMON_H_ 1
 
+#include <stdint.h>
+
 typedef uint32_t u_int32_t;
 typedef uint32_t Elf_Symndx;
 

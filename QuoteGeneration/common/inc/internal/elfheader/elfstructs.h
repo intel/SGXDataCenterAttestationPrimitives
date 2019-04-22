@@ -26,6 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdint.h>
+
 typedef uint8_t		Elf_Byte;
 
 typedef uint32_t	Elf32_Addr;	/* Unsigned program address */
