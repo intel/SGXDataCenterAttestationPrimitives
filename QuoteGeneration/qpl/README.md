@@ -26,3 +26,10 @@ The target library named ``libsgx_default_qcnl_wrapper.so`` will be generated.
 ```
   $ make DEBUG=1
 ```
+## Configuration
+The configuration file for Intel(R) SGX default Quote Provider Library is /etc/sgx_default_qcnl.conf. If it is not present, the library will use hard-coded configurations.
+
+#PCS_URL is the URL of your PCS caching service, the hard-coded value is https://localhost:8081/sgx/certification/v1/
+PCS_URL=https://your_pcs_server:8081/sgx/certification/v1/
+#Should always set to TRUE for production environment. Use FALSE for development/debug only
+USE_SECURE_CERT=TRUE
