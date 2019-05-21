@@ -96,18 +96,19 @@ $ make clean
 The Intel(R) SGX driver supports DKMS installation, to install the driver follow the following steps:  
 - Ensure that the DKMS package is installed, or install it using:
   ``` $ sudo apt-get install dkms  ```
-- With root priviledge, copy the sources to ``/usr/src/sgx-0.10/``
+- With root priviledge, copy the sources to ``/usr/src/sgx-<version>/`` 
+	- ``<version>`` should match the version specified in the dkms.conf file 
 - Follow the following steps to add and install the driver into the DKMS tree:
 ```
-$ sudo dkms add -m sgx -v 0.10
-$ sudo dkms build -m sgx -v 0.10
-$ sudo dkms install -m sgx -v 0.10
+$ sudo dkms add -m sgx -v <version>
+$ sudo dkms build -m sgx -v <version>
+$ sudo dkms install -m sgx -v <version>
 $ sudo /sbin/modprobe intel_sgx
 ```
 ### Uninstall the Intel(R) SGX Driver
 To uninstall the Intel(R) SGX driver, enter the following commands with root privilege: 
 ```
 $ sudo /sbin/modprobe -r intel_sgx
-$ sudo dkms remove -m sgx -v 0.10 --all
+$ sudo dkms remove -m sgx -v <version> --all
 ```
-You should also remove the sources from ``/usr/src/sgx-0.10/``
+You should also remove the sources from ``/usr/src/sgx-<version>/``
