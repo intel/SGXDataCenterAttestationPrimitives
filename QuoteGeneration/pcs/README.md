@@ -21,6 +21,7 @@ This is a lightweight PCK caching service implemented in nodejs for reference. I
            openssl genrsa 1024 > private.pem 
            openssl req -new -key private.pem -out csr.pem
            openssl x509 -req -days 365 -in csr.pem -signkey private.pem -out file.crt
+       NOTE : If self-signed insecure key and certificate are used, you need to set USE_SECURE_KEY=FALSE when configuring QPL library
 
     5) From the root directory of the pcs server, run ./install.sh 
         This will install the required npm packages in the current directory. It will also install pm2 package in the 

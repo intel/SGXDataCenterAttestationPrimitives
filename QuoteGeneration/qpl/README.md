@@ -31,5 +31,5 @@ The configuration file for Intel(R) SGX default Quote Provider Library is /etc/s
 
 #PCS_URL is the URL of your PCS caching service, the hard-coded value is https://localhost:8081/sgx/certification/v1/
 PCS_URL=https://your_pcs_server:8081/sgx/certification/v1/
-#Should always set to TRUE for production environment. Use FALSE for development/debug only
+#Should always set to TRUE for production environment. Set it to FALSE if PCS server uses self-signed certificate and key 
 USE_SECURE_CERT=TRUE
