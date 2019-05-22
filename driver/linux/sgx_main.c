@@ -63,6 +63,7 @@
 #include <linux/mman.h>
 #include "sgx.h"
 #include "le/enclave/sgx_le_ss.h"
+#include "sgx_version.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
 #define CDEV_BUILD
@@ -74,9 +75,6 @@
 	#include <linux/module.h>
 	#include <linux/miscdevice.h>
 #endif
-
-#define DRV_DESCRIPTION "Intel SGX Driver"
-#define DRV_VERSION "1.10"
 
 MODULE_DESCRIPTION("Intel SGX Driver");
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
