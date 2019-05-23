@@ -1,10 +1,16 @@
 Intel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX DCAP) default Quote Provider Library
 
-This library serves as a quoting data provider plugin for Intel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX DCAP). This provider plugin is used to fetch certain data files, such as platform certificates, TCB information, revocation lists, and QE identities from a caching server within the datacenter.
+This library serves as a quoting data provider plugin for Intel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX 
+DCAP). This provider plugin is used to fetch certain data files, such as platform certificates, TCB information, revocation lists, and QE 
+identities from a caching server within the datacenter.
 
-The DCAP Client fetches artifacts from a Cloud-internal caching service. The purpose of this cache is to ensure that all hosts in the datacenter always have the correct data available within the datacenter environment.
+The DCAP Client fetches artifacts from a Cloud-internal caching service. The purpose of this cache is to ensure that all hosts in the 
+datacenter always have the correct data available within the datacenter environment.
 
-For how to setup the Cloud-internal caching server, please check PCS/README.txt. 
+For how to setup the Cloud-internal caching server, please check PCS/README.md. 
+
+For more details about Intel® Software Guard Extensions (Intel® SGX) Data Center Attestation Primitives API, please refer to:
+    https://download.01.org/intel-sgx/dcap-1.1/linux/docs/Intel_SGX_ECDSA_QuoteGenReference_DCAP_API_Gold.pdf
 
 API and structure Definitions
 ===============
@@ -31,8 +37,11 @@ quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_pck_cert_id
 Parameters:
     p_quote_config [In]
         Pointer to the PCK certification data needed for quote generation.  
+Return Values:
+    SGX_QL_SUCCESS: 
+        The buffer was freed successfully.
 */
-void sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
+quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
 
 /** Used to describe the PCK Cert for a platform */
 typedef struct _sgx_ql_pck_cert_id_t
