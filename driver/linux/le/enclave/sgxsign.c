@@ -488,6 +488,7 @@ static bool calc_q1q2(const uint8_t *s, const uint8_t *m, uint8_t *q1,
 		      uint8_t *q2)
 {
 	struct q1q2_ctx ctx;
+	int q1_len, q2_len;
 
 	if (!alloc_q1q2_ctx(s, m, &ctx)) {
 		fprintf(stderr, "Not enough memory for Q1Q2 calculation\n");
@@ -500,26 +501,26 @@ static bool calc_q1q2(const uint8_t *s, const uint8_t *m, uint8_t *q1,
 	if (!BN_div(ctx.q1, ctx.qr, ctx.q1, ctx.m, ctx.bn_ctx))
 		goto out;
 
-	if (BN_num_bytes(ctx.q1) > SGX_MODULUS_SIZE) {
-		fprintf(stderr, "Too large Q1 %d bytes\n",
-			BN_num_bytes(ctx.q1));
-		goto out;
-	}
-
 	if (!BN_mul(ctx.q2, ctx.s, ctx.qr, ctx.bn_ctx))
 		goto out;
 
 	if (!BN_div(ctx.q2, NULL, ctx.q2, ctx.m, ctx.bn_ctx))
 		goto out;
 
-	if (BN_num_bytes(ctx.q2) > SGX_MODULUS_SIZE) {
-		fprintf(stderr, "Too large Q2 %d bytes\n",
-			BN_num_bytes(ctx.q2));
+	q1_len = BN_num_bytes(ctx.q1);
+	if (q1_len > SGX_MODULUS_SIZE) {
+		fprintf(stderr, "Too large Q1 %d bytes\n", q1_len);
 		goto out;
 	}
 
-	BN_bn2bin(ctx.q1, q1);
-	BN_bn2bin(ctx.q2, q2);
+	q2_len = BN_num_bytes(ctx.q2);
+	if (q2_len > SGX_MODULUS_SIZE) {
+		fprintf(stderr, "Too large Q2 %d bytes\n", q2_len);
+		goto out;
+	}
+
+	BN_bn2bin(ctx.q1, &q1[SGX_MODULUS_SIZE - q1_len]);
+	BN_bn2bin(ctx.q2, &q2[SGX_MODULUS_SIZE - q2_len]);
 
 	free_q1q2_ctx(&ctx);
 	return true;
