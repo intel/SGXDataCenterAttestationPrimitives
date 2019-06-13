@@ -369,7 +369,7 @@ static bool measure_encl(const char *path, uint8_t *mrenclave, uint32_t *date)
 	}
 
 	tm_p = gmtime(&sb.st_mtime);
-	if (strftime(date_str, 11, "%Y%m%d", tm_p) != 8) {
+	if (strftime(date_str, 11, "0x%Y%m%d", tm_p) != 10) {
 		fprintf(stderr, "Failed to generate date\n");
 		goto out;
 	}
