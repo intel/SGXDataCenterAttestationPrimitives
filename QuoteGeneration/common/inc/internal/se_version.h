@@ -28,10 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#define STRFILEVER    "1.1.100.49918"
+#define STRFILEVER    "1.2.100.51313"
 #define COPYRIGHT      "Copyright (C) 2019 Intel Corporation"
-#define FILEVER        1,1,100,0
-#define PRODUCTVER     1,1,100,0
-#define STRPRODUCTVER  "1.1.100.0"
+#define FILEVER        1,2,100,0
+#define PRODUCTVER     1,2,100,0
+#define STRPRODUCTVER  "1.2.100.0"
 #define COMPANYNAME    "Intel Corporation"
 #define PRODUCTNAME    "Intel® Software Guard Extensions"

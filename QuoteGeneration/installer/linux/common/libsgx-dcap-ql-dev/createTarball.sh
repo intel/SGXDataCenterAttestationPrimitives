@@ -40,6 +40,8 @@ LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 
 INSTALL_PATH=${SCRIPT_DIR}/output
 
+[[ -z "${SGX_SDK}" ]] && SGX_SDK=/opt/intel/sgxsdk
+
 # Cleanup
 rm -fr ${INSTALL_PATH}
 
@@ -55,6 +57,8 @@ python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_commoninc.txt --de
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 pushd ${INSTALL_PATH} &> /dev/null
+sed -i "s/USR_LIB_VER=.*/USR_LIB_VER=${SGX_VERSION}/" Makefile
 tar -zcvf ${TARBALL_NAME} *
 popd &> /dev/null

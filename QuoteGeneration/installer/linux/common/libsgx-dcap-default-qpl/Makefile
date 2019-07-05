@@ -1,0 +1,53 @@
+#
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in
+#     the documentation and/or other materials provided with the
+#     distribution.
+#   * Neither the name of Intel Corporation nor the names of its
+#     contributors may be used to endorse or promote products derived
+#     from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+
+include scripts/installConfig
+
+SOURCE_FOLDER=package
+
+NGA_ETC_PATH=$(SOURCE_FOLDER)/$(ETC_DIR)
+NGA_LIB_PATH=$(SOURCE_FOLDER)/$(LIB_DIR)
+USR_ETC_PATH=$(shell readlink -m $(DESTDIR)/$(ETC_DIR))
+USR_LIB_PATH=$(shell readlink -m $(DESTDIR)/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null))
+USR_LIB_VER=1.0.0
+
+default:
+
+install:
+	install -d $(USR_ETC_PATH)
+	install -d $(USR_LIB_PATH)
+	install $(NGA_ETC_PATH)/* $(USR_ETC_PATH)
+	install $(NGA_LIB_PATH)/* $(USR_LIB_PATH)
+	cd $(USR_LIB_PATH) && \
+	mv libdcap_quoteprov.so libdcap_quoteprov.so.$(USR_LIB_VER) && \
+	ln -s libdcap_quoteprov.so.$(USR_LIB_VER) libdcap_quoteprov.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}') && \
+	mv libsgx_default_qcnl_wrapper.so libsgx_default_qcnl_wrapper.so.$(USR_LIB_VER) && \
+	ln -s libsgx_default_qcnl_wrapper.so.$(USR_LIB_VER) libsgx_default_qcnl_wrapper.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}')

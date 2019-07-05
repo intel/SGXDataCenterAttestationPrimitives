@@ -965,7 +965,9 @@ uint32_t gen_att_key(uint8_t *p_blob,
 {
     qe3_error_t ret = REFQE3_SUCCESS;
     sgx_status_t sgx_status = SGX_SUCCESS;
+#ifdef GENERATE_RANDOM_ATTESTATION_KEY
     sgx_ecc_state_handle_t ecc_handle = NULL;
+#endif
     sgx_sha_state_handle_t sha_handle = NULL;
     sgx_report_data_t report_data = { 0 };
     ref_plaintext_ecdsa_data_sdk_t plaintext_data;
@@ -1158,9 +1160,11 @@ ret_point:
         (void)memset_s(p_qe3_report, sizeof(*p_qe3_report), 0, sizeof(*p_qe3_report));
     }
 
+#ifdef GENERATE_RANDOM_ATTESTATION_KEY
     if (NULL != ecc_handle) {
         sgx_status = sgx_ecc256_close_context(ecc_handle);
     }
+#endif
     if (NULL != sha_handle) {
         sgx_sha256_close(sha_handle);
     }
@@ -1214,10 +1218,11 @@ uint32_t store_cert_data(ref_plaintext_ecdsa_data_sdk_t *p_plaintext_data,
     sgx_status_t sgx_status = SGX_SUCCESS;
     randomly_placed_buffer<ref_ciphertext_ecdsa_data_sdk_t, alignof(ref_ciphertext_ecdsa_data_sdk_t)> ciphertext_data_buf{};
     auto *pciphertext_data = ciphertext_data_buf.randomize_object();
-
+#ifdef ALLOW_CLEARTEXT_PPID
     void *rsa_key = NULL;
     unsigned char* dec_dat = NULL;
     size_t ppid_size = 0;
+#endif
     ref_plaintext_ecdsa_data_sdk_t local_plaintext_data;
     uint8_t is_resealed;
 
@@ -1379,15 +1384,16 @@ uint32_t store_cert_data(ref_plaintext_ecdsa_data_sdk_t *p_plaintext_data,
     }
 
 ret_point:
+    memset_s(pciphertext_data, sizeof(*pciphertext_data), 0, sizeof(*pciphertext_data));
+#ifdef ALLOW_CLEARTEXT_PPID
     if (NULL != rsa_key) {
         sgx_free_rsa_key(rsa_key, SGX_RSA_PRIVATE_KEY, REF_RSA_OAEP_3072_MOD_SIZE, 0);
     }
-    memset_s(pciphertext_data, sizeof(*pciphertext_data), 0, sizeof(*pciphertext_data));
     if (NULL != dec_dat) {
         memset_s(dec_dat, ppid_size, 0, ppid_size);
         free(dec_dat);
     }
-
+#endif
     return(ret);
 }
 
@@ -1461,7 +1467,7 @@ uint32_t gen_quote(uint8_t *p_blob,
     sgx_ql_ppid_rsa3072_encrypted_cert_info_t *p_cert_encrypted_ppid_info_data;
     sgx_sha_state_handle_t sha_quote_context = NULL;
     sgx_report_data_t qe_report_data;
-    sgx_key_128bit_t qe_id;
+    sgx_key_128bit_t qe_id = { 0 };
 
     memset(&plaintext, 0, sizeof(plaintext));
 
@@ -1564,7 +1570,7 @@ uint32_t gen_quote(uint8_t *p_blob,
     // Set up the component quote structure pointers to point to the correct place within the inputted quote buffer.
     p_quote = (sgx_quote3_t*)p_quote_buf;
     p_quote->signature_data_len = sign_size;
-    p_quote_sig = (sgx_ql_ecdsa_sig_data_t*)((uint8_t*)p_quote + sizeof(*p_quote));
+    p_quote_sig = (sgx_ql_ecdsa_sig_data_t*)(p_quote->signature_data);
     p_auth_data = (sgx_ql_auth_data_t*)(p_quote_sig->auth_certification_data);
     p_auth_data->size = (uint16_t)plaintext.authentication_data_size;
     //Note:  This is potentially dangerous pointer math using an untrusted input size.  The 'required_buffer_size' check

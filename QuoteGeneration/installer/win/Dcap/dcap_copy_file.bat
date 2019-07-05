@@ -34,7 +34,7 @@ copy /y "%THIRDPARTYLICENSEFOLDER%\ThirdPartyLicenses.txt" "%~dp0output\ThirdPar
 echo **************************************************
 echo * Signing components files *
 echo **************************************************
-call "%TOOLSFOLDER%\Sign.bat"  "%~dp0output\*.dll"
+call "%TOOLSFOLDER%\Sign.bat"  "%~dp0output\sgx_dcap_ql.dll"
 
 echo **************************************************
 echo * Done *

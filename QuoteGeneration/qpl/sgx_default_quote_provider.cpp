@@ -52,9 +52,11 @@ quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_cert_id, sg
     }
 }
 
-void sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config)
+quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config)
 {
     sgx_qcnl_free_pck_cert_chain(p_quote_config);
+
+    return SGX_QL_SUCCESS;
 }
 
 

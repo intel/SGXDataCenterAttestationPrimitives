@@ -1,0 +1,6 @@
+NGA_VERSION="1.0"
+TARBALL_NAME=libsgx-dcap-default-qpl_1.0.orig.tar.gz
+NGA_PKG_NAME=libsgx-dcap-default-qpl
+
+LIB_DIR=lib64
+ETC_DIR=etc
