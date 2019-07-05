@@ -68,19 +68,18 @@ enum sgx_misc {
 #define SGX_MISC_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
 
 enum sgx_attribute {
-	SGX_ATTR_DEBUG		= 0x02,
-	SGX_ATTR_MODE64BIT	= 0x04,
-	SGX_ATTR_PROVISIONKEY	= 0x10,
-	SGX_ATTR_EINITTOKENKEY	= 0x20,
-	SGX_ATTR_KSS		= 0x80,
+	SGX_ATTR_DEBUG = 0x02,
+	SGX_ATTR_MODE64BIT = 0x04,
+	SGX_ATTR_PROVISIONKEY = 0x10,
+	SGX_ATTR_EINITTOKENKEY = 0x20,
 };
 
-#define SGX_ATTR_RESERVED_MASK 0xFFFFFFFFFFFFFF49L
+#define SGX_ATTR_RESERVED_MASK 0xFFFFFFFFFFFFFFC9L
 
 #define SGX_SECS_RESERVED1_SIZE 24
 #define SGX_SECS_RESERVED2_SIZE 32
-#define SGX_SECS_RESERVED3_SIZE 32
-#define SGX_SECS_RESERVED4_SIZE 3834
+#define SGX_SECS_RESERVED3_SIZE 96
+#define SGX_SECS_RESERVED4_SIZE 3836
 
 struct sgx_secs {
 	uint64_t size;
@@ -94,10 +93,8 @@ struct sgx_secs {
 	uint8_t reserved2[SGX_SECS_RESERVED2_SIZE];
 	uint32_t mrsigner[8];
 	uint8_t	reserved3[SGX_SECS_RESERVED3_SIZE];
-	uint32_t configid[16];
 	uint16_t isvvprodid;
 	uint16_t isvsvn;
-	uint16_t configsvn;
 	uint8_t reserved4[SGX_SECS_RESERVED4_SIZE];
 };
 
@@ -181,14 +178,12 @@ struct sgx_sigstruct_header {
 struct sgx_sigstruct_body {
 	uint32_t miscselect;
 	uint32_t miscmask;
-	uint8_t reserved2[4];
-	uint8_t isvfamilyid[16];
+	uint8_t reserved2[20];
 	uint64_t attributes;
 	uint64_t xfrm;
 	uint8_t attributemask[16];
 	uint8_t mrenclave[32];
-	uint8_t reserved3[16];
-	uint8_t isvextprodid[16];
+	uint8_t reserved3[32];
 	uint16_t isvprodid;
 	uint16_t isvsvn;
 };

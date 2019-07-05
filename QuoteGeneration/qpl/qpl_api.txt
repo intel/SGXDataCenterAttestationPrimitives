@@ -1,4 +1,4 @@
-Intel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX DCAP) default Quote Provider Library
+CIntel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX DCAP) default Quote Provider Library
 
 This library serves as a quoting data provider plugin for Intel® Software Guard Extensions Data Center Attestation Primitives (Intel® SGX 
 DCAP). This provider plugin is used to fetch certain data files, such as platform certificates, TCB information, revocation lists, and QE 
@@ -7,7 +7,7 @@ identities from a caching server within the datacenter.
 The DCAP Client fetches artifacts from a Cloud-internal caching service. The purpose of this cache is to ensure that all hosts in the 
 datacenter always have the correct data available within the datacenter environment.
 
-For how to setup the Cloud-internal caching server, please check PCS/README.md. 
+For how to setup the Cloud-internal caching server, please check PCCS/README.md. 
 
 For more details about Intel® Software Guard Extensions (Intel® SGX) Data Center Attestation Primitives API, please refer to:
     https://download.01.org/intel-sgx/dcap-1.1/linux/docs/Intel_SGX_ECDSA_QuoteGenReference_DCAP_API_Gold.pdf

@@ -35,9 +35,14 @@ SOURCE_FOLDER=package
 
 NGA_INC_PATH=$(SOURCE_FOLDER)/$(INC_DIR)
 USR_INC_PATH=$(addprefix $(DESTDIR)/usr/, $(INC_DIR))
+USR_LIB_PATH=$(shell readlink -m $(DESTDIR)/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null))
+USR_LIB_VER=1.0.0
 
 default:
 
 install:
 	install -d $(USR_INC_PATH)
 	install $(NGA_INC_PATH)/* $(USR_INC_PATH)
+	install -d $(USR_LIB_PATH)
+	cd $(USR_LIB_PATH) && \
+	ln -fs libsgx_dcap_ql.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}') libsgx_dcap_ql.so

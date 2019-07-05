@@ -45,7 +45,7 @@ extern "C" {
 #endif
 
 quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_pck_cert_id, sgx_ql_config_t **pp_quote_config);
-void sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
+quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
 
 
 #if defined(__cplusplus)

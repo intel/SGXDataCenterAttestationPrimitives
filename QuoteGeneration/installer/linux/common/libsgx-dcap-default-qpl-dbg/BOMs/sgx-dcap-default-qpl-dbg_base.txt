@@ -1,0 +1,4 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/build/linux/libdcap_quoteprov.so.debug	<installdir>/package/lib64/libdcap_quoteprov.so.debug	0	main	STP
+<deliverydir>/build/linux/libsgx_default_qcnl_wrapper.so.debug	<installdir>/package/lib64/libsgx_default_qcnl_wrapper.so.debug	0	main	STP
+<deliverydir>/installer/linux/common/libsgx-dcap-default-qpl-dbg/Makefile	<installdir>/Makefile	0	main	STP

@@ -37,7 +37,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/dcap-1.1/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/dcap-1.2/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -54,7 +54,7 @@ For Linux* OS
 - Configure the system with the **SGX hardware enabled** option.
 - Use the following command(s) to install the required tools to build the Intel(R) SGX software:
 ```
-  $ sudo apt-get install build-essential wget python debhelper
+  $ sudo apt-get install build-essential wget python debhelper zip
 ```
 - Install latest prebuilt Intel(R) SGX SDK Installer from [01.org](https://01.org/intel-software-guard-extensions/downloads)
 ```
@@ -71,12 +71,12 @@ For Linux* OS
 A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DCAP. Please follow the instructions in the `README.md` to build and install Intel(R) SGX driver.
 
 
-## Build the Intel(R) SGX DCAP Quote Generation Library Package
+## Build the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library Package
 - To set the environment variables, enter the following command:
 ```
   $ source ${SGX_PACKAGES_PATH}/sgxsdk/environment
 ```
-- To build the Intel(R) SGX DCAP Quote Generation Library package, enter the following command:
+- To build the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library package, enter the following command:
 ```
    $ make
 ``` 
@@ -85,7 +85,7 @@ The target package named ``linux_dcap_interface.zip`` will be generated.
 ```
   $ make clean
 ```
-- To rebuild the Intel(R) SGX DCAP Quote Generation Library package, enter the following command:
+- To rebuild the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library package, enter the following command:
 ```
   $ make rebuild
 ```
@@ -93,7 +93,7 @@ The target package named ``linux_dcap_interface.zip`` will be generated.
 ```
   $ make DEBUG=1
 ```
-- To build the Intel(R) SGX DCAP Quote Generation Library installers, enter the following commands:
+- To build the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library installers, enter the following command:
 ```
   $ make deb_pkg
 ```
@@ -105,12 +105,24 @@ The installers will be generated in ./installer/linux/deb/.
 ```
   & sudo dpkg -i libsgx-enclave-common_{version}-{revision}_{arch}.deb
 ```
-- For production systems, package should be installed by the following commands:
+- For production systems, package should be installed by the following command:
 ```
   $ sudo dpkg -i libsgx-dcap-ql_${version}-${revision}_${arch}.deb
 ```
-- For development systems, two packages(including the above package) should be installed by the following commands:
+- For development systems, another two packages should be installed by the following commands:
 ```
   $ sudo dpkg -i libsgx-dcap-ql-dev_${version}-${revision}_${arch}.deb
   $ sudo dpkg -i libsgx-dcap-ql-dbg_${version}-${revision}_${arch}.deb
 ```
+
+## Install the Intel(R) SGX Default Quote Provider Library Package
+- For production systems, package should be installed by the following commands:
+```
+  $ sudo dpkg -i libsgx-dcap-default-qpl_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-pccs_${version}-${revision}_${arch}.deb
+```
+  Please refer to /opt/intel/libsgx-dcap-pccs/README.md for more details about the installation of libsgx-dcap-pccs.
+- For development systems, another two packages should be installed by the following commands:
+```
+  $ sudo dpkg -i libsgx-dcap-default-qpl-dev_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-default-qpl-dbg_${version}-${revision}_${arch}.deb

@@ -126,6 +126,7 @@ FLCMSREvtDeviceD0Exit(
     IN WDF_POWER_DEVICE_STATE   PowerState
 )
 {
+    PAGED_CODE();
     UNREFERENCED_PARAMETER(Device);
     UNREFERENCED_PARAMETER(PowerState);
 
