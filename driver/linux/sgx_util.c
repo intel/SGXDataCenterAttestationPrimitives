@@ -359,7 +359,12 @@ int sgx_get_key_hash(struct crypto_shash *tfm, const void *modulus, void *hash)
 	SHASH_DESC_ON_STACK(shash, tfm);
 
 	shash->tfm = tfm;
-	shash->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0))
+        shash->tfm->base.crt_flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+#else
+        shash->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+#endif
 
 	return crypto_shash_digest(shash, modulus, SGX_MODULUS_SIZE, hash);
 }
