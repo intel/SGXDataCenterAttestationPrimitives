@@ -94,7 +94,11 @@ static atomic_t sgx_nr_free_pages = ATOMIC_INIT(0);
 static struct task_struct *ksgxswapd_tsk;
 static DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
+static int sgx_test_and_clear_young_cb(pte_t *ptep, 
+#else
 static int sgx_test_and_clear_young_cb(pte_t *ptep, pgtable_t token,
+#endif
 				       unsigned long addr, void *data)
 {
 	pte_t pte;
