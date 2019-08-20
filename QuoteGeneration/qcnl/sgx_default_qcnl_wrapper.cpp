@@ -187,8 +187,13 @@ static void http_header_to_map(char* resp_header, uint32_t header_size, map<stri
             // parse one line
             string str((unsigned char*)resp_header+start, (unsigned char*)resp_header+end);
             size_t pos = str.find(": ");
-            if (pos != string::npos)
-                header_map.insert(pair<string, string>(str.substr(0, pos), str.substr(pos+2)));
+            if (pos != string::npos) {
+				// HTTP headers are case-insensitive. Convert to lower case
+				// for convenience.
+				string header_lc= str.substr(0, pos);
+				transform(header_lc.begin(), header_lc.end(), header_lc.begin(), ::tolower);
+                header_map.insert(pair<string, string>(header_lc, str.substr(pos+2)));
+			}
             start = end;
         }
     }
