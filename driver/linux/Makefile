@@ -54,82 +54,26 @@
 
 ifneq ($(KERNELRELEASE),)
 
-
-ifneq ($(LE_ACTION),GENDATA)
-	obj-m += intel_sgx.o
-	intel_sgx-y := \
-		sgx_le_proxy_piggy.o \
-		sgx_ioctl.o \
-		sgx_encl.o \
-		sgx_main.o \
-		sgx_page_cache.o \
-		sgx_util.o \
-		sgx_vma.o \
-		sgx_le.o
-else
-	obj-m += dummy_driver.o
-	dummy_driver-y := dummy.o
-endif
+obj-m += intel_sgx.o
+intel_sgx-y := \
+	sgx_ioctl.o \
+	sgx_encl.o \
+	sgx_main.o \
+	sgx_page_cache.o \
+	sgx_util.o \
+	sgx_vma.o
 
 else
+
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD  := $(shell pwd)
 
-ifneq ($(SIG_FILE),)
-FULL_SIG_FILE = $(shell realpath $(SIG_FILE))
-export FULL_SIG_FILE
-endif
-
-SGX_LE_SIGNING_KEY_PATH := sgx_signing_key.pem
-SGX_LE_PUBLIC_KEY_PATH := sgx_public_key.pem
-SGX_LE_SIGNING_MATERIAL := signing_material.bin
-
-SIGNING_KEY_PATH := $(shell realpath $(SGX_LE_SIGNING_KEY_PATH))
-PUBLIC_KEY_PATH := $(shell realpath $(SGX_LE_PUBLIC_KEY_PATH))
-SIGNING_MATERIAL := $(shell realpath $(SGX_LE_SIGNING_MATERIAL))
-
-export SIGNING_KEY_PATH
-export PUBLIC_KEY_PATH
-export SIGNING_MATERIAL
-
-sign:
-	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=SIGN
-
-gendata:
-	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=GENDATA
-
-usesig:
-	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=USESIG
+default:
+	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules
 
 endif
-
-ifeq ($(LE_ACTION)$(FULL_SIG_FILE),USESIG)
- $(error On usesig build - SIG_FILE must point to the signature input file)
-endif
-
-KBUILD_AFLAGS += -I$(PWD)/le
-
-$(eval $(call config_filename,INTEL_SGX_SIGNING_KEY))
-
-
-$(SIGNING_KEY_PATH):
-	$(Q)openssl genrsa -3 -out $(SIGNING_KEY_PATH) 3072
-
-$(PUBLIC_KEY_PATH): $(SIGNING_KEY_PATH)
-	$(Q)openssl rsa -in $(SIGNING_KEY_PATH) -outform PEM -pubout -out $(PUBLIC_KEY_PATH)
-
-
-ifeq ($(LE_ACTION),SIGN)
-SGX_LE_KEY_DEP := $(SIGNING_KEY_PATH)
-else ifeq ($(LE_ACTION),USESIG)
-SGX_LE_KEY_DEP := $(PUBLIC_KEY_PATH)
-endif
-
-$(obj)/dummy.o: $(SIGNING_MATERIAL)
-$(obj)/sgx_le_proxy_piggy.o: $(SGX_LE_KEY_DEP) $(obj)/le/sgx_le_proxy
-$(obj)/le/sgx_le_proxy $(SIGNING_MATERIAL): FORCE
-	$(Q)$(MAKE) $(build)=$(obj)/le $@
 
 clean:
-	rm -vrf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*.cmd *.o.ur-safe $(SIGNING_MATERIAL)
-	$(Q)$(MAKE) -C le clean
+	rm -vrf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*.cmd *.o.ur-safe
+
+
