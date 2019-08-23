@@ -101,23 +101,12 @@ static void sgx_vma_close(struct vm_area_struct *vma)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,1,0))
 static unsigned int sgx_vma_fault(struct vm_fault *vmf)
-{
-    struct vm_area_struct *vma = vmf->vma;
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+#else
 static int sgx_vma_fault(struct vm_fault *vmf)
-{
-    struct vm_area_struct *vma = vmf->vma;
-#else
-static int sgx_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
-{
 #endif
-	
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+{
+	struct vm_area_struct *vma = vmf->vma;
 	unsigned long addr = (unsigned long)vmf->address;
-#else
-	unsigned long addr = (unsigned long) vmf->virtual_address;
-#endif
-
 	struct sgx_encl_page *entry;
 
 	entry = sgx_fault_page(vma, addr, 0);
@@ -165,7 +154,7 @@ static int sgx_edbgwr(struct sgx_encl *encl, struct sgx_encl_page *page,
 	/* Writing anything else than flags will cause #GP */
 	if ((page->desc & SGX_ENCL_PAGE_TCS) &&
 		(offset < offsetof(struct sgx_tcs, flags) ||
-		(offset + sizeof(unsigned long)) > 
+		(offset + sizeof(unsigned long)) >
 		offsetof(struct sgx_tcs, flags) + sizeof(unsigned long)))
 		return -ECANCELED;
 

@@ -62,11 +62,7 @@
 #include <linux/kthread.h>
 #include <linux/ratelimit.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-	#include <linux/sched/signal.h>
-#else
-	#include <linux/signal.h>
-#endif
+#include <linux/sched/signal.h>
 #include <linux/slab.h>
 #include "sgx.h"
 
