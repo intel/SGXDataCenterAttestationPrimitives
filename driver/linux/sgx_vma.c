@@ -153,9 +153,7 @@ static int sgx_edbgwr(struct sgx_encl *encl, struct sgx_encl_page *page,
 
 	/* Writing anything else than flags will cause #GP */
 	if ((page->desc & SGX_ENCL_PAGE_TCS) &&
-		(offset < offsetof(struct sgx_tcs, flags) ||
-		(offset + sizeof(unsigned long)) >
-		offsetof(struct sgx_tcs, flags) + sizeof(unsigned long)))
+		(offset < offsetof(struct sgx_tcs, flags)))
 		return -ECANCELED;
 
 	ptr = sgx_get_page(page->epc_page);
