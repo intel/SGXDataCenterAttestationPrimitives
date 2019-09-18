@@ -162,6 +162,8 @@ struct ql_global_data{
     se_mutex_t m_ecdsa_blob_mutex;
 
     sgx_ql_request_policy_t m_load_policy;
+    TCHAR m_qe_dirpath[MAX_PATH];
+    size_t m_qe_dirpath_length;
     sgx_enclave_id_t m_eid;
     sgx_misc_attribute_t m_attributes;
     sgx_launch_token_t m_launch_token;
@@ -170,6 +172,7 @@ struct ql_global_data{
 
     ql_global_data():
         m_load_policy(SGX_QL_DEFAULT),
+        m_qe_dirpath_length(0),
         m_eid(0),
         m_pencryptedppid(NULL)
     {
@@ -429,24 +432,38 @@ static bool get_qe_path(const TCHAR *p_file_name,
     if(!p_file_name || !p_file_path) {
         return false;
     }
-    #ifndef _MSC_VER
-#ifndef AESM_ECDSA_BUNDLE
-    Dl_info dl_info;
-    if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
-        NULL != dl_info.dli_fname)
-    {
-        if(strnlen(dl_info.dli_fname,buf_size)>=buf_size) {
+
+    // If an explicit path as set by a client, use that instead of searching.
+    bool used_explicit_path = false;
+    if (g_ql_global_data.m_qe_dirpath_length > 0) {
+        if(g_ql_global_data.m_qe_dirpath_length>=buf_size) {
             return false;
         }
-        (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
+        memcpy(p_file_path,g_ql_global_data.m_qe_dirpath,g_ql_global_data.m_qe_dirpath_length);
+        p_file_path[g_ql_global_data.m_qe_dirpath_length] = 0;
+        used_explicit_path = true;
     }
-    else //not a dynamic executable
+
+    #ifndef _MSC_VER
+#ifndef AESM_ECDSA_BUNDLE
+    if (!used_explicit_path) {
+        Dl_info dl_info;
+        if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
+            NULL != dl_info.dli_fname)
+        {
+            if(strnlen(dl_info.dli_fname,buf_size)>=buf_size) {
+                return false;
+            }
+            (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
+        }
+        else //not a dynamic executable
 #endif
-    {
-        ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
-        if (i == -1)
-            return false;
-        p_file_path[i] = '\0';
+        {
+            ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
+            if (i == -1)
+                return false;
+            p_file_path[i] = '\0';
+        }
     }
 
     char* p_last_slash = strrchr(p_file_path, '/' );
@@ -463,16 +480,18 @@ static bool get_qe_path(const TCHAR *p_file_name,
     }
     (void)strncat(p_file_path,p_file_name, strnlen(p_file_name,buf_size));
     #else
-    HMODULE hModule = NULL;
+    if (!used_explicit_path) {
+        HMODULE hModule = NULL;
 #ifndef AESM_ECDSA_BUNDLE
-    if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _T(__FUNCTION__), &hModule))
-        return false;
+        if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _T(__FUNCTION__), &hModule))
+            return false;
 #endif
-    DWORD path_length = GetModuleFileName(hModule, p_file_path, static_cast<DWORD>(buf_size));
-    if (path_length == 0)
-        return false;
-    if (path_length == buf_size)
-        return false;
+        DWORD path_length = GetModuleFileName(hModule, p_file_path, static_cast<DWORD>(buf_size));
+        if (path_length == 0)
+            return false;
+        if (path_length == buf_size)
+            return false;
+    }
 
     TCHAR *p_last_slash = _tcsrchr(p_file_path, _T('\\'));
     if (p_last_slash != NULL)
@@ -1025,6 +1044,52 @@ quote3_error_t ECDSA256Quote::ecdsa_set_enclave_load_policy(sgx_ql_request_polic
     // Unload the qe if the policy was changed to ephemeral and the enclave is loaded.
     unload_qe();
 
+    return(refqt_ret);
+}
+
+quote3_error_t ECDSA256Quote::set_enclave_dirpath(const TCHAR *dirpath)
+{
+    quote3_error_t refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+    sgx_pce_error_t pce_error;
+    int rc = 0;
+    size_t dirpath_len;
+
+#ifndef _MSC_VER
+    dirpath_len = strnlen(dirpath, MAX_PATH);
+#else
+    dirpath_len = _tcsnlen(dirpath, MAX_PATH);
+#endif
+
+    if (dirpath_len >= sizeof(g_ql_global_data.m_qe_dirpath))
+    {
+        refqt_ret = SGX_QL_ERROR_INVALID_PARAMETER;
+        goto CLEANUP;
+    }
+
+    rc = se_mutex_lock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+        refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        goto CLEANUP;
+    }
+
+    memcpy(g_ql_global_data.m_qe_dirpath, dirpath, dirpath_len);
+    g_ql_global_data.m_qe_dirpath[dirpath_len] = 0;
+    g_ql_global_data.m_qe_dirpath_length = dirpath_len;
+    refqt_ret = SGX_QL_SUCCESS;
+
+    rc = se_mutex_unlock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex.\n");
+        refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+    }
+    pce_error = sgx_set_pce_enclave_dirpath(dirpath);
+    if (SGX_PCE_SUCCESS != pce_error) {
+        refqt_ret = translate_pce_errors(pce_error);
+        goto CLEANUP;
+    }
+
+    CLEANUP:
     return(refqt_ret);
 }
 

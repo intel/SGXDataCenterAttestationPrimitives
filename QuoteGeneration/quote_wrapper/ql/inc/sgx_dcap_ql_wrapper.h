@@ -42,11 +42,21 @@
 #include "sgx_pce.h"
 #include "sgx_ql_lib_common.h"
 
+#if defined(_MSC_VER)
+#include <tchar.h>
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 quote3_error_t sgx_qe_set_enclave_load_policy(sgx_ql_request_policy_t policy);
+
+#if defined(_MSC_VER)
+quote3_error_t sgx_qe_set_enclave_dirpath(const TCHAR *dirpath);
+#else
+quote3_error_t sgx_qe_set_enclave_dirpath(const char *dirpath);
+#endif
 
 quote3_error_t sgx_qe_get_target_info(sgx_target_info_t *p_qe_target_info);
 

@@ -42,8 +42,13 @@
 #include "user_types.h"
 #include "sgx_report.h"
 #include "sgx_ql_ecdsa_quote.h"
+#include "sgx_ql_lib_common.h"
 #include "sgx_ql_core_wrapper.h"
 #include "qe3.h"
+
+#ifndef _MSC_VER
+typedef char TCHAR;
+#endif
 
 #ifdef USE_DEBUG_MRSIGNER
 // This is the mrsigner for debug key
@@ -120,6 +125,31 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
     }
 
     ret_val = ecdsa_quote.set_enclave_load_policy(policy);
+    if(SGX_QL_SUCCESS != ret_val) {
+        if((ret_val < SGX_QL_ERROR_MIN) ||
+           (ret_val > SGX_QL_ERROR_MAX))
+        {
+                ret_val = SGX_QL_ERROR_UNEXPECTED;
+        }
+    }
+
+    return(ret_val);
+}
+
+/**
+ * This API will explicitly set the directory where enclaves required for quoting are located. By default, enclaves
+ * are assumed to be located in the same directory as the application which is calling the ECDSA quoting APIs. This
+ * API will override that default, locating the quoting and provisionining enclaves in dirpath.
+ *
+ * @param dirpath The directory where the quoting and provisioning enclaves are. If NULL, any previously-set
+ * path is cleared.
+ */
+quote3_error_t sgx_ql_set_enclave_dirpath(const TCHAR *dirpath)
+{
+    quote3_error_t ret_val = SGX_QL_ERROR_UNEXPECTED;
+    ECDSA256Quote ecdsa_quote;
+
+    ret_val = ecdsa_quote.set_enclave_dirpath(dirpath);
     if(SGX_QL_SUCCESS != ret_val) {
         if((ret_val < SGX_QL_ERROR_MIN) ||
            (ret_val > SGX_QL_ERROR_MAX))

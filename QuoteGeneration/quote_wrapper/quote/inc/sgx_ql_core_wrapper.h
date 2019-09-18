@@ -40,6 +40,10 @@
 #include "sgx_quote_3.h"
 #include "sgx_ql_quote.h"
 
+#if defined(_MSC_VER)
+#include <tchar.h>
+#endif
+
 #define SGX_QL_MAX_ATT_KEY_IDS 10
 
 #define SGX_QL_CERT_TYPE PPID_RSA3072_ENCRYPTED 
@@ -49,6 +53,12 @@ extern "C" {
 #endif
 
 quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy);
+
+#if defined(_MSC_VER)
+quote3_error_t sgx_ql_set_enclave_dirpath(const TCHAR *dirpath);
+#else
+quote3_error_t sgx_ql_set_enclave_dirpath(const char *dirpath);
+#endif
 
 quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_att_key_id_list,
                                         sgx_ql_att_key_id_t **p_selected_key_id);

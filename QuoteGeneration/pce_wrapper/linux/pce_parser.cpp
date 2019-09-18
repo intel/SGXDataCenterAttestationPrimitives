@@ -144,6 +144,7 @@ bool pce_get_metadata(const char* enclave_file, metadata_t *metadata)
 
 #define PCE_ENCLAVE_NAME "libsgx_pce.signed.so"
 bool get_pce_path(
+    const char *p_dirpath,
     char *p_file_path,
     size_t buf_size)
 {
@@ -151,10 +152,19 @@ bool get_pce_path(
         return false;
 
     Dl_info dl_info;
-    if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
+    if (p_dirpath != NULL)
+    {
+        if(strnlen(p_dirpath,buf_size)==buf_size)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Input dirpath is too long\n");
+            return false;
+        }
+        (void)strncpy(p_file_path,p_dirpath,buf_size);
+    }
+    else if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
         NULL != dl_info.dli_fname)
     {
-        if(strnlen(dl_info.dli_fname,buf_size)>=buf_size)
+        if(strnlen(dl_info.dli_fname,buf_size)==buf_size)
             return false;
         (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
     }

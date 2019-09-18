@@ -41,12 +41,22 @@
 
 #include "sgx_ql_quote.h"
 
+#ifdef _MSC_VER
+#include <tchar.h>
+#endif
+
 /**
     Class definition of the reference ECDSA-P256 quoting code which implements the quoting interface, IQuote.
 */
 class ECDSA256Quote :public IQuote {
 public:
     virtual quote3_error_t set_enclave_load_policy(sgx_ql_request_policy_t policy);
+
+#ifdef _MSC_VER
+    virtual quote3_error_t set_enclave_dirpath(const TCHAR *dirpath);
+#else
+    virtual quote3_error_t set_enclave_dirpath(const char *dirpath);
+#endif
 
     virtual quote3_error_t init_quote(sgx_ql_att_key_id_t* p_att_key_id,
                                       sgx_ql_cert_key_type_t certification_key_type,
@@ -67,6 +77,12 @@ public:
 
 private:
     quote3_error_t ecdsa_set_enclave_load_policy(sgx_ql_request_policy_t policy);
+
+#ifdef _MSC_VER
+    quote3_error_t ecdsa_set_enclave_dirpath(const TCHAR *dirpath);
+#else
+    quote3_error_t ecdsa_set_enclave_dirpath(const char *dirpath);
+#endif
 
     quote3_error_t ecdsa_init_quote(sgx_ql_cert_key_type_t certification_key_type,
                                     sgx_target_info_t *p_target_info,

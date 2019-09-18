@@ -46,6 +46,10 @@
 #include "sgx_quote_3.h"
 #include "se_trace.h"
 
+#ifndef _MSC_VER
+typedef char TCHAR;
+#endif
+
 /** 
  * When the Quoting Library is linked to a process, it needs to know the proper enclave loading policy.  The library
  * may be linked with a long lived process, such as a service, where it can load the enclaves and leave them loaded 
@@ -72,6 +76,19 @@ extern "C" quote3_error_t sgx_qe_set_enclave_load_policy(sgx_ql_request_policy_t
     quote_ret = sgx_ql_set_enclave_load_policy(policy);
 
     return(quote_ret);
+}
+
+/**
+ * This API will explicitly set the directory where enclaves required for quoting are located. By default, enclaves
+ * are assumed to be located in the same directory as the application which is calling the ECDSA quoting APIs. This
+ * API will override that default, locating the quoting and provisioning enclaves in dirpath.
+ *
+ * @param dirpath The directory where the quoting and provisioning enclaves are. If NULL, any previously-set
+ * path is cleared.
+ */
+extern "C" quote3_error_t sgx_qe_set_enclave_dirpath(const TCHAR *dirpath)
+{
+    return(sgx_ql_set_enclave_dirpath(dirpath));
 }
 
 /**

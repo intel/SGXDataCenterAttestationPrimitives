@@ -41,6 +41,10 @@
 #include "sgx_key.h"
 #include "sgx_report.h"
 
+#ifdef _MSC_VER
+#include <tchar.h>
+#endif
+
 #define SGX_PCE_MK_ERROR(x)          (0x0000F000|(x))
 typedef enum _sgx_pce_error_t
 {
@@ -90,6 +94,14 @@ extern "C" {
 
 sgx_pce_error_t sgx_set_pce_enclave_load_policy(
                               sgx_ql_request_policy_t policy);
+
+/** Set the directory in which the PCE binary is located. */
+sgx_pce_error_t sgx_set_pce_enclave_dirpath(
+#if defined(_MSC_VER)
+                              const TCHAR *dirpath);
+#else
+                              const char *dirpath);
+#endif
 
 sgx_pce_error_t sgx_pce_get_target(
                               sgx_target_info_t *p_pce_target,

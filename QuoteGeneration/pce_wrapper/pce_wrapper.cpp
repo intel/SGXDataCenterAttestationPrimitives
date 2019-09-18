@@ -52,24 +52,28 @@
 
 #if defined(_MSC_VER)
 #include <tchar.h>
-bool get_pce_path(TCHAR *p_file_path, size_t buf_size);
-bool pce_get_metadata(const TCHAR* enclave_file, metadata_t *metadata);
 #else
 #include <limits.h>
+#include <string.h>
 #define MAX_PATH PATH_MAX
-bool get_pce_path(char *p_file_path, size_t buf_size);
-bool pce_get_metadata(const char* enclave_file, metadata_t *metadata);
-
+typedef char TCHAR;
+#define _T(str) str
 #endif
+
+bool get_pce_path(const TCHAR *p_dirpath, TCHAR *p_file_path, size_t buf_size);
+bool pce_get_metadata(const TCHAR* enclave_file, metadata_t *metadata);
 
 struct PCE_status {
     se_mutex_t m_pce_mutex;
     sgx_ql_request_policy_t m_pce_enclave_load_policy;
+    TCHAR m_pce_dirpath[MAX_PATH];
+    size_t m_pce_dirpath_length;
     sgx_enclave_id_t m_pce_eid;
     sgx_misc_attribute_t m_pce_attributes;
 
     PCE_status() :
         m_pce_enclave_load_policy(SGX_QL_DEFAULT),
+        m_pce_dirpath_length(0),
         m_pce_eid(0)
     {
         se_mutex_init(&m_pce_mutex);
@@ -78,6 +82,12 @@ struct PCE_status {
     ~PCE_status() {
         if (m_pce_eid != 0) sgx_destroy_enclave(m_pce_eid);
         se_mutex_destroy(&m_pce_mutex);
+    }
+
+    bool get_pce_path(TCHAR *p_file_path, size_t buf_size) const
+    {
+        const TCHAR *dirpath = m_pce_dirpath_length > 0 ? m_pce_dirpath : NULL;
+        return ::get_pce_path(dirpath, p_file_path, buf_size);
     }
 };
 
@@ -90,11 +100,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
     sgx_status_t sgx_status = SGX_SUCCESS;
     int enclave_lost_retry_time = 1;
     int launch_token_updated = 0;
-#if defined(_MSC_VER)
     TCHAR pce_enclave_path[MAX_PATH] = _T("");
-#else 
-    char pce_enclave_path[MAX_PATH] = "";
-#endif
     memset(p_launch_token, 0, sizeof(*p_launch_token));
 
     int rc = se_mutex_lock(&g_pce_status.m_pce_mutex);
@@ -107,7 +113,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
     // Load the PCE
     if (g_pce_status.m_pce_eid == 0)
     {
-        if (!get_pce_path(pce_enclave_path, MAX_PATH))
+        if (!g_pce_status.get_pce_path(pce_enclave_path, MAX_PATH))
             return SGX_PCE_INTERFACE_UNAVAILABLE;
         do
         {
@@ -190,6 +196,37 @@ sgx_pce_error_t sgx_set_pce_enclave_load_policy(
         unload_pce(true);
     return SGX_PCE_SUCCESS;
 }
+
+sgx_pce_error_t sgx_set_pce_enclave_dirpath(
+    const TCHAR *dirpath)
+{
+    if (dirpath == NULL)
+    {
+        memset(g_pce_status.m_pce_dirpath, 0, sizeof(g_pce_status.m_pce_dirpath));
+        g_pce_status.m_pce_dirpath_length = 0;
+        return SGX_PCE_SUCCESS;
+    }
+
+    size_t dirpath_length;
+
+#if defined(_MSC_VER)
+    dirpath_length = _tcsnlen(dirpath);
+#else
+    dirpath_length = strlen(dirpath);
+#endif
+
+    if (dirpath_length >= sizeof(g_pce_status.m_pce_dirpath))
+    {
+        return SGX_PCE_INVALID_PARAMETER;
+    }
+
+    memcpy(g_pce_status.m_pce_dirpath, dirpath, dirpath_length);
+    g_pce_status.m_pce_dirpath[dirpath_length] = 0;
+    g_pce_status.m_pce_dirpath_length = dirpath_length;
+
+    return SGX_PCE_SUCCESS;
+}
+
 sgx_pce_error_t sgx_pce_get_target(sgx_target_info_t *p_target,
     sgx_isv_svn_t *p_isvsvn)
 {
@@ -197,18 +234,14 @@ sgx_pce_error_t sgx_pce_get_target(sgx_target_info_t *p_target,
     sgx_enclave_id_t pce_eid = 0;
     sgx_launch_token_t launch_token = { 0 };
     metadata_t metadata;
-#if defined(_MSC_VER)
     TCHAR pce_enclave_path[MAX_PATH] = _T("");
-#else 
-    char pce_enclave_path[MAX_PATH] = "";
-#endif
     if ((NULL == p_target) ||
         (NULL == p_isvsvn))
     {
         return(SGX_PCE_INVALID_PARAMETER);
     }
 
-    if (!get_pce_path(pce_enclave_path, MAX_PATH))
+    if (!g_pce_status.get_pce_path(pce_enclave_path, MAX_PATH))
         return SGX_PCE_INTERFACE_UNAVAILABLE;
 
     if (!pce_get_metadata(pce_enclave_path, &metadata))

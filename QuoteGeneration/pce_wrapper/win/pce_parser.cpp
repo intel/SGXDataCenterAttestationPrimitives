@@ -121,6 +121,7 @@ bool pce_get_metadata(const TCHAR* enclave_file, metadata_t *metadata)
 #define PCE_ENCLAVE_NAME _T("pce.signed.dll")
 
 bool get_pce_path(
+    const TCHAR *p_dirpath,
     TCHAR *p_file_path,
     size_t buf_size)
 {
@@ -128,13 +129,25 @@ bool get_pce_path(
         return false;
 
     HMODULE hModule;
-    if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _T(__FUNCTION__), &hModule))
-        return false;
-    DWORD path_length = GetModuleFileName(hModule, p_file_path, static_cast<DWORD>(buf_size));
-    if (path_length == 0)
-        return false;
-    if (path_length == buf_size)
-        return false;
+    if (p_dirpath != NULL)
+    {
+        if(_tcsnlen(p_dirpath,buf_size)==buf_size)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Input dirpath is too long\n");
+            return false;
+        }
+        (void)_tcsncpy(p_file_path,p_dirpath,buf_size);
+    }
+    else
+    {
+        if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _T(__FUNCTION__), &hModule))
+            return false;
+        DWORD path_length = GetModuleFileName(hModule, p_file_path, static_cast<DWORD>(buf_size));
+        if (path_length == 0)
+            return false;
+        if (path_length == buf_size)
+            return false;
+    }
 
     TCHAR *p_last_slash = _tcsrchr(p_file_path, _T('\\'));
     if (p_last_slash != NULL)
