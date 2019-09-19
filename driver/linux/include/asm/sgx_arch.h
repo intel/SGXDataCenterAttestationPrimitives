@@ -159,14 +159,14 @@ enum sgx_secinfo_flags {
 struct sgx_secinfo {
 	uint64_t flags;
 	uint64_t reserved[7];
-} __attribute__((packed, aligned(64)));
+} __attribute__((__packed__, aligned(64)));
 
 struct sgx_pcmd {
 	struct sgx_secinfo secinfo;
 	uint64_t enclave_id;
 	uint8_t reserved[40];
 	uint8_t mac[16];
-} __attribute__((__packed__));
+} __attribute__((__packed__, aligned(64)));
 
 #define SGX_MODULUS_SIZE 384
 
