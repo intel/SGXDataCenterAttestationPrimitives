@@ -25,7 +25,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#ifdef __cplusplus
 extern "C" {
+#endif
 #ifndef SGX_ECDSA_QUOTE_VERIFICATION_H_
 #define SGX_ECDSA_QUOTE_VERIFICATION_H_
 
@@ -363,4 +365,6 @@ QVL_API Status sgxAttestationVerifyPCKRevocationList(const char *crl, const char
 /** @}*/
 
 #endif //SGX_ECDSA_QUOTE_VERIFICATION_H_
+#ifdef __cplusplus
 };
+#endif
