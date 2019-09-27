@@ -328,6 +328,7 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 		sgx_invalidate(encl, true);
 		goto out;
 	}
+	rc = 0;
 
 	sgx_test_and_clear_young(entry);
 out:

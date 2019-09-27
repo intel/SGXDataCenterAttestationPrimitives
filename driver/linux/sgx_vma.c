@@ -111,7 +111,7 @@ static int sgx_vma_fault(struct vm_fault *vmf)
 static int sgx_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 #endif
-	
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	unsigned long addr = (unsigned long)vmf->address;
 #else
@@ -225,19 +225,18 @@ static int sgx_vma_access(struct vm_area_struct *vma, unsigned long addr,
 		cnt = sizeof(unsigned long) - offset;
 		cnt = min(cnt, len - i);
 
-                ret = sgx_edbgrd(encl, entry, align, data);
-                if (ret)
-                        break;
+		ret = sgx_edbgrd(encl, entry, align, data);
+		if (ret)
+			break;
 
-                if (write) {
-                        memcpy(data + offset, buf + i, cnt);
-                        ret = sgx_edbgwr(encl, entry, align, data);
-                        if (ret)
-                                break;
-                }
-                else
-                        memcpy(buf + i,data + offset, cnt);
-
+		if (write) {
+			memcpy(data + offset, buf + i, cnt);
+			ret = sgx_edbgwr(encl, entry, align, data);
+			if (ret)
+				break;
+		}
+		else
+			memcpy(buf + i,data + offset, cnt);
 	}
 
 	if (entry)

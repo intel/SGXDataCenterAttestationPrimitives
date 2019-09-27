@@ -65,7 +65,7 @@ ifneq ($(LE_ACTION),GENDATA)
 		sgx_page_cache.o \
 		sgx_util.o \
 		sgx_vma.o \
-		sgx_le.o 
+		sgx_le.o
 else
 	obj-m += dummy_driver.o
 	dummy_driver-y := dummy.o
@@ -93,13 +93,13 @@ export PUBLIC_KEY_PATH
 export SIGNING_MATERIAL
 
 sign:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=SIGN
+	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=SIGN
 
 gendata:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=GENDATA
+	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=GENDATA
 
 usesig:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=USESIG
+	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules LE_ACTION=USESIG
 
 endif
 
@@ -107,7 +107,7 @@ ifeq ($(LE_ACTION)$(FULL_SIG_FILE),USESIG)
  $(error On usesig build - SIG_FILE must point to the signature input file)
 endif
 
-KBUILD_AFLAGS += -I$(PWD)/le 
+KBUILD_AFLAGS += -I$(PWD)/le
 
 $(eval $(call config_filename,INTEL_SGX_SIGNING_KEY))
 
@@ -129,9 +129,7 @@ $(obj)/dummy.o: $(SIGNING_MATERIAL)
 $(obj)/sgx_le_proxy_piggy.o: $(SGX_LE_KEY_DEP) $(obj)/le/sgx_le_proxy
 $(obj)/le/sgx_le_proxy $(SIGNING_MATERIAL): FORCE
 	$(Q)$(MAKE) $(build)=$(obj)/le $@
- 
+
 clean:
-	rm -vrf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*.cmd $(SIGNING_MATERIAL)
+	rm -vrf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*.cmd *.o.ur-safe $(SIGNING_MATERIAL)
 	$(Q)$(MAKE) -C le clean
-
-
