@@ -61,9 +61,12 @@
 #include <linux/suspend.h>
 #include <linux/version.h>
 #include <linux/mman.h>
+#include <linux/cdev.h>
+
 #include "sgx.h"
 #include "sgx_version.h"
-#include <linux/cdev.h>
+#include "sgx_driver_info.h"
+
 
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
@@ -254,6 +257,7 @@ struct sgx_context {
 	struct cdev cdev;
 	struct device provision_dev;
 	struct cdev provision_cdev;
+	struct kobject *kobj_dir;
 };
 
 static dev_t sgx_devt;
@@ -324,6 +328,26 @@ static struct sgx_context *sgxm_ctx_alloc(struct device *parent)
 	return ctx;
 }
 
+static ssize_t sgx_info_show(struct kobject *kobj,
+					struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "0x%08X\n", SGX_DRIVER_INFO_DCAP);
+}
+
+static ssize_t sgx_version_show(struct kobject *kobj,
+					struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "v"  DRV_VERSION "\n");
+}
+
+static ssize_t sgx_store(struct kobject *kobj,
+					struct kobj_attribute *attr,const char *buf, size_t count)
+{
+	return 0;
+}
+
+struct kobj_attribute info_attr = __ATTR(info, 0444, sgx_info_show, sgx_store);
+struct kobj_attribute version_attr = __ATTR(version, 0444, sgx_version_show, sgx_store);
 
 static int sgx_dev_init(struct device *parent)
 {
@@ -379,6 +403,10 @@ static int sgx_dev_init(struct device *parent)
 	if (ret)
 		goto out_workqueue;
 
+	sgx_dev->kobj_dir = kobject_create_and_add("sgx", kernel_kobj);
+	sysfs_create_file(sgx_dev->kobj_dir, &info_attr.attr);
+	sysfs_create_file(sgx_dev->kobj_dir, &version_attr.attr);
+
 	return 0;
 
 out_workqueue:
@@ -402,6 +430,10 @@ static int sgx_drv_probe(struct platform_device *pdev)
 static int sgx_drv_remove(struct platform_device *pdev)
 {
 	struct sgx_context *ctx = dev_get_drvdata(&pdev->dev);
+
+	sysfs_remove_file(kernel_kobj, &info_attr.attr);
+	sysfs_remove_file(kernel_kobj, &version_attr.attr);
+	kobject_put(ctx->kobj_dir);
 
 	cdev_device_del(&ctx->cdev, &ctx->dev);
 	cdev_device_del(&ctx->provision_cdev, &ctx->provision_dev);
