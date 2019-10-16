@@ -44,6 +44,7 @@
 #endif
 
 #include "sgx_urts.h"
+#include "sgx_quote3_defs.h"
 #include "sgx_report.h"
 #include "sgx_dcap_ql_wrapper.h"
 #include "sgx_pce.h"
@@ -51,12 +52,17 @@
 
 #include "Enclave_u.h"
 
+#include <sys/types.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #if defined(_MSC_VER)
 #define ENCLAVE_PATH _T("enclave.signed.dll")
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
 #endif
 
+uint16_t quote_certification_type(sgx_quote3_t *p_quote_buffer);
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -66,6 +72,7 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
         sgx_enclave_id_t eid = 0;
         int launch_token_updated = 0;
         sgx_launch_token_t launch_token = { 0 };
+        uint16_t qtype;
 
         sgx_status = sgx_create_enclave(ENCLAVE_PATH,
                 SGX_DEBUG_FLAG,
@@ -100,6 +107,7 @@ int main(int argc, char* argv[])
     (void)(argv);
 
     int ret = 0;
+    int qtype = 0;
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
     uint8_t* p_quote_buffer = NULL;
@@ -114,7 +122,7 @@ int main(int argc, char* argv[])
         ret = -1;
         goto CLEANUP;
     }
-    printf("succeed!");
+    printf("OK");
         
     printf("\nStep1: Call sgx_qe_get_target_info:");
     qe3_ret = sgx_qe_get_target_info(&qe_target_info);
@@ -123,7 +131,7 @@ int main(int argc, char* argv[])
                 ret = -1;
         goto CLEANUP;
     }
-    printf("succeed!");
+    printf("OK");
     printf("\nStep2: Call create_app_report:");
     if(true != create_app_enclave_report(qe_target_info, &app_report)) {
         printf("\nCall to create_app_report() failed\n");
@@ -131,7 +139,7 @@ int main(int argc, char* argv[])
         goto CLEANUP;
     }
 
-    printf("succeed!");
+    printf("OK");
     printf("\nStep3: Call sgx_qe_get_quote_size:");
     qe3_ret = sgx_qe_get_quote_size(&quote_size);
     if (SGX_QL_SUCCESS != qe3_ret) {
@@ -140,7 +148,7 @@ int main(int argc, char* argv[])
         goto CLEANUP;
     }
 
-    printf("succeed!");
+    printf("OK");
     p_quote_buffer = (uint8_t*)malloc(quote_size);
     if (NULL == p_quote_buffer) {
         printf("Couldn't allocate quote_buffer\n");
@@ -159,19 +167,81 @@ int main(int argc, char* argv[])
         ret = -1;
         goto CLEANUP;
     }
-    printf("succeed!");
-        
-    printf("\n Clean up the enclave load policy:");
+    printf("OK\n");
+
+    /* Determine the quote type (the evidence used to sign the quote) */
+    qtype= quote_certification_type((sgx_quote3_t *) p_quote_buffer);
+    if ( qtype > 0 ) {
+        printf("Quote type = %d (", qtype);
+        switch(qtype) {
+        case PPID_CLEARTEXT:
+            printf("Clear PPID + CPU_SVN, PvE_SVN, PCE_SVN, PCE_ID");
+            break;
+        case PPID_RSA2048_ENCRYPTED:
+            printf("RSA-2048-OAEP Encrypted PPID + CPU_SVN, PvE_SVN, PCE_SVN, PCE_ID");
+            break;
+        case PPID_RSA3072_ENCRYPTED:
+            printf("RSA-3072-OAEP Encrypted PPID + CPU_SVN, PvE_SVN, PCE_SVN, PCE_ID");
+            break;
+        case PCK_CLEARTEXT:
+            printf("Clear PCK Leaf Cert");
+            break;
+        case PCK_CERT_CHAIN:
+            printf("Full PCK Cert chain");
+            break;
+        case ECDSA_SIG_AUX_DATA:
+            printf("CERTIFICATION_INFO_DATA contains the ECDSA_SIG_AUX_DATA of another quote");
+            break;
+        }
+        printf(")\n");
+    }
+ 
+    printf("Clean up the enclave load policy:");
     qe3_ret = sgx_qe_cleanup_by_policy();
     if(SGX_QL_SUCCESS != qe3_ret) {
         printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
         ret = -1;
         goto CLEANUP;
     }
-    printf("succeed!\n");
+    printf("OK\n");
 CLEANUP:
     if (NULL != p_quote_buffer) {
         free(p_quote_buffer);
     }
     return ret;
 }
+
+uint16_t quote_certification_type(sgx_quote3_t *q3)
+{
+    sgx_quote3_header_t *q3h= (sgx_quote3_header_t *) q3;
+    sgx_ql_ecdsa_sig_data_t *q3s= NULL;
+    sgx_ql_auth_data_t *ql_auth= NULL;
+    sgx_ql_certification_data_t *ql_cert= NULL;
+    uint8_t *ql_ac_data= NULL;
+
+    switch(q3h->version) {
+    case 2:
+        fprintf(stderr, "EPID quote received");
+        return 0;
+        break;
+    case 3:
+        break;
+    default:
+        fprintf(stderr, "Unknown quote version");
+        return 0;
+    }
+
+    /* Parse the variable-length data structures */
+
+    q3s= (sgx_ql_ecdsa_sig_data_t *) &(q3->signature_data);
+
+    ql_ac_data= (uint8_t *) &(q3s->auth_certification_data);
+
+    ql_auth= (sgx_ql_auth_data_t *) ql_ac_data;
+
+    ql_cert= (sgx_ql_certification_data_t *) 
+        (uint8_t *)(ql_ac_data + sizeof(ql_auth->size) + ql_auth->size);
+
+    return ql_cert->cert_key_type;
+}
+
