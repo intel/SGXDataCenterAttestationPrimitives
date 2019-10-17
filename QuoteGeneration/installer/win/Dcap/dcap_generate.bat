@@ -2,7 +2,6 @@ echo off
 
 set BUILDNUM="0"
 set TOOLSFOLDER="..\Tools"
-set RELEASEFILEFOLDER="..\..\..\x64\Release"
 SET INFVER="C:\Program Files (x86)\Windows Kits\10\Tools\x64\infverif.exe"
 
 :GETPSWEXENAME

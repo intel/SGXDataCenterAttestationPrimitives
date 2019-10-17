@@ -54,7 +54,7 @@ typedef enum _sgx_qcnl_error_t{
     SGX_QCNL_NETWORK_UNKNOWN_OPTION = SGX_QCNL_MK_ERROR(0x000B),        ///< Network error : An option passed to libcurl is not recognized/known.
     SGX_QCNL_NETWORK_INIT_ERROR = SGX_QCNL_MK_ERROR(0x000C),            ///< Failed to initialize CURL library
     SGX_QCNL_MSG_ERROR = SGX_QCNL_MK_ERROR(0x000D),                     ///< HTTP message error
-    SGX_QCNL_ERROR_NO_CERT_DATA = SGX_QCNL_MK_ERROR(0x000E),            ///< PCK cert data not found
+    SGX_QCNL_ERROR_STATUS_NOT_FOUND = SGX_QCNL_MK_ERROR(0x000E),        ///< Data not found
     SGX_QCNL_OUT_OF_MEMORY = SGX_QCNL_MK_ERROR(0x000F),                 ///< Out of memory error
 } sgx_qcnl_error_t;
 
@@ -88,6 +88,16 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
 
 void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity);
 
+sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity, 
+                                           uint32_t *p_qve_identity_size,
+                                           char **pp_qve_identity_issuer_chain,
+                                           uint32_t *p_qve_identity_issuer_chain_size);
+
+void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
+
+sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_root_ca_cal_size);
+
+void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl);
 
 #if defined(__cplusplus)
 }

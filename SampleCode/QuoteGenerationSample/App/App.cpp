@@ -48,6 +48,7 @@
 #include "sgx_dcap_ql_wrapper.h"
 #include "sgx_pce.h"
 #include "sgx_error.h"
+#include "sgx_quote_3.h"
 
 #include "Enclave_u.h"
 
@@ -105,6 +106,11 @@ int main(int argc, char* argv[])
     uint8_t* p_quote_buffer = NULL;
     sgx_target_info_t qe_target_info; 
     sgx_report_t app_report;
+    sgx_quote3_t *p_quote;
+    sgx_ql_auth_data_t *p_auth_data;
+    sgx_ql_ecdsa_sig_data_t *p_sig_data;
+    sgx_ql_certification_data_t *p_cert_data;
+    FILE *fptr = NULL;
 
     printf("This step is optional: the default enclave load policy is persistent: \n");
     printf("set the enclave load policy as persistent:");
@@ -160,7 +166,25 @@ int main(int argc, char* argv[])
         goto CLEANUP;
     }
     printf("succeed!");
-        
+    
+    p_quote = (_sgx_quote3_t*)p_quote_buffer;
+    p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
+    p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
+    p_cert_data = (sgx_ql_certification_data_t *)((uint8_t *)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
+
+    printf("cert_key_type = 0x%x\n", p_cert_data->cert_key_type);
+
+#if _WIN32
+    fopen_s(&fptr, "quote.dat", "wb");
+#else
+    fptr = fopen("quote.dat","wb");
+#endif
+    if( fptr )
+    {
+        fwrite(p_quote, quote_size, 1, fptr);
+        fclose(fptr);
+    }
+    
     printf("\n Clean up the enclave load policy:");
     qe3_ret = sgx_qe_cleanup_by_policy();
     if(SGX_QL_SUCCESS != qe3_ret) {

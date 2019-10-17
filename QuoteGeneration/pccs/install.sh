@@ -15,7 +15,8 @@ function checkNodeJs() {
 checkNodeJs
 
 cd `dirname $0`
-npm install
+npm install --engine-strict
+[ $? -eq 0 ] || exit $?;
 
 if which pm2 > /dev/null 
 then 
@@ -49,13 +50,13 @@ do
         admintoken2=""
     else
         HASH="$(echo -n "$admintoken1" | sha512sum | tr -d '[:space:]-')"
-        sed "/\"AdminToken\"*/c\ \ \ \ \"AdminToken\" \: \"${HASH}\"" -i config.json
+        sed "/\"AdminToken\"*/c\ \ \ \ \"AdminToken\" \: \"${HASH}\"," -i config/default.json
         pass_set=true
     fi
 done
 
 pm2 update
-pm2 start pccs_server.js
+pm2 start pccs_server.config.js 
 
 pm2cfg=`pm2 startup systemd | grep 'sudo'` 
 eval $pm2cfg

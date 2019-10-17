@@ -35,7 +35,7 @@
  *
  */
 
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
@@ -45,6 +45,7 @@
 #include "sgx_default_qcnl_wrapper.h"
 #include "sgx_pce.h"
 #include "network_wrapper.h"
+#include "se_memcpy.h"
 
 using namespace std;
 
@@ -188,12 +189,13 @@ static void http_header_to_map(char* resp_header, uint32_t header_size, map<stri
             string str((unsigned char*)resp_header+start, (unsigned char*)resp_header+end);
             size_t pos = str.find(": ");
             if (pos != string::npos) {
-				// HTTP headers are case-insensitive. Convert to lower case
-				// for convenience.
-				string header_lc= str.substr(0, pos);
-				transform(header_lc.begin(), header_lc.end(), header_lc.begin(), ::tolower);
+                // HTTP headers are case-insensitive. Convert to lower case
+                // for convenience.
+                string header_lc= str.substr(0, pos);
+                transform(header_lc.begin(), header_lc.end(), header_lc.begin(),
+                          [](unsigned char c){return (unsigned char)::tolower(c);});
                 header_map.insert(pair<string, string>(header_lc, str.substr(pos+2)));
-			}
+            }
             start = end;
         }
     }
@@ -388,8 +390,14 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
             ret = SGX_QCNL_OUT_OF_MEMORY;
             break; 
         }
-        memcpy((*pp_quote_config)->p_cert_data, resp_msg, resp_size); 
-        memcpy((*pp_quote_config)->p_cert_data + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s((*pp_quote_config)->p_cert_data, (*pp_quote_config)->cert_data_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s((*pp_quote_config)->p_cert_data + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -497,8 +505,14 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
         }
 
         // set certchain (crl || intermediateCA || root CA)
-        memcpy(*p_crl_chain, resp_msg, resp_size); 
-        memcpy(*p_crl_chain + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_crl_chain, *p_crl_chain_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_crl_chain + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -557,7 +571,7 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
     // initialize https request url
     string url(server_url);
 
-    // Append fmspc 
+    // Append fmspc
     url.append("tcb?fmspc=");
     if ((ret = url_append_req_para(url, reinterpret_cast<const uint8_t*>(fmspc), fmspc_size)) != SGX_QCNL_SUCCESS) {
         return SGX_QCNL_UNEXPECTED_ERROR;
@@ -600,8 +614,14 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
         }
 
         // set certchain (tcbinfo || signingCA || root CA)
-        memcpy(*p_tcbinfo, resp_msg, resp_size); 
-        memcpy(*p_tcbinfo + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_tcbinfo, *p_tcbinfo_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_tcbinfo + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -671,7 +691,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-qe-identity-issuer-chain");
+        it = header_map.find("sgx-enclave-identity-issuer-chain");
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
@@ -693,8 +713,14 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
         }
 
         // set certchain (QE identity || signingCA || root CA)
-        memcpy(*p_qe_identity, resp_msg, resp_size); 
-        memcpy(*p_qe_identity + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_qe_identity, *p_qe_identity_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_qe_identity + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -721,5 +747,208 @@ void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity)
 {
     if(p_qe_identity) {
         free(p_qe_identity);
+    }
+}
+
+/**
+* This API gets QvE identity from PCCS server. The pp_qve_identity and pp_qve_identity_issuer_chain buffer allocated by this API
+* must be freed with sgx_qcnl_free_qve_identity upon success.
+*
+* @param pp_qve_identity Output buffer for QvE identity
+* @param p_qve_identity_size Size of QvE identity
+* @param pp_qve_identity_issuer_chain Output buffer for QvE identity certificate chain
+* @param p_qve_identity_issuer_chain_size Size of QvE identity certificate chain
+*
+* @return SGX_QCNL_SUCCESS If the QvE identity was retrieved from PCCS server successfully.
+*/
+sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity, 
+                                           uint32_t *p_qve_identity_size,
+                                           char **pp_qve_identity_issuer_chain,
+                                           uint32_t *p_qve_identity_issuer_chain_size)
+{
+    // Check input parameters
+    if (pp_qve_identity == NULL || p_qve_identity_size == NULL 
+       || pp_qve_identity_issuer_chain == NULL || p_qve_identity_issuer_chain_size == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+
+    *pp_qve_identity = NULL;
+    *pp_qve_identity_issuer_chain = NULL;
+
+    // initialize https request url
+    string url(server_url);
+
+    // Append qve identity 
+    url.append("qve/identity");
+
+    char* resp_msg = NULL;
+    uint32_t resp_size;
+    char* resp_header = NULL;
+    uint32_t header_size;
+
+    sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
+    if (ret != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    do {
+        // Get certchain from HTTP response header
+        map<string,string> header_map;
+        map<string, string>::const_iterator it;
+        http_header_to_map(resp_header, header_size, header_map);
+        it = header_map.find("sgx-enclave-identity-issuer-chain");
+        if (it == header_map.end()) {
+            ret = SGX_QCNL_MSG_ERROR;
+            break;
+        }
+        string certchain = it->second;
+        certchain = unescape(certchain);
+
+        if (resp_size >= UINT32_MAX - 1) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (certchain.size() >= UINT32_MAX - 1){
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        // allocate buffers
+        *p_qve_identity_size = resp_size + 1;
+        *pp_qve_identity = (char*)malloc(*p_qve_identity_size);
+        if (*pp_qve_identity == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+        *p_qve_identity_issuer_chain_size = (uint32_t)(certchain.size() + 1);
+        *pp_qve_identity_issuer_chain = (char*)malloc(*p_qve_identity_issuer_chain_size);
+        if (*pp_qve_identity_issuer_chain == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+
+        // set QvE identity
+        if (memcpy_s(*pp_qve_identity, *p_qve_identity_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        (*pp_qve_identity)[*p_qve_identity_size - 1] = '\0'; // add NULL terminator
+
+        // set certchain (signingCA || root CA)
+        if (memcpy_s(*pp_qve_identity_issuer_chain, *p_qve_identity_issuer_chain_size, certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        (*pp_qve_identity_issuer_chain)[*p_qve_identity_issuer_chain_size - 1] = '\0'; // add NULL terminator
+
+        ret = SGX_QCNL_SUCCESS;
+    } while(0);
+
+    if (ret != SGX_QCNL_SUCCESS) {
+        sgx_qcnl_free_qve_identity(*pp_qve_identity, *pp_qve_identity_issuer_chain);
+    }
+    if (resp_msg) {
+        free(resp_msg);
+        resp_msg = NULL;
+    }
+    if (resp_header){
+        free(resp_header);
+        resp_header = NULL;
+    }
+
+    return ret;
+}
+
+/**
+* This API frees the p_qve_identity and p_qve_identity_issuer_chain buffer allocated by sgx_qcnl_get_qve_identity
+*/
+void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain)
+{
+    if(p_qve_identity) {
+        free(p_qve_identity);
+        p_qve_identity = NULL;
+    }
+    if(p_qve_identity_issuer_chain) {
+        free(p_qve_identity_issuer_chain);
+        p_qve_identity_issuer_chain = NULL;
+    }
+}
+
+/**
+* This API gets Root CA CRL from PCCS server. The p_root_ca_crl buffer allocated by this API
+* must be freed with sgx_qcnl_free_root_ca_crl upon success.
+*
+* @param p_root_ca_crl Output buffer for Root CA CRL 
+* @param p_root_ca_cal_size Size of Root CA CRL
+*
+* @return SGX_QCNL_SUCCESS If the Root CA CRL was retrieved from PCCS server successfully.
+*/
+sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_root_ca_cal_size)
+{
+    // Check input parameters
+    if (p_root_ca_crl == NULL || p_root_ca_cal_size == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+
+    // initialize https request url
+    string url(server_url);
+
+    // Append url
+    url.append("rootcacrl");
+
+    char* resp_msg = NULL;
+    uint32_t resp_size;
+    char* resp_header = NULL;
+    uint32_t header_size;
+
+    sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
+    if (ret != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    do {
+        if (resp_size >= UINT16_MAX) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        *p_root_ca_cal_size = (uint16_t)(resp_size);
+        *p_root_ca_crl = (uint8_t*)malloc(*p_root_ca_cal_size);
+        if (*p_root_ca_crl == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+
+        // set Root CA CRL
+        if (memcpy_s(*p_root_ca_crl, *p_root_ca_cal_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        ret = SGX_QCNL_SUCCESS;
+    } while(0);
+
+    if (ret != SGX_QCNL_SUCCESS) {
+        sgx_qcnl_free_root_ca_crl(*p_root_ca_crl);
+    }
+    if (resp_msg) {
+        free(resp_msg);
+        resp_msg = NULL;
+    }
+    if (resp_header){
+        free(resp_header);
+        resp_header = NULL;
+    }
+
+    return ret;
+}
+
+/**
+* This API frees the p_root_ca_crl buffer allocated by sgx_qcnl_get_root_ca_crl
+*/
+void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl)
+{
+    if(p_root_ca_crl) {
+        free(p_root_ca_crl);
     }
 }

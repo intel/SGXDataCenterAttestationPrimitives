@@ -31,7 +31,7 @@
 
 CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
-.PHONY: all pkg dcap opt_check_failed clean rebuild sdk sample pce_wrapper quote_wrapper
+.PHONY: all pkg dcap opt_check_failed clean rebuild sdk sample pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper qve_wrapper
 
 all: pkg deb_pkg
 
@@ -58,7 +58,7 @@ ifeq ("$(wildcard psw/ae/data/prebuilt)", "")
 CHECK_OPT := opt_check_failed
 endif
 
-dcap: $(CHECK_OPT) pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper sample
+dcap: $(CHECK_OPT) pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper qve_wrapper sample
 
 opt_check_failed:
 	@echo "ERROR: Please decompress prebuilt enclave package before compiling."
@@ -77,34 +77,45 @@ qcnl_wrapper:
 qpl_wrapper: qcnl_wrapper
 	$(MAKE) -C qpl/linux
 
+qve_wrapper:
+	$(MAKE) -C ../QuoteVerification
+
 sample: quote_wrapper
 	cd ../SampleCode && zip -r sample.zip ./
 
-deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper
+.PHONY: deb_sgx_dcap_ql_pkg
+deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper qve_wrapper
 	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
-deb_sgx_dcap_ql_dbg_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper
+.PHONY: deb_sgx_dcap_ql_dbg_pkg
+deb_sgx_dcap_ql_dbg_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper qve_wrapper
 ifndef DEBUG
 	./installer/linux/deb/libsgx-dcap-ql-dbg/build.sh
 endif
 
+.PHONY: deb_sgx_dcap_ql_dev_pkg
 deb_sgx_dcap_ql_dev_pkg:
 	./installer/linux/deb/libsgx-dcap-ql-dev/build.sh
 
+.PHONY: deb_sgx_dcap_default_qpl_pkg
 deb_sgx_dcap_default_qpl_pkg: $(CHECK_OPT) qcnl_wrapper qpl_wrapper
 	./installer/linux/deb/libsgx-dcap-default-qpl/build.sh
 
+.PHONY:deb_sgx_dcap_default_qpl_dbg_pkg
 deb_sgx_dcap_default_qpl_dbg_pkg: $(CHECK_OPT) qcnl_wrapper qpl_wrapper
 ifndef DEBUG
 	./installer/linux/deb/libsgx-dcap-default-qpl-dbg/build.sh
 endif
 
+.PHONY: deb_sgx_dcap_default_qpl_dev_pkg
 deb_sgx_dcap_default_qpl_dev_pkg:
 	./installer/linux/deb/libsgx-dcap-default-qpl-dev/build.sh
 
+.PHONY: deb_sgx_dcap_pccs_pkg
 deb_sgx_dcap_pccs_pkg:
 	./installer/linux/deb/libsgx-dcap-pccs/build.sh
 
+.PHONY: deb_pkg
 deb_pkg: deb_sgx_dcap_ql_pkg deb_sgx_dcap_ql_dbg_pkg deb_sgx_dcap_ql_dev_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_default_qpl_dbg_pkg deb_sgx_dcap_default_qpl_dev_pkg deb_sgx_dcap_pccs_pkg
 	@$(RM) -f ./installer/linux/deb/*.deb
 	cp `find ./installer/linux/deb/ -name "*.deb"` ./installer/linux/deb/
@@ -114,6 +125,7 @@ clean:
 	$(MAKE) -C quote_wrapper/ql/linux clean
 	$(MAKE) -C qcnl/linux clean
 	$(MAKE) -C qpl/linux clean
+	$(MAKE) -C ../QuoteVerification clean
 	@$(RM) -rf ../SampleCode/sample.zip
 	@$(RM) -rf linux_dcap_interface.zip
 	@$(RM) -rf ./build/

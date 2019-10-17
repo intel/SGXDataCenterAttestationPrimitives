@@ -44,4 +44,6 @@ install:
 	install $(NGA_LIB_PATH)/* $(USR_LIB_PATH)
 	cd $(USR_LIB_PATH) && \
 	mv libsgx_dcap_ql.so libsgx_dcap_ql.so.$(USR_LIB_VER) && \
-	ln -s libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}')
+	ln -s libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}') && \
+	mv libdcap_quoteverify.so libdcap_quoteverify.so.$(USR_LIB_VER) && \
+	ln -s libdcap_quoteverify.so.$(USR_LIB_VER) libdcap_quoteverify.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}')

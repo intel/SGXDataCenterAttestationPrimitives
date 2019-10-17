@@ -59,13 +59,15 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Debug Support;$(SGXSDKInstallPath)bin\x64\Release</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sgx_dcap_ql.lib;sgx_urts.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Debug Support;$(SGXSDKInstallPath)\bin\x64\Release;$(VC_LibraryPath_VC_x64_OneCore)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
+      <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -87,14 +89,16 @@
       <AdditionalIncludeDirectories>$(SGXDCAPComponentsPath)\Header Files;$(SGXSDKInstallPath)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Libraries;$(SGXSDKInstallPath)bin\x64\Release</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sgx_dcap_ql.lib;sgx_urts.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Libraries;$(SGXSDKInstallPath)\bin\x64\Release;$(VC_LibraryPath_VC_x64_OneCore)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>

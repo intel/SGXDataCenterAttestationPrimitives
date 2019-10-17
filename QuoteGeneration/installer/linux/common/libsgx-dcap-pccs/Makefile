@@ -40,4 +40,4 @@ default:
 
 install:
 	install -d $(USR_PCCS_PATH)
-	install $(NGA_PCCS_PATH)/* $(USR_PCCS_PATH)
+	cp -r $(NGA_PCCS_PATH)/* $(USR_PCCS_PATH)

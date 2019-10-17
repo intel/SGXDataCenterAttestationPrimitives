@@ -8,4 +8,4 @@ call npm install pm2 -g
 
 call pm2 update
 
-call pm2 start pccs_server.js
+call pm2 start pccs_server.config.js
