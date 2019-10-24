@@ -133,12 +133,6 @@ static bool sgx_is_enabled(void)
 		return false;
 	}
 
-	rdmsrl(MSR_IA32_FEATURE_CONFIG, fc);
-	if ((fc & FEATURE_CONFIG_AES_DISABLE_LOCKED) == FEATURE_CONFIG_AES_DISABLE_LOCKED){
-		pr_err("intel_sgx: AES-NI is disabled in FEATURE_CONFIG MSR!\n");
-		return false;
-	}
-
 	cpuid(0, &eax, &ebx, &ecx, &edx);
 	if (eax < SGX_CPUID) {
 		pr_err("intel_sgx: SGX CPUID leaf is not supported!\n");
