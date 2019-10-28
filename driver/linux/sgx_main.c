@@ -64,6 +64,7 @@
 #include "sgx.h"
 #include "le/enclave/sgx_le_ss.h"
 #include "sgx_version.h"
+#include "sgx_driver_info.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
 #define CDEV_BUILD
@@ -319,6 +320,7 @@ static struct bus_type sgx_bus_type = {
 struct sgx_context {
 	struct device dev;
 	struct cdev cdev;
+	struct kobject *kobj_dir;
 };
 
 static dev_t sgx_devt;
@@ -416,6 +418,21 @@ static int sgx_init_msrs(void)
 	return 0;
 }
 
+static ssize_t info_show(struct kobject *kobj,
+					struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "0x%08X\n", SGX_DRIVER_INFO_DCAP);
+}
+
+static ssize_t version_show(struct kobject *kobj,
+					struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "v"  DRV_VERSION "\n");
+}
+
+struct kobj_attribute info_attr = __ATTR_RO(info);
+struct kobj_attribute version_attr = __ATTR_RO(version);
+
 static int sgx_dev_init(struct device *parent)
 {
 #ifdef CDEV_BUILD
@@ -484,6 +501,10 @@ static int sgx_dev_init(struct device *parent)
 	if (ret)
 		goto out_le;
 
+	sgx_dev->kobj_dir = kobject_create_and_add("sgx", kernel_kobj);
+	sysfs_create_file(sgx_dev->kobj_dir, &info_attr.attr);
+	sysfs_create_file(sgx_dev->kobj_dir, &version_attr.attr);
+
 	return 0;
 out_le:
 	sgx_le_exit(&sgx_le_ctx);
@@ -521,6 +542,10 @@ static int sgx_drv_remove(struct platform_device *pdev)
 {
 #ifdef CDEV_BUILD
 	struct sgx_context *ctx = dev_get_drvdata(&pdev->dev);
+
+	sysfs_remove_file(ctx->kobj_dir, &info_attr.attr);
+	sysfs_remove_file(ctx->kobj_dir, &version_attr.attr);
+	kobject_put(ctx->kobj_dir);
 
 	cdev_device_del(&ctx->cdev, &ctx->dev);
 #else
