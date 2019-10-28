@@ -63,7 +63,8 @@
 
 #ifndef _MSC_VER
     #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so"
-    #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so"
+    #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
+    #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
     #define TCHAR char
     #define _T(x) (x)
 #else
@@ -239,6 +240,9 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     void *handle = NULL;
     char *error1 = NULL;
     char *error2 = NULL;
+    #ifndef DISABLE_TRACE
+    bool old_libname_used = false;
+    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -255,8 +259,20 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
 
     #ifndef _MSC_VER
     handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+    if (NULL == handle)
+    {
+        ///TODO:
+        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
+        // We shalll remove this when we have a major version change later and drop the backward compatible
+        // support for old lib name.
+        #ifndef DISABLE_TRACE
+        old_libname_used = true;
+        #endif
+        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+    }
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
+            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_get_quote_config = (sgx_get_quote_config_func_t)dlsym(handle, "sgx_ql_get_quote_config");
         error1 = dlerror();
         p_sgx_free_quote_config = (sgx_free_quote_config_func_t)dlsym(handle, "sgx_ql_free_quote_config");
@@ -727,6 +743,9 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
     #ifndef _MSC_VER
     void *handle;
     char *error;
+    #ifndef DISABLE_TRACE
+    bool old_libname_used = false;
+    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -739,8 +758,20 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
 
     #ifndef _MSC_VER
     handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+    if (NULL == handle)
+    {
+        ///TODO:
+        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
+        // We shalll remove this when we have a major version change later and drop the backward compatible
+        // support for old lib name.
+        #ifndef DISABLE_TRACE
+        old_libname_used = true;
+        #endif
+        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+    }
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
+            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)dlsym(handle, "sgx_ql_write_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_write_persistent_data) {
@@ -809,6 +840,9 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
     #ifndef _MSC_VER
     void *handle;
     char *error;
+    #ifndef DISABLE_TRACE
+    bool old_libname_used = false;
+    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -821,8 +855,20 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
 
     #ifndef _MSC_VER
     handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+    if (NULL == handle)
+    {
+        ///TODO:
+        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
+        // We shalll remove this when we have a major version change later and drop the backward compatible
+        // support for old lib name.
+        #ifndef DISABLE_TRACE
+        old_libname_used = true;
+        #endif
+        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+    }
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
+            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)dlsym(handle, "sgx_ql_read_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_read_persistent_data) {
@@ -1866,11 +1912,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
     sgx_sealed_data_t *p_sealed_ecdsa;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
     sgx_report_body_t qe3_report_body;
-    uint8_t *p_cert_data = NULL;
-    bool update_cert_data = false;
-    sgx_ql_ecdsa_sig_data_t *p_quote_sig;
-    sgx_ql_auth_data_t *p_auth_data;
-    sgx_ql_certification_data_t *p_certification_data;
+    sgx_ql_certification_data_t *p_certification_data = NULL;
     sgx_psvn_t pce_cert_psvn;
     int blob_mutex_rc = 0;
 
@@ -1998,17 +2040,18 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
             goto CLEANUP;
         }
         // malloc the buffer to get the cert data and call again
-        p_cert_data = (uint8_t*)malloc(cert_data_size);
-        if(NULL == p_cert_data) {
+        p_certification_data = (sgx_ql_certification_data_t *)malloc(sizeof(*p_certification_data) + cert_data_size);
+        if(NULL == p_certification_data) {
             refqt_ret = SGX_QL_ERROR_OUT_OF_MEMORY;
             goto CLEANUP;
 
         }
+        memset(p_certification_data, 0, sizeof(*p_certification_data));
         refqt_ret = get_platform_quote_cert_data(&pck_cert_id,
                                                  &pce_cert_psvn.cpu_svn,
                                                  &pce_cert_psvn.isv_svn,
                                                  &cert_data_size,
-                                                 p_cert_data);
+                                                 p_certification_data->certification_data);
         if (refqt_ret != SGX_QL_SUCCESS) {
             // Really shouldn't fail here if we passed the first call.
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
@@ -2031,7 +2074,8 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
             refqt_ret = SGX_QL_ERROR_INVALID_PARAMETER;
             goto CLEANUP;
         }
-        update_cert_data = true;
+        p_certification_data->cert_key_type = PCK_CERT_CHAIN;
+        p_certification_data->size = cert_data_size;
     }
     else
     {
@@ -2058,7 +2102,9 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
                            p_qe_report_out,
                            (uint8_t*)p_quote,
                            quote_size,
-                           cur_pce_isv_svn);
+                           cur_pce_isv_svn,
+                           (uint8_t*)p_certification_data,
+                           p_certification_data ? (uint32_t)(sizeof(*p_certification_data) + cert_data_size) : 0);
     if (SGX_SUCCESS != sgx_status) {
         SE_TRACE(SE_TRACE_ERROR, "Failed call into the QE3. 0x%04x\n", sgx_status);
         ///todo:  May want to retry on SGX_ERROR_ENCLAVE_LOST caused by power transition
@@ -2072,26 +2118,9 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
     }
     SE_TRACE(SE_TRACE_DEBUG, "Get quote success\n");
 
-    if(true == update_cert_data) {
-        p_quote_sig = (sgx_ql_ecdsa_sig_data_t*)(p_quote->signature_data);
-        p_auth_data = (sgx_ql_auth_data_t*)(p_quote_sig->auth_certification_data);
-        //Note:  This is potentially dangerous pointer math using an untrusted input size.  The 'required_buffer_size' check
-        //above verifies that the size will not put the calculated address and certification data outside of the inputted
-        //p_quote + quote_size memory.
-        p_certification_data = (sgx_ql_certification_data_t*)(p_auth_data->auth_data + p_auth_data->size);
-        p_certification_data->cert_key_type = PCK_CERT_CHAIN;
-        p_quote->signature_data_len -= p_certification_data->size;
-        p_certification_data->size = cert_data_size;
-        p_quote->signature_data_len += p_certification_data->size;
-        if(0 != memcpy_s(p_certification_data->certification_data, cert_data_size, p_cert_data, cert_data_size)) {
-            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
-            goto CLEANUP;
-        }
-    }
-
     CLEANUP:
-    if(NULL != p_cert_data) {
-        free(p_cert_data);
+    if(NULL != p_certification_data) {
+        free(p_certification_data);
     }
 
     if(0 != blob_mutex_rc ) {

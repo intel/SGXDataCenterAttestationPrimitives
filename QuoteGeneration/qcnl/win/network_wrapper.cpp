@@ -244,7 +244,7 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
         }
         else if (dwStatus == HTTP_STATUS_NOT_FOUND) // 404
         {
-            ret = SGX_QCNL_ERROR_NO_CERT_DATA;
+            ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
             break;
         }
         else {

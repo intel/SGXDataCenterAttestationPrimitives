@@ -1,4 +1,4 @@
-PCK ID Retrieval Tool, version 1.2.100.1
+Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP): PCK ID Retrieval Tool
 ===============================================
 
 
@@ -10,16 +10,14 @@ PCK ID Retrieval Tool, version 1.2.100.1
 For Linux version:
 - Please build and install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
     sudo ./sgx_linux_x64_driver.bin
-- Please install bellow DCAP Debian packages:
+- Please install bellow Debian packages:
     a. libsgx-enclave-common_{version}-{revision}_{arch}.deb
     b. libsgx-dcap-ql_{version}-{revision}_{arch}.deb
-- Please DON'T install bellow DCAP Debian package or uninstall it if you have installed it:
-    libsgx-dcap-default-qpl_{version}-{revision}_{arch}.deb
 - Configure the system with the **Intel(R) SGX hardware enabled** option.
 
 For Windows version:
 - Please install Intel(R)_SGX_Windows_SDK_2.x.xxx.xxx and DCAP INF installer,
-- Please Install Intel(R)_SGX_Windows_x64_PSW_2.x.xxx.xxx for Windows Server 2016 
+- Please Install Intel(R)_SGX_Windows_x64_PSW_2.x.xxx.xxx for Windows Server 2016 or 2019 
     
 
 

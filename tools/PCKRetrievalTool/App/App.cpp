@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@
 #include <dlfcn.h>
 #endif
 #include "version.h"
+#include "sgx_urts.h"
 #include "sgx_report.h"
 #include "sgx_dcap_ql_wrapper.h"
 #include "sgx_pce.h"
@@ -58,7 +59,7 @@
 #define ENCLAVE_PATH _T("enclave.signed.dll")
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so"
+#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
 #endif
 #define MAX_PATH 260
 
@@ -77,12 +78,12 @@ void PrintHelp() {
 // Some utility MACRO to output some of the data structures.
 #define PRINT_BYTE_ARRAY(stream,mem, len)                     \
 {                                                             \
-    if (!mem || !len) {                                       \
+    if (!(mem) || !(len)) {                                       \
         fprintf(stream,"\n( null )\n");                       \
     } else {                                                  \
-        uint8_t *array = (uint8_t *)mem;                      \
+        uint8_t *array = (uint8_t *)(mem);                      \
         uint32_t i = 0;                                       \
-        for (i = 0; i < len - 1; i++) {                       \
+        for (i = 0; i < (len) - 1; i++) {                       \
             fprintf(stream,"%02x", array[i]);                 \
             if (i % 32 == 31 && stream == stdout)             \
                fprintf(stream,"\n");                          \
@@ -94,55 +95,11 @@ void PrintHelp() {
 #define WRITE_COMMA                                           \
     fprintf(pFile,",");                                       \
 
-#if DEBUG
+#ifdef DEBUG
 #define PRINT_MESSAGE(message) printf(message);
 #else
 #define PRINT_MESSAGE(message) ;
 #endif
-
-
-typedef uint8_t sgx_launch_token_t[1024];
-#ifdef __cplusplus
-extern "C" {
-#endif
-	
-#if defined(_MSC_VER)
-#ifdef UNICODE
-#define sgx_create_enclave  sgx_create_enclavew
-#define sgx_create_enclave_ex       sgx_create_enclave_exw
-#else
-#define sgx_create_enclave  sgx_create_enclavea
-#define sgx_create_enclave_ex       sgx_create_enclave_exa
-#endif /* !UNICODE */
-
-	/*
-	@attr: On success, 'misc_attr->secs_attr' is filled with secs attributes. On error, 'misc_attr->secs_attr' is filled with platform capability.
-	*/
-	sgx_status_t SGXAPI sgx_create_enclavew(const LPCWSTR file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr);
-	sgx_status_t SGXAPI sgx_create_enclavea(const LPCSTR file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr);
-
-	sgx_status_t SGXAPI sgx_create_enclave_exw(const LPCWSTR file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr, const uint32_t ex_features, const void* ex_features_p[32]);
-	sgx_status_t SGXAPI sgx_create_enclave_exa(const LPCSTR file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr, const uint32_t ex_features, const void* ex_features_p[32]);
-#else
-sgx_status_t SGXAPI sgx_create_enclave(const char *file_name, 
-                                       const int debug, 
-                                       sgx_launch_token_t *launch_token, 
-                                       int *launch_token_updated, 
-                                       sgx_enclave_id_t *enclave_id, 
-                                       sgx_misc_attribute_t *misc_attr);
-
-#endif
-sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
-#ifdef __cplusplus
-}
-#endif
-
-
-typedef quote3_error_t (*sgx_get_quote_config_func_t)(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
-                                                      sgx_ql_config_t **pp_quote_config);
-
-typedef quote3_error_t (*sgx_free_quote_config_func_t)(sgx_ql_config_t *p_quote_config);
-
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -190,7 +147,7 @@ int main(int argc, char* argv[])
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
     uint8_t* p_quote_buffer = NULL;
-    sgx_target_info_t qe_target_info; 
+    sgx_target_info_t qe_target_info;
     sgx_report_t app_report;
     FILE* pFile = NULL;
     char output_filename[MAX_PATH] = { 0 };
@@ -220,44 +177,18 @@ int main(int argc, char* argv[])
         }
     }
 
-// to check whether the sgx_get_quote_config_func is provided.
-    sgx_get_quote_config_func_t p_sgx_get_quote_config = NULL;
-    sgx_free_quote_config_func_t p_sgx_free_quote_config = NULL;
-
+	// try to load quote provide library.
 #ifdef _MSC_VER
-	HINSTANCE handle;
-	handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-	if (handle) {
-		PRINT_MESSAGE("Found the Quote provider library. \n");
-		p_sgx_get_quote_config = (sgx_get_quote_config_func_t)GetProcAddress(handle, "sgx_ql_get_quote_config");
-		p_sgx_free_quote_config = (sgx_free_quote_config_func_t)GetProcAddress(handle, "sgx_ql_free_quote_config");
-
-		if ((NULL != p_sgx_get_quote_config) || (NULL != p_sgx_free_quote_config)) {
-			printf("Error:Found the sgx_get_quote_config_func API.This tool is only used to retrieval raw PCK data.\n");
-			ret = -1;
-			goto CLEANUP;
-		}
-	}
+    HINSTANCE handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+    if (handle != NULL) {
+        PRINT_MESSAGE("Found the Quote provider library. \n");
+    }
 #else
-	void *handle = NULL;
-	char *error1 = NULL;
-	char *error2 = NULL;
-	handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-	if (handle) {
-		PRINT_MESSAGE("Found the Quote provider library. \n");
-		p_sgx_get_quote_config = (sgx_get_quote_config_func_t)dlsym(handle, "sgx_ql_get_quote_config");
-		error1 = dlerror();
-		p_sgx_free_quote_config = (sgx_free_quote_config_func_t)dlsym(handle, "sgx_ql_free_quote_config");
-		error2 = dlerror();
-
-		if ((NULL == error1) || (NULL == error2)) {
-			printf("Error:Found the sgx_get_quote_config_func API.This tool is only used to retrieval raw PCK data.\n");
-			ret = -1;
-			goto CLEANUP;
-		}
-	}
+    void *handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+    if (handle != NULL) {
+        PRINT_MESSAGE("Found the Quote provider library. \n");
+    }
 #endif
-
 
     PRINT_MESSAGE("\nStep1: Call sgx_qe_get_target_info:");
     qe3_ret = sgx_qe_get_target_info(&qe_target_info);
@@ -266,7 +197,7 @@ int main(int argc, char* argv[])
         ret = -1;
         goto CLEANUP;
     }
-       
+
     PRINT_MESSAGE("succeed! \nStep2: Call create_app_report:");
     if(true != create_app_enclave_report(qe_target_info, &app_report)) {
         printf("\nCall to create_app_report() failed\n");
@@ -302,7 +233,7 @@ int main(int argc, char* argv[])
         goto CLEANUP;
     }
     PRINT_MESSAGE("succeed!");
-        
+
 
     // Output PCK Cert Retrieval Data
     do {
@@ -312,15 +243,8 @@ int main(int argc, char* argv[])
         sgx_ql_certification_data_t* p_temp_cert_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
         sgx_ql_ppid_rsa3072_encrypted_cert_info_t* p_cert_info = (sgx_ql_ppid_rsa3072_encrypted_cert_info_t*)(p_temp_cert_data->certification_data);
 
-        if(PPID_RSA3072_ENCRYPTED != p_temp_cert_data->cert_key_type) {
-            printf("The data can't be generated when the libdcap_quoteprov.so is found by ‘dlopen’.\n");
-            printf("Please make sure that this library is not in the library search paths and re-run the tool\n"); 
-            ret = -1;
-            break;
-        }
-
         if(is_default_filename_used) {
-#ifdef _MSC_VER	
+#ifdef _MSC_VER
             if (0 != fopen_s(&pFile,"pckid_retrieval.csv", "w")) {
 #else
             if (NULL == (pFile = fopen("pckid_retrieval.csv", "w"))) {
@@ -340,28 +264,41 @@ int main(int argc, char* argv[])
                 break;
             }
         }
-#if DEBUG
+
+        uint64_t data_index = 0;
+#ifdef DEBUG
         PRINT_MESSAGE("EncPPID:\n");
-        PRINT_BYTE_ARRAY(stdout,&p_cert_info->enc_ppid, sizeof(p_cert_info->enc_ppid));
+        PRINT_BYTE_ARRAY(stdout,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
         PRINT_MESSAGE("\n PCE_ID:\n");
-        PRINT_BYTE_ARRAY(stdout,&p_cert_info->pce_info.pce_id, sizeof(p_cert_info->pce_info.pce_id));
+        data_index = data_index + sizeof(p_cert_info->enc_ppid);
+        PRINT_BYTE_ARRAY(stdout,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
         PRINT_MESSAGE("\n TCBr - CPUSVN:\n");
-        PRINT_BYTE_ARRAY(stdout,&p_cert_info->cpu_svn, sizeof(p_cert_info->cpu_svn));
+        data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
+        PRINT_BYTE_ARRAY(stdout,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
         PRINT_MESSAGE("\n TCBr - PCE_ISVSVN:\n");
-        PRINT_BYTE_ARRAY(stdout, &p_cert_info->pce_info.pce_isv_svn, sizeof(p_cert_info->pce_info.pce_isv_svn));
+        data_index = data_index + sizeof(p_cert_info->cpu_svn);
+        PRINT_BYTE_ARRAY(stdout,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
         PRINT_MESSAGE("\n QE_ID:\n");
         PRINT_BYTE_ARRAY(stdout,&p_quote->header.user_data[0], 16);
+        PRINT_MESSAGE("\n new QE_ID:\n");
+        data_index = data_index + sizeof(p_cert_info->pce_info.pce_isv_svn);
+        PRINT_BYTE_ARRAY(stdout,p_temp_cert_data->certification_data + data_index, 16);
 #endif
-        PRINT_BYTE_ARRAY(pFile,&p_cert_info->enc_ppid, sizeof(p_cert_info->enc_ppid));
-        WRITE_COMMA;  
-        PRINT_BYTE_ARRAY(pFile,&p_cert_info->pce_info.pce_id, sizeof(p_cert_info->pce_info.pce_id));
-        WRITE_COMMA;  
-        PRINT_BYTE_ARRAY(pFile,&p_cert_info->cpu_svn, sizeof(p_cert_info->cpu_svn));
-        WRITE_COMMA;  
-        PRINT_BYTE_ARRAY(pFile, &p_cert_info->pce_info.pce_isv_svn, sizeof(p_cert_info->pce_info.pce_isv_svn));
-        WRITE_COMMA;  
+        data_index = 0;
+        PRINT_BYTE_ARRAY(pFile,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
+        WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->enc_ppid);
+        PRINT_BYTE_ARRAY(pFile,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
+        WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
+        PRINT_BYTE_ARRAY(pFile,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
+        WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->cpu_svn);
+        PRINT_BYTE_ARRAY(pFile,p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
+        WRITE_COMMA;
         PRINT_BYTE_ARRAY(pFile,&p_quote->header.user_data[0], 16);
         PRINT_MESSAGE("\n");
+
     }while(0);
 CLEANUP:
     if (NULL != p_quote_buffer) {
@@ -370,6 +307,15 @@ CLEANUP:
     if (pFile) {
         fclose(pFile);
     }
+#ifdef _MSC_VER
+	if (handle != NULL) {
+		FreeLibrary(handle);
+	}
+#else
+	if (handle != NULL) {
+		dlclose(handle);
+	}
+#endif
     if(ret == 0) {
         if(is_default_filename_used) {
             printf("pckid_retrieval.csv has been generated successfully!\n");

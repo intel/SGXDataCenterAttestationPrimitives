@@ -1,4 +1,4 @@
-PCK ID Retrieval Tool, version 1.2.100.1
+Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP): PCK ID Retrieval Tool
 ===============================================
 
 
@@ -10,8 +10,6 @@ PCK ID Retrieval Tool, version 1.2.100.1
 
 ## How to build this tool
 For Linux version:
-- Please build and install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
-    sudo ./sgx_linux_x64_driver.bin
 - Install prebuilt Intel(R) SGX SDK and PSW Installer
     a. sgx_linux_x64_sdk_${version}.bin
     b. libsgx-enclave-common_{version}-{revision}_{arch}.deb
@@ -20,7 +18,7 @@ For Linux version:
     b. libsgx-dcap-ql-dev_{version}-{revision}_{arch}.deb
     
 For Windows version:
-1. Install Intel(R)_SGX_Windows_SDK_2.x.xxx.xxx, , DCAP INF installer,
+1. Install Intel(R)_SGX_Windows_SDK_2.x.xxx.xxx 
 2. Open the solution "PCKIDRetrievalTool.sln" with Microsoft Visual Studio
 3. Install NuGet package DCAP_Components.1.x.xxx.x.nupkg to the solution
 4. Build it directly

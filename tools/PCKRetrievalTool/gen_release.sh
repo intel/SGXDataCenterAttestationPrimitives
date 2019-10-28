@@ -30,16 +30,17 @@
 #
 #
 
-rel_dir_base=PCKIDRetrievalTool_v1.2.100.
+rel_dir_base=PCKIDRetrievalTool_v1.3.100.4
 rel_dir_name=$rel_dir_base$1
 
 rm -rf $rel_dir_base*
 
 mkdir $rel_dir_name
 cp enclave.signed.so $rel_dir_name
+cp libdcap_quoteprov.so.1 $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name
 cp README.txt $rel_dir_name
-cp Master_EULA_for_Intel_Sw_Development_Products.pdf $rel_dir_name
+cp License.txt $rel_dir_name
 
 tar cvpzf $rel_dir_name.tar.gz $rel_dir_name
 

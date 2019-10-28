@@ -9,3 +9,7 @@ EXPORTS
     sgx_qcnl_free_tcbinfo             @6
     sgx_qcnl_get_qe_identity          @7
     sgx_qcnl_free_qe_identity         @8
+    sgx_qcnl_get_qve_identity         @9
+    sgx_qcnl_free_qve_identity        @10
+    sgx_qcnl_get_root_ca_crl          @11
+    sgx_qcnl_free_root_ca_crl         @12
