@@ -76,9 +76,11 @@
 	#include <linux/miscdevice.h>
 #endif
 
-MODULE_DESCRIPTION("Intel SGX Driver");
+MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_VERSION(DRV_VERSION);
+
 
 /*
  * Global data.
