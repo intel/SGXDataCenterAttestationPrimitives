@@ -826,6 +826,8 @@ static int sgx_einit(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 		goto out;
 	}
 
+	token->payload.valid = 0;
+
 	preempt_disable();
 	sgx_update_lepubkeyhash_msrs(lepubkeyhash, false);
 	ret = __einit(sigstruct, token, secs_va);
