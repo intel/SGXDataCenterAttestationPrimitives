@@ -61,21 +61,12 @@
 #include <linux/suspend.h>
 #include <linux/version.h>
 #include <linux/mman.h>
+#include <linux/cdev.h>
+
 #include "sgx.h"
-#include "le/enclave/sgx_le_ss.h"
 #include "sgx_version.h"
 #include "sgx_driver_info.h"
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
-#define CDEV_BUILD
-#endif
-
-#ifdef CDEV_BUILD
-	#include <linux/cdev.h>
-#else
-	#include <linux/module.h>
-	#include <linux/miscdevice.h>
-#endif
 
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
@@ -93,41 +84,6 @@ u64 sgx_encl_size_max_64;
 u64 sgx_xfrm_mask = 0x3;
 u32 sgx_misc_reserved;
 u32 sgx_xsave_size_tbl[64];
-bool sgx_unlocked_msrs;
-u64 sgx_le_pubkeyhash[4];
-
-
-#ifndef X86_FEATURE_SGX
-        #define X86_FEATURE_SGX (9 * 32 + 2)
-#endif
-
-#define FEATURE_CONTROL_SGX_ENABLE                      (1<<18)
-
-#ifndef MSR_IA32_FEATURE_CONTROL
-    #define MSR_IA32_FEATURE_CONTROL        0x0000003a
-#endif
-
-#ifndef FEATURE_CONTROL_SGX_LE_WR
-    #define FEATURE_CONTROL_SGX_LE_WR			(1<<17)
-#endif
-
-#ifndef X86_FEATURE_SGX_LC
-    #define X86_FEATURE_SGX_LC		(16*32+30) /* supports SGX launch configuration */
-#endif
-
-#ifndef MSR_IA32_FEATURE_CONFIG
-#define MSR_IA32_FEATURE_CONFIG        0x0000013C
-#endif
-
-#ifndef FEATURE_CONFIG_LOCKED
-#define FEATURE_CONFIG_LOCKED                                              (1<<0)
-#endif
-
-#ifndef FEATURE_CONFIG_AES_DISABLE
-#define FEATURE_CONFIG_AES_DISABLE                                     (1<<1)
-#endif
-
-#define FEATURE_CONFIG_AES_DISABLE_LOCKED (FEATURE_CONFIG_AES_DISABLE | FEATURE_CONFIG_LOCKED)
 
 
 // From intel_sgx.c
@@ -177,12 +133,6 @@ static bool sgx_is_enabled(void)
 		return false;
 	}
 
-	rdmsrl(MSR_IA32_FEATURE_CONFIG, fc);
-	if ((fc & FEATURE_CONFIG_AES_DISABLE_LOCKED) == FEATURE_CONFIG_AES_DISABLE_LOCKED){
-		pr_err("intel_sgx: AES-NI is disabled in FEATURE_CONFIG MSR!\n");
-		return false;
-	}
-
 	cpuid(0, &eax, &ebx, &ecx, &edx);
 	if (eax < SGX_CPUID) {
 		pr_err("intel_sgx: SGX CPUID leaf is not supported!\n");
@@ -209,27 +159,6 @@ static int sgx_init(void)
 
 static DECLARE_RWSEM(sgx_file_sem);
 
-static int sgx_open(struct inode *inode, struct file *file)
-{
-	int ret;
-
-	ret = sgx_le_start(&sgx_le_ctx);
-
-	if (!ret)
-		file->private_data = &sgx_le_ctx;
-
-	return ret;
-}
-
-static int sgx_release(struct inode *inode, struct file *file)
-{
-	if (!file->private_data)
-		return 0;
-
-	sgx_le_stop(file->private_data, true);
-
-	return 0;
-}
 
 #ifdef CONFIG_COMPAT
 long sgx_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -285,8 +214,6 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 
 const struct file_operations sgx_fops = {
 	.owner			= THIS_MODULE,
-	.open			= sgx_open,
-	.release		= sgx_release,
 	.unlocked_ioctl		= sgx_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl		= sgx_compat_ioctl,
@@ -295,11 +222,14 @@ const struct file_operations sgx_fops = {
 	.get_unmapped_area	= sgx_get_unmapped_area,
 };
 
+const struct file_operations sgx_provision_fops = {
+	.owner			= THIS_MODULE,
+};
+
 static int sgx_pm_suspend(struct device *dev)
 {
 	struct sgx_encl *encl;
 
-	sgx_le_stop(&sgx_le_ctx, false);
 	list_for_each_entry(encl, &sgx_encl_list, encl_list) {
 		sgx_invalidate(encl, false);
 		encl->flags |= SGX_ENCL_SUSPEND;
@@ -312,7 +242,6 @@ static int sgx_pm_suspend(struct device *dev)
 static SIMPLE_DEV_PM_OPS(sgx_drv_pm, sgx_pm_suspend, NULL);
 
 
-#ifdef CDEV_BUILD
 static struct bus_type sgx_bus_type = {
 	.name	= "sgx",
 };
@@ -320,6 +249,8 @@ static struct bus_type sgx_bus_type = {
 struct sgx_context {
 	struct device dev;
 	struct cdev cdev;
+	struct device provision_dev;
+	struct cdev provision_cdev;
 	struct kobject *kobj_dir;
 };
 
@@ -340,6 +271,7 @@ static struct sgx_context *sgx_ctx_alloc(struct device *parent)
 	if (!ctx)
 		return ERR_PTR(-ENOMEM);
 
+	// /dev/sgx
 	device_initialize(&ctx->dev);
 
 	ctx->dev.bus = &sgx_bus_type;
@@ -352,6 +284,20 @@ static struct sgx_context *sgx_ctx_alloc(struct device *parent)
 	cdev_init(&ctx->cdev, &sgx_fops);
 	ctx->cdev.owner = THIS_MODULE;
 
+	// /dev/sgx_prv
+	device_initialize(&ctx->provision_dev);
+
+	ctx->provision_dev.bus = &sgx_bus_type;
+	ctx->provision_dev.parent = parent;
+	ctx->provision_dev.devt = MKDEV(MAJOR(sgx_devt), 1);
+	ctx->provision_dev.release = sgx_dev_release;
+
+	dev_set_name(&ctx->provision_dev, "sgx_prv");
+
+	cdev_init(&ctx->provision_cdev, &sgx_provision_fops);
+	ctx->provision_cdev.owner = THIS_MODULE;
+
+	// device
 	dev_set_drvdata(parent, ctx);
 
 	return ctx;
@@ -375,48 +321,6 @@ static struct sgx_context *sgxm_ctx_alloc(struct device *parent)
 
 	return ctx;
 }
-#else
-static struct miscdevice sgx_dev = {
-	.minor	= MISC_DYNAMIC_MINOR,
-	.name	= "sgx",
-	.fops	= &sgx_fops,
-	.mode   = 0666,
-};
-#endif
-
-static int sgx_init_msrs(void)
-{
-	struct sgx_sigstruct *sgx_le_ss_p = (struct sgx_sigstruct *)sgx_le_ss;
-	unsigned long fc = 0;
-	u64 msrs[4] = {0};
-	int ret;
-
-	rdmsrl(MSR_IA32_FEATURE_CONTROL, fc);
-	if (fc & FEATURE_CONTROL_SGX_LE_WR)
-		sgx_unlocked_msrs = true;
-
-	ret = sgx_get_key_hash_simple(sgx_le_ss_p->modulus, sgx_le_pubkeyhash);
-	if (ret)
-		return ret;
-
-	if (sgx_unlocked_msrs)
-		return 0;
-
-	rdmsrl(MSR_IA32_SGXLEPUBKEYHASH0, msrs[0]);
-	rdmsrl(MSR_IA32_SGXLEPUBKEYHASH1, msrs[1]);
-	rdmsrl(MSR_IA32_SGXLEPUBKEYHASH2, msrs[2]);
-	rdmsrl(MSR_IA32_SGXLEPUBKEYHASH3, msrs[3]);
-
-	if ((sgx_le_pubkeyhash[0] != msrs[0]) ||
-	    (sgx_le_pubkeyhash[1] != msrs[1]) ||
-	    (sgx_le_pubkeyhash[2] != msrs[2]) ||
-	    (sgx_le_pubkeyhash[3] != msrs[3])) {
-		pr_err("IA32_SGXLEPUBKEYHASHn MSRs do not match to the launch enclave signing key\n");
-		return -ENODEV;
-	}
-
-	return 0;
-}
 
 static ssize_t info_show(struct kobject *kobj,
 					struct kobj_attribute *attr, char *buf)
@@ -435,9 +339,7 @@ struct kobj_attribute version_attr = __ATTR_RO(version);
 
 static int sgx_dev_init(struct device *parent)
 {
-#ifdef CDEV_BUILD
 	struct sgx_context *sgx_dev;
-#endif
 	unsigned int eax;
 	unsigned int ebx;
 	unsigned int ecx;
@@ -447,15 +349,7 @@ static int sgx_dev_init(struct device *parent)
 
 	pr_info("intel_sgx: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 
-	ret = sgx_init_msrs();
-	if (ret)
-		return ret;
-		
-#ifdef CDEV_BUILD
 	sgx_dev = sgxm_ctx_alloc(parent);
-#else
-	sgx_dev.parent = parent;
-#endif
 
 	cpuid_count(SGX_CPUID, SGX_CPUID_CAPABILITIES, &eax, &ebx, &ecx, &edx);
 	/* Only allow misc bits supported by the driver. */
@@ -489,25 +383,20 @@ static int sgx_dev_init(struct device *parent)
 		goto out_page_cache;
 	}
 
-	ret = sgx_le_init(&sgx_le_ctx);
+	ret = cdev_device_add(&sgx_dev->cdev, &sgx_dev->dev);
 	if (ret)
 		goto out_workqueue;
 
-#ifdef CDEV_BUILD
-	ret = cdev_device_add(&sgx_dev->cdev, &sgx_dev->dev);
-#else
-	ret = misc_register(&sgx_dev);
-#endif
+	ret = cdev_device_add(&sgx_dev->provision_cdev, &sgx_dev->provision_dev);
 	if (ret)
-		goto out_le;
+		goto out_workqueue;
 
 	sgx_dev->kobj_dir = kobject_create_and_add("sgx", kernel_kobj);
 	sysfs_create_file(sgx_dev->kobj_dir, &info_attr.attr);
 	sysfs_create_file(sgx_dev->kobj_dir, &version_attr.attr);
 
 	return 0;
-out_le:
-	sgx_le_exit(&sgx_le_ctx);
+
 out_workqueue:
 	destroy_workqueue(sgx_add_page_wq);
 out_page_cache:
@@ -515,21 +404,9 @@ out_page_cache:
 	return ret;
 }
 
-#ifndef CDEV_BUILD
-static atomic_t sgx_init_flag = ATOMIC_INIT(0);
-#endif
 
 static int sgx_drv_probe(struct platform_device *pdev)
 {
-#ifndef CDEV_BUILD
-	if (atomic_cmpxchg(&sgx_init_flag, 0, 1)) {
-		pr_warn("intel_sgx: second initialization call skipped\n");
-		if (!sgx_enabled)
-			return -ENODEV;
-		return 0;
-	}
-#endif
-
 	sgx_init();
 
 	if (!sgx_enabled)
@@ -540,7 +417,6 @@ static int sgx_drv_probe(struct platform_device *pdev)
 
 static int sgx_drv_remove(struct platform_device *pdev)
 {
-#ifdef CDEV_BUILD
 	struct sgx_context *ctx = dev_get_drvdata(&pdev->dev);
 
 	sysfs_remove_file(ctx->kobj_dir, &info_attr.attr);
@@ -548,16 +424,8 @@ static int sgx_drv_remove(struct platform_device *pdev)
 	kobject_put(ctx->kobj_dir);
 
 	cdev_device_del(&ctx->cdev, &ctx->dev);
-#else
-	if (!atomic_cmpxchg(&sgx_init_flag, 1, 0)) {
-		pr_warn("intel_sgx: second release call skipped\n");
-		return 0;
-	}
+	cdev_device_del(&ctx->provision_cdev, &ctx->provision_dev);
 
-	misc_deregister(&sgx_dev);
-#endif
-
-	sgx_le_exit(&sgx_le_ctx);
 	destroy_workqueue(sgx_add_page_wq);
 	sgx_page_cache_teardown();
 
@@ -581,8 +449,6 @@ static struct platform_driver sgx_drv = {
 		.acpi_match_table	= ACPI_PTR(sgx_device_ids),
 	},
 };
-
-#ifdef CDEV_BUILD
 
 static int __init sgx_drv_subsys_init(void)
 {
@@ -630,26 +496,3 @@ static void __exit sgx_drv_exit(void)
 }
 module_exit(sgx_drv_exit);
 
-#else
-
-static struct platform_device *pdev;
-int init_sgx_module(void)
-{
-	platform_driver_register(&sgx_drv);
-	pdev = platform_device_register_simple("intel_sgx", 0, NULL, 0);
-	if (IS_ERR(pdev))
-		pr_err("platform_device_register_simple failed\n");
-
-	return 0;
-}
-module_init(init_sgx_module);
-
-void cleanup_sgx_module(void)
-{
-	dev_set_uevent_suppress(&pdev->dev, true);
-	platform_device_unregister(pdev);
-	platform_driver_unregister(&sgx_drv);
-}
-module_exit(cleanup_sgx_module);
-
-#endif
