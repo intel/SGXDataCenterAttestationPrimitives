@@ -63,11 +63,7 @@
 #include <linux/highmem.h>
 #include <linux/ratelimit.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-	#include <linux/sched/signal.h>
-#else
-	#include <linux/signal.h>
-#endif
+#include <linux/sched/signal.h>
 #include <linux/shmem_fs.h>
 #include <linux/slab.h>
 #include "sgx.h"
@@ -238,15 +234,62 @@ static long sgx_ioc_enclave_init(struct file *filep, unsigned int cmd,
 	if (ret)
 		goto out;
 
-	ret = sgx_le_get_token(&sgx_le_ctx, encl, sigstruct, einittoken);
-	if (!ret)
-		ret = sgx_encl_init(encl, sigstruct, einittoken);
+	ret = sgx_encl_init(encl, sigstruct, einittoken);
 
 	kref_put(&encl->refcount, sgx_encl_release);
 
 out:
 	kunmap(initp_page);
 	__free_page(initp_page);
+	return ret;
+}
+
+/**
+ * sgx_ioc_enclave_set_attribute - handler for %SGX_IOC_ENCLAVE_SET_ATTRIBUTE
+ * @filep:	open file to /dev/sgx
+ * @cmd:	the command value
+ * @arg:	pointer to a struct sgx_enclave_set_attribute instance
+ *
+ * Mark the enclave as being allowed to access a restricted attribute bit.
+ * The requested attribute is specified via the attribute_fd field in the
+ * provided struct sgx_enclave_set_attribute.  The attribute_fd must be a
+ * handle to an SGX attribute file, e.g. “/dev/sgx/provision".
+ *
+ * Failure to explicitly request access to a restricted attribute will cause
+ * sgx_ioc_enclave_init() to fail.  Currently, the only restricted attribute
+ * is access to the PROVISION_KEY.
+ *
+ * Note, access to the EINITTOKEN_KEY is disallowed entirely.
+ *
+ * Return: 0 on success, -errno otherwise
+ */
+static long sgx_ioc_enclave_set_attribute(struct file *filep, unsigned int cmd,
+					  unsigned long arg)
+{
+	struct sgx_enclave_set_attribute *params = (void *)arg;
+	struct sgx_encl *encl;
+	struct file *attribute_file;
+	int ret;
+
+	attribute_file = fget(params->attribute_fd);
+	if (!attribute_file || !attribute_file->f_op)
+		return -EINVAL;
+
+	if (attribute_file->f_op != &sgx_provision_fops) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = sgx_encl_get(params->addr, &encl);
+	if (ret)
+		goto out;
+
+	encl->allowed_attributes |= SGX_ATTR_PROVISIONKEY;
+
+	kref_put(&encl->refcount, sgx_encl_release);
+
+out:
+	fput(attribute_file);
 	return ret;
 }
 
@@ -268,6 +311,9 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 	case SGX_IOC_ENCLAVE_INIT:
 		handler = sgx_ioc_enclave_init;
+		break;
+	case SGX_IOC_ENCLAVE_SET_ATTRIBUTE:
+		handler = sgx_ioc_enclave_set_attribute;
 		break;
 	default:
 		return -ENOIOCTLCMD;
