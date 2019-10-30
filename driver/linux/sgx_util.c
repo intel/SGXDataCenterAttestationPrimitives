@@ -58,11 +58,7 @@
 
 #include <linux/highmem.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-        #include <linux/sched/mm.h>
-#else
-        #include <linux/mm.h>
-#endif
+#include <linux/sched/mm.h>
 #include <linux/shmem_fs.h>
 #include "sgx.h"
 

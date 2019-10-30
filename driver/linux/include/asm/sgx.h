@@ -230,17 +230,4 @@ static inline int __emodt(struct sgx_secinfo *secinfo, void *epc)
 
 extern bool sgx_enabled;
 
-struct sgx_le_output {
-	struct sgx_einittoken token;
-	int result;
-};
-
-struct sgx_launch_request {
-	u8 mrenclave[32];
-	u8 mrsigner[32];
-	uint64_t attributes;
-	uint64_t xfrm;
-	struct sgx_le_output output;
-};
-
 #endif /* _ASM_X86_SGX_H */

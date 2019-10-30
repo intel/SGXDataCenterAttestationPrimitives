@@ -50,17 +50,13 @@
 //
 // Authors:
 //
-// Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-#include <linux/linkage.h>
-#include <asm/page_types.h>
+#ifndef _SGX_DRIVER_INFO_H
+#define _SGX_DRIVER_INFO_H
 
-	.section ".rodata","a"
+#define SGX_DRIVER_INFO_OOT					0x80000000
+#define SGX_DRIVER_INFO_DCAP				0x40000000
 
-GLOBAL(sgx_le_proxy)
-	.incbin	"sgx_le_proxy"
-END(sgx_le_proxy)
+#define SGX_DRIVER_INFO_FEATURE_SGX2		0x00000001
 
-GLOBAL(sgx_le_proxy_end)
-
-
+#endif /* _SGX_DRIVER_INFO_H */
