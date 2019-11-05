@@ -30,7 +30,7 @@
 @echo off 
 
 set svn_ver=%1%
-set rel_dir_base=PCKIDRetrievalTool_v1.2.100.
+set rel_dir_base=PCKIDRetrievalTool_v1.3.100.4
 set rel_dir_name=%rel_dir_base%%svn_ver%
 
 
@@ -39,9 +39,10 @@ rd %rel_dir_name%
 
 mkdir %rel_dir_name%
 copy x64\release\enclave.signed.dll %rel_dir_name%
+copy x64\release\dcap_quoteprov.dll %rel_dir_name%
 copy x64\release\PCKIDRetrievalTool.exe %rel_dir_name%
 copy README.txt %rel_dir_name%
-copy Master_EULA_for_Intel_Sw_Development_Products.pdf %rel_dir_name%
+copy License.txt %rel_dir_name%
 
 powershell Compress-Archive -Path '%rel_dir_name%\*' -DestinationPath '%rel_dir_name%.zip' -Force 
 

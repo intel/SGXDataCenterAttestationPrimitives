@@ -37,10 +37,105 @@
 
 //static BOOLEAN OwnFLC = FALSE;
 sgx_get_launch_support_output_t launch_support_info = { 0 };
+SGX_PUBKEYHASH  legacypubKeyHash = { 0 };
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(PAGE, FLCMSREvtDeviceD0Exit)
 #endif // ALLOC_PRAGMA
+
+ULONG *PROCESSOR_MSR_FLAG = NULL;
+PKDPC pkdpc = NULL;
+PKTHREAD gFLCNotifyRegistryChangeThreadObject = NULL;
+BOOLEAN gFLCNotifyRegistryChangeThreadStatus = FALSE;
+HANDLE gRegKeyHandle = NULL;
+
+KDEFERRED_ROUTINE WriteMsrRoutine;
+KSTART_ROUTINE FLCMSRNotifyRegistryChangeRoutine;
+
+void WriteMsrRoutine(
+    KDPC *Dpc,
+    PVOID DeferredContext,
+    PVOID SystemArgument1,
+    PVOID SystemArgument2
+)
+{
+    UNREFERENCED_PARAMETER(Dpc);
+    UNREFERENCED_PARAMETER(DeferredContext);
+    UNREFERENCED_PARAMETER(SystemArgument2);
+    BOOLEAN UsePLEOptIn = !!(SystemArgument1);
+    ULONG ret = 0;
+    __int64 feature_control = 0;
+
+    try
+    {
+        feature_control = __readmsr(MSR_IA32_FEATURE_CONTROL);
+
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "MSR_IA32_FEATURE_CONTROL %llx", feature_control);
+
+        if (feature_control & (1 << 17))
+        {
+            if (UsePLEOptIn)
+            {
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_0, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_1, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_2, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_3, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3);
+            }
+            else
+            {
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_0, legacypubKeyHash.pubKeyHash_Value_0);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_1, legacypubKeyHash.pubKeyHash_Value_1);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_2, legacypubKeyHash.pubKeyHash_Value_2);
+                __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_3, legacypubKeyHash.pubKeyHash_Value_3);
+            }
+            ret = 1;
+        }
+        else
+        {
+            ret = 2;
+        }
+    }
+    except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        ret = 3;
+    }
+
+    ULONG current_processor = KeGetCurrentProcessorNumber();
+    if (PROCESSOR_MSR_FLAG != NULL)
+    {
+        PROCESSOR_MSR_FLAG[current_processor] = ret;
+    }
+    return;
+}
+
+void ReadMsr()
+{
+    __int64 feature_control = 0;
+
+    try
+    {
+        feature_control = __readmsr(MSR_IA32_FEATURE_CONTROL);
+
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "MSR_IA32_FEATURE_CONTROL %llx", feature_control);
+
+        if (feature_control & (1 << 17))
+        {
+            legacypubKeyHash.pubKeyHash_Value_0 = __readmsr(MSR_IA32_SGX_LE_PUBKEYHASH_0);
+            legacypubKeyHash.pubKeyHash_Value_1 = __readmsr(MSR_IA32_SGX_LE_PUBKEYHASH_1);
+            legacypubKeyHash.pubKeyHash_Value_2 = __readmsr(MSR_IA32_SGX_LE_PUBKEYHASH_2);
+            legacypubKeyHash.pubKeyHash_Value_3 = __readmsr(MSR_IA32_SGX_LE_PUBKEYHASH_3);
+        }
+    }
+    except(EXCEPTION_EXECUTE_HANDLER)
+    {
+    }
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "read msr The Key is %llx %llx %llx %llx",
+        legacypubKeyHash.pubKeyHash_Value_0,
+        legacypubKeyHash.pubKeyHash_Value_1,
+        legacypubKeyHash.pubKeyHash_Value_2,
+        legacypubKeyHash.pubKeyHash_Value_3);
+    return;
+}
 
 static BOOLEAN is_PLE_OPT_IN()
 {
@@ -55,7 +150,6 @@ static BOOLEAN is_PLE_OPT_IN()
     }
     else
     {
-
         DECLARE_CONST_UNICODE_STRING(valueName, SGX_PLE_REGISTRY_OPT_IN_REGISTRY);
         status = WdfRegistryQueryULong(key, &valueName, &ulPLEOptIn);
         if (!NT_SUCCESS(status))
@@ -73,13 +167,201 @@ static BOOLEAN is_PLE_OPT_IN()
         return FALSE;
 }
 
+static BOOLEAN FLCWriteMSRs(BOOLEAN UsePLEOptIn)
+{
+    ULONG maximumProcessor = 0;
+    ULONG i = 0;
+    ULONG count = 0;
+    BOOLEAN ret = FALSE;
+    PKDPC tmp_pkdc = NULL;
+
+    maximumProcessor = KeQueryActiveProcessorCount(NULL);
+    if (PROCESSOR_MSR_FLAG == NULL)
+    {
+        PROCESSOR_MSR_FLAG = (ULONG*)ExAllocatePoolWithTag(NonPagedPool, maximumProcessor * sizeof(ULONG), 'flag');
+        if (PROCESSOR_MSR_FLAG == NULL)
+        {
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_POWER, " Insufficient memory");
+            return FALSE;
+        }
+    }
+
+    if (pkdpc == NULL)
+    {
+        pkdpc = (PKDPC)ExAllocatePoolWithTag(NonPagedPool, maximumProcessor * sizeof(KDPC), 'kdpc');
+        if (pkdpc == NULL)
+        {
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_POWER, " Insufficient memory");
+            return FALSE;
+        }
+        tmp_pkdc = pkdpc;
+        for (i = 0; i < maximumProcessor; i++, tmp_pkdc++)
+        {
+            KeInitializeThreadedDpc(tmp_pkdc, WriteMsrRoutine, NULL);
+        }
+    }
+
+    tmp_pkdc = pkdpc;
+    for (i = 0; i < maximumProcessor; i++, tmp_pkdc++)
+    {
+        PROCESSOR_MSR_FLAG[i] = 0;
+        KeSetTargetProcessorDpc(tmp_pkdc, (CCHAR)i);
+        KeInsertQueueDpc(tmp_pkdc, (PVOID)UsePLEOptIn, NULL);
+    }
+
+    while (1)
+    {
+        count = 0;
+        for (i = 0; i < maximumProcessor; i++)
+        {
+            if (PROCESSOR_MSR_FLAG[i] != 0)
+            {
+                count++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        if (count == maximumProcessor)
+        {
+            break;
+        }
+    }
+    ret = TRUE;
+    for (i = 0; i < maximumProcessor; i++)
+    {
+        if (PROCESSOR_MSR_FLAG[i] == 3)
+        {
+            ret = FALSE;
+            break;
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "Write MSRs finished %u", ret);
+    return ret;
+}
+
+void watch_registry(HANDLE regh) {
+    NTSTATUS status;
+    IO_STATUS_BLOCK iosb;
+    ULONG ret = 0;
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "%!FUNC! Entry");
+
+    status = ZwNotifyChangeKey(regh, NULL, NULL, (PVOID)DelayedWorkQueue, &iosb, REG_NOTIFY_CHANGE_LAST_SET, TRUE, NULL, 0, FALSE);
+    if (!NT_SUCCESS(status))
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_POWER, "%!FUNC! ZwNotifyChangeKey failed %!STATUS!", status);
+        return;
+    }
+
+    if (is_PLE_OPT_IN())
+    {
+        launch_support_info.configurationFlags |= SGX_PLE_REGISTRY_OPT_IN;
+        ret = FLCWriteMSRs(TRUE);
+        if (ret == TRUE)
+        {
+            launch_support_info.configurationFlags |= SGX_LCP_PLATFORM_SUPPORT;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_0 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_1 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_2 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_3 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3;
+        }
+    }
+    else
+    {
+        launch_support_info.configurationFlags &= ~SGX_PLE_REGISTRY_OPT_IN;
+        ret = FLCWriteMSRs(FALSE);
+        if (ret == TRUE)
+        {
+            launch_support_info.configurationFlags &= ~SGX_LCP_PLATFORM_SUPPORT;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_0 = legacypubKeyHash.pubKeyHash_Value_0;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_1 = legacypubKeyHash.pubKeyHash_Value_1;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_2 = legacypubKeyHash.pubKeyHash_Value_2;
+            launch_support_info.pubKeyHash.pubKeyHash_Value_3 = legacypubKeyHash.pubKeyHash_Value_3;
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "%!FUNC! exit");
+    return;
+}
+
+
+
+void FLCMSRNotifyRegistryChangeRoutine(PVOID StartContext)
+{
+    NTSTATUS status;
+    WDFKEY key;
+    UNREFERENCED_PARAMETER(StartContext);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "%!FUNC! Entry");
+
+    status = WdfDriverOpenParametersRegistryKey(WdfGetDriver(), KEY_ALL_ACCESS, WDF_NO_OBJECT_ATTRIBUTES, &key);
+    if (!NT_SUCCESS(status))
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_POWER, "%!FUNC! WdfDriverOpenParametersRegistryKey failed %!STATUS!", status);
+        PsTerminateSystemThread(status);
+        return;
+    }
+
+    gRegKeyHandle = WdfRegistryWdmGetHandle(key);
+   
+    while (gFLCNotifyRegistryChangeThreadStatus == TRUE)
+    {
+        watch_registry(gRegKeyHandle);
+    }
+  
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "%!FUNC! exit");
+    PsTerminateSystemThread(STATUS_SUCCESS);
+    return;
+}
+
+static BOOLEAN FLCMSRNotifyRegistryChange()
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    HANDLE thread_handle;
+    gFLCNotifyRegistryChangeThreadStatus = TRUE;
+
+    status = PsCreateSystemThread(&thread_handle,
+        THREAD_ALL_ACCESS,
+        NULL,
+        NULL,
+        NULL,
+        FLCMSRNotifyRegistryChangeRoutine,
+        NULL);
+
+    if (!NT_SUCCESS(status))
+    {
+        gFLCNotifyRegistryChangeThreadStatus = FALSE;
+        return FALSE;
+    }
+
+    status = ObReferenceObjectByHandle(
+        thread_handle,
+        THREAD_ALL_ACCESS,
+        NULL,
+        KernelMode,
+        &gFLCNotifyRegistryChangeThreadObject,
+        NULL);
+
+    if (!NT_SUCCESS(status))
+    {
+        gFLCNotifyRegistryChangeThreadStatus = FALSE;
+        return FALSE;
+    }
+    
+    ZwClose(thread_handle);
+    return TRUE;
+}
+
+
 NTSTATUS
 FLCMSREvtDeviceD0Entry(
     IN WDFDEVICE                Device,
     IN WDF_POWER_DEVICE_STATE   RecentPowerState
 )
 {
-    ULONG_PTR ret = 0;
+    BOOLEAN ret = 0;
 
     UNREFERENCED_PARAMETER(Device);
     UNREFERENCED_PARAMETER(RecentPowerState);
@@ -94,16 +376,20 @@ FLCMSREvtDeviceD0Entry(
     //clear the platform support bit, set the bit if and only if successfuly update MSR
     launch_support_info.configurationFlags &= ~SGX_LCP_PLATFORM_SUPPORT;
 
+    if (is_HW_support_FLC())
+    {
+        ReadMsr();
+    }
+
     if (is_PLE_OPT_IN())
     {
         launch_support_info.configurationFlags |= SGX_PLE_REGISTRY_OPT_IN;
 
         if (is_HW_support_FLC())
         {
-            ret = KeIpiGenericCall(IpiGenericCall, 0);
-            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "Write MSRs finished %llu", ret);
+            ret = FLCWriteMSRs(TRUE);
 
-            if (ret == 0)
+            if (ret == TRUE)
             {
                 launch_support_info.configurationFlags |= SGX_LCP_PLATFORM_SUPPORT;
                 launch_support_info.pubKeyHash.pubKeyHash_Value_0 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0;
@@ -112,6 +398,11 @@ FLCMSREvtDeviceD0Entry(
                 launch_support_info.pubKeyHash.pubKeyHash_Value_3 = MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3;
             }
         }
+    }
+    
+    if (is_HW_support_FLC())
+    {
+        FLCMSRNotifyRegistryChange();
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "%!FUNC! Exit %x", launch_support_info.configurationFlags);
@@ -129,6 +420,42 @@ FLCMSREvtDeviceD0Exit(
     PAGED_CODE();
     UNREFERENCED_PARAMETER(Device);
     UNREFERENCED_PARAMETER(PowerState);
+
+    if (gFLCNotifyRegistryChangeThreadStatus == TRUE)
+    {
+        gFLCNotifyRegistryChangeThreadStatus = FALSE;
+        if (gRegKeyHandle != NULL)
+        {
+            ZwClose(gRegKeyHandle);
+            gRegKeyHandle = NULL;
+        }
+
+        KeWaitForSingleObject(
+            gFLCNotifyRegistryChangeThreadObject,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+        );
+        ObDereferenceObject(gFLCNotifyRegistryChangeThreadObject);
+    }
+
+    if (is_HW_support_FLC())
+    {
+        FLCWriteMSRs(FALSE);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_POWER, "Write legacy LE mrsigner when exit");
+    }
+
+    if (PROCESSOR_MSR_FLAG)
+    {
+        ExFreePoolWithTag(PROCESSOR_MSR_FLAG, 'flag');
+        PROCESSOR_MSR_FLAG = NULL;
+    }
+    if (pkdpc)
+    {
+        ExFreePoolWithTag(pkdpc, 'kdpc');
+        pkdpc = NULL;
+    }
 
     return STATUS_SUCCESS;
 }

@@ -32,13 +32,13 @@ The target library named ``libsgx_default_qcnl_wrapper.so`` will be generated.
 #### Linux
 The configuration file for Intel(R) SGX default Quote Provider Library under Linux is /etc/sgx_default_qcnl.conf. If it is not present, the library will use hard-coded configurations.
 
-#PCCS_URL is the URL of your PCCS caching service, the hard-coded value is https://localhost:8081/sgx/certification/v1/
-PCCS_URL=https://your_pccs_server:8081/sgx/certification/v1/
+#PCCS_URL is the URL of your PCCS caching service, the hard-coded value is https://localhost:8081/sgx/certification/v2/
+PCCS_URL=https://your_pccs_server:8081/sgx/certification/v2/
 #Should always set to TRUE for production environment. Set it to FALSE if PCCS server uses self-signed certificate and key 
 USE_SECURE_CERT=TRUE
 #### Windows
 Intel(R) SGX default Quote Provider Library reads configuration data from Windows Registry, and hard-coded values will be used if the keys don't exist.
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Intel\SGX\QCNL]
-"PCCS_URL"="https://localhost:8081/sgx/certification/v1/"
-"USE_SECURE_CERT"=drord:00000000
+"PCCS_URL"="https://localhost:8081/sgx/certification/v2/"
+"USE_SECURE_CERT"=dword:00000001

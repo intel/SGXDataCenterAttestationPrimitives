@@ -43,13 +43,91 @@ Return Values:
 */
 quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
 
+
+/**
+Parameters
+    fmspc [In]
+        Base 16-encoded representation of FMSPC.
+    fmspc_size [In]
+        Length of fmspc.
+    ca [In]
+        Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
+    pp_quote_collateral [Out]
+        Pointer to a pointer to the PCK quote collateral data needed for quote verifcation. 
+
+Return Values:
+    SGX_QL_SUCCESS: 
+        The platform has the certification data available and has returned it in the p_quote_config buffer.
+    SGX_QL_INVALID_PARRAMETER: 
+        The parameters are incorrect.
+    SGX_QL_OUT_OF_MEMORY: 
+        Out of memory error.
+    SGX_QL_NO_QUOTE_COLLATERAL_DATA:
+        The platform does not have the quote verification collateral data available.
+*/
+quote3_error_t sgx_ql_get_quote_verification_collateral( const char *fmspc, uint16_t fmspc_size, const char *pck_ca,
+                          sgx_ql_qve_collateral_t **pp_quote_collateral);
+
+/**
+Parameters:
+    p_quote_collateral [In]
+        Pointer to the PCK certification that the sgx_ql_get_quote_verification_collateral() API returns.
+Return Values:
+    SGX_QL_SUCCESS: 
+        The buffer was freed successfully.
+*/
+quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t *p_quote_collateral);
+
+/**
+Parameters:
+    pp_qve_identity[Out]
+        Pointer to a pointer to the UTF-8 encoded JSON string containing the QVE Identity structure.  The 
+        provider library will allocate this buffer and it is expected that the caller will free it using 
+        the provider library’s sgx_ql_free_qve_identity() API.
+    p_qve_identity_size[Out]
+        The length of the string in bytes in the buffer pointed by *pp_qve_identity including the 
+        terminating null character.
+    pp_qve_identity_issuer_chain[Out]
+        Pointer to a pointer to the QVE identity certificate chain. The provider library will allocate This
+        buffer and it is expected that the caller will free it using the provider library’s sgx_ql_free_qve_identity() API.
+    p_qve_identity_issuer_chain_size[Out]
+        The length of the string in bytes in the buffer pointed by *pp_qve_identity_issuer_chain including the 
+        terminating null character.
+Return Values:
+    SGX_QL_SUCCESS: 
+        Data was read successfully.
+    SGX_QL_INVALID_PARRAMETER: 
+        The input parameters are incorrect.
+    SGX_QL_OUT_OF_MEMORY: 
+        Out of memory error.
+    SGX_QL_NO_QVE_IDENTITY_DATA:
+        The platform does not have the QVE identity data available.
+*/
+quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity, 
+                                       uint32_t *p_qve_identity_size,
+                                       char **pp_qve_identity_issuer_chain,
+                                       uint32_t *p_qve_identity_issuer_chain_size);
+
+/**
+Parameters:
+    p_qve_identity[In]
+        Pointer to the QvE identity that the sgx_ql_get_qve_identity() API returns.
+    p_qve_identity_issuer_chain[In]
+        Pointer to the QvE identity certificate chain that the sgx_ql_get_qve_identity() API returns.
+Return Values:
+    SGX_QL_SUCCESS:
+        The buffer was freed successfully.
+*/
+void sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
+
+
 /** Used to describe the PCK Cert for a platform */
 typedef struct _sgx_ql_pck_cert_id_t
 {
     uint8_t *p_qe_id;
     uint32_t qe_id_size;
     sgx_cpu_svn_t *platform_cpu_svn;
-    sgx_cpu_svn_t *platform_pce_isv_svn;
+    sgx_isv_svn_t *platform_pce_isv_svn;
     uint8_t* p_encrypted_ppid;
     uint32_t encrypted_ppid_size;
     uint8_t crypto_suite;
@@ -60,8 +138,27 @@ typedef struct _sgx_ql_pck_cert_id_t
 typedef struct _sgx_ql_config_t {
     sgx_ql_config_version_t version;
     sgx_cpu_svn_t   cert_cpu_svn;
-    sgx_cpu_svn_t   cert_pce_isv_svn;
+    sgx_isv_svn_t   cert_pce_isv_svn;
     uint32_t cert_data_size;
     uint8_t* p_cert_data;
 }sgx_ql_config_t;
 
+/** This is the data provided to the quote verifier by the verifying platform software. */
+typedef struct _sgx_ql_qve_collateral_t
+{
+    uint32_t version;                      /// version = 1.  PCK Cert chain is in the Quote.
+    char *pck_crl_issuer_chain;
+    uint32_t pck_crl_issuer_chain_size;
+    char *root_ca_crl;                     /// Root CA CRL
+    uint32_t root_ca_crl_size;
+    char *pck_crl;                         /// PCK Cert CRL
+    uint32_t pck_crl_size;
+    char *tcb_info_issuer_chain;
+    uint32_t tcb_info_issuer_chain_size;
+    char *tcb_info;                        /// TCB Info structure
+    uint32_t tcb_info_size;
+    char *qe_identity_issuer_chain;
+    uint32_t qe_identity_issuer_chain_size;
+    char *qe_identity;                     /// QE Identity Structure
+    uint32_t qe_identity_size;
+}sgx_ql_qve_collateral_t;

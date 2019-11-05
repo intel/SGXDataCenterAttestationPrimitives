@@ -42,6 +42,7 @@
 #include <map>
 #include <fstream>
 #include "sgx_default_qcnl_wrapper.h"
+#include "se_memcpy.h"
 
 extern bool g_use_secure_cert;
 
@@ -68,7 +69,9 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
         s->base = p;
         s->size = newsize;
     }
-    memcpy(s->base +start, ptr, size*nmemb);
+    if (memcpy_s(s->base +start, s->size-start, ptr, size*nmemb) != 0) {
+        return 0;
+    }
     return size*nmemb;
 }
 
@@ -167,7 +170,7 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
         long http_code = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
         if (http_code == 404) {
-            ret = SGX_QCNL_ERROR_NO_CERT_DATA;
+            ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
             break;
         }
         else if (http_code != 200) {

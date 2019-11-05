@@ -37,6 +37,7 @@ SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../../../"
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer/linux"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
+LINUX_QV_DIR="${ROOT_DIR}/../QuoteVerification"
 
 INSTALL_PATH=${SCRIPT_DIR}/output
 
@@ -53,6 +54,7 @@ cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 
 # Copy the files according to the BOM
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_base.txt
+python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_qvinc.txt --deliverydir=${LINUX_QV_DIR}  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-ql-dev_commoninc.txt --deliverydir=${SGX_SDK}/include  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 

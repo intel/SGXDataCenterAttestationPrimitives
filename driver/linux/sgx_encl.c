@@ -64,14 +64,12 @@
 #include <linux/ratelimit.h>
 
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-	#include <linux/sched/signal.h>
-#else
-	#include <linux/signal.h>
-#endif
+#include <linux/sched/signal.h>
 #include <linux/shmem_fs.h>
 #include <linux/slab.h>
 #include "sgx.h"
+#include "sgx_wl.h"
+
 
 struct sgx_add_page_req {
 	struct sgx_encl *encl;
@@ -80,6 +78,9 @@ struct sgx_add_page_req {
 	u16 mrmask;
 	struct list_head list;
 };
+
+/* A per-cpu cache for the last known values of IA32_SGXLEPUBKEYHASHx MSRs. */
+static DEFINE_PER_CPU(u64 [4], sgx_lepubkeyhash_cache);
 
 /**
  * sgx_encl_find - find an enclave
@@ -478,6 +479,7 @@ struct sgx_encl *sgx_encl_alloc(struct sgx_secs *secs)
 	}
 
 	encl->attributes = secs->attributes;
+	encl->allowed_attributes = SGX_ATTR_ALLOWED_MASK;
 	encl->xfrm = secs->xfrm;
 
 	kref_init(&encl->refcount);
@@ -759,6 +761,7 @@ out:
 	return ret;
 }
 
+
 /**
  * sgx_encl_add_page - add a page to the enclave
  *
@@ -793,26 +796,51 @@ int sgx_encl_add_page(struct sgx_encl *encl, unsigned long addr, void *data,
 	return ret;
 }
 
+
+static void sgx_update_lepubkeyhash_msrs(u64 *lepubkeyhash, bool enforce)
+{
+	u64 *cache;
+	int i;
+
+	cache = per_cpu(sgx_lepubkeyhash_cache, smp_processor_id());
+	for (i = 0; i < 4; i++) {
+		if (enforce || (lepubkeyhash[i] != cache[i])) {
+			wrmsrl(MSR_IA32_SGXLEPUBKEYHASH0 + i, lepubkeyhash[i]);
+			cache[i] = lepubkeyhash[i];
+		}
+	}
+}
+
+
 static int sgx_einit(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
-		     struct sgx_einittoken *token)
+		     struct sgx_einittoken *token, u64 *lepubkeyhash)
 {
 	void *secs_epc = encl->secs.epc_page;
 	void *secs_va;
 	int ret;
 
 	secs_va = sgx_get_page(secs_epc);
+
+	if (!boot_cpu_has(X86_FEATURE_SGX_LC)) {
+		ret = __einit(sigstruct, token, secs_va);
+		goto out;
+	}
+
+	token->payload.valid = 0;
+
+	preempt_disable();
+	sgx_update_lepubkeyhash_msrs(lepubkeyhash, false);
 	ret = __einit(sigstruct, token, secs_va);
+	if (ret == SGX_INVALID_EINITTOKEN) {
+		sgx_update_lepubkeyhash_msrs(lepubkeyhash, true);
+		ret = __einit(sigstruct, token, secs_va);
+	}
+	preempt_enable();
+
+out:
 	sgx_put_page(secs_va);
 
 	return ret;
-}
-
-static void sgx_update_pubkeyhash(void)
-{
-	wrmsrl(MSR_IA32_SGXLEPUBKEYHASH0, sgx_le_pubkeyhash[0]);
-	wrmsrl(MSR_IA32_SGXLEPUBKEYHASH1, sgx_le_pubkeyhash[1]);
-	wrmsrl(MSR_IA32_SGXLEPUBKEYHASH2, sgx_le_pubkeyhash[2]);
-	wrmsrl(MSR_IA32_SGXLEPUBKEYHASH3, sgx_le_pubkeyhash[3]);
 }
 
 /**
@@ -833,9 +861,27 @@ static void sgx_update_pubkeyhash(void)
 int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 		  struct sgx_einittoken *token)
 {
+	u64 mrsigner[4];
 	int ret;
 	int i;
 	int j;
+
+	ret = sgx_get_key_hash_simple(sigstruct->modulus, mrsigner);
+	if (ret)
+		return ret;
+
+	if((encl->attributes & ~encl->allowed_attributes) && (encl->attributes & SGX_ATTR_PROVISIONKEY)) {
+		for(i = 0; i < (sizeof(G_SERVICE_ENCLAVE_MRSIGNER) / sizeof(G_SERVICE_ENCLAVE_MRSIGNER[0])); i++) {
+			if(0 == memcmp(&G_SERVICE_ENCLAVE_MRSIGNER[i], mrsigner, sizeof(G_SERVICE_ENCLAVE_MRSIGNER[0]))) {
+				encl->allowed_attributes |= SGX_ATTR_PROVISIONKEY;
+				break;
+			}
+		}
+	}
+
+	/* Check that the required attributes have been authorized. */
+	if (encl->attributes & ~encl->allowed_attributes)
+		return -EINVAL;
 
 	flush_work(&encl->add_page_work);
 
@@ -848,18 +894,7 @@ int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 
 	for (i = 0; i < SGX_EINIT_SLEEP_COUNT; i++) {
 		for (j = 0; j < SGX_EINIT_SPIN_COUNT; j++) {
-			ret = sgx_einit(encl, sigstruct, token);
-
-			if (ret == SGX_INVALID_ATTRIBUTE ||
-			    ret == SGX_INVALID_EINITTOKEN) {
-				if (sgx_unlocked_msrs) {
-					preempt_disable();
-					sgx_update_pubkeyhash();
-					ret = sgx_einit(encl, sigstruct, token);
-					preempt_enable();
-				}
-			}
-
+			ret = sgx_einit(encl, sigstruct, token, mrsigner);
 			if (ret == SGX_UNMASKED_EVENT)
 				continue;
 			else
@@ -870,6 +905,7 @@ int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 			break;
 
 		msleep_interruptible(SGX_EINIT_SLEEP_TIME);
+
 		if (signal_pending(current)) {
 			mutex_unlock(&encl->lock);
 			return -ERESTARTSYS;

@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "se_version.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -50,8 +51,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,1,100,0
- PRODUCTVERSION 1,1,100,0
+ FILEVERSION FILEVER
+ PRODUCTVERSION PRODUCTVER
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -66,14 +67,14 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Intel Corporation"
+            VALUE "CompanyName", COMPANYNAME
             VALUE "FileDescription", "Intel® SGX Default PCK Collateral Network DLL"
-            VALUE "FileVersion", "1.1.100.0"
+            VALUE "FileVersion", STRFILEVER
             VALUE "InternalName", "Default PCK Collateral Network Library"
-            VALUE "LegalCopyright", "Copyright (C) 2019 Intel Corporation"
+            VALUE "LegalCopyright", COPYRIGHT
             VALUE "OriginalFilename", "sgx_default_qcnl_wrapper.dll"
-            VALUE "ProductName", "Intel® Software Guard Extensions"
-            VALUE "ProductVersion", "1.1.100.0"
+            VALUE "ProductName", PRODUCTNAME
+            VALUE "ProductVersion", STRPRODUCTVER
         END
     END
     BLOCK "VarFileInfo"

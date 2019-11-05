@@ -62,11 +62,7 @@
 #include <linux/kthread.h>
 #include <linux/ratelimit.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-	#include <linux/sched/signal.h>
-#else
-	#include <linux/signal.h>
-#endif
+#include <linux/sched/signal.h>
 #include <linux/slab.h>
 #include "sgx.h"
 
@@ -94,8 +90,11 @@ static atomic_t sgx_nr_free_pages = ATOMIC_INIT(0);
 static struct task_struct *ksgxswapd_tsk;
 static DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
 
-static int sgx_test_and_clear_young_cb(pte_t *ptep, pgtable_t token,
-				       unsigned long addr, void *data)
+static int sgx_test_and_clear_young_cb(pte_t *ptep,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0))
+				pgtable_t token,
+#endif
+				unsigned long addr, void *data)
 {
 	pte_t pte;
 	int ret;

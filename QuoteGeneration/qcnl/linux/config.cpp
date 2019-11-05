@@ -47,7 +47,7 @@ using namespace std;
 #define MAX_URL_LENGTH  2083
 
 // Default URL for PCCS server if configuration file doesn't exist
-char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v1/";
+char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v2/";
 // Use secure HTTPS certificate or not
 bool g_use_secure_cert = true;
 
@@ -88,5 +88,6 @@ __attribute__((constructor)) void _qcnl_global_init()
                 continue;
             }
         }
+        ifs.close();
     }
 }

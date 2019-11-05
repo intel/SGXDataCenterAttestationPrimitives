@@ -6,8 +6,8 @@
     <TCSNum>1</TCSNum>
     <TCSPolicy>1</TCSPolicy>
     <HW>0</HW>
-    <StackMaxSize>0x40000</StackMaxSize>
-    <HeapMaxSize>0x20000</HeapMaxSize>
+    <StackMaxSize>0x44000</StackMaxSize>
+    <HeapMaxSize>0x24000</HeapMaxSize>
     <!-- Recommend changing 'DisableDebug' to 1 to make the enclave undebuggable for enclave release -->
     <DisableDebug>1</DisableDebug>
 </EnclaveConfiguration>

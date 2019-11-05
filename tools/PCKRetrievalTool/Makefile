@@ -1,5 +1,5 @@
 
-# Copyright (C) 2011-2018 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,16 +31,27 @@
 
 ######## SGX SDK Settings ########
 
-DEBUG ?= 0
-
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 
-SGX_COMMON_CFLAGS := -m64
-SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
-SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+ifeq ($(shell getconf LONG_BIT), 32)
+        SGX_ARCH := x86
+else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
+        SGX_ARCH := x86
+endif
+
+ifeq ($(SGX_ARCH), x86)
+        SGX_COMMON_CFLAGS := -m32
+        SGX_LIBRARY_PATH := $(SGX_SDK)/lib
+        SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
+        SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+else
+        SGX_COMMON_CFLAGS := -m64
+        SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+        SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+        SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+endif
 
 ifeq ($(DEBUG), 1)
         SGX_COMMON_CFLAGS += -O0 -g
@@ -48,26 +59,48 @@ else
         SGX_COMMON_CFLAGS += -O2
 endif
 
-######## App Settings ########
-
-
-App_Cpp_Files := $(wildcard App/App.cpp)
-App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/common/inc  
-
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
-
-# Two configuration modes - Debug, Release
-#   Debug - Macro DEBUG enabled.
-#   Release - Macro NDEBUG enabled.
-ifeq ($(DEBUG), 1)
-        App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+# turn on stack protector for SDK
+CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
+ifeq ($(CC_BELOW_4_9), 1)
+    COMMON_FLAGS += -fstack-protector
 else
-        App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+    COMMON_FLAGS += -fstack-protector-strong
 endif
 
+ifdef DEBUG
+    COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
+else
+    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
+endif
+
+COMMON_FLAGS += -ffunction-sections -fdata-sections
+
+# turn on compiler warnings as much as possible
+COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
+                -Waddress -Wsequence-point -Wformat-security \
+                -Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
+                -Wcast-align -Wconversion -Wredundant-decls
+
+# additional warnings flags for C
+CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
+
+# additional warnings flags for C++
+CXXFLAGS += -Wnon-virtual-dtor
+
+CXXFLAGS += -std=c++11
+
+
+
+######## App Settings ########
+
+App_Cpp_Files := $(wildcard App/*.cpp)
+App_Include_Paths := -I$(SGX_SDK)/include -I./App 
+
+App_C_Flags := $(COMMON_FLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack 
-App_Link_Flags +=  -lsgx_urts -lsgx_dcap_ql -ldl -lpthread  
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack
+App_Link_Flags +=  -lsgx_urts -lsgx_dcap_ql -ldl -lpthread -Wl,-rpath=.
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
@@ -122,16 +155,21 @@ else
 endif
 
 
+
+
+
 .PHONY: all run
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: .config_$(Build_Mode)_$(SGX_ARCH) $(App_Name) $(Signed_Enclave_Name)
+all: $(App_Name) $(Signed_Enclave_Name)
+	make -C Qpl/linux
+	@cp -f Qpl/linux/libdcap_quoteprov.so.1 .
 	@echo "The project has been built in release hardware mode."
 else
-all: .config_$(Build_Mode)_$(SGX_ARCH) $(App_Name) $(Signed_Enclave_Name)
-ifeq ($(Build_Mode), HW_DEBUG)
+all: $(App_Name) $(Signed_Enclave_Name)
+	make -C Qpl/linux
+	@cp -f Qpl/linux/libdcap_quoteprov.so.1 .
 	@echo "The project has been built in debug hardware mode."
-endif
 endif
 
 run: all
@@ -140,10 +178,11 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
 
+
 ######## App Objects ########
 
-App/Enclave_u.c: 
-	cd App && $(SGX_EDGER8R) --untrusted ../Enclave/Enclave.edl 
+App/Enclave_u.c:
+	cd App && $(SGX_EDGER8R) --untrusted ../Enclave/Enclave.edl
 	@echo "GEN  =>  $@"
 
 App/Enclave_u.o: App/Enclave_u.c
@@ -154,7 +193,7 @@ App/%.o: App/%.cpp
 	$(CXX) $(App_Cpp_Flags) -c $< -o $@
 	echo "CXX  <=  $<"
 
-$(App_Name): App/Enclave_u.o $(App_Cpp_Objects) 
+$(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
 	$(CXX) $^ $(App_Link_Flags) -o $@
 	echo "LINK =>  $@"
 
@@ -163,8 +202,8 @@ $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
 
 ######## Enclave Objects ########
 
-Enclave/Enclave_t.c: 
-	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl  
+Enclave/Enclave_t.c:
+	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl
 	@echo "GEN  =>  $@"
 
 Enclave/Enclave_t.o: Enclave/Enclave_t.c
@@ -187,5 +226,5 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(App_Name)  $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
-	@rm -f libsgx_pce.signed.so libsgx_qe3.signed.so
+	@rm -f $(App_Name)  $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* libdcap_quoteprov.so.1
+	make -C Qpl/linux clean

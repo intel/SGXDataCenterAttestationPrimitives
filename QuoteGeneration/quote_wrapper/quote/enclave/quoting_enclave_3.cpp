@@ -161,6 +161,9 @@ const uint32_t g_sgx_nistp256_r_m1[] = {//hard-coded value for n-1 where n is or
 static const char QE_ID_STRING[] = "QE_ID_DER";
 static const char QE_ATT_STRING[] = "QE_ATT_DER";
 
+#define MAX_CERT_DATA_SIZE (4098*3)
+#define MIN_CERT_DATA_SIZE (500)
+
 #ifdef ENABLE_QE3_LOGGING
 /*
  * printf:
@@ -444,7 +447,7 @@ static qe3_error_t get_qe_id_internal(sgx_key_128bit_t *p_qe_id)
     }
 
     uint8_t content[16];
-    memset(&content, 0, sizeof(content)); 
+    memset(&content, 0, sizeof(content));
     //1-10bytes: "QE_ID_DER"(ascii encoded)
     memcpy(content + 1, QE_ID_STRING, 9);
     //14-15bytes: 0x0080 (Big Endian)
@@ -1428,7 +1431,10 @@ ret_point:
  * @param pce_isvsvn [In] The ISVSVN of the PCE currently installed on the platform.  This value will be placed in the
  *                   quote header to allow the quote verifier to know whether the PCE has been properly upgraded in case
  *                   of a TCB recover.  The verifier can then request that the attestation key to be re-certified.
- *
+ * @param p_certification_data [In] The optional cert_data, it can be NULL.
+ * @param cert_data_size [in] The size of buffer pointed to by p_certification_data, in bytes.  If p_certification_data is NULL, it should
+                     be 0.
+
  * @return REFQE3_SUCCESS
  * @return REFQE3_ERROR_INVALID_PARAMETER
  * @return REFQE3_ECDSABLOB_ERROR
@@ -1444,7 +1450,9 @@ uint32_t gen_quote(uint8_t *p_blob,
     sgx_report_t *p_qe_report_out,
     uint8_t *p_quote_buf,
     uint32_t quote_size,
-    sgx_isv_svn_t pce_isvsvn)
+    sgx_isv_svn_t pce_isvsvn,
+    const uint8_t * p_certification_data,
+    uint32_t cert_data_size)
 {
     qe3_error_t ret = REFQE3_SUCCESS;
     sgx_quote3_t* p_quote;
@@ -1460,7 +1468,7 @@ uint32_t gen_quote(uint8_t *p_blob,
 
     sgx_ecc_state_handle_t handle = NULL;
     sgx_ql_auth_data_t *p_auth_data;
-    sgx_ql_certification_data_t *p_certification_data;
+    sgx_ql_certification_data_t *p_certification_data_output;
 #ifdef ALLOW_CLEARTEXT_PPID
     sgx_ql_ppid_cleartext_cert_info_t *p_cert_cleartext_ppid_info_data;
 #endif
@@ -1488,6 +1496,24 @@ uint32_t gen_quote(uint8_t *p_blob,
     if (!(NULL != p_nonce) && (NULL != p_app_enclave_target_info) && (NULL != p_qe_report_out)) {
         return(REFQE3_ERROR_INVALID_PARAMETER);
     }
+    if (NULL != p_certification_data)
+    {
+        sgx_ql_certification_data_t * p_input_certification_data_header = (sgx_ql_certification_data_t *)p_certification_data;
+        if (PPID_CLEARTEXT > p_input_certification_data_header->cert_key_type
+            || QL_CERT_KEY_TYPE_MAX < p_input_certification_data_header->cert_key_type) {
+            return(REFQE3_ERROR_INVALID_PARAMETER);
+        }
+        if (MAX_CERT_DATA_SIZE < p_input_certification_data_header->size) {
+            return(REFQE3_ERROR_INVALID_PARAMETER);
+        }
+        if (sizeof(sgx_ql_certification_data_t) + p_input_certification_data_header->size != cert_data_size) {
+            return(REFQE3_ERROR_INVALID_PARAMETER);
+        }
+    }
+    if (NULL == p_certification_data && cert_data_size !=0) {
+        return(REFQE3_ERROR_INVALID_PARAMETER);
+    }
+
 
     // The ECDSA Quote is not so large that it needs to be outside the enclave.  Verify the full buffer is within
     // the EPC.  To reduce the ECDSA QE, it can be moved outside the epc.
@@ -1503,6 +1529,13 @@ uint32_t gen_quote(uint8_t *p_blob,
     if (!sgx_is_within_enclave(p_enclave_report, sizeof(*p_enclave_report))) {
         return(REFQE3_ERROR_INVALID_PARAMETER);
     }
+
+    if (NULL != p_certification_data) {
+        if (!sgx_is_within_enclave(p_certification_data, cert_data_size)) {
+            return(REFQE3_ERROR_INVALID_PARAMETER);
+        }
+    }
+
     // If the code reaches here, if p_nonce is NULL, then p_qe_report will be
     // NULL also. So we only check p_nonce here.
     if (p_nonce) {
@@ -1544,7 +1577,12 @@ uint32_t gen_quote(uint8_t *p_blob,
         sign_size += (uint32_t)sizeof(sgx_ql_ppid_cleartext_cert_info_t);  // PPID, PCE PSVN and PCE_ID
     }
     else {
-        sign_size += (uint32_t)sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);  // RSA3072_Enc_PPID, PCE PSVN and PCE_ID
+        if (!p_certification_data) {
+            sign_size += (uint32_t)sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);  // RSA3072_Enc_PPID, PCE PSVN and PCE_ID
+        }
+        else {
+            sign_size += ((sgx_ql_certification_data_t *)p_certification_data)->size;
+        }
     }
     /* Check for overflow before adding in the variable size of authentication data. */
     if ((UINT32_MAX - sign_size - sizeof(sgx_quote3_t)) < plaintext.authentication_data_size) {
@@ -1576,7 +1614,7 @@ uint32_t gen_quote(uint8_t *p_blob,
     //Note:  This is potentially dangerous pointer math using an untrusted input size.  The 'required_buffer_size' check
     //above verifies that the size will not put the calculated address and certification data outside of the inputted
     //p_quote + quote_size memory.
-    p_certification_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
+    p_certification_data_output = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
 
     // Populate the quote buffer.
     // Set up the header.
@@ -1663,13 +1701,12 @@ uint32_t gen_quote(uint8_t *p_blob,
         memcpy(p_auth_data->auth_data, plaintext.authentication_data, p_auth_data->size);
     }
 
-    // Post alpha only supports PPID_RSA3072_ENCRYPTED
     if (1 == pciphertext->is_clear_ppid) {
 #ifdef ALLOW_CLEARTEXT_PPID
-        p_cert_cleartext_ppid_info_data = (sgx_ql_ppid_cleartext_cert_info_t *)p_certification_data->certification_data;
+        p_cert_cleartext_ppid_info_data = (sgx_ql_ppid_cleartext_cert_info_t *)p_certification_data_output->certification_data;
         // Prepare the the certificaiton data.  PPID_CLEARTEXT = Plaintext PPID + PCE_TCB + PCEID is supported by the referecne.
-        p_certification_data->cert_key_type = PPID_CLEARTEXT;
-        p_certification_data->size = sizeof(sgx_ql_ppid_cleartext_cert_info_t);
+        p_certification_data_output->cert_key_type = PPID_CLEARTEXT;
+        p_certification_data_output->size = sizeof(sgx_ql_ppid_cleartext_cert_info_t);
         // Get the cert_info_data from the ECDSA blob.
         memcpy(p_cert_cleartext_ppid_info_data->ppid, pciphertext->ppid, sizeof(p_cert_cleartext_ppid_info_data->ppid));
 #ifdef USE_PCEID
@@ -1684,18 +1721,27 @@ uint32_t gen_quote(uint8_t *p_blob,
 #endif
     }
     else {
-        p_cert_encrypted_ppid_info_data = (sgx_ql_ppid_rsa3072_encrypted_cert_info_t *)p_certification_data->certification_data;
-        // Prepare the the certificaiton data.  PPID_RSA3072_ENCRYPTED = Encrypted_PPID + PCE_TCB + PCEID is supported by the referecne.
-        p_certification_data->cert_key_type = PPID_RSA3072_ENCRYPTED;
-        p_certification_data->size = sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);
-        // Get the cert_info_data from the ECDSA blob.
-        memcpy(p_cert_encrypted_ppid_info_data->enc_ppid, pciphertext->encrypted_ppid_data.encrypted_ppid, sizeof(p_cert_encrypted_ppid_info_data->enc_ppid));
+        if (NULL == p_certification_data) {
+            p_cert_encrypted_ppid_info_data = (sgx_ql_ppid_rsa3072_encrypted_cert_info_t *)p_certification_data_output->certification_data;
+            // Prepare the the certificaiton data.  PPID_RSA3072_ENCRYPTED = Encrypted_PPID + PCE_TCB + PCEID is supported by the referecne.
+            p_certification_data_output->cert_key_type = PPID_RSA3072_ENCRYPTED;
+            p_certification_data_output->size = sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);
+            // Get the cert_info_data from the ECDSA blob.
+            memcpy(p_cert_encrypted_ppid_info_data->enc_ppid, pciphertext->encrypted_ppid_data.encrypted_ppid, sizeof(p_cert_encrypted_ppid_info_data->enc_ppid));
 #ifdef USE_PCEID
-        p_cert_encrypted_ppid_info_data->pce_info = plaintext.cert_pce_info;
+            p_cert_encrypted_ppid_info_data->pce_info = plaintext.cert_pce_info;
 #else
-        p_cert_encrypted_ppid_info_data->pce_info.pce_isv_svn = plaintext.cert_pce_info.pce_isv_svn;
+            p_cert_encrypted_ppid_info_data->pce_info.pce_isv_svn = plaintext.cert_pce_info.pce_isv_svn;
 #endif
-        memcpy(&p_cert_encrypted_ppid_info_data->cpu_svn, &plaintext.cert_cpu_svn, sizeof(p_cert_encrypted_ppid_info_data->cpu_svn));
+            memcpy(&p_cert_encrypted_ppid_info_data->cpu_svn, &plaintext.cert_cpu_svn, sizeof(p_cert_encrypted_ppid_info_data->cpu_svn));
+        }
+        else {
+            sgx_ql_certification_data_t * p_input_certification_data_header = (sgx_ql_certification_data_t *)p_certification_data;
+            p_certification_data_output->cert_key_type = p_input_certification_data_header->cert_key_type;
+            p_certification_data_output->size = p_input_certification_data_header->size;
+            // Get the cert_info_data from the ECDSA blob.
+            memcpy(p_certification_data_output->certification_data, &p_input_certification_data_header->certification_data, p_input_certification_data_header->size);
+        }
     }
 
     // Get the QE's report if requested.

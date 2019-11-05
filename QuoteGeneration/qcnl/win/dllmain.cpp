@@ -9,7 +9,7 @@
 #define REG_VALUE_QCNL_USE_SECURE_CERT  _T("USE_SECURE_CERT")
 
 // Default URL for PCCS server if registry key doesn't exist
-char server_url[MAX_URL_LENGTH] = "https://localhost:8081/sgx/certification/v1/";
+char server_url[MAX_URL_LENGTH] = "https://localhost:8081/sgx/certification/v2/";
 // Use secure HTTPS certificate or not
 bool g_use_secure_cert = true;
 bool g_isWin81OrLater = true;
