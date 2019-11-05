@@ -29,8 +29,8 @@
  *
  */
 /**
- * File: sgx_ql_core_wrapper.cpp 
- *  
+ * File: sgx_ql_core_wrapper.cpp
+ *
  * Description: SGX core Quote Library wrapper to implement generic quote generation. Only implements the ECDSA
  * P256 quote algorithm type.
  *
@@ -54,17 +54,17 @@ uint8_t g_qe_mrsigner[32] = { 0x8c, 0x4f, 0x57, 0x75, 0xd7, 0x96, 0x50, 0x3e, 0x
                               0x00, 0x56, 0xac, 0x8d, 0xed, 0x70, 0x14, 0x0b, 0x08, 0x1b, 0x09, 0x44, 0x90, 0xc5, 0x7b, 0xff };
 #endif
 uint8_t g_qe_ext_prod_id[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-uint8_t g_qe_config_id[64] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // QE's Config ID 
-                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                      
-                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                      
-                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};                     
-    
+uint8_t g_qe_config_id[64] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // QE's Config ID
+                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 uint8_t g_qe_family_id[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};   // QE's family_id
 
 
 /* Set the default Attestation Key Identity for the DCAP Quoting Library.  This is the ECDSA QE3's identity and
    ECDSA-256 */
-const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
+extern const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
 {
     0,                                                                                                   // ID
     0,                                                                                                   // Version
@@ -77,7 +77,7 @@ const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
     { 0x8c, 0x4f, 0x57, 0x75, 0xd7, 0x96, 0x50, 0x3e, 0x96, 0x13, 0x7f, 0x77, 0xc6, 0x8a, 0x82, 0x9a,
       0x00, 0x56, 0xac, 0x8d, 0xed, 0x70, 0x14, 0x0b, 0x08, 0x1b, 0x09, 0x44, 0x90, 0xc5, 0x7b, 0xff,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // Production QE3's MRSIGNER
-#endif	  
+#endif
     1,                                                                                                   // QE3's Legacy Prod ID
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // QE's extended_prod_id
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // QE's Config ID
@@ -88,7 +88,7 @@ const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
     SGX_QL_ALG_ECDSA_P256                                                                                   // Supported QE3's algorithm_id
 };
 
-/** 
+/**
  * When the Quoting Library is linked to a process, it needs to know the proper enclave loading policy.  The library
  * may be linked with a long lived process, such as a service, where it can load the enclaves and leave them loaded
  * (persistent).  This better ensures that the enclaves will be available upon quote requests and not subject to EPC
@@ -96,18 +96,18 @@ const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id =
  * many applications with the Quoting library and a better utilization of EPC is to load and unloaded the quoting
  * enclaves on demand (ephemeral).  The library will be shipped with a default policy of loading enclaves and leaving
  * them loaded until the library is unloaded (SGX_QL_PERSISTENT).
- *  
+ *
  * If the policy is set to SGX_QL_EPHEMERAL, then the QE and PCE will be loaded and unloaded on-demand.  If either
  * enclave is already loaded when the policy is change to SGX_QL_EPHEMERAL, the enclaves will be unloaded before
  * returning.
- *  
+ *
  * @param policy Sets the requested enclave loading policy to either SGX_QL_PERSISTENT, SGX_QL_EPHEMERAL or
  *                SGX_QL_DEFAULT.
- *  
+ *
  * @return SGX_QL_SUCCESS Successfully set the enclave loading policy for the quoting library's enclaves.
  * @return SGX_QL_UNSUPPORTED_LOADING_POLICY
  * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error.
- *  
+ *
  */
 quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
 {
@@ -131,25 +131,26 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
     return(ret_val);
 }
 
-/** 
+#ifndef AESM_ECDSA_BUNDLE
+/**
  * Used to select the attestation key from the list provided by the off-platform Quote verifier.  When none of the keys
  * in the list are supported by the platform, the platform will return an error and a NULL for the inputted attestation
  * key id pointer.  The reference uses a sample list that includes only the attestation key identity for the ECDSA QE.
- *  
- * If this API is never called before the subsequent quoting API's are called, then Quoting Library will use a default 
- * sgx_ql_att_key_id_t.  The Quoting Library will support at least one QE and Attestation key type described by 
- * sgx_ql_att_key_id_t.  When this API is not called, the p_att_key_id in the subsequent quoting API's should be NULL 
- * to notify the library it should use its default QE and algorithm. 
- *  
- * @param p_att_key_id_list [In] List of the supported attestation key IDs provided by the quote verifier. Can not be 
+ *
+ * If this API is never called before the subsequent quoting API's are called, then Quoting Library will use a default
+ * sgx_ql_att_key_id_t.  The Quoting Library will support at least one QE and Attestation key type described by
+ * sgx_ql_att_key_id_t.  When this API is not called, the p_att_key_id in the subsequent quoting API's should be NULL
+ * to notify the library it should use its default QE and algorithm.
+ *
+ * @param p_att_key_id_list [In] List of the supported attestation key IDs provided by the quote verifier. Can not be
  *                          NULL. it will use the p_att_key_id_list and compare it with the
  *                          supported values.
- * @param pp_selected_key_id [In, Out] Pointer to the selected attestation key in the list.  This should be used by the 
+ * @param pp_selected_key_id [In, Out] Pointer to the selected attestation key in the list.  This should be used by the
  *                           application as input to the quoting and remote attestation APIs.  Must not be NULL.  Note,
  *                           it will point to one of the entries in the p_att_key_id_list and the application must copy
  *                           it if the memory for p_att_key_id_list will not persist for future quoting APIs calls.
- *  
- * @return SGX_QL_SUCCESS Successfully selected an attestation key.  The pp_selected_key_id will point an entry in the 
+ *
+ * @return SGX_QL_SUCCESS Successfully selected an attestation key.  The pp_selected_key_id will point an entry in the
  *         p_att_key_id_list.
  * @return SGX_ERROR_INVALID_PARAMETER  Invalid parameter if p_att_key_id_list, pp_selected_key_id is NULL,
  *         list header is incorrect, or the number of key IDs in the list exceed the maximum.
@@ -206,44 +207,45 @@ extern "C" quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_a
 
     return(ret_val);
  }
+#endif
 
 /**
  * The application calls this API to request the selected platform's attestation key owner to generate or obtain
- * the attestation key.  Once called, the QE that owns the attestation key described by the inputted attestation 
- * key id will do what is required to get this platform’s attestation including getting any certification data 
+ * the attestation key.  Once called, the QE that owns the attestation key described by the inputted attestation
+ * key id will do what is required to get this platform’s attestation including getting any certification data
  * required from the PCE.  Depending on the type of attestation key and the attestation key owner, this API will
  * return the same attestation key public ID or generate a new one.  The caller can request that the attestation
  * key owner "refresh" the key.  This will cause the owner to either re-get the key or generate a new one.  The
  * platform's attestation key owner is expected to store the key in persistent memory and use it in the
- * subsequent quote generation APIs described below. 
- *  
- * In an environment where attestation key provisioning and certification needs to take place during a platform 
- * deployment phase, an application can generate the attestation key, certify it with the PCK Cert and register 
- * it with the attestation owners cloud infrastructure.  That way, the key is available during the run time 
- * phase to generate code without requiring re-certification. 
- *  
- * The QE's target info is also returned by this API that will allow the application's enclave to generate a 
- * REPORT that the attestation key owner's QE can verify using local REPORT-based attestation when generating a 
- * quote. 
- *  
- * In order to allow the application to allocate the public key id buffer first, the application can call this 
- * function with the p_pub_key_id set to NULL and the p_pub_key_id_size to a valid size_t pointer.  In this 
- * case, the function will return the required buffer size to contain the p_pub_key_id_size and ignore the other 
- * parameters.  The application can then call this API again with the correct p_pub_key_size and the pointer to 
- * the allocated buffer in p_pub_key_id. 
- *  
- * 
- * @param p_att_key_id The selected att_key_id from the quote verifier's list.  It includes the QE identity as 
+ * subsequent quote generation APIs described below.
+ *
+ * In an environment where attestation key provisioning and certification needs to take place during a platform
+ * deployment phase, an application can generate the attestation key, certify it with the PCK Cert and register
+ * it with the attestation owners cloud infrastructure.  That way, the key is available during the run time
+ * phase to generate code without requiring re-certification.
+ *
+ * The QE's target info is also returned by this API that will allow the application's enclave to generate a
+ * REPORT that the attestation key owner's QE can verify using local REPORT-based attestation when generating a
+ * quote.
+ *
+ * In order to allow the application to allocate the public key id buffer first, the application can call this
+ * function with the p_pub_key_id set to NULL and the p_pub_key_id_size to a valid size_t pointer.  In this
+ * case, the function will return the required buffer size to contain the p_pub_key_id_size and ignore the other
+ * parameters.  The application can then call this API again with the correct p_pub_key_size and the pointer to
+ * the allocated buffer in p_pub_key_id.
+ *
+ *
+ * @param p_att_key_id The selected att_key_id from the quote verifier's list.  It includes the QE identity as
  *                     well as the attestation key's algorithm type. It cannot be NULL.
  * @param p_qe_target_info Pointer to QE's target info required by the application to generate an enclave REPORT
  *                         targeting the selected QE.  Must not be NULL when p_pub_key_id is not NULL.
- * @param refresh_att_key A flag indicating the attestation key owner should re-generated and certify or 
+ * @param refresh_att_key A flag indicating the attestation key owner should re-generated and certify or
  *                        otherwise attempt to re-provision the attestation key.  For example, for ECDSDA, the
  *                        platform will generate a new key and request the PCE to recertify it.  For EPID, the
  *                        platform will attempt to re-provision the EPID key.  The behavior is dependent on the
  *                        key type and the key owner, but it should make an attempt to refresh the key typically
  *                        to update the key to the current platform's TCB.
- * @param p_pub_key_id_size This parameter can be used in 2 ways.  When p_pub_key_id is NULL, the API will 
+ * @param p_pub_key_id_size This parameter can be used in 2 ways.  When p_pub_key_id is NULL, the API will
  *                          return the buffer size required to hold the attestation's public key ID.  The
  *                          application can then allocate the buffer and call it again with p_pub_key_id not set
  *                          to NULL and the other parameters valid.  If p_pub_key_id is not NULL, p_pub_key_size
@@ -264,29 +266,29 @@ extern "C" quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_a
  *                        public key ID.
  * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter if p_pub_key_id_size is NULL.  If p_pub_key_size is
  *                                        not NULL, the other parameters must be valid.
- * @return SGX_QL_ERROR_UNEXPECTED Invalid parameter if p_pub_key_id_size is NULL.  If 
+ * @return SGX_QL_ERROR_UNEXPECTED Invalid parameter if p_pub_key_id_size is NULL.  If
  *                                 p_pub_key_size is not NULL, the other parameters must be valid
- *  
- *  
- * @return SGX_QL_SUCCESS Successfully selected an attestation key.  Either returns the required attestation's 
+ *
+ *
+ * @return SGX_QL_SUCCESS Successfully selected an attestation key.  Either returns the required attestation's
  *         public key ID size in p_pub_key_id_size when p_pub_key_id is passed in as NULL.  When p_pub_key_id is
  *         not NULL, p_qe_target_info will contain the attestation key's QE target info for REPORT generation
  *         and p_pub_key_id will contain the attestation's public key ID.
  * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter if p_pub_key_id_size is NULL, p_att_key_id is NULL.
  *         If p_pub_key_size is not NULL, the other parameters must be valid.
- * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error. 
- * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described 
+ * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error.
+ * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described
  *         in p_att_key_id.
- * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to 
+ * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to
  *         complete this operation.
- * @return SGX_QL_ERROR_OUT_OF_MEMORY Heap memory allocation error in library or enclave. 
- * @return SGX_QL_ATTESTATION_KEY_CERTIFCATION_ERROR Failed to generate and certify the attestation key. 
- * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by 
+ * @return SGX_QL_ERROR_OUT_OF_MEMORY Heap memory allocation error in library or enclave.
+ * @return SGX_QL_ATTESTATION_KEY_CERTIFCATION_ERROR Failed to generate and certify the attestation key.
+ * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by
  *         linux:fork().
- * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key. 
+ * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.
  *         Could be due to file I/O error, loading infrastructure error or insufficient enclave memory.
- *  
- */  
+ *
+ */
 extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
                                             sgx_target_info_t *p_qe_target_info,
                                             bool refresh_att_key,
@@ -335,7 +337,7 @@ extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
                 return(SGX_QL_ERROR_INVALID_PARAMETER);
             }
         }
-        p_local_att_key_id = p_att_key_id; 
+        p_local_att_key_id = p_att_key_id;
     }
     else
     {
@@ -396,7 +398,7 @@ extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
                     ret_val = SGX_QL_ENCLAVE_LOST;
                     break;
 
-                    // Unexpected enclave loading errorsReturn codes from load_qe 
+                    // Unexpected enclave loading errorsReturn codes from load_qe
                 case SGX_ERROR_INVALID_ENCLAVE:
                 case SGX_ERROR_UNDEFINED_SYMBOL:
                 case SGX_ERROR_MODE_INCOMPATIBLE:
@@ -414,6 +416,9 @@ extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
                     //case SE_ERROR_INVALID_ISVSVNLE:         ///todo: Internal error should be scrubbed before here.
                 case SGX_ERROR_INVALID_ENCLAVE_ID:
                     ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+                    break;
+                case SGX_ERROR_SERVICE_INVALID_PRIVILEGE:
+                    ret_val = SGX_QL_ERROR_INVALID_PRIVILEGE;
                     break;
 
                 case SGX_ERROR_UNEXPECTED:
@@ -433,37 +438,37 @@ extern "C" quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t* p_att_key_id,
 }
 
 /**
- * The application needs to call this function before generating a quote.  The quote size is variable 
- * depending on the type of attestation key selected and other platform or key data required to generate the 
- * quote.  Once the application calls this API, it will use the returned p_quote_size to allocate the buffer 
- * required to hold the generated quote.  A pointer to this buffer is provided to the ref_get_quote() API. 
- *  
- * If the key is not available, this API may return an error (SGX_QL_ATT_KEY_NOT_INITIALIZED) depending on 
- * the algorithm.  In this case, the caller must call sgx_ql_init_quote() to re-generate and certify the 
- * attestation key. 
+ * The application needs to call this function before generating a quote.  The quote size is variable
+ * depending on the type of attestation key selected and other platform or key data required to generate the
+ * quote.  Once the application calls this API, it will use the returned p_quote_size to allocate the buffer
+ * required to hold the generated quote.  A pointer to this buffer is provided to the ref_get_quote() API.
  *
- * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE 
+ * If the key is not available, this API may return an error (SGX_QL_ATT_KEY_NOT_INITIALIZED) depending on
+ * the algorithm.  In this case, the caller must call sgx_ql_init_quote() to re-generate and certify the
+ * attestation key.
+ *
+ * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE
  *                     identity as well as the attestation key's algorithm type. It cannot be NULL.
- * @param p_quote_size Pointer to the location where the required quote buffer size will be returned. Must 
+ * @param p_quote_size Pointer to the location where the required quote buffer size will be returned. Must
  *                     not be NULL.
- *  
- * @return SGX_QL_SUCCESS Successfully calculated the required quote size. The required size in bytes is returned in the 
+ *
+ * @return SGX_QL_SUCCESS Successfully calculated the required quote size. The required size in bytes is returned in the
  *         memory pointed to by p_quote_size.
  * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error.
- * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter.  p_quote_size and p_att_key_id must not be NULL. 
- * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation 
+ * @return SGX_QL_ERROR_INVALID_PARAMETER Invalid parameter.  p_quote_size and p_att_key_id must not be NULL.
+ * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation
  *         key available to generate quotes.  sgx_ql_init_quote() must be called again.
- * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key 
+ * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key
  *         described in p_att_key_id.  ///todo:  Add support for this error.
- * @return SGX_QL_ATT_KEY_CERT_DATA_INVALID The data returned by the platform library's sgx_ql_get_quote_config() is 
+ * @return SGX_QL_ATT_KEY_CERT_DATA_INVALID The data returned by the platform library's sgx_ql_get_quote_config() is
  *         invalid.
- * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to complete 
+ * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to complete
  *         this operation.
  * @return SGX_QL_ERROR_OUT_OF_MEMORY Heap memory allocation error in library or enclave.
- * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.  Could be 
+ * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.  Could be
  *         due to file I/O error, loading infrastructure error or insufficient enclave memory.
- * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by linux:fork(). 
- *  
+ * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by linux:fork().
+ *
  */
 extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_id,
                                                 uint32_t* p_quote_size)
@@ -510,13 +515,13 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
                 return(SGX_QL_ERROR_INVALID_PARAMETER);
             }
         }
-        p_local_att_key_id = p_att_key_id; 
+        p_local_att_key_id = p_att_key_id;
     }
     else
     {
         p_local_att_key_id = (sgx_ql_att_key_id_t*)&g_default_ecdsa_p256_att_key_id;
     }
-    
+
     // Choose the certification key type supported by the reference.
     sgx_ql_cert_key_type_t certification_key_type = SGX_QL_CERT_TYPE;
 
@@ -542,7 +547,7 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
                 ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
                 break;
 
-            // Unexpected enclave loading errorsReturn codes from load_qe 
+            // Unexpected enclave loading errorsReturn codes from load_qe
             case SGX_ERROR_INVALID_ENCLAVE:
             case SGX_ERROR_UNDEFINED_SYMBOL:
             case SGX_ERROR_MODE_INCOMPATIBLE:
@@ -559,18 +564,21 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
             //case SE_ERROR_INVALID_MEASUREMENT:      ///todo: Internal error should be scrubbed before here.
             //case SE_ERROR_INVALID_ISVSVNLE:         ///todo: Internal error should be scrubbed before here.
             case SGX_ERROR_INVALID_ENCLAVE_ID:
-                ret_val = SGX_QL_ENCLAVE_LOAD_ERROR; 
+                ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+                break;
+            case SGX_ERROR_SERVICE_INVALID_PRIVILEGE:
+                ret_val = SGX_QL_ERROR_INVALID_PRIVILEGE;
                 break;
 
             case SGX_ERROR_ENCLAVE_LOST:
                 ret_val = SGX_QL_ENCLAVE_LOST;
                 break;
-                 
+
 
             case SGX_ERROR_UNEXPECTED:
                 ret_val = SGX_QL_ERROR_UNEXPECTED;
                 break;
-            
+
 
             default:
                 ret_val = SGX_QL_ERROR_UNEXPECTED;
@@ -583,23 +591,23 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
 }
 
 /**
- * This function is c-code wrapper for getting the quote. The function will take the application enclave's REPORT that 
- * will be converted into a quote after the QE verifies the REPORT.  Once verified it will sign it with platform's 
- * attestation key matching the selected attestation key ID.  If the key is not available, this API may return an error 
- * (SGX_QL_ATT_KEY_NOT_INITIALIZED) depending on the algorithm.  In this case, the caller must call sgx_ql_init_quote() 
- * to re-generate and certify the attestation key. an attestation key. 
- *  
- * The caller can request a REPORT from the QE using a supplied nonce.  This will allow the enclave requesting the quote 
- * to verify the QE used to generate the quote. This makes it more difficult for something to spoof a QE and allows the 
- * app enclave to catch it earlier.  But since the authenticity of the QE lies in knowledge of the Quote signing key, 
- * such spoofing will ultimately be detected by the quote verifier.  QE REPORT.ReportData = 
- * SHA256(*p_nonce||*p_quote)||32-0x00's. 
- * 
- * @param p_app_report Pointer to the enclave report that needs the quote. The report needs to be generated using the 
+ * This function is c-code wrapper for getting the quote. The function will take the application enclave's REPORT that
+ * will be converted into a quote after the QE verifies the REPORT.  Once verified it will sign it with platform's
+ * attestation key matching the selected attestation key ID.  If the key is not available, this API may return an error
+ * (SGX_QL_ATT_KEY_NOT_INITIALIZED) depending on the algorithm.  In this case, the caller must call sgx_ql_init_quote()
+ * to re-generate and certify the attestation key. an attestation key.
+ *
+ * The caller can request a REPORT from the QE using a supplied nonce.  This will allow the enclave requesting the quote
+ * to verify the QE used to generate the quote. This makes it more difficult for something to spoof a QE and allows the
+ * app enclave to catch it earlier.  But since the authenticity of the QE lies in knowledge of the Quote signing key,
+ * such spoofing will ultimately be detected by the quote verifier.  QE REPORT.ReportData =
+ * SHA256(*p_nonce||*p_quote)||32-0x00's.
+ *
+ * @param p_app_report Pointer to the enclave report that needs the quote. The report needs to be generated using the
  *                     QE's target info returned by the sgx_ql_init_quote() API.  Must not be NULL.
- * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE identity as 
+ * @param p_att_key_id The selected attestation key ID from the quote verifier's list.  It includes the QE identity as
  *                     well as the attestation key's algorithm type. It cannot be NULL.
- * @param p_qe_report_info Pointer to a data structure that will contain the information required for the QE to generate 
+ * @param p_qe_report_info Pointer to a data structure that will contain the information required for the QE to generate
  *                         a REPORT that can be verified by the application enclave.  The inputted data structure
  *                         contains the application's TARGET_INFO, a nonce and a buffer to hold the generated report.
  *                         The QE Report will be generated using the target information and the QE's REPORT.ReportData =
@@ -608,26 +616,26 @@ extern "C" quote3_error_t sgx_ql_get_quote_size(sgx_ql_att_key_id_t *p_att_key_i
  *                         untrusted code.  A spoofed QE will ultimately be rejected by the remote verifier.   This
  *                         parameter is optional and will be ignored when NULL.
  * @param p_quote Pointer to the buffer that will contain the quote.
- * @param quote_size Size of the buffer pointed to by p_quote. 
- *  
- * @return SGX_QL_SUCCESS Successfully generated the quote. 
+ * @param quote_size Size of the buffer pointed to by p_quote.
+ *
+ * @return SGX_QL_SUCCESS Successfully generated the quote.
  * @return SGX_QL_ERROR_UNEXPECTED An unexpected internal error occurred.
- * @return SGX_QL_ERROR_INVALID_PARAMETER If either p_app_report or p_quote is null. Or, if quote_size isn't large 
+ * @return SGX_QL_ERROR_INVALID_PARAMETER If either p_app_report or p_quote is null. Or, if quote_size isn't large
  *         enough, p_att_key_id is NULL.
- * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation key 
+ * @return SGX_QL_ATT_KEY_NOT_INITIALIZED The platform quoting infrastructure does not have the attestation key
  *         available to generate quotes.  sgx_ql_init_quote() must be called again.
- * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described in 
+ * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support the key described in
  *         p_att_key_id.
- * @return SGX_QL_ATT_KEY_CERT_DATA_INVALID The data returned by the platform library's sgx_ql_get_quote_config() is 
+ * @return SGX_QL_ATT_KEY_CERT_DATA_INVALID The data returned by the platform library's sgx_ql_get_quote_config() is
  *         invalid.
- * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to complete 
+ * @return SGX_QL_OUT_OF_EPC There is not enough EPC memory to load one of the Architecture Enclaves needed to complete
  *         this operation.
  * @return SGX_QL_ERROR_OUT_OF_MEMORY Heap memory allocation error in library or enclave.
- * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.  Could be 
+ * @return SGX_QL_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.  Could be
  *         due to file I/O error, loading infrastructure error or insufficient enclave memory.
- * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by linux:fork(). 
- * @return SGX_QL_INVALID_REPORT Report MAC check failed on application report. 
- * @return SGX_QL_UNABLE_TO_GENERATE_QE_REPORT The QE was unable to generate its own report targeting the application 
+ * @return SGX_QL_ENCLAVE_LOST Enclave lost after power transition or used in child process created by linux:fork().
+ * @return SGX_QL_INVALID_REPORT Report MAC check failed on application report.
+ * @return SGX_QL_UNABLE_TO_GENERATE_QE_REPORT The QE was unable to generate its own report targeting the application
  *         enclave either because the QE doesn't support this feature or there is an enclave compatibility issue.
  *         Please call again with the p_qe_report_info set to NULL.
  */
@@ -676,7 +684,7 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
                 return(SGX_QL_ERROR_INVALID_PARAMETER);
             }
         }
-        p_local_att_key_id = p_att_key_id; 
+        p_local_att_key_id = p_att_key_id;
     }
     else
     {
@@ -703,11 +711,11 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
             case REFQE3_ERROR_INVALID_PARAMETER:
                 ret_val = SGX_QL_ERROR_INVALID_PARAMETER;
                 break;
-            
+
             case REFQE3_ERROR_INVALID_REPORT:
                 ret_val = SGX_QL_INVALID_REPORT;
                 break;
-                 
+
             case REFQE3_ERROR_CRYPTO:
                 // Error generating QE_ID.  Shouldn't happen
                 ret_val = SGX_QL_ERROR_UNEXPECTED;
@@ -718,9 +726,9 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
                 break;
 
             case REFQE3_UNABLE_TO_GENERATE_QE_REPORT:
-                ret_val = SGX_QL_UNABLE_TO_GENERATE_QE_REPORT; 
+                ret_val = SGX_QL_UNABLE_TO_GENERATE_QE_REPORT;
                 break;
-            
+
             default:
                 // Translate SDK errors
                 switch (sgx_status)
@@ -741,7 +749,7 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
                     ret_val = SGX_QL_ENCLAVE_LOST;
                     break;
 
-                    // Unexpected enclave loading errorsReturn codes from load_qe 
+                    // Unexpected enclave loading errorsReturn codes from load_qe
                 case SGX_ERROR_INVALID_ENCLAVE:
                 case SGX_ERROR_UNDEFINED_SYMBOL:
                 case SGX_ERROR_MODE_INCOMPATIBLE:
@@ -759,6 +767,9 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
                     //case SE_ERROR_INVALID_ISVSVNLE:         ///todo: Internal error should be scrubbed before here.
                 case SGX_ERROR_INVALID_ENCLAVE_ID:
                     ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+                    break;
+                case SGX_ERROR_SERVICE_INVALID_PRIVILEGE:
+                    ret_val = SGX_QL_ERROR_INVALID_PRIVILEGE;
                     break;
 
                 case SGX_ERROR_UNEXPECTED:

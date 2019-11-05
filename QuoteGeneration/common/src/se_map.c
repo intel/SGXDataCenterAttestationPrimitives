@@ -38,12 +38,15 @@
 
 map_handle_t* map_file(se_file_handle_t file, uint32_t *size)
 {
+    if(size == NULL)
+        return NULL;
+
     map_handle_t* mh = (map_handle_t *)calloc(1, sizeof(map_handle_t));
-    if (mh == NULL || size == NULL)
+    if (mh == NULL)
         return NULL;
 
     // Using GetFileSizeEx instead of GetFileSize.
-    // We do NOT support mapping files larger than max uint32_t with this API
+    // We do NOT support mapping files larger than max uint32_t with this API.
     LARGE_INTEGER file_size; file_size.QuadPart = 0;
     if (GetFileSizeEx(file, &file_size) && file_size.HighPart == 0)
     {
@@ -51,6 +54,7 @@ map_handle_t* map_file(se_file_handle_t file, uint32_t *size)
     }
     else
     {
+        free(mh);
         return NULL;
     }
 

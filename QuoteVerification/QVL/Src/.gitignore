@@ -1,0 +1,11 @@
+Version/include
+.idea
+Build
+cmake-build-debug
+cmake-build-release
+.vscode
+x64
+Debug
+Release
+packages
+.vs

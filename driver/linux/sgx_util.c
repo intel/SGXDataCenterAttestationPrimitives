@@ -58,11 +58,7 @@
 
 #include <linux/highmem.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
-        #include <linux/sched/mm.h>
-#else
-        #include <linux/mm.h>
-#endif
+#include <linux/sched/mm.h>
 #include <linux/shmem_fs.h>
 #include "sgx.h"
 
@@ -328,6 +324,7 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 		sgx_invalidate(encl, true);
 		goto out;
 	}
+	rc = 0;
 
 	sgx_test_and_clear_young(entry);
 out:
@@ -359,7 +356,12 @@ int sgx_get_key_hash(struct crypto_shash *tfm, const void *modulus, void *hash)
 	SHASH_DESC_ON_STACK(shash, tfm);
 
 	shash->tfm = tfm;
-	shash->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0))
+        shash->tfm->base.crt_flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+#else
+        shash->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+#endif
 
 	return crypto_shash_digest(shash, modulus, SGX_MODULUS_SIZE, hash);
 }

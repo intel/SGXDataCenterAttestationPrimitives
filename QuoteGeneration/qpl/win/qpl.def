@@ -1,0 +1,9 @@
+LIBRARY	"dcap_quoteprov"
+
+EXPORTS
+    sgx_ql_get_quote_config                     @1
+    sgx_ql_free_quote_config                    @2
+    sgx_ql_get_quote_verification_collateral    @3
+    sgx_ql_free_quote_verification_collateral   @4
+    sgx_ql_get_qve_identity                     @5
+    sgx_ql_free_qve_identity                    @6

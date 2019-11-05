@@ -60,7 +60,7 @@ NIPD := .nipd
 NIPRODT := .niprod
 
 ######## SGX SDK Settings ########
-SGX_SDK ?= /opt/sgxsdk
+SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
@@ -101,7 +101,7 @@ endif
 
 ifdef DEBUG
     COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
-    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
+    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG -DDEBUG_MODE=1
 else
     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
 endif

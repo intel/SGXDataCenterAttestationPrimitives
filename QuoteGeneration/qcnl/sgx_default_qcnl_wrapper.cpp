@@ -35,30 +35,36 @@
  *
  */
 
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
-#include <curl/curl.h>
 #include <map>
 #include <fstream>
 #include <algorithm>
+#include <sgx_key.h>
 #include "sgx_default_qcnl_wrapper.h"
 #include "sgx_pce.h"
+#include "network_wrapper.h"
+#include "se_memcpy.h"
 
 using namespace std;
 
 #define MAX_URL_LENGTH  2083
 #define QE3_ID_SIZE     16
 #define ENC_PPID_SIZE   384
-#define CPUSVN_SIZE     SGX_CPUSVN_SIZE
+#define CPUSVN_SIZE     16
 #define PCESVN_SIZE     2
 #define PCEID_SIZE      2
 #define FMSPC_SIZE      6
 
-// Default URL for PCS server if configuration file doesn't exist
-static char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v1/";
+// Default URL for PCCS server if configuration file doesn't exist
+extern char server_url[MAX_URL_LENGTH];
 // Use secure HTTPS certificate or not
-static bool g_use_secure_cert = true;
+extern bool g_use_secure_cert;
+
+#ifdef _MSC_VER
+#define sscanf  sscanf_s
+#endif
 
 /**
 * Method converts byte containing value from 0x00-0x0F into its corresponding ASCII code,
@@ -155,33 +161,6 @@ static bool hex_string_to_byte_array(const uint8_t *in_buf, uint32_t in_size, ui
     return true;
 }
 
-typedef struct _network_malloc_info_t{
-    char *base;
-    uint32_t size;
-}network_malloc_info_t;
-
-static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
-{
-    network_malloc_info_t* s=reinterpret_cast<network_malloc_info_t *>(stream);
-    uint32_t start=0;
-    if(s->base==NULL){
-        s->base = reinterpret_cast<char *>(malloc(size*nmemb));
-        s->size = static_cast<uint32_t>(size*nmemb);
-        if(s->base==NULL)return 0;
-    }else{
-        uint32_t newsize = s->size+static_cast<uint32_t>(size*nmemb);
-        char *p=reinterpret_cast<char *>(realloc(s->base, newsize));
-        if(p == NULL){
-            return 0;
-        }
-        start = s->size;
-        s->base = p;
-        s->size = newsize;
-    }
-    memcpy(s->base +start, ptr, size*nmemb);
-    return size*nmemb;
-}
-
 // Convert http header string to a <field,value> map 
 // HTTP 1.1 header specification
 //       message-header = field-name ":" [ field-value ]
@@ -209,8 +188,14 @@ static void http_header_to_map(char* resp_header, uint32_t header_size, map<stri
             // parse one line
             string str((unsigned char*)resp_header+start, (unsigned char*)resp_header+end);
             size_t pos = str.find(": ");
-            if (pos != string::npos)
-                header_map.insert(pair<string, string>(str.substr(0, pos), str.substr(pos+2)));
+            if (pos != string::npos) {
+                // HTTP headers are case-insensitive. Convert to lower case
+                // for convenience.
+                string header_lc= str.substr(0, pos);
+                transform(header_lc.begin(), header_lc.end(), header_lc.begin(),
+                          [](unsigned char c){return (unsigned char)::tolower(c);});
+                header_map.insert(pair<string, string>(header_lc, str.substr(pos+2)));
+            }
             start = end;
         }
     }
@@ -232,133 +217,6 @@ static string unescape(string& src ) {
         }
     }
     return dst;
-}
-
-/**
-* This method converts CURL error codes to QCNL error codes
-*
-* @param curl_error Curl library error codes
-*
-* @return Collateral Network Library Error Codes
-*/
-static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error)
-{
-    switch(curl_error){
-        case CURLE_OK:
-            return SGX_QCNL_SUCCESS;
-        case CURLE_COULDNT_RESOLVE_PROXY:
-            return SGX_QCNL_NETWORK_PROXY_FAIL;
-        case CURLE_COULDNT_RESOLVE_HOST:
-            return SGX_QCNL_NETWORK_HOST_FAIL;
-        case CURLE_COULDNT_CONNECT:
-            return SGX_QCNL_NETWORK_COULDNT_CONNECT;
-        case CURLE_WRITE_ERROR:
-            return SGX_QCNL_NETWORK_WRITE_ERROR;
-        case CURLE_OPERATION_TIMEDOUT:
-            return SGX_QCNL_NETWORK_OPERATION_TIMEDOUT;
-        case CURLE_SSL_CONNECT_ERROR:
-            return SGX_QCNL_NETWORK_HTTPS_ERROR;
-        case CURLE_UNKNOWN_OPTION:
-            return SGX_QCNL_NETWORK_UNKNOWN_OPTION;
-        case CURLE_PEER_FAILED_VERIFICATION:
-            return SGX_QCNL_NETWORK_HTTPS_ERROR;
-        default:
-            return SGX_QCNL_NETWORK_ERROR;
-    }
-}
-
-/**
-* This method calls curl library to perform https GET request and returns response body and header
-*
-* @param url HTTPS Get URL 
-* @param resp_msg Output buffer of response body
-* @param resp_size Size of response body
-* @param resp_header Output buffer of response header
-* @param header_size Size of response header
-*
-* @return SGX_QCNL_SUCCESS Call https get successfully. Other return codes indicate an error occured.
-*/
-static sgx_qcnl_error_t qcnl_https_get(const char* url, 
-                                      char **resp_msg, 
-                                      uint32_t& resp_size, 
-                                      char **resp_header, 
-                                      uint32_t& header_size) 
-{
-    CURL *curl = NULL;
-    CURLcode curl_ret;
-    sgx_qcnl_error_t ret = SGX_QCNL_NETWORK_ERROR;
-    network_malloc_info_t res_header = {0,0};
-    network_malloc_info_t res_body = {0,0};
-
-    do {
-        curl = curl_easy_init();
-        if (!curl)
-            break;
-
-        if (curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK)
-            break;;
-
-        if (!g_use_secure_cert) {
-            // if not set this option, the below error code will be returned for self signed cert
-            // CURLE_SSL_CACERT (60) Peer certificate cannot be authenticated with known CA certificates.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK)
-                break;
-            // if not set this option, the below error code will be returned for self signed cert
-            // // CURLE_PEER_FAILED_VERIFICATION (51) The remote server's SSL certificate or SSH md5 fingerprint was deemed not OK.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L) != CURLE_OK)
-                break;
-        }
-
-        // Set write callback functions
-        if(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback)!=CURLE_OK)
-            break;
-        if(curl_easy_setopt(curl, CURLOPT_WRITEDATA, reinterpret_cast<void *>(&res_body))!=CURLE_OK)
-            break;
-
-        // Set header callback functions
-        if(curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_callback)!=CURLE_OK)
-            break;
-        if(curl_easy_setopt(curl, CURLOPT_HEADERDATA, reinterpret_cast<void *>(&res_header))!=CURLE_OK)
-            break;
-
-        // Perform request
-        if((curl_ret = curl_easy_perform(curl))!=CURLE_OK) {
-            ret = curl_error_to_qcnl_error(curl_ret);
-            break;
-        }
-        long http_code = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        if (http_code == 404) {
-            ret = SGX_QCNL_ERROR_NO_CERT_DATA;
-            break;
-        }
-        else if (http_code != 200) {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
-            break;
-        }
-
-        *resp_msg = res_body.base;
-        resp_size = res_body.size;
-        *resp_header = res_header.base;
-        header_size = res_header.size;
-
-        ret = SGX_QCNL_SUCCESS;
-
-    } while(0);
-
-    if (curl) {
-        curl_easy_cleanup(curl);
-    }
-    if (ret != SGX_QCNL_SUCCESS) {
-        if(res_body.base){
-            free(res_body.base);
-        }
-        if(res_header.base){
-            free(res_header.base);
-        }
-    }
-
-    return ret;
 }
 
 /**
@@ -388,53 +246,13 @@ static sgx_qcnl_error_t url_append_req_para(string& url, const uint8_t* ba, cons
 }
 
 /**
-* Global initializtion of the QCNL library. Will be called when .so is loaded
-* This method will 
-* 1) Call curl_global_init to initialize CURL Library
-* 2) Read configuration data
-*/
-__attribute__((constructor)) void _qcnl_global_init()
-{
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-
-    // read configuration File
-    ifstream ifs("/etc/sgx_default_qcnl.conf");
-    if (ifs.is_open())
-    {
-        string line;
-        auto f = [](unsigned char const c) { return std::isspace(c); };
-        while(getline(ifs, line)){
-            line.erase(std::remove_if(line.begin(), line.end(), f), line.end());
-            if(line[0] == '#' || line.empty())
-                continue;
-            size_t pos = line.find("=");
-            string name = line.substr(0, pos);
-            string value = line.substr(pos + 1);
-            if (name.compare("PCS_URL") == 0) {
-                if (value.size() < sizeof(server_url)) {
-                    value.copy(server_url, value.size()+1);
-                    server_url[value.size()] = '\0';
-                }
-            }
-            else if (name.compare("USE_SECURE_CERT") == 0 && 
-                     (value.compare("FALSE") == 0 || value.compare("false") == 0)){
-                g_use_secure_cert = false;
-            }
-            else {
-                continue;
-            }
-        }
-    }
-}
-
-/**
-* This API gets PCK certificate chain and TCBm from PCS server based on the information provided(QE_ID, TCBr, EncPPID, PCE_ID) 
+* This API gets PCK certificate chain and TCBm from PCCS server based on the information provided(QE_ID, TCBr, EncPPID, PCE_ID) 
 * The buffer allocated by this function should be freed with sgx_qcnl_free_pck_cert_chain by the caller.
 *
 * @param p_pck_cert_id PCK cert identity information
 * @param pp_quote_config Output buffer for quote configuration data
 *
-* @return SGX_QCNL_SUCCESS If the PCK certificate chain and TCBm was retrieved from PCS server successfully.
+* @return SGX_QCNL_SUCCESS If the PCK certificate chain and TCBm was retrieved from PCCS server successfully.
 */
 sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
                                            sgx_ql_config_t **pp_quote_config)
@@ -448,7 +266,8 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
     if (p_pck_cert_id->p_qe3_id == NULL || p_pck_cert_id->qe3_id_size != QE3_ID_SIZE) {
         return SGX_QCNL_INVALID_PARAMETER;
     }
-    if (p_pck_cert_id->p_encrypted_ppid == NULL || p_pck_cert_id->encrypted_ppid_size != ENC_PPID_SIZE) {
+    if (p_pck_cert_id->p_encrypted_ppid != NULL && p_pck_cert_id->encrypted_ppid_size != ENC_PPID_SIZE) {
+        // Allow ENCRYPTED_PPID to be NULL, but if it is not NULL, the size must match ENC_PPID_SIZE
         return SGX_QCNL_INVALID_PARAMETER;
     }
     if (p_pck_cert_id->p_platform_cpu_svn == NULL || p_pck_cert_id->p_platform_pce_isv_svn == NULL) {
@@ -469,8 +288,16 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
 
     // Append encrypted PPID
     url.append("&encrypted_ppid=");
-    if ((ret = url_append_req_para(url, p_pck_cert_id->p_encrypted_ppid, p_pck_cert_id->encrypted_ppid_size)) != SGX_QCNL_SUCCESS){
-        return ret;
+    if (p_pck_cert_id->p_encrypted_ppid == NULL) {
+        uint8_t enc_ppid_unused[ENC_PPID_SIZE] = { 0 };
+        if ((ret = url_append_req_para(url, (const uint8_t*)&enc_ppid_unused, sizeof(enc_ppid_unused))) != SGX_QCNL_SUCCESS) {
+            return ret;
+        }
+    }
+    else {
+        if ((ret = url_append_req_para(url, p_pck_cert_id->p_encrypted_ppid, p_pck_cert_id->encrypted_ppid_size)) != SGX_QCNL_SUCCESS) {
+            return ret;
+        }
     }
 
     // Append cpusvn
@@ -563,8 +390,14 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
             ret = SGX_QCNL_OUT_OF_MEMORY;
             break; 
         }
-        memcpy((*pp_quote_config)->p_cert_data, resp_msg, resp_size); 
-        memcpy((*pp_quote_config)->p_cert_data + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s((*pp_quote_config)->p_cert_data, (*pp_quote_config)->cert_data_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s((*pp_quote_config)->p_cert_data + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -600,7 +433,7 @@ void sgx_qcnl_free_pck_cert_chain(sgx_ql_config_t *p_quote_config)
 }
 
 /**
-* This API gets CRL certificate chain from PCS server. The p_crl_chain buffer allocated by this API
+* This API gets CRL certificate chain from PCCS server. The p_crl_chain buffer allocated by this API
 * must be freed with sgx_qcnl_free_pck_crl_chain upon success.
 *
 * @param ca Currently only "platform" or "processor"
@@ -608,7 +441,7 @@ void sgx_qcnl_free_pck_cert_chain(sgx_ql_config_t *p_quote_config)
 * @param p_crl_chain Output buffer for CRL certificate chain
 * @param p_crl_chain_size Size of CRL certificate chain
 *
-* @return SGX_QCNL_SUCCESS If the CRL certificate chain was retrieved from PCS server successfully.
+* @return SGX_QCNL_SUCCESS If the CRL certificate chain was retrieved from PCCS server successfully.
 */
 sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
                                           uint16_t ca_size,
@@ -672,8 +505,14 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
         }
 
         // set certchain (crl || intermediateCA || root CA)
-        memcpy(*p_crl_chain, resp_msg, resp_size); 
-        memcpy(*p_crl_chain + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_crl_chain, *p_crl_chain_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_crl_chain + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -704,7 +543,7 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain)
 }
 
 /**
-* This API gets TCB information from PCS server. The p_tcbinfo buffer allocated by this API
+* This API gets TCB information from PCCS server. The p_tcbinfo buffer allocated by this API
 * must be freed with sgx_qcnl_free_tcbinfo upon success.
 *
 * @param fmspc Family-Model-Stepping value
@@ -712,7 +551,7 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain)
 * @param p_tcbinfo Output buffer for TCB information
 * @param p_tcbinfo_size Size of TCB information
 *
-* @return SGX_QCNL_SUCCESS If the TCB information was retrieved from PCS server successfully.
+* @return SGX_QCNL_SUCCESS If the TCB information was retrieved from PCCS server successfully.
 */
 sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
                                     uint16_t fmspc_size,
@@ -732,7 +571,7 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
     // initialize https request url
     string url(server_url);
 
-    // Append fmspc 
+    // Append fmspc
     url.append("tcb?fmspc=");
     if ((ret = url_append_req_para(url, reinterpret_cast<const uint8_t*>(fmspc), fmspc_size)) != SGX_QCNL_SUCCESS) {
         return SGX_QCNL_UNEXPECTED_ERROR;
@@ -775,8 +614,14 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
         }
 
         // set certchain (tcbinfo || signingCA || root CA)
-        memcpy(*p_tcbinfo, resp_msg, resp_size); 
-        memcpy(*p_tcbinfo + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_tcbinfo, *p_tcbinfo_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_tcbinfo + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -807,14 +652,14 @@ void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo)
 }
 
 /**
-* This API gets QE identity from PCS server. The p_qe_identity buffer allocated by this API
+* This API gets QE identity from PCCS server. The p_qe_identity buffer allocated by this API
 * must be freed with sgx_qcnl_free_qe_identity upon success.
 *
 * @param qe_type Currently only 0 (ECDSA QE) is supported
 * @param p_qe_identity Output buffer for QE identity
 * @param p_qe_identity_size Size of QE identity
 *
-* @return SGX_QCNL_SUCCESS If the QE identity was retrieved from PCS server successfully.
+* @return SGX_QCNL_SUCCESS If the QE identity was retrieved from PCCS server successfully.
 */
 sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
                                         uint8_t **p_qe_identity,
@@ -846,7 +691,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-qe-identity-issuer-chain");
+        it = header_map.find("sgx-enclave-identity-issuer-chain");
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
@@ -868,8 +713,14 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
         }
 
         // set certchain (QE identity || signingCA || root CA)
-        memcpy(*p_qe_identity, resp_msg, resp_size); 
-        memcpy(*p_qe_identity + resp_size, certchain.data(), certchain.size());
+        if (memcpy_s(*p_qe_identity, *p_qe_identity_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s(*p_qe_identity + resp_size, certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
 
         ret = SGX_QCNL_SUCCESS;
     } while(0);
@@ -899,3 +750,205 @@ void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity)
     }
 }
 
+/**
+* This API gets QvE identity from PCCS server. The pp_qve_identity and pp_qve_identity_issuer_chain buffer allocated by this API
+* must be freed with sgx_qcnl_free_qve_identity upon success.
+*
+* @param pp_qve_identity Output buffer for QvE identity
+* @param p_qve_identity_size Size of QvE identity
+* @param pp_qve_identity_issuer_chain Output buffer for QvE identity certificate chain
+* @param p_qve_identity_issuer_chain_size Size of QvE identity certificate chain
+*
+* @return SGX_QCNL_SUCCESS If the QvE identity was retrieved from PCCS server successfully.
+*/
+sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity, 
+                                           uint32_t *p_qve_identity_size,
+                                           char **pp_qve_identity_issuer_chain,
+                                           uint32_t *p_qve_identity_issuer_chain_size)
+{
+    // Check input parameters
+    if (pp_qve_identity == NULL || p_qve_identity_size == NULL 
+       || pp_qve_identity_issuer_chain == NULL || p_qve_identity_issuer_chain_size == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+
+    *pp_qve_identity = NULL;
+    *pp_qve_identity_issuer_chain = NULL;
+
+    // initialize https request url
+    string url(server_url);
+
+    // Append qve identity 
+    url.append("qve/identity");
+
+    char* resp_msg = NULL;
+    uint32_t resp_size;
+    char* resp_header = NULL;
+    uint32_t header_size;
+
+    sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
+    if (ret != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    do {
+        // Get certchain from HTTP response header
+        map<string,string> header_map;
+        map<string, string>::const_iterator it;
+        http_header_to_map(resp_header, header_size, header_map);
+        it = header_map.find("sgx-enclave-identity-issuer-chain");
+        if (it == header_map.end()) {
+            ret = SGX_QCNL_MSG_ERROR;
+            break;
+        }
+        string certchain = it->second;
+        certchain = unescape(certchain);
+
+        if (resp_size >= UINT32_MAX - 1) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (certchain.size() >= UINT32_MAX - 1){
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        // allocate buffers
+        *p_qve_identity_size = resp_size + 1;
+        *pp_qve_identity = (char*)malloc(*p_qve_identity_size);
+        if (*pp_qve_identity == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+        *p_qve_identity_issuer_chain_size = (uint32_t)(certchain.size() + 1);
+        *pp_qve_identity_issuer_chain = (char*)malloc(*p_qve_identity_issuer_chain_size);
+        if (*pp_qve_identity_issuer_chain == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+
+        // set QvE identity
+        if (memcpy_s(*pp_qve_identity, *p_qve_identity_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        (*pp_qve_identity)[*p_qve_identity_size - 1] = '\0'; // add NULL terminator
+
+        // set certchain (signingCA || root CA)
+        if (memcpy_s(*pp_qve_identity_issuer_chain, *p_qve_identity_issuer_chain_size, certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        (*pp_qve_identity_issuer_chain)[*p_qve_identity_issuer_chain_size - 1] = '\0'; // add NULL terminator
+
+        ret = SGX_QCNL_SUCCESS;
+    } while(0);
+
+    if (ret != SGX_QCNL_SUCCESS) {
+        sgx_qcnl_free_qve_identity(*pp_qve_identity, *pp_qve_identity_issuer_chain);
+    }
+    if (resp_msg) {
+        free(resp_msg);
+        resp_msg = NULL;
+    }
+    if (resp_header){
+        free(resp_header);
+        resp_header = NULL;
+    }
+
+    return ret;
+}
+
+/**
+* This API frees the p_qve_identity and p_qve_identity_issuer_chain buffer allocated by sgx_qcnl_get_qve_identity
+*/
+void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain)
+{
+    if(p_qve_identity) {
+        free(p_qve_identity);
+        p_qve_identity = NULL;
+    }
+    if(p_qve_identity_issuer_chain) {
+        free(p_qve_identity_issuer_chain);
+        p_qve_identity_issuer_chain = NULL;
+    }
+}
+
+/**
+* This API gets Root CA CRL from PCCS server. The p_root_ca_crl buffer allocated by this API
+* must be freed with sgx_qcnl_free_root_ca_crl upon success.
+*
+* @param p_root_ca_crl Output buffer for Root CA CRL 
+* @param p_root_ca_cal_size Size of Root CA CRL
+*
+* @return SGX_QCNL_SUCCESS If the Root CA CRL was retrieved from PCCS server successfully.
+*/
+sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_root_ca_cal_size)
+{
+    // Check input parameters
+    if (p_root_ca_crl == NULL || p_root_ca_cal_size == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+
+    // initialize https request url
+    string url(server_url);
+
+    // Append url
+    url.append("rootcacrl");
+
+    char* resp_msg = NULL;
+    uint32_t resp_size;
+    char* resp_header = NULL;
+    uint32_t header_size;
+
+    sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
+    if (ret != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    do {
+        if (resp_size >= UINT16_MAX) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        *p_root_ca_cal_size = (uint16_t)(resp_size);
+        *p_root_ca_crl = (uint8_t*)malloc(*p_root_ca_cal_size);
+        if (*p_root_ca_crl == NULL) {
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+
+        // set Root CA CRL
+        if (memcpy_s(*p_root_ca_crl, *p_root_ca_cal_size, resp_msg, resp_size) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+
+        ret = SGX_QCNL_SUCCESS;
+    } while(0);
+
+    if (ret != SGX_QCNL_SUCCESS) {
+        sgx_qcnl_free_root_ca_crl(*p_root_ca_crl);
+    }
+    if (resp_msg) {
+        free(resp_msg);
+        resp_msg = NULL;
+    }
+    if (resp_header){
+        free(resp_header);
+        resp_header = NULL;
+    }
+
+    return ret;
+}
+
+/**
+* This API frees the p_root_ca_crl buffer allocated by sgx_qcnl_get_root_ca_crl
+*/
+void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl)
+{
+    if(p_root_ca_crl) {
+        free(p_root_ca_crl);
+    }
+}

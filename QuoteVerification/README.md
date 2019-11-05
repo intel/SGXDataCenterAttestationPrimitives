@@ -1,92 +1,49 @@
-Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Verification Library for Linux Quick Start Guide
+Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Verification Enclave Quick Start Guide
 ================================================
 
-## SGX Quote Verification Library
+## Build QvE and dcap_quoteverify libraries, non-production only (for debug purposes). For production you must use Intel(R) signed QvE.
+## Linux
+Supported operating systems:
+* Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
+* Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
+* Ubuntu* 18.04 LTS Desktop 64bits
+* Ubuntu* 18.04 LTS Server 64bits
 
-Reference implementation of QUOTE verification in SGX ECDSA model.
-
-This library is an interface encapsulating all the processing involved in ECDSA Quote verification.
-It requires providing Intel-issued PCK Certificate, PCK Revocation List and TCB Information corresponding to the platform that is attested.
-Library is exposed via C-like API and is implemented in a thread-safe-manner to enable simultaneous Quote verifications by the Attestation Service.
-
-## SGX QVL Sample App
-This repository contains also a sample application meant to present the way dynamic-link QVL application is implemented.
-Sample Application can be used to perform quote verification using QVL.
-
-## Build
-Currently only unix like system are supported out of the box.
 Requirements:
-
-* cmake version 3.2 or higher
 * make
-* clang++ with c++11 support (5.0.2 or higher is recommended)
-* doxygen version 1.8.14 if BUILD_DOCS is enabled
-* gcc to compile dependant openssl
+* gcc
+* g++
+* ZIP
 * bash shell
-* due to self contained third parties, ~230MB disk space is required for full build - debug, release, tests and doc
 
-Additional libraries will be downloaded from official, public repositories and compiled during first build:
+Pre-requisets:
+* Intel(R) SGX SDK
+* Intel(R) SgxSSL: Follow instructions in https://github.com/intel/intel-sgx-ssl (By default SgxSSL will automatically be downloaded and built). You should use OpenSSL1.1.1d version to build SgxSSL, QvE is validated with this version.
 
-* openssl v1.1.0i -  http://www.openssl.org/source/openssl-1.1.0i.tar.gz (AttestationLibrary dependency)
-* googletest - https://github.com/google/googletest/archive/release-1.8.0.tar.gz (Tests dependency)
-
-
-See build scripts (release, debug) to set options:
-
-| Option | Description | Default |
-| ----- | ----- | :-----: |
-| BUILD_ATTESTATION_LIBRARY | Enable/Disable building of the library files | ON |
-| BUILD_ATTESTATION_APP | Enable/Disable building of the sample app | ON |
-| BUILD_TESTS | Enable/Disable building of the unit and integration tests | ON |
-| BUILD_DOCS | Enable/Disable building of the doxygen based documentation | OFF |
-
-
-### Build in release:
+### Build ``dcap_quoteverify.so`` and ``libsgx_qve.signed.so`` (Only for debug purposes):
 ````
-$ cd Src
-$ ./release
+$ cd QuoteVerification/
+$ make
+Generate a key and sign generated QvE enclave:
+$ /opt/intel/sgxsdk/bin/x64/sgx_sign sign -key Enclave/<GENERATED_KEY>.pem -enclave qve.so -out libsgx_qve.signed.so -config Enclave/qve.config.xml
 ````
 
-Binaries to be found in `Src/Build/Release/dist`
+## Windows
+Supported operating systems:
+   * Windows* Server 2016 (Long-Term Servicing Channel)
+   * Windows* Server 2019 (Long-Term Servicing Channel)
 
-### Build in debug:
+Requirements:
+* Microsoft Visual Studio 2015 or newer.
+* 7-Zip
+* Perl
+* NASM (Netwide Assembler)
 
+Pre-requisets:
+* Intel(R) SGX SDK.
+* Intel(R) SgxSSL: Follow instructions in https://github.com/intel/intel-sgx-ssl (By default SgxSSL will automatically be downloaded and built). You should use OpenSSL1.1.1d version to build SgxSSL, QvE is validated with this version.
+
+### Build ``dcap_quoteverify.dll`` and ``qve.signed.dll`` (Only for debug purposes):
 ````
-$ cd Src
-$ ./debug
+$ In the top directory, open ``SGX_DCAP.sln`` using Visual studio and build.
 ````
-
-Binaries to be found in `Src/Build/Debug/dist`
-
-### Run unit tests:
-
-````
-$ cd Src
-$ ./runUT
-````
-
-### Run code coverage analysis
-(requires Bullseye to be installed on the system)
-
-Default Bullseye install location is `/opt/bullseye`, but you can specify a different one using a '-b' option:
-
-````
-$ cd Src
-$ ./coverage [-b custom/bullseye/location]
-````
-
-## Run SGX QVL Sample App
-After build sample app can be found in `Src/Build/Release/dist/bin` for release or `Src/Build/Debug/dist/bin` for debug.
-
-To see usage run following:
-
-````
-$ LD_LIBRARY_PATH=../lib ./AttestationApp --help
-````
-### Provided sample data
-Build includes sample data for SGX QVL Sample App in `Src/Build/Debug/dist/bin/sampleData` directory. All files use default names so they will be loaded by app without any parameters. In sampleData directory run:
-```
-LD_LIBRARY_PATH=../../lib ../AttestationApp
-```
-## Clion setup
-To use the project in Clion it is necessary to set Clang as a compiler. This is done in *File->Settings->Build, Execution, Deployment->CMake* menu by adding `-DCMAKE_CXX_COMPILER=clang++` to *CMake options*.

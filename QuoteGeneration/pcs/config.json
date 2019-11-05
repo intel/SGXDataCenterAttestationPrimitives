@@ -1,8 +1,0 @@
-{
-    "HTTPS_PORT": 8081,
-    "uri": "https://api.trustedservices.intel.com/sgx/certification/v1/",
-    "ApiKey": "",
-    "RefreshSchedule": "0 0 1 * * *",
-    "CacheDB": "pckcache.db",
-    "AdminToken" : ""
-}

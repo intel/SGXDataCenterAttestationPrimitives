@@ -54,7 +54,7 @@ DCAP_Library_Name := sgx_dcap_ql
 Urts_Library_Name := sgx_urts
 
 App_Cpp_Files :=  App/App.cpp
-App_Include_Paths := -I$(SGX_SDK)/include 
+App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/common/inc
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 

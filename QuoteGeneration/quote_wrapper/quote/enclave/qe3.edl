@@ -48,7 +48,7 @@ trusted {
                                 uint32_t blob_size,
                                 [in]const sgx_target_info_t *p_pce_target_info,
                                 [out] sgx_report_t *qe_report,
-                                [in, size = authentication_data_size] uint8_t* p_authentication_data, 
+                                [in, size = authentication_data_size] uint8_t* p_authentication_data,
                                 uint32_t authentication_data_size);
 
     public uint32_t verify_blob([size = blob_size, in, out] uint8_t *p_blob,
@@ -72,7 +72,9 @@ trusted {
                               [in] const sgx_target_info_t *p_app_enclave_target_info,
                               [out] sgx_report_t *p_qe_report,
                               [size = quote_size, in, out] uint8_t *p_quote,
-                              uint32_t quote_size, 
-                              sgx_isv_svn_t pce_isvnsvn);
+                              uint32_t quote_size,
+                              sgx_isv_svn_t pce_isvnsvn,
+                              [in, size = cert_data_size] const uint8_t * p_cert_data,
+                              uint32_t cert_data_size);
     };
 };

@@ -68,14 +68,17 @@ enum sgx_misc {
 #define SGX_MISC_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
 
 enum sgx_attribute {
-	SGX_ATTR_DEBUG		= 0x02,
-	SGX_ATTR_MODE64BIT	= 0x04,
-	SGX_ATTR_PROVISIONKEY	= 0x10,
-	SGX_ATTR_EINITTOKENKEY	= 0x20,
-	SGX_ATTR_KSS		= 0x80,
+	SGX_ATTR_INIT			= BIT(0),
+	SGX_ATTR_DEBUG			= BIT(1),
+	SGX_ATTR_MODE64BIT		= BIT(2),
+	SGX_ATTR_PROVISIONKEY	= BIT(4),
+	SGX_ATTR_EINITTOKENKEY	= BIT(5),
+	SGX_ATTR_KSS			= BIT(7)
 };
 
-#define SGX_ATTR_RESERVED_MASK 0xFFFFFFFFFFFFFF49L
+#define SGX_ATTR_RESERVED_MASK	(BIT_ULL(0) | BIT_ULL(3) | BIT_ULL(6) | GENMASK_ULL(63, 8))
+#define SGX_ATTR_ALLOWED_MASK	(SGX_ATTR_DEBUG | SGX_ATTR_MODE64BIT | SGX_ATTR_KSS)
+
 
 #define SGX_SECS_RESERVED1_SIZE 24
 #define SGX_SECS_RESERVED2_SIZE 32
@@ -156,14 +159,14 @@ enum sgx_secinfo_flags {
 struct sgx_secinfo {
 	uint64_t flags;
 	uint64_t reserved[7];
-} __attribute__((packed, aligned(64)));
+} __attribute__((__packed__, aligned(64)));
 
 struct sgx_pcmd {
 	struct sgx_secinfo secinfo;
 	uint64_t enclave_id;
 	uint8_t reserved[40];
 	uint8_t mac[16];
-} __attribute__((__packed__));
+} __attribute__((__packed__, aligned(64)));
 
 #define SGX_MODULUS_SIZE 384
 

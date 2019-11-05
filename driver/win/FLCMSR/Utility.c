@@ -33,47 +33,6 @@
 #include "Utility.tmh"
 #include "Key.h"
 
-_Use_decl_annotations_
-ULONG_PTR IpiGenericCall(
-    _In_ ULONG_PTR Argument
-)
-{
-    UNREFERENCED_PARAMETER(Argument);
-    ULONG_PTR ret = 0;
-    __int64 feature_control = 0;
-
-    try
-    {
-        feature_control = __readmsr(MSR_IA32_FEATURE_CONTROL);
-
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "MSR_IA32_FEATURE_CONTROL %llx", feature_control);
-
-        if (feature_control & (1 << 17))
-        {
-            __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_0, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0);
-            __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_1, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1);
-            __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_2, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2);
-            __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_3, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3);
-        }
-        else
-        {
-            ret = 2;
-        }
-
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "The Key is %llx %llx %llx %llx",
-                    MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0,
-                    MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1,
-                    MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2,
-                    MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3);
-
-    }
-    except(EXCEPTION_EXECUTE_HANDLER)
-    {
-        ret = 3;
-    }
-
-    return ret;
-}
 
 BOOLEAN is_HW_support_FLC()
 {

@@ -1,0 +1,13 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/pccs/config/default.json	<installdir>/package/pccs/config/default.json	0	main	STP
+<deliverydir>/pccs/package.json	<installdir>/package/pccs/package.json	0	main	STP
+<deliverydir>/pccs/pckclient.js	<installdir>/package/pccs/pckclient.js	0	main	STP
+<deliverydir>/pccs/pckdb.js	<installdir>/package/pccs/pckdb.js	0	main	STP
+<deliverydir>/pccs/pccs_server.js	<installdir>/package/pccs/pccs_server.js	0	main	STP
+<deliverydir>/pccs/pccs_server.config.js	<installdir>/package/pccs/pccs_server.config.js	0	main	STP
+<deliverydir>/pccs/winston.js	<installdir>/package/pccs/winston.js	0	main	STP
+<deliverydir>/pccs/x509.js	<installdir>/package/pccs/x509.js	0	main	STP
+<deliverydir>/pccs/install.sh	<installdir>/package/pccs/install.sh	0	main	STP
+<deliverydir>/pccs/README.md	<installdir>/package/pccs/README.md	0	main	STP
+<deliverydir>/installer/linux/common/libsgx-dcap-pccs/installConfig	<installdir>/installConfig	0	main	STP
+<deliverydir>/installer/linux/common/libsgx-dcap-pccs/Makefile	<installdir>/Makefile	0	main	STP

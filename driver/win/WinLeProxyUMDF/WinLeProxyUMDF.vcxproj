@@ -94,15 +94,15 @@
       <WppEnabled>true</WppEnabled>
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SGXSDKInstallPath)include;$(SolutionDir)\external\openssl\include;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SGXSDKInstallPath)include;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Inf>
       <SpecifyArchitecture>true</SpecifyArchitecture>
     </Inf>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)\external\openssl\lib\x64\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libeay32MTd.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -114,11 +114,11 @@
       <WppEnabled>true</WppEnabled>
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SGXSDKInstallPath)include;$(SolutionDir)\external\openssl\include;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SGXSDKInstallPath)include;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)..\..\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>libeay32MT.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\external\openssl\lib\x64\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>
