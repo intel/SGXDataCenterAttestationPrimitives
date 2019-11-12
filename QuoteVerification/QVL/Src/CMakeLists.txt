@@ -25,34 +25,49 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 cmake_minimum_required(VERSION 3.2)
 if (POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
+	cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
 endif()
-
-######### QVL Enclave related settings #################################################################################
-
-set(SGX_SDK "/opt/intel/sgxsdk" CACHE INTERNAL "SGX SDK location path")
-set(SGX_OPENSSL "/opt/intel/intel-sgx-ssl/Linux/package" CACHE INTERNAL "SGX OpenSLL location path")
-set(SGX_MODE "HW" CACHE INTERNAL "SGX mode: HW or SIM")
-
-if(${SGX_MODE} STREQUAL "HW")
-	set(TRTS_LIBRARY_NAME     sgx_trts)
-	set(TSERVICE_LIBRARY_NAME sgx_tservice)
-	set(URTS_LIBRARY_NAME	  sgx_urts)
-	set(USERVICE_LIBRARY_NAME sgx_uae_service)
-else()
-	set(TRTS_LIBRARY_NAME     sgx_trts_sim)
-	set(TSERVICE_LIBRARY_NAME sgx_tservice_sim)
-	set(URTS_LIBRARY_NAME	  sgx_urts_sim)
-	set(USERVICE_LIBRARY_NAME sgx_uae_service_sim)
-endif()
-
-########################################################################################################################
 
 set(ATTESTATION_PARSERS_ROOT_DIR "") # Optional path to Attestation Parsers library
 set(ATTESTATION_LIBRARY_ROOT_DIR "") # Optional path to Attestation library
 option(BUILD_ATTESTATION_APP "Build AttestationApp" ON)
 option(BUILD_TESTS "Build tests for all components" ON)
 option(BUILD_DOCS "Build doxygen based documentation" OFF)
+option(BUILD_ENCLAVE "Build test sgx enclave and sample app that uses it" OFF)
+
+######### QVL Enclave related settings #################################################################################
+
+if(BUILD_ENCLAVE)
+	message("Enclave build is on. Checking required components...")
+	set(SGX_SDK "/opt/intel/sgxsdk" CACHE INTERNAL "SGX SDK location path")
+	set(SGX_OPENSSL "/opt/intel/intel-sgx-ssl/Linux/package" CACHE INTERNAL "SGX OpenSLL location path")
+	set(SGX_MODE "HW" CACHE INTERNAL "SGX mode: HW or SIM")
+	if (NOT EXISTS ${SGX_SDK})
+		message("SGX SDK was not found in ${SGX_SDK}")
+	endif()
+	if(NOT EXISTS ${SGX_OPENSSL})
+		message("SGX SSL was not found in ${SGX_OPENSSL}")
+	endif()
+	if(NOT EXISTS ${SGX_SDK} OR NOT EXISTS ${SGX_OPENSSL})
+		message(FATAL_ERROR "SGX SDK and SGX SSL are required for enclave build.")
+	endif()
+	message("All required components found. SGX mode: ${SGX_MODE}")
+	if(${SGX_MODE} STREQUAL "HW")
+		set(TRTS_LIBRARY_NAME     sgx_trts)
+		set(TSERVICE_LIBRARY_NAME sgx_tservice)
+		set(URTS_LIBRARY_NAME	  sgx_urts)
+		set(USERVICE_LIBRARY_NAME sgx_uae_service)
+	else()
+		set(TRTS_LIBRARY_NAME     sgx_trts_sim)
+		set(TSERVICE_LIBRARY_NAME sgx_tservice_sim)
+		set(URTS_LIBRARY_NAME	  sgx_urts_sim)
+		set(USERVICE_LIBRARY_NAME sgx_uae_service_sim)
+	endif()
+	set(CMAKE_CXX_COMPILER g++)
+	set(CMAKE_C_COMPILER gcc)
+endif()
+
+########################################################################################################################
 
 # Use AttestationParsers from provided path if build is disabled
 if(NOT ${ATTESTATION_PARSERS_ROOT_DIR} STREQUAL "")
@@ -69,15 +84,15 @@ endif()
 
 # Use AttestationLibrary from provided path if build is disabled
 if(NOT ${ATTESTATION_LIBRARY_ROOT_DIR} STREQUAL "")
-    message(STATUS "Using external attestation library at: ${ATTESTATION_LIBRARY_ROOT_DIR}")
+	message(STATUS "Using external attestation library at: ${ATTESTATION_LIBRARY_ROOT_DIR}")
 
-    add_library(AttestationLibrary INTERFACE)
-    target_include_directories(AttestationLibrary SYSTEM INTERFACE "${ATTESTATION_LIBRARY_ROOT_DIR}/include/")
-    target_link_libraries(AttestationLibrary INTERFACE ${ATTESTATION_LIBRARY_ROOT_DIR}/lib/libQuoteVerification.so)
+	add_library(AttestationLibrary INTERFACE)
+	target_include_directories(AttestationLibrary SYSTEM INTERFACE "${ATTESTATION_LIBRARY_ROOT_DIR}/include/")
+	target_link_libraries(AttestationLibrary INTERFACE ${ATTESTATION_LIBRARY_ROOT_DIR}/lib/libQuoteVerification.so)
 
-    add_library(AttestationLibraryStatic INTERFACE)
-    target_include_directories(AttestationLibraryStatic SYSTEM INTERFACE "${ATTESTATION_LIBRARY_ROOT_DIR}/include/")
-    target_link_libraries(AttestationLibraryStatic INTERFACE ${ATTESTATION_LIBRARY_ROOT_DIR}/lib/libQuoteVerificationStatic.a)
+	add_library(AttestationLibraryStatic INTERFACE)
+	target_include_directories(AttestationLibraryStatic SYSTEM INTERFACE "${ATTESTATION_LIBRARY_ROOT_DIR}/include/")
+	target_link_libraries(AttestationLibraryStatic INTERFACE ${ATTESTATION_LIBRARY_ROOT_DIR}/lib/libQuoteVerificationStatic.a)
 endif()
 
 set(QVL_BUILD_DIR "${CMAKE_SOURCE_DIR}/Build/${CMAKE_BUILD_TYPE}")
@@ -95,29 +110,29 @@ if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		get_filename_component(COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
 		find_program(BULLSEYE_CC
-				   NAMES ${COMPILER_NAME}
-				   PATHS ${BULLSEYE_BIN}
-				   NO_DEFAULT_PATH)
+				NAMES ${COMPILER_NAME}
+				PATHS ${BULLSEYE_BIN}
+				NO_DEFAULT_PATH)
 
 		find_program(BULLSEYE_COV_ENABLE
-				   NAMES "cov01"
-				   PATHS ${BULLSEYE_BIN}
-				   NO_DEFAULT_PATH)
+				NAMES "cov01"
+				PATHS ${BULLSEYE_BIN}
+				NO_DEFAULT_PATH)
 
 		find_program(BULLSEYE_COV_SELECT
-				   NAMES "covselect"
-				   PATHS ${BULLSEYE_BIN}
-				   NO_DEFAULT_PATH)
+				NAMES "covselect"
+				PATHS ${BULLSEYE_BIN}
+				NO_DEFAULT_PATH)
 
 		find_program(BULLSEYE_COV_HTML
-				   NAMES "covhtml"
-				   PATHS ${BULLSEYE_BIN}
-				   NO_DEFAULT_PATH)
+				NAMES "covhtml"
+				PATHS ${BULLSEYE_BIN}
+				NO_DEFAULT_PATH)
 
 		find_program(BULLSEYE_COV_XML
-				  NAMES "covxml"
-				  PATHS ${BULLSEYE_BIN}
-				  NO_DEFAULT_PATH)
+				NAMES "covxml"
+				PATHS ${BULLSEYE_BIN}
+				NO_DEFAULT_PATH)
 
 		include(FindPackageHandleStandardArgs)
 		find_package_handle_standard_args(BULLSEYE DEFAULT_MSG BULLSEYE_CC BULLSEYE_COV_ENABLE BULLSEYE_COV_SELECT BULLSEYE_COV_HTML BULLSEYE_COV_XML)
@@ -127,7 +142,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		message(FATAL_ERROR "Coverage build is only supported on Linux")
 	endif()
 endif ()
-
 
 #required to run CMake on windows
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
@@ -142,14 +156,21 @@ option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/ruslo/hunter/archive/v0.23.177.tar.gz"
-		SHA1 "c3d4bf987a1c5f8ce9bb8b2b80bc6c123185cd66"
+		URL "https://github.com/ruslo/hunter/archive/v0.23.214.tar.gz"
+		SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
 project(SgxEcdsaAttestation)
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+set(CMAKE_THREAD_LIBS_INIT "-lpthread") # Could NOT find Threads (missing: Threads_FOUND) related workarounds
+set(CMAKE_HAVE_THREADS_LIBRARY 1)
+set(CMAKE_USE_WIN32_THREADS_INIT 0)
+set(CMAKE_USE_PTHREADS_INIT 1)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE) # adds -fpic/-fpie/-pie
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -170,6 +191,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 				"-fcolor-diagnostics"           #clang coloured output
 				"-Wno-unused-command-line-argument"
 				)
+		set(CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG "-fsanitize=safe-stack")
 	endif()
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
@@ -201,13 +223,19 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 			"-Wcast-qual"
 			"-Wredundant-decls"
 			)
+	if(NOT DEFINED SANITIZE_FLAGS)
+		set(SANITIZE_FLAGS
+				"-Wl,-z,relro" "-Wl,-z,now" #data relocation and protection (RELRO)
+				"-Wl,-z,noexecstack"       #stack execution protection
+				"-Wl,--no-undefined")
+	endif()
 	set(CMAKE_CXX_FLAGS
 			"${CMAKE_C_FLAGS}"
 			"-std=c++14"                    #currently used C++ standard
 			"-Wnon-virtual-dtor"
 			"${CMAKE_CXX_FLAGS_CLANG}"
 			"${IGNORED_WARNINGS}"           #but ignore some unimportant ones
-			"${CUSTOM_FLAGS}"
+			"${SANITIZE_FLAGS}"
 			)
 	set(CMAKE_CXX_FLAGS_RELEASE "-O2 -D_FORTIFY_SOURCE=2 -fvisibility=hidden")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
@@ -216,35 +244,54 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 
 	set(COMMON_LINKER_FLAGS
 			"-ldl" "-lrt" "-lpthread"
-			"-Wl,-z,relro" "-Wl,-z,now"     #data relocation and protection (RELRO)
-			"-Wl,-z,noexecstack"            #stack execution protection
-			"-Wl,--no-undefined"
+			"${SANITIZE_FLAGS}"
 			)
+
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${COMMON_LINKER_FLAGS}" "-pie" "${CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG}")
+	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${COMMON_LINKER_FLAGS}")
+
+	string(REPLACE ";" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	set(CMAKE_CXX_FLAGS
 			"/analyze"
 			"/DYNAMICBASE"
 			"/EHsc" # catch C++ exceptions, assume extern "C" functions never throw C++ exceptions
 			"/MP" # Multi processor compilation
+			"/guard:cf"
 			"/INCREMENTAL"
-			"${CUSTOM_FLAGS}"
+			"${SANITIZE_FLAGS}"
 			)
 
 	set(COMMON_LINKER_FLAGS
 			"/NXCOMPAT"
 			"/FORCE:MULTIPLE"
 			)
+	if(NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+		set(COMMON_LINKER_FLAGS "${COMMON_LINKER_FLAGS}" "/SAFESEH") # valid for x86 build only
+	endif()
+
+	set(CMAKE_EXE_LINKER_FLAGS "${COMMON_LINKER_FLAGS}")
+	set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_LINKER_FLAGS}")
+	set(CMAKE_STATIC_LINKER_FLAGS "${COMMON_LINKER_FLAGS}")
+	set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_LINKER_FLAGS}")
+
+	string(REPLACE ";" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+	string(REPLACE ";" " " CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
+
 	cmake_minimum_required(VERSION 3.12)
 	add_compile_definitions(_WINDOWS)
 else()
 	message(FATAL_ERROR "Unsupported compiler '${CMAKE_CXX_COMPILER_ID}'. Clang 5.0, GCC and MSVC are supported")
 endif()
 
-string(REPLACE ";" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
-string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
-string(REPLACE ";" " " COMMON_LINKER_FLAGS "${COMMON_LINKER_FLAGS}") #Convert colon-separated CMake lists back to space-separated values that clang likes
-
-set(CMAKE_EXE_LINKER_FLAGS ${COMMON_LINKER_FLAGS})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/bin)
@@ -252,56 +299,55 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/bin)
 # Order matters!
 add_subdirectory(ThirdParty)
 if("${ATTESTATION_PARSERS_ROOT_DIR}" STREQUAL "")
-    add_subdirectory(AttestationParsers)
+	add_subdirectory(AttestationParsers)
 endif()
 if("${ATTESTATION_LIBRARY_ROOT_DIR}" STREQUAL "")
-    add_subdirectory(AttestationLibrary)
+	add_subdirectory(AttestationLibrary)
 endif()
 if(BUILD_ATTESTATION_APP)
-    add_subdirectory(AttestationApp)
+	add_subdirectory(AttestationApp)
 endif()
 
 add_custom_target(install_${PROJECT_NAME}
-        $(MAKE) install
-        DEPENDS AttestationApp
-        COMMENT "Installing ${PROJECT_NAME}")
+		$(MAKE) install
+		DEPENDS AttestationApp
+		COMMENT "Installing ${PROJECT_NAME}")
 
 if (BUILD_TESTS)
 	if(UNIX)
 		add_custom_target(runTests
-			COMMAND cd ${QVL_DIST_DIR}/bin && LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
-											  LD_LIBRARY_PATH=../lib ./AttestationParsers_IT --gtest_output="xml:../results/AttestationParsers_ITResults.xml" &&
-											  LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTesults.xml" &&
-											  LD_LIBRARY_PATH=../lib ./AttestationLibrary_IT --gtest_output="xml:../results/AttestationLibrary_ITResults.xml" &&
-											  LD_LIBRARY_PATH=../lib ./AttestationApp_UT --gtest_output="xml:../results/AttestationApp_UTResults.xml" &&
-					cd ${CMAKE_SOURCE_DIR}
-			DEPENDS install_${PROJECT_NAME})
+				COMMAND cd ${QVL_DIST_DIR}/bin && LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationParsers_IT --gtest_output="xml:../results/AttestationParsers_ITResults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTesults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationLibrary_IT --gtest_output="xml:../results/AttestationLibrary_ITResults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationApp_UT --gtest_output="xml:../results/AttestationApp_UTResults.xml" &&
+				cd ${CMAKE_SOURCE_DIR}
+				DEPENDS install_${PROJECT_NAME})
 	endif()
 
-    if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+	if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		if(UNIX)
 			set(COVFILE "${CMAKE_SOURCE_DIR}/sgx.cov")
 
 			add_custom_target(cov_on
-				COMMAND ${BULLSEYE_COV_SELECT} -d --quiet
-				COMMAND ${BULLSEYE_COV_SELECT} -i ${PROJECT_SOURCE_DIR}/BullseyeCoverageExclusions --no-banner
-				COMMAND ${BULLSEYE_COV_ENABLE} -1  --no-banner
-			)
+					COMMAND ${BULLSEYE_COV_SELECT} -d --quiet
+					COMMAND ${BULLSEYE_COV_SELECT} -i ${PROJECT_SOURCE_DIR}/BullseyeCoverageExclusions --no-banner
+					COMMAND ${BULLSEYE_COV_ENABLE} -1  --no-banner
+					)
 
 			add_custom_target(cov_off
-				COMMAND ${BULLSEYE_COV_ENABLE} -0 --no-banner)
+					COMMAND ${BULLSEYE_COV_ENABLE} -0 --no-banner)
 
 			add_custom_target(cov_html
-				COMMAND ${BULLSEYE_COV_HTML} -d${PROJECT_SOURCE_DIR} -f${COVFILE} ${PROJECT_SOURCE_DIR}/code-coverage-report  --no-banner)
+					COMMAND ${BULLSEYE_COV_HTML} -d${PROJECT_SOURCE_DIR} -f${COVFILE} ${PROJECT_SOURCE_DIR}/code-coverage-report  --no-banner)
 
 			add_custom_target(cov_xml
-				COMMAND ${BULLSEYE_COV_XML} -f${COVFILE} -o${PROJECT_SOURCE_DIR}/code-coverage-report/coverage.xml  --no-banner)
+					COMMAND ${BULLSEYE_COV_XML} -f${COVFILE} -o${PROJECT_SOURCE_DIR}/code-coverage-report/coverage.xml  --no-banner)
 
 			add_custom_target(code-coverage
-				COMMAND COVFILE=${COVFILE} ${CMAKE_MAKE_PROGRAM} -C ${QVL_BUILD_DIR} -j1 cov_on runTests cov_off cov_html cov_xml)
+					COMMAND COVFILE=${COVFILE} ${CMAKE_MAKE_PROGRAM} -C ${QVL_BUILD_DIR} -j1 cov_on runTests cov_off cov_html cov_xml)
 		else()
 			message(FATAL_ERROR "Coverage build is only supported on Linux")
 		endif()
 	endif ()
 endif ()
-

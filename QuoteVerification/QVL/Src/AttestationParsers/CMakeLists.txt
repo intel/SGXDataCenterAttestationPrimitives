@@ -55,11 +55,11 @@ hunter_add_package(OpenSSL)
 find_package(OpenSSL 1.1.1 EXACT REQUIRED)
 
 file(GLOB SOURCE_FILES src/*.cpp
-    src/Json/*.cpp
-    src/X509/*.cpp
-    src/OpensslHelpers/*.cpp
-    src/Utils/*.cpp
-    )
+        src/Json/*.cpp
+        src/X509/*.cpp
+        src/OpensslHelpers/*.cpp
+        src/Utils/*.cpp
+        )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 add_library(${PROJECT_NAME}Static STATIC ${SOURCE_FILES})
@@ -67,27 +67,27 @@ add_library(${PROJECT_NAME}Static STATIC ${SOURCE_FILES})
 set(ATTESTATION_PARSERS_API_INCLUDE ${PROJECT_SOURCE_DIR}/include CACHE INTERNAL "${PROJECT_NAME} API")
 
 include_directories(
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${DCAP_API_INCLUDE}
-    ${PROJECT_SOURCE_DIR}/src
-    )
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        ${DCAP_API_INCLUDE}
+        ${PROJECT_SOURCE_DIR}/src
+)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    rapidjson
-    )
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        rapidjson
+        )
 
-target_link_libraries(${PROJECT_NAME}Static PUBLIC
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    rapidjson
-    )
+target_link_libraries(${PROJECT_NAME}Static PRIVATE
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        rapidjson
+        )
 
 ######### QVL Enclave related settings #################################################################################
 
-if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
+if (BUILD_ENCLAVE)
 
     add_library(${PROJECT_NAME}StaticEnclave STATIC ${SOURCE_FILES})
 
@@ -97,16 +97,16 @@ if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
             "-Wl,-Bstatic -Wl,-Bsymbolic"
             "-Wl,-pie,-eenclave_entry -Wl,--export-dynamic"
             "-Wl,--defsym,__ImageBase=0"
-        rapidjson
-        )
+            rapidjson
+            )
 
     target_include_directories(${PROJECT_NAME}StaticEnclave SYSTEM PRIVATE
-        "${SGX_SDK}/include"
-        "${SGX_SDK}/include/tlibc"
-        "${SGX_SDK}/include/libcxx"
-        "${SGX_SDK}/include/stdc++"
-        "${SGX_OPENSSL}/include"
-        )
+            "${SGX_SDK}/include"
+            "${SGX_SDK}/include/tlibc"
+            "${SGX_SDK}/include/libcxx"
+            "${SGX_SDK}/include/stdc++"
+            "${SGX_OPENSSL}/include"
+            )
 
     target_compile_definitions(${PROJECT_NAME}StaticEnclave PUBLIC SGX_TRUSTED=true)
 
@@ -122,11 +122,13 @@ endif()
 ########################################################################################################################
 
 if(MSVC)
-	target_link_libraries(${PROJECT_NAME} PUBLIC wsock32 ws2_32 crypt32)
-	target_link_libraries(${PROJECT_NAME}Static PUBLIC wsock32 ws2_32 crypt32)
-	
-	target_compile_definitions(${PROJECT_NAME} PUBLIC _ATTESTATIONPARSERS_EXPORTS)
-	target_compile_definitions(${PROJECT_NAME}Static PUBLIC ATTESTATIONPARSERS_STATIC)
+    target_link_libraries(${PROJECT_NAME} PUBLIC wsock32 ws2_32 crypt32)
+    target_link_libraries(${PROJECT_NAME}Static PUBLIC wsock32 ws2_32 crypt32)
+
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _ATTESTATIONPARSERS_EXPORTS)
+    target_compile_definitions(${PROJECT_NAME}Static PUBLIC ATTESTATIONPARSERS_STATIC)
+else()
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL") # hide external libs symbols in shared object, do not add it for Enclave as we use LDS file here
 endif()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)

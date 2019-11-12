@@ -1341,7 +1341,7 @@ public:
         \note Linear time complexity.
     */
     void RemoveAllMembers() {
-        RAPIDJSON_ASSERT(IsObject()); 
+        RAPIDJSON_ASSERT(IsObject());
         for (MemberIterator m = MemberBegin(); m != MemberEnd(); ++m)
             m->~Member();
         data_.o.size = 0;
@@ -1487,7 +1487,7 @@ public:
         \note Linear time complexity.
     */
     void Clear() {
-        RAPIDJSON_ASSERT(IsArray()); 
+        RAPIDJSON_ASSERT(IsArray());
         GenericValue* e = GetElementsPointer();
         for (GenericValue* v = e; v != e + data_.a.size; ++v)
             v->~GenericValue();
@@ -1634,7 +1634,7 @@ public:
         RAPIDJSON_ASSERT(last <= End());
         ValueIterator pos = Begin() + (first - Begin());
         for (ValueIterator itr = pos; itr != last; ++itr)
-            itr->~GenericValue();       
+            itr->~GenericValue();
         std::memmove(pos, last, static_cast<size_t>(End() - last) * sizeof(GenericValue));
         data_.a.size -= static_cast<SizeType>(last - first);
         return pos;
@@ -1693,7 +1693,7 @@ public:
 
     //! Set this value as a string without copying source string.
     /*! This version has better performance with supplied length, and also support string containing null character.
-        \param s source string pointer. 
+        \param s source string pointer.
         \param length The length of source string, excluding the trailing null terminator.
         \return The value itself for fluent API.
         \post IsString() == true && GetString() == s && GetStringLength() == length
@@ -1710,7 +1710,7 @@ public:
 
     //! Set this value as a string by copying from source string.
     /*! This version has better performance with supplied length, and also support string containing null character.
-        \param s source string. 
+        \param s source string.
         \param length The length of source string, excluding the trailing null terminator.
         \param allocator Allocator for allocating copied buffer. Commonly use GenericDocument::GetAllocator().
         \return The value itself for fluent API.
@@ -1719,7 +1719,7 @@ public:
     GenericValue& SetString(const Ch* s, SizeType length, Allocator& allocator) { this->~GenericValue(); SetStringRaw(StringRef(s, length), allocator); return *this; }
 
     //! Set this value as a string by copying from source string.
-    /*! \param s source string. 
+    /*! \param s source string.
         \param allocator Allocator for allocating copied buffer. Commonly use GenericDocument::GetAllocator().
         \return The value itself for fluent API.
         \post IsString() == true && GetString() != s && strcmp(GetString(),s) == 0 && GetStringLength() == length
@@ -1796,10 +1796,10 @@ public:
                 if (RAPIDJSON_UNLIKELY(!v->Accept(handler)))
                     return false;
             return handler.EndArray(data_.a.size);
-    
+
         case kStringType:
             return handler.String(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0);
-    
+
         default:
             RAPIDJSON_ASSERT(GetType() == kNumberType);
             if (IsDouble())         return handler.Double(data_.n.d);
@@ -1943,7 +1943,7 @@ private:
             GenericValue* e = static_cast<GenericValue*>(allocator.Malloc(count * sizeof(GenericValue)));
             if (e != NULL) {
                 SetElementsPointer(e);
-                std::memcpy(e, values, count * sizeof(GenericValue));
+                safeMemcpy(e, values, count * sizeof(GenericValue));
             }
             else {
                 return;
@@ -1961,7 +1961,7 @@ private:
             Member* m = static_cast<Member*>(allocator.Malloc(count * sizeof(Member)));
             if (m != NULL) {
                 SetMembersPointer(m);
-                std::memcpy(m, members, count * sizeof(Member));
+                safeMemcpy(m, members, count * sizeof(Member));
             }
             else {
                 return;
@@ -1979,25 +1979,25 @@ private:
         data_.s.length = s.length;
     }
 
-    //! Initialize this value as copy string with initial data, without calling destructor.
-    void SetStringRaw(StringRefType s, Allocator& allocator) {
-        Ch* str = 0;
-        if (ShortString::Usable(s.length)) {
-            data_.f.flags = kShortStringFlag;
-            data_.ss.SetLength(s.length);
-            str = data_.ss.str;
-        } else {
-            data_.f.flags = kCopyStringFlag;
-            data_.s.length = s.length;
-            str = static_cast<Ch *>(allocator.Malloc((s.length + 1) * sizeof(Ch)));
-            if (str == NULL) {
-                return;
+        //! Initialize this value as copy string with initial data, without calling destructor.
+        void SetStringRaw(StringRefType s, Allocator& allocator) {
+            Ch* str = 0;
+            if (ShortString::Usable(s.length)) {
+                data_.f.flags = kShortStringFlag;
+                data_.ss.SetLength(s.length);
+                str = data_.ss.str;
+            } else {
+                data_.f.flags = kCopyStringFlag;
+                data_.s.length = s.length;
+                str = static_cast<Ch *>(allocator.Malloc((s.length + 1) * sizeof(Ch)));
+                if (str == NULL) {
+                    return;
+                }
+                SetStringPointer(str);
             }
-            SetStringPointer(str);
+            safeMemcpy(str, s, s.length * sizeof(Ch));
+            str[s.length] = '\0';
         }
-        std::memcpy(str, s, s.length * sizeof(Ch));
-        str[s.length] = '\0';
-    }
 
     //! Assignment without calling destructor
     void RawAssign(GenericValue& rhs) RAPIDJSON_NOEXCEPT {
@@ -2019,14 +2019,14 @@ private:
         const Ch* const str2 = rhs.GetString();
         if(str1 == str2) { return true; } // fast path for constant string
 
-        return (std::memcmp(str1, str2, sizeof(Ch) * len1) == 0);
-    }
+            return (std::memcmp(str1, str2, sizeof(Ch) * len1) == 0);
+        }
 
-    Data data_;
-};
+        Data data_;
+    };
 
 //! GenericValue with UTF8 encoding
-typedef GenericValue<UTF8<> > Value;
+    typedef GenericValue<UTF8<> > Value;
 
 ///////////////////////////////////////////////////////////////////////////////
 // GenericDocument 
@@ -2061,12 +2061,12 @@ public:
     }
 
     //! Constructor
-    /*! Creates an empty document which type is Null. 
+    /*! Creates an empty document which type is Null.
         \param allocator        Optional allocator for allocating memory.
         \param stackCapacity    Optional initial capacity of stack in bytes.
         \param stackAllocator   Optional allocator for allocating memory for stack.
     */
-    GenericDocument(Allocator* allocator = 0, size_t stackCapacity = kDefaultStackCapacity, StackAllocator* stackAllocator = 0) : 
+    GenericDocument(Allocator* allocator = 0, size_t stackCapacity = kDefaultStackCapacity, StackAllocator* stackAllocator = 0) :
         allocator_(allocator), ownAllocator_(0), stack_(stackAllocator, stackCapacity), parseResult_()
     {
         if (!allocator_)
@@ -2272,7 +2272,7 @@ public:
     GenericDocument& Parse(const Ch* str, size_t length) {
         return Parse<parseFlags, Encoding>(str, length);
     }
-    
+
     GenericDocument& Parse(const Ch* str, size_t length) {
         return Parse<kParseDefaultFlags>(str, length);
     }
@@ -2357,16 +2357,16 @@ public:
     bool Uint64(uint64_t i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
     bool Double(double d) { new (stack_.template Push<ValueType>()) ValueType(d); return true; }
 
-    bool RawNumber(const Ch* str, SizeType length, bool copy) { 
-        if (copy) 
+    bool RawNumber(const Ch* str, SizeType length, bool copy) {
+        if (copy)
             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
         else
             new (stack_.template Push<ValueType>()) ValueType(str, length);
         return true;
     }
 
-    bool String(const Ch* str, SizeType length, bool copy) { 
-        if (copy) 
+    bool String(const Ch* str, SizeType length, bool copy) {
+        if (copy)
             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
         else
             new (stack_.template Push<ValueType>()) ValueType(str, length);
@@ -2374,7 +2374,7 @@ public:
     }
 
     bool StartObject() { new (stack_.template Push<ValueType>()) ValueType(kObjectType); return true; }
-    
+
     bool Key(const Ch* str, SizeType length, bool copy) { return String(str, length, copy); }
 
     bool EndObject(SizeType memberCount) {
@@ -2384,7 +2384,7 @@ public:
     }
 
     bool StartArray() { new (stack_.template Push<ValueType>()) ValueType(kArrayType); return true; }
-    
+
     bool EndArray(SizeType elementCount) {
         ValueType* elements = stack_.template Pop<ValueType>(elementCount);
         stack_.template Top<ValueType>()->SetArrayRaw(elements, elementCount, GetAllocator());

@@ -473,6 +473,7 @@ TEST_F(QuoteVerifierUT, shouldNOTReturnTcbRevokedWhenRevokedPcesvnAndCpusvnAreLo
     EXPECT_EQ(STATUS_OK, qvl::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentity, enclaveReportVerifier));
 }
 
+/*
 TEST_F(QuoteVerifierUT, shouldReturnUnsupportedQeCertification)
 {
     qvl::test::QuoteGenerator::QeCertData qeCertData;
@@ -485,6 +486,7 @@ TEST_F(QuoteVerifierUT, shouldReturnUnsupportedQeCertification)
     qvl::Quote quote;
     EXPECT_EQ(STATUS_UNSUPPORTED_QE_CERTIFICATION, qvl::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentity, enclaveReportVerifier));
 }
+*/
 
 struct QeIdentityStatuses {
     Status enclaveVerifierStatus;
@@ -508,7 +510,7 @@ TEST_P(QuoteVerifierUTQeIdentityStatusParametrized, testAllStatuses)
     }
 
     EXPECT_CALL(enclaveReportVerifier, verify(_, _)).WillOnce(Return(params.enclaveVerifierStatus));
-    EXPECT_CALL(enclaveIdentity, getStatus()).WillOnce(Return(STATUS_OK));
+    EXPECT_CALL(enclaveIdentity, getStatus()).WillRepeatedly(Return(STATUS_OK));
     EXPECT_EQ(params.expectedStatus, qvl::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentity, enclaveReportVerifier));
 }
 
@@ -516,12 +518,11 @@ INSTANTIATE_TEST_CASE_P(AllStatutes,
                         QuoteVerifierUTQeIdentityStatusParametrized,
                         testing::Values(
                                 QeIdentityStatuses{STATUS_OK, STATUS_OK},
-                                QeIdentityStatuses{STATUS_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE, STATUS_QE_IDENTITY_OUT_OF_DATE},
                                 QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH, STATUS_QE_IDENTITY_MISMATCH},
                                 QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH, STATUS_QE_IDENTITY_MISMATCH},
                                 QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH, STATUS_QE_IDENTITY_MISMATCH},
                                 QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH, STATUS_QE_IDENTITY_MISMATCH},
-                                QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE, STATUS_QE_IDENTITY_MISMATCH}
+                                QeIdentityStatuses{STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE, STATUS_TCB_OUT_OF_DATE}
                         ));
 
 TEST_F(QuoteVerifierUT, shouldNotVerifyQeidIfJsonStatusIsNotOk)
@@ -532,6 +533,6 @@ TEST_F(QuoteVerifierUT, shouldNotVerifyQeidIfJsonStatusIsNotOk)
     qvl::Quote quote;
     ASSERT_TRUE(quote.parse(quoteBin));
     EXPECT_CALL(enclaveReportVerifier, verify(_, _, _)).Times(0);
-    EXPECT_CALL(enclaveIdentity, getStatus()).WillOnce(Return(STATUS_SGX_ENCLAVE_IDENTITY_INVALID));
+    EXPECT_CALL(enclaveIdentity, getStatus()).Times(2).WillRepeatedly(Return(STATUS_SGX_ENCLAVE_IDENTITY_INVALID));
     EXPECT_EQ(STATUS_OK, qvl::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentity, enclaveReportVerifier));
 }

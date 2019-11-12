@@ -172,9 +172,9 @@ typedef enum _status
  * @param pemPckCertificate - Null terminated Intel SGX PCK certificate in PEM format.
  * @param intermediateCrl - Null terminated, PEM formatted x.509 Intel SGX PCK Processor/Platform CRL
  * @param tcbInfoJson - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param qeIdenityJson - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
  * @return Status code of the operation, one of:
  *      - STATUS_OK
- *      - STATUS_INVALID_PARAMETER
  *      - STATUS_MISSING_PARAMETERS
  *      - STATUS_UNSUPPORTED_QUOTE_FORMAT
  *      - STATUS_UNSUPPORTED_PCK_CERT_FORMAT
@@ -194,12 +194,8 @@ typedef enum _status
  *      - STATUS_INVALID_QE_REPORT_SIGNATURE
  *      - STATUS_INVALID_QE_REPORT_DATA
  *      - STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT
- *      - STATUS_QE_IDENTITY_OUT_OF_DATE
  *      - STATUS_QE_IDENTITY_MISMATCH
  *      - STATUS_INVALID_QUOTE_SIGNATURE
- *      - STATUS_SGX_PCK_CERT_CHAIN_EXPIRED
- *      - STATUS_SGX_CRL_EXPIRED
- *      - STATUS_SGX_TCB_INFO_EXPIRED
  */
 QVL_API Status sgxAttestationVerifyQuote(const uint8_t* quote, uint32_t quoteSize, const char *pemPckCertificate, const char* intermediateCrl, const char* tcbInfoJson, const char* qeIdentityJson);
 
@@ -292,40 +288,9 @@ QVL_API Status sgxAttestationGetQECertificationData(
  *      - crls[0] - CRL issued by root CA
  *      - crls[1] - CRL issued by intermediate certificate.
  * @param pemRootCaCertificate - Null terminated Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
- * @return Status code of the operation. One of:
- *      - STATUS_OK
- *      - STATUS_UNSUPPORTED_CERT_FORMAT
- *      - STATUS_SGX_ROOT_CA_MISSING
- *      - STATUS_SGX_ROOT_CA_INVALID
- *      - STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS
- *      - STATUS_SGX_ROOT_CA_INVALID_ISSUER
- *      - STATUS_SGX_INTERMEDIATE_CA_MISSING
- *      - STATUS_SGX_INTERMEDIATE_CA_INVALID
- *      - STATUS_SGX_INTERMEDIATE_CA_INVALID_EXTENSIONS
- *      - STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER
- *      - STATUS_SGX_INTERMEDIATE_CA_REVOKED
- *      - STATUS_SGX_PCK_MISSING
- *      - STATUS_SGX_PCK_INVALID
- *      - STATUS_SGX_PCK_INVALID_EXTENSIONS
- *      - STATUS_SGX_PCK_INVALID_ISSUER
- *      - STATUS_SGX_PCK_REVOKED
- *      - STATUS_TRUSTED_ROOT_CA_INVALID
- *      - STATUS_SGX_PCK_CERT_CHAIN_UNTRUSTED
- *      - STATUS_SGX_CRL_UNSUPPORTED_FORMAT
- *      - STATUS_SGX_CRL_UNKNOWN_ISSUER
- *      - STATUS_SGX_CRL_INVALID
- *      - STATUS_SGX_CRL_INVALID_EXTENSIONS
- *      - STATUS_SGX_CRL_INVALID_SIGNATURE
- */
-QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *const crls[], const char *pemRootCaCertificate, const time_t* expirationCheckDate);
-
-/**
- * This function is responsible for verifying TCB Info structure issued by Intel SGX TCB Signing Certificate.
- *
- * @param tcbInfo - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
- * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided TCBInfo) in PEM format concatenated together.
- * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
- * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
+ *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
+ *        This parameter is optional if the function is executed in SW mode and mandatory if it is executed inside an SGX Enclave.
  * @return Status code of the operation. One of:
  *      - STATUS_OK
  *      - STATUS_INVALID_PARAMETER
@@ -354,19 +319,22 @@ QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, cons
  *      - STATUS_SGX_PCK_CERT_CHAIN_EXPIRED
  *      - STATUS_SGX_CRL_EXPIRED
  */
-QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
+QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *const crls[], const char *pemRootCaCertificate, const time_t* expirationCheckDate);
 
 /**
- * This function is responsible for verifying Enclave Identity structure.
+ * This function is responsible for verifying TCB Info structure issued by Intel SGX TCB Signing Certificate.
  *
- * @param enclaveIdentityString - Enclave Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
- * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided QE Identity) in PEM format concatenated together.
+ * @param tcbInfo - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided TCBInfo) in PEM format concatenated together.
  * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
  * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
+ *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
+ *        This parameter is optional if the function is executed in SW mode and mandatory if it is executed inside an SGX Enclave.
  * @return Status code of the operation. One of:
  *      - STATUS_OK
  *      - STATUS_INVALID_PARAMETER
- *      - STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT
+ *      - STATUS_UNSUPPORTED_CERT_FORMAT
  *      - STATUS_SGX_TCB_INFO_INVALID
  *      - STATUS_TCB_INFO_INVALID_SIGNATURE
  *      - STATUS_UNSUPPORTED_CERT_FORMAT
@@ -374,13 +342,13 @@ QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemC
  *      - STATUS_SGX_ROOT_CA_INVALID
  *      - STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS
  *      - STATUS_SGX_ROOT_CA_INVALID_ISSUER
- *      - STATUS_SGX_TCB_SIGNING_CERT_MISSING
- *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID
- *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS
- *      - STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER
- *      - STATUS_SGX_TCB_SIGNING_CERT_REVOKED
+ *      - STATUS_SGX_INTERMEDIATE_CA_MISSING
+ *      - STATUS_SGX_INTERMEDIATE_CA_INVALID
+ *      - STATUS_SGX_INTERMEDIATE_CA_INVALID_EXTENSIONS
+ *      - STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER
+ *      - STATUS_SGX_INTERMEDIATE_CA_REVOKED
  *      - STATUS_TRUSTED_ROOT_CA_INVALID
- *      - STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED
+ *      - STATUS_SGX_PCK_CERT_CHAIN_UNTRUSTED
  *      - STATUS_SGX_CRL_UNSUPPORTED_FORMAT
  *      - STATUS_SGX_CRL_UNKNOWN_ISSUER
  *      - STATUS_SGX_CRL_INVALID
@@ -390,18 +358,18 @@ QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemC
  *      - STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED
  *      - STATUS_SGX_CRL_EXPIRED
  */
-QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
+QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
 
 /**
- * This function is responsible for verifying Certificate Revocation Lists issued by one of the CA certificates in
- * PCK Certificate Chain.
+ * This function is responsible for verifying Enclave Identity structure.
  *
- * @param crl - Null terminated, PEM formatted x.509 Certificate Revocation Lists supported by PCK Certificate Chain. One of:
- *      - Intel SGX Root CA CRL
- *      - Intel SGX PCK Platform CRL
- *      - Intel SGX PCK Processor CRL
- * @param pemCACertChain - x.509 CA certificates (that issued provided CRL) in PEM format concatenated together
- * @param pemTrustedRootCaCert - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @param enclaveIdentityString - Enclave Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided QE Identity) in PEM format concatenated together.
+ * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
+ * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
+ *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
+ *        This parameter is optional if the function is executed in SW mode and mandatory if it is executed inside an SGX Enclave.
  * @return Status code of the operation. One of:
  *      - STATUS_OK
  *      - STATUS_INVALID_PARAMETER
@@ -428,6 +396,31 @@ QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentitySt
  *      - STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED
  *      - STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED
  *      - STATUS_SGX_CRL_EXPIRED
+ */
+QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
+
+/**
+ * This function is responsible for verifying Certificate Revocation Lists issued by one of the CA certificates in
+ * PCK Certificate Chain.
+ *
+ * @param crl - Null terminated, PEM formatted x.509 Certificate Revocation Lists supported by PCK Certificate Chain. One of:
+ *      - Intel SGX Root CA CRL
+ *      - Intel SGX PCK Platform CRL
+ *      - Intel SGX PCK Processor CRL
+ * @param pemCACertChain - x.509 CA certificates (that issued provided CRL) in PEM format concatenated together
+ * @param pemTrustedRootCaCert - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
+ * @return Status code of the operation. One of:
+ *      - STATUS_OK
+ *      - STATUS_SGX_CRL_UNSUPPORTED_FORMAT
+ *      - STATUS_SGX_CRL_UNKNOWN_ISSUER
+ *      - STATUS_SGX_CRL_INVALID
+ *      - STATUS_SGX_CRL_INVALID_EXTENSIONS
+ *      - STATUS_SGX_CRL_INVALID_SIGNATURE
+ *      - STATUS_SGX_CA_CERT_UNSUPPORTED_FORMAT
+ *      - STATUS_SGX_CA_CERT_INVALID
+ *      - STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT
+ *      - STATUS_TRUSTED_ROOT_CA_INVALID
+ *      - STATUS_SGX_ROOT_CA_UNTRUSTED
  */
 QVL_API Status sgxAttestationVerifyPCKRevocationList(const char *crl, const char *pemCACertChain, const char *pemTrustedRootCaCert);
 

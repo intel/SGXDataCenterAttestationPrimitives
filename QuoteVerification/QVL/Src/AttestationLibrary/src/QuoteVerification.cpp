@@ -51,6 +51,7 @@
 #include "Verifiers/EnclaveIdentityParser.h"
 #include "Verifiers/EnclaveIdentity.h"
 #include "Utils/TimeUtils.h"
+#include "Utils/SafeMemcpy.h"
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <Version/Version.h>
@@ -91,10 +92,10 @@ void sgxEnclaveAttestationGetVersion(char *version, size_t len)
     size_t strln = 1 + strlen(VERSION);
     if (strln > len)
     {
-        memcpy(version, VERSION, len);
+        safeMemcpy(version, VERSION, len);
         return;
     }
-    memcpy(version, VERSION, strln);
+    safeMemcpy(version, VERSION, strln);
 }
 
 Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char * const crls[], const char *pemRootCaCertificate, const time_t* expirationDate)

@@ -70,10 +70,12 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
     {
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
+
     auto enclaveIdentityStatus = enclaveIdentity->getTcbStatus(enclaveReport.isvSvn);
     if(enclaveIdentityStatus != TcbStatus::UpToDate)
     {
-        if (enclaveIdentityStatus == TcbStatus::Revoked) {
+        if (enclaveIdentityStatus == TcbStatus::Revoked)
+        {
             return STATUS_TCB_REVOKED;
         }
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;

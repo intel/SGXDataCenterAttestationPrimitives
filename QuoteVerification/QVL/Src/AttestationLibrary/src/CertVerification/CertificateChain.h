@@ -57,7 +57,7 @@ public:
 
     /**
     * Parse certificate chain.
-    * Check if there is at least on valid x.509 certificate in the chain.
+    * Check if there is at least one valid x.509 certificate in the chain.
     *
     * @param pemCertChain - string of concatenated PEM certificates
     * @return true if chain has been successfully parsed
@@ -71,12 +71,18 @@ public:
     virtual size_t length() const;
 
     /**
-    * Get nth certificate from chain
+    * Get certificate from chain by subject
     *
     * @param subject - certificate subject to get
     * @return shared pointer to certificate
     */
     virtual std::shared_ptr<const dcap::parser::x509::Certificate> get(const dcap::parser::x509::DistinguishedName &subject) const;
+
+    /**
+    * Get certificate of intermediate CA from chain (middle one)
+    *
+    * @return shared pointer to certificate
+    */
     virtual std::shared_ptr<const dcap::parser::x509::Certificate> getIntermediateCert() const;
 
     /**

@@ -85,7 +85,7 @@ class CertificateChainMock: public qvl::CertificateChain
 public:
     MOCK_METHOD1(parse, Status(const std::string&));
 
-    MOCK_CONST_METHOD0(length, unsigned long());
+    MOCK_CONST_METHOD0(length, size_t());
     MOCK_CONST_METHOD1(get, std::shared_ptr<const dcap::parser::x509::Certificate>(const dcap::parser::x509::DistinguishedName &));
     MOCK_CONST_METHOD0(getRootCert, std::shared_ptr<const dcap::parser::x509::Certificate>());
     MOCK_CONST_METHOD0(getIntermediateCert, std::shared_ptr<const dcap::parser::x509::Certificate>());

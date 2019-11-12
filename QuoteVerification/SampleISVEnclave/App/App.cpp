@@ -67,13 +67,24 @@ vector<uint8_t> readBinaryContent(const string& filePath)
     file.close();
     return retVal;
 }
+#define PATHSIZE 0x418U
 
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-    (void)(argc);
-    (void)(argv);
+    char quote_path[PATHSIZE] = { '\0' };
 
+    for (int i = 1; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "-quote"))
+        {
+            strncpy(quote_path, argv[++i], PATHSIZE);
+            break;
+        }
+    }
+    if (*quote_path == '\0') {
+        strncpy(quote_path, QUOTE, PATHSIZE);
+    }
     vector<uint8_t> quote;
     int ret = -1;
     time_t current_time = 0;
@@ -134,7 +145,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
     //read quote from file
     //
-    quote = readBinaryContent(QUOTE);
+    quote = readBinaryContent(quote_path);
     if (quote.empty()) {
         printf("Error: Quote not available.\n");
         sgx_destroy_enclave(eid);

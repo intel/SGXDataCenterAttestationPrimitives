@@ -29,28 +29,25 @@
  *
  */
 
-#ifndef SGXECDSAATTESTATION_APPOPTIONS_H
-#define SGXECDSAATTESTATION_APPOPTIONS_H
+#ifndef QVL_SAFEMEMCPY_H
+#define QVL_SAFEMEMCPY_H
 
-#include <string>
-#include <ctime>
+#include <stdexcept>
+#include <cstring>
 
-namespace intel { namespace sgx { namespace qvl {
-struct AppOptions
+inline void* safeMemcpy(void* dest, const void* src, size_t srcLen)
 {
-    std::string pckCertificateFile;
-    std::string pckSigningChainFile;
-    std::string rootCaCrlFile;
-    std::string intermediateCaCrlFile;
-    std::string trustedRootCACertificateFile;
-    std::string tcbInfoFile;
-    std::string tcbSigningChainFile;
-    std::string quoteFile;
-    std::string qeIdentityFile;
-    std::string qveIdentityFile;
-    time_t expirationDate;
-};
+    if (src == nullptr)
+    {
+        throw std::runtime_error("Source pointer invalid.");
+    }
 
-}}}
+    if(dest == nullptr)
+    {
+        throw std::runtime_error("Destination pointer invalid.");
+    }
 
-#endif //SGXECDSAATTESTATION_APPOPTIONS_H
+    return memcpy((dest), (src), (srcLen));
+}
+
+#endif //QVL_SAFEMEMCPY_H

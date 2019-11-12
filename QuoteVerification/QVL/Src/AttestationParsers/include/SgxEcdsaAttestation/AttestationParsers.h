@@ -48,14 +48,44 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         class JsonParser;
 
         class TcbInfo;
-
+        /**
+         * Class representing a single TCB Level
+         */
         class TcbLevel
         {
         public:
+            /**
+             * Creates TCB Level object with provided data
+             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
+             * @param pceSvn - Unsigned integer for PCE SVN
+             * @param status - TCB Level status which is a string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             * @return the value for given component
+             *
+             */
             TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                      unsigned int pceSvn,
                      const std::string& status);
 
+            /**
+             * Creates TCB Level object with provided data
+             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
+             * @param pceSvn - Unsigned integer for PCE SVN
+             * @param status - TCB Level status which is a string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             * @param tcbDate - Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
+             * @param advisoryIDs - Vector of strings representing security advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
+             * @return the value for given component
+             *
+             */
             TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                      unsigned int pceSvn,
                      const std::string& status,
@@ -74,10 +104,45 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @throws intel::sgx::dcap::parser::FormatException when out of range
              */
             virtual unsigned int getSgxTcbComponentSvn(unsigned int componentNumber) const;
+
+            /**
+             * Get CPU SVN
+             * @return Vector of bytes representing CPU SVN (16 bytes)
+             *
+             */
             virtual const std::vector<uint8_t>& getCpuSvn() const;
+
+            /**
+             * Get PCE SVN
+             * @return unsigned integer value representing PCE SVN
+             *
+             */
             virtual unsigned int getPceSvn() const;
+
+            /**
+             * Get status of this tcb level
+             * @return string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             *
+             */
             virtual const std::string& getStatus() const;
+
+            /**
+             * Get date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
+             * @return std::time_t structure representing TCB Date
+             *
+             */
             virtual const std::time_t& getTcbDate() const;
+
+            /**
+             * Get array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
+             * @return array of strings
+             *
+             */
             virtual const std::vector<std::string>& getAdvisoryIDs() const;
 
         private:
@@ -100,9 +165,15 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             friend class TcbInfo;
         };
 
+        /**
+         * Class representing a TCB information structure which holds information about TCB Levels for specific FMSPC
+         */
         class TcbInfo
         {
         public:
+            /**
+             * Enum describing version of TCB Level structure
+             */
             enum class Version : unsigned int
             {
                 V1 = 1,
@@ -112,33 +183,79 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             TcbInfo() = default;
             virtual ~TcbInfo() = default;
 
+            /**
+             * Get version of TCB Info structure
+             * @return unsigned integer with version number
+             */
             virtual unsigned int getVersion() const;
+
+            /**
+             * Get date and time when TCB information was created in UTC
+             * @return std::time_t object with issue date
+             */
             virtual std::time_t getIssueDate() const;
+
+            /**
+             * Get date and time by which next TCB information will be issued in UTC
+             * @return std::time_t object with next update date
+             */
             virtual std::time_t getNextUpdate() const;
+
+            /**
+             * Get FMSPC (Family-Model-Stepping-Platform-CustomSKU)
+             * @return vector of bytes representing FMSPC (6 bytes)
+             */
             virtual const std::vector<uint8_t>& getFmspc() const;
+
+            /**
+             * Get PCE Identifier
+             * @return vector of bytes representing PCE identifier
+             */
             virtual const std::vector<uint8_t>& getPceId() const;
+
+            /**
+             * Get sorted list of SGX TCB levels for given FMSPC
+             * @return array of TCB Level objects
+             */
             virtual const std::set<TcbLevel, std::greater<TcbLevel>>& getTcbLevels() const;
+
+            /**
+             * Get signature over tcbInfo body (without whitespaces) using TCB Signing Key
+             * @return vector of bytes representing signature
+             */
             virtual const std::vector<uint8_t>& getSignature() const;
+
+            /**
+             * Get raw tcb info body data
+             * @return vector of bytes with raw data
+             */
             virtual const std::vector<uint8_t>& getInfoBody() const;
 
             /**
-             * @return TCB Type
+             * Get type of TCB level composition that determines TCB level comparison logic
+             * @return integer representing TCB Type
              *
              * @throws intel::sgx::dcap::parser::FormatException in case of TCBInfo version equal 1
              */
             virtual int getTcbType() const;
 
             /**
-             * @return TCB Evaluation Data Number
+             * Get a monotically increasing sequence number changed then Intel updates the content of the TCB evaluation
+             * data set: TCB Info, QE Identity and QVE Identity. Idenity and QVE Identity. The tcbEvaluationDataNumber
+             * update is synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU)
+             * and QE/QVE Identity. This sequence number allows users to easily determine when a particular
+             * TCB Info/QE Idenity/QVE Identiy superseedes another TCB Info/QE Identity/QVE Identity.
+             *
+             * @return unsigned integer representing TCB Evaluation Data Number
              *
              * @throws intel::sgx::dcap::parser::FormatException in case of TCBInfo version equal 1
              */
             virtual unsigned int getTcbEvaluationDataNumber() const;
 
             /**
-             * Parse JSON text from a string
-             * @param json JSON text
-             * @return TCB info instance
+             * Staic function that parses JSON text from a string into TCB Info object
+             * @param string with text in JSON Format
+             * @return TcbInfo instance
              *
              * @throws intel::sgx::dcap::parser::FormatException in case of parsing error
              */
@@ -157,8 +274,6 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             unsigned int _tcbEvaluationDataNumber;
 
             void parsePartV2(const ::rapidjson::Value &tcbInfo, JsonParser& jsonParser);
-
-
             explicit TcbInfo(const std::string& jsonString);
         };
     }
@@ -167,10 +282,22 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
     {
         class Certificate;
 
+        /**
+         * Class that represents x509 distinguished name
+         */
         class DistinguishedName
         {
         public:
             DistinguishedName() = default;
+            /**
+             * Create instance of DistinguishedName class
+             * @param raw - string with raw distinguished name
+             * @param commonName - common name component of distinguished name
+             * @param countryName - country component of distinguished name
+             * @param organizationName - organization component of distinguished name
+             * @param locationName - location component of distinguished name
+             * @param stateName - state component of distinguished name
+             */
             DistinguishedName(const std::string& raw,
                               const std::string& commonName,
                               const std::string& countryName,
@@ -182,11 +309,35 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             virtual bool operator==(const DistinguishedName& other) const;
             virtual bool operator!=(const DistinguishedName& other) const;
 
+            /**
+             * Get string with raw name
+             * @return string with raw name
+             */
             virtual const std::string& getRaw() const;
+            /**
+             * Get common name component of Distinguished Name
+             * @return string with common name
+             */
             virtual const std::string& getCommonName() const;
+            /**
+             * Get country name component of Distinguished Name
+             * @return string with country name
+             */
             virtual const std::string& getCountryName() const;
+            /**
+             * Get organization name component of Distinguished Name
+             * @return string with organization name
+             */
             virtual const std::string& getOrganizationName() const;
+            /**
+             * Get location name component of Distinguished Name
+             * @return string with location name
+             */
             virtual const std::string& getLocationName() const;
+            /**
+             * Get state name component of Distinguished Name
+             * @return string with state name
+             */
             virtual const std::string& getStateName() const;
 
         private:
@@ -202,16 +353,37 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             friend class Certificate;
         };
 
+        /**
+         * Class that represents certificate's validity
+         */
         class Validity
         {
         public:
             Validity() = default;
+            /**
+             * Creates instance of Validity object
+             * @param notBeforeTime - date when validity starts
+             * @param notAfterTime - date when validity ends
+             */
             Validity(std::time_t notBeforeTime, std::time_t notAfterTime);
             virtual ~Validity() = default;
 
+            /**
+             * Check if validity objects are equal
+             * @param other - second validity
+             * @return true if objects are equal
+             */
             virtual bool operator==(const Validity& other) const;
 
+            /**
+             * Get notBeforeTime component of validity
+             * @return notBeforeTime
+             */
             virtual std::time_t getNotBeforeTime() const;
+            /**
+             * Get notAfterTime of validity
+             * @return notAfterTime
+             */
             virtual std::time_t getNotAfterTime() const;
 
         private:
@@ -219,9 +391,15 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             std::time_t _notAfterTime;
         };
 
+        /**
+         * Class that represents SGX specific X509 certificate extensions
+         */
         class Extension
         {
         public:
+            /**
+             * Enum representing SGX extension type
+             */
             enum class Type : int
             {
                 NONE = -1,
@@ -253,16 +431,44 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             };
 
             Extension();
+
+            /**
+             * Creates an instance of Extension class
+             * @param nid
+             * @param name - extension name
+             * @param value - extension value
+             */
             Extension(int nid,
                       const std::string& name,
                       const std::vector<uint8_t>& value) noexcept;
             virtual ~Extension() = default;
 
+            /**
+             * Check if extensions are equal
+             * @return true if equal
+             */
             virtual bool operator==(const Extension&) const;
+
+            /**
+             * Check if extensions are not equal
+             * @return true if not equal
+             */
             virtual bool operator!=(const Extension&) const;
 
+            /**
+             * Get NID
+             * @return nid
+             */
             virtual int getNid() const;
+            /**
+             * Get name
+             * @return name
+             */
             virtual const std::string& getName() const;
+            /**
+             * Get value
+             * @return vector of bytes representing extension's value
+             */
             virtual const std::vector<uint8_t>& getValue() const;
 
         private:
@@ -276,19 +482,48 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             friend class UnitTests;
         };
 
+        /**
+         * Class that represents ECDSA signature
+         */
         class Signature
         {
         public:
             Signature();
+
+            /**
+             * Creates instance of signature
+             * @param rawDer - vector of bytes representing raw signature in DER format
+             * @param r - r component of signature
+             * @param s - s component of signature
+             */
             Signature(const std::vector<uint8_t>& rawDer,
                       const std::vector<uint8_t>& r,
                       const std::vector<uint8_t>& s);
             virtual ~Signature() = default;
 
+            /**
+             * Check if signatures are equal
+             * @param other
+             * @return true if are equal
+             */
             virtual bool operator==(const Signature& other) const;
 
+            /**
+             * Get raw signature in DER format
+             * @return vector of bytes with signature
+             */
             virtual const std::vector<uint8_t>& getRawDer() const;
+
+            /**
+             * Get R component of ECDSA signature
+             * @return vector of bytes with R component
+             */
             virtual const std::vector<uint8_t>& getR() const;
+
+            /**
+             * Get S component of ECDSA signature
+             * @return vector of bytes with S component
+             */
             virtual const std::vector<uint8_t>& getS() const;
 
         private:
@@ -301,6 +536,9 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             friend class Certificate;
         };
 
+        /**
+         * Class that represents X509 Certificate
+         */
         class Certificate
         {
         public:
@@ -311,14 +549,54 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
 
             Certificate& operator=(const Certificate &) = delete;
             Certificate& operator=(Certificate &&) = default;
+
+            /**
+             * Check if certificate objects are equal
+             * @param other certificate
+             * @return true if equal
+             */
             virtual bool operator==(const Certificate& other) const;
 
+            /**
+             * Get version of X509 certificate
+             * @return unsigned integer with version
+             */
             virtual unsigned int getVersion() const;
+
+            /**
+             * Get serial number of X509 certificate
+             * @return vector of bytes with serial number
+             */
             virtual const std::vector<uint8_t>& getSerialNumber() const;
+
+            /**
+             * Get subject of X509 certificate
+             * @return subject as DistinguishedName object
+             */
             virtual const DistinguishedName& getSubject() const;
+
+            /**
+             * Get issuer of X509 certificate
+             * @return issuer as DistinguishedName object
+             */
             virtual const DistinguishedName& getIssuer() const;
+
+            /**
+             * Get validity of X509 certificate (period when certificate is valid)
+             * @return validity as Validity object
+             */
             virtual const Validity& getValidity() const;
+
+            /**
+             * Get extensions of X509 certificate
+             * @return vector of Extension objects
+             */
             virtual const std::vector<Extension>& getExtensions() const;
+
+            /**
+             * Get raw PEM data of X509 certificate
+             * @return string - PEM format
+             */
             virtual const std::string getPem() const;
 
             /**
@@ -327,6 +605,11 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @return Vector of bytes representing certificate info
              */
             virtual const std::vector<uint8_t>& getInfo() const;
+
+            /**
+             * Get Certificate's signature
+             * @return signature as Signature object
+             */
             virtual const Signature& getSignature() const;
 
             /**
@@ -377,15 +660,29 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
 
         class PckCertificate;
 
+        /**
+         * Class that represents Intel SGX Trusted Computing Base information stored in Provisioning Certification Key Certificate
+         */
         class Tcb
         {
         public:
             Tcb() = default;
+            /**
+             * Creates instance of TCB class
+             * @param cpusvn vector of bytes representing CPU SVN
+             * @param cpusvnComponents vector of bytes representing CPU SVN components
+             * @param pcesvn unsigned integer with PCE SVN value
+             */
             Tcb(const std::vector<uint8_t>& cpusvn,
                 const std::vector<uint8_t>& cpusvnComponents,
                 unsigned int pcesvn);
             virtual ~Tcb() = default;
 
+            /**
+             * Check if TCB objects are equal
+             * @param other TCB
+             * @return true if equal
+             */
             virtual bool operator==(const Tcb& other) const;
 
             /**
@@ -396,8 +693,22 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @throws intel::sgx::dcap::parser::FormatException when out of range
              */
             virtual unsigned int getSgxTcbComponentSvn(unsigned int componentNumber) const;
+            /**
+             * Get all CPU SVN components
+             * @return vector of bytes with cpu svn components
+             */
             virtual const std::vector<uint8_t>& getSgxTcbComponents () const;
+
+            /**
+             * Get PCE SVN
+             * @return unsigned integer representing PCE SVN
+             */
             virtual unsigned int getPceSvn() const;
+
+            /**
+             * Get CPU SVN
+             * @return vector of bytes representing CPU SVN (16 bytes)
+             */
             virtual const std::vector<uint8_t>& getCpuSvn() const;
 
         private:
@@ -410,6 +721,9 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             friend class PckCertificate;
         };
 
+        /**
+         * Class that represents Provisioning Certification Key Certificate
+         */
         class PckCertificate : public Certificate
         {
         public:
@@ -428,9 +742,24 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
 
             PckCertificate& operator=(const PckCertificate &) = delete;
             PckCertificate& operator=(PckCertificate &&) = default;
+
+            /**
+             * Chekc if PCK certificates are equal
+             * @param other PCK certificate
+             * @return true if equal
+             */
             virtual bool operator==(const PckCertificate& other) const;
 
+            /**
+             * Get PPID
+             * @return vector of bytes representing PPID (16 bytes)
+             */
             virtual const std::vector<uint8_t>& getPpid() const;
+
+            /**
+             * Get PCE identifier
+             * @return vector of bytes representing PCE ID (2 bytes)
+             */
             virtual const std::vector<uint8_t>& getPceId() const;
             virtual const std::vector<uint8_t>& getFmspc() const;
             virtual SgxType getSgxType() const;
@@ -458,12 +787,18 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         };
     }
 
+    /**
+     * Exception when parsing fails due to incorrect format of the structure
+     */
     class FormatException : public std::logic_error
     {
     public:
         using std::logic_error::logic_error;
     };
 
+    /**
+     * Exception when invalid extension is found in certificate
+     */
     class InvalidExtensionException : public std::logic_error
     {
     public:

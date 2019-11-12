@@ -37,20 +37,20 @@ add_library(AppCore ${SOURCE_FILES})
 
 target_include_directories(AppCore PUBLIC ${ATTESTATION_LIBRARY_API_INCLUDE} src)
 
-target_link_libraries(AppCore PUBLIC
-        AttestationLibrary
+target_link_libraries(AppCore
+        PUBLIC
         argtable3
+        PRIVATE
+        AttestationLibrary
         )
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 
-target_link_libraries(${PROJECT_NAME} AppCore)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS ${COMMON_LINKER_FLAGS})
+target_link_libraries(${PROJECT_NAME} PRIVATE AppCore)
 
 ######### QVL Enclave related settings #################################################################################
 
-if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
+if (BUILD_ENCLAVE)
     set_source_files_properties(src/Enclave/Enclave_u.c PROPERTIES GENERATED TRUE)
 
     set_property(DIRECTORY PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
@@ -65,20 +65,22 @@ if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
 
     target_include_directories(AppCoreEnclave
             SYSTEM PUBLIC
-                "${SGX_SDK}/include"
-                "${SGX_OPENSSL}/include/openssl"
+            "${SGX_SDK}/include"
+            "${SGX_OPENSSL}/include/openssl"
             )
 
     target_include_directories(AppCoreEnclave
             PUBLIC
-                ${ATTESTATION_LIBRARY_API_INCLUDE}
-                src
-                src/Enclave
+            ${ATTESTATION_LIBRARY_API_INCLUDE}
+            src
+            src/Enclave
             )
 
-    target_link_libraries(AppCoreEnclave PUBLIC
-            AttestationLibraryEnclave
+    target_link_libraries(AppCoreEnclave
+            PUBLIC
             argtable3
+            PRIVATE
+            AttestationLibraryEnclave
             "-Wl,--no-undefined -L${SGX_SDK}/lib64 -L${SGX_OPENSSL}/lib64"
             "-Wl,--whole-archive -l${URTS_LIBRARY_NAME} -Wl,--no-whole-archive"
             "-Wl,--start-group -l${USERVICE_LIBRARY_NAME} -lsgx_usgxssl -Wl,--end-group"
@@ -91,11 +93,9 @@ if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
 
     add_executable(${PROJECT_NAME}Enclave src/main.cpp)
 
-    target_link_libraries(${PROJECT_NAME}Enclave AppCoreEnclave)
+    target_link_libraries(${PROJECT_NAME}Enclave PRIVATE AppCoreEnclave)
 
     target_compile_definitions(${PROJECT_NAME}Enclave PUBLIC SGX_TRUSTED=true)
-
-    set_target_properties(${PROJECT_NAME}Enclave PROPERTIES LINK_FLAGS ${COMMON_LINKER_FLAGS})
 
     install(TARGETS ${PROJECT_NAME}Enclave DESTINATION bin)
 

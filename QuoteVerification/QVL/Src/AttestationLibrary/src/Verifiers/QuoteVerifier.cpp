@@ -121,21 +121,22 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
     return STATUS_TCB_UNRECOGNIZED_STATUS;
 }
 
-Status convergeTcbstatus(Status tcbInfoStatus, Status qeIdentityStatus) {
-    if (qeIdentityStatus == STATUS_OK) {
+Status convergeTcbstatus(Status tcbInfoStatus, Status qeIdentityStatus)
+{
+    if (qeIdentityStatus == STATUS_OK)
+    {
         return tcbInfoStatus;
     }
-    if (qeIdentityStatus == STATUS_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE ||
-        qeIdentityStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE ||
-        qeIdentityStatus == STATUS_QE_IDENTITY_OUT_OF_DATE) {
+    if (qeIdentityStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
+    {
         switch (tcbInfoStatus)
         {
-        case STATUS_OK:
-            return STATUS_TCB_OUT_OF_DATE;
-        case STATUS_TCB_CONFIGURATION_NEEDED:
-            return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
-        default:
-            return tcbInfoStatus;
+            case STATUS_OK:
+                return STATUS_TCB_OUT_OF_DATE;
+            case STATUS_TCB_CONFIGURATION_NEEDED:
+                return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
+            default:
+                return tcbInfoStatus;
         }
     }
     return STATUS_INVALID_PARAMETER;
@@ -185,9 +186,16 @@ Status QuoteVerifier::verify(const Quote& quote,
         return qeCertDataVerificationStatus;
     }
 
+    auto pubKey = crypto::rawToP256PubKey(pckCert.getPubKey());
+    if (pubKey == nullptr)
+    {
+        return STATUS_INVALID_PCK_CERT; // if there were issues with parsing public key it means cert was invalid.
+                                        // Probably it will never happen because parsing cert should fail earlier.
+    }
+
     if(!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().qeReportSignature.signature,
                                            quote.getQuoteAuthData().qeReport.rawBlob(),
-                                           *crypto::rawToP256PubKey(pckCert.getPubKey())))
+                                           *pubKey))
     {
         return STATUS_INVALID_QE_REPORT_SIGNATURE;
     }
@@ -205,8 +213,8 @@ Status QuoteVerifier::verify(const Quote& quote,
     }();
 
     if(hashedConcatOfAttestKeyAndQeReportData.empty() || !std::equal(hashedConcatOfAttestKeyAndQeReportData.begin(),
-                   hashedConcatOfAttestKeyAndQeReportData.end(),
-                   quote.getQuoteAuthData().qeReport.reportData.begin()))
+                                                                     hashedConcatOfAttestKeyAndQeReportData.end(),
+                                                                     quote.getQuoteAuthData().qeReport.reportData.begin()))
     {
         return STATUS_INVALID_QE_REPORT_DATA;
     }
@@ -218,8 +226,8 @@ Status QuoteVerifier::verify(const Quote& quote,
     }
 
     if (!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().ecdsa256BitSignature.signature,
-        quote.getSignedData(),
-        *attestKey))
+                                            quote.getSignedData(),
+                                            *attestKey))
     {
         return STATUS_INVALID_QUOTE_SIGNATURE;
     }
@@ -238,7 +246,14 @@ Status QuoteVerifier::verify(const Quote& quote,
     try
     {
         const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert);
-        convergedTcbStatus = convergeTcbstatus(tcbLevelStatus, qeIdentityStatus);
+        if (enclaveIdentity && enclaveIdentity->getStatus() == STATUS_OK)
+        {
+            convergedTcbStatus = convergeTcbstatus(tcbLevelStatus, qeIdentityStatus);
+        }
+        else
+        {
+            convergedTcbStatus = tcbLevelStatus;
+        }
     }
     catch (const dcap::parser::FormatException &e)
     {
@@ -262,8 +277,8 @@ Status QuoteVerifier::verifyQeIdentity(const Quote& quote, const EnclaveIdentity
     Status status = enclaveReportVerifier.verify(qeIdentityJson, quote.getQuoteAuthData().qeReport);
 
     if(status != STATUS_OK &&
-        status != STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE &&
-        status != STATUS_TCB_REVOKED)
+       status != STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE &&
+       status != STATUS_TCB_REVOKED)
     {
         return STATUS_QE_IDENTITY_MISMATCH;
     }

@@ -93,11 +93,22 @@ bool AppCore::runVerification(const AppOptions& options, std::ostream& logger) c
             outputResult("QeIdentity", qeIdentityVerifyStatus, logger);
         }
 
+        const auto qveIdentityPresent = !options.qveIdentityFile.empty();
+        std::string qveIdentity = std::string{};
+        Status qveIdentityVerifyStatus = STATUS_OK;
+        if (qveIdentityPresent)
+        {
+            qveIdentity = fileReader->readContent(options.qveIdentityFile);
+            qveIdentityVerifyStatus = attestationLib->verifyQeIdentity(qveIdentity, tcbSigningCert, rootCaCrl, trustedRootCACert, expirationDate);
+            outputResult("QveIdentity", qveIdentityVerifyStatus, logger);
+        }
+
         const auto quote = fileReader->readBinaryContent(options.quoteFile);
         const auto quoteVerifyStatus = attestationLib->verifyQuote(quote, pckCert, intermediateCaCrl, tcbInfo, qeIdentity);
         outputResult("Quote", quoteVerifyStatus, logger);
 
-        return (pckVerifyStatus == STATUS_OK) && (tcbVerifyStatus == STATUS_OK) && (quoteVerifyStatus == STATUS_OK) && (qeIdentityVerifyStatus == STATUS_OK);
+        return (pckVerifyStatus == STATUS_OK) && (tcbVerifyStatus == STATUS_OK) && (quoteVerifyStatus == STATUS_OK) &&
+                    (qeIdentityVerifyStatus == STATUS_OK) && (qveIdentityVerifyStatus == STATUS_OK);
     }
     catch (const IFileReader::ReadFileException& e)
     {

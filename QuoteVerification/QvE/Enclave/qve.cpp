@@ -975,7 +975,7 @@ static quote3_error_t sgx_qve_generate_report(
     return ret;
 }
 
-#define IS_IN_ENCLAVE_POINTER(p, size) (p && (strlen(p) == size - 1) && sgx_is_within_enclave(p, size))
+#define IS_IN_ENCLAVE_POINTER(p, size) (p && (strnlen(p, size) == size - 1) && sgx_is_within_enclave(p, size))
 
 static bool is_collateral_deep_copied(const struct _sgx_ql_qve_collateral_t *p_quote_collateral) {
     if (IS_IN_ENCLAVE_POINTER(p_quote_collateral->pck_crl_issuer_chain, p_quote_collateral->pck_crl_issuer_chain_size) &&
