@@ -47,8 +47,8 @@ rm -fr ${INSTALL_PATH}
 # Get the architecture of the build from generated binary
 get_arch()
 {
-    local a=$(readelf -h $(find ${BUILD_DIR} -name "*.so*" |head -n 1) | sed -n '2p' | awk '/:/{print $6}')
-    test $a = 02 && echo 'x64' || echo 'x86'
+    local a=$(readelf -h $(find ${BUILD_DIR} -name "*.so*" |head -n 1) | sed -n '2p' | awk '{print $6}')
+    test $a = 01 && echo 'x86' || echo 'x64'
 }
 
 ARCH=$(get_arch)
