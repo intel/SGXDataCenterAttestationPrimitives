@@ -366,7 +366,7 @@ static int sgx_dev_init(struct device *parent)
 
 		for (i = 2; i < 64; i++) {
 			cpuid_count(0x0D, i, &eax, &ebx, &ecx, &edx);
-			if ((1 << i) & sgx_xfrm_mask)
+			if ((1ULL << i) & sgx_xfrm_mask)
 				sgx_xsave_size_tbl[i] = eax + ebx;
 		}
 	}
