@@ -115,7 +115,7 @@ int sgx_encl_find(struct mm_struct *mm, unsigned long addr,
 }
 
 static int sgx_measure(void *secs_page,
-		       void *epc_page,
+		       struct sgx_epc_page *epc_page,
 		       u16 mrmask)
 {
 	int ret = 0;
@@ -141,7 +141,7 @@ static int sgx_measure(void *secs_page,
 }
 
 static int sgx_eadd(void *secs_page,
-		    void *epc_page,
+		    struct sgx_epc_page *epc_page,
 		    unsigned long linaddr,
 		    struct sgx_secinfo *secinfo,
 		    struct page *backing)
@@ -166,7 +166,7 @@ static int sgx_eadd(void *secs_page,
 }
 
 static bool sgx_process_add_page_req(struct sgx_add_page_req *req,
-				     void *epc_page)
+				     struct sgx_epc_page *epc_page)
 {
 	struct sgx_encl_page *encl_page = req->encl_page;
 	struct sgx_encl *encl = req->encl;
@@ -238,7 +238,7 @@ static void sgx_add_page_worker(struct work_struct *work)
 	bool skip_rest = false;
 	bool is_empty = false;
 	struct sgx_encl *encl;
-	void *epc_page;
+	struct sgx_epc_page *epc_page;
 
 	encl = container_of(work, struct sgx_encl, add_page_work);
 
@@ -384,7 +384,7 @@ static int sgx_init_page(struct sgx_encl *encl, struct sgx_encl_page *entry,
 			 unsigned long addr)
 {
 	struct sgx_va_page *va_page;
-	void *epc_page = NULL;
+	struct sgx_epc_page *epc_page = NULL;
 	void *ptr;
 	int ret = 0;
 
@@ -519,7 +519,7 @@ int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	struct vm_area_struct *vma;
 	struct sgx_pageinfo pginfo;
 	struct sgx_secinfo secinfo;
-	void *secs_epc;
+	struct sgx_epc_page *secs_epc;
 	void *secs_vaddr;
 	long ret;
 
@@ -815,7 +815,7 @@ static void sgx_update_lepubkeyhash_msrs(u64 *lepubkeyhash, bool enforce)
 static int sgx_einit(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 		     struct sgx_einittoken *token, u64 *lepubkeyhash)
 {
-	void *secs_epc = encl->secs.epc_page;
+	struct sgx_epc_page *secs_epc = encl->secs.epc_page;
 	void *secs_va;
 	int ret;
 
@@ -961,7 +961,7 @@ void sgx_encl_release(struct kref *ref)
 		atomic_dec(&sgx_va_pages_cnt);
 	}
 
-	if (!(encl->flags & SGX_ENCL_SECS_EVICTED))
+	if (!(encl->flags & SGX_ENCL_SECS_EVICTED) && encl->secs.epc_page)
 		sgx_free_page(encl->secs.epc_page, encl);
 
 	if (encl->backing)

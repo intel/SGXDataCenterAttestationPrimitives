@@ -78,9 +78,8 @@ struct sgx_epc_bank {
 	unsigned long pa;
 	unsigned long va;
 	unsigned long size;
-	void **pages;
-	atomic_t free_cnt;
-	struct rw_semaphore lock;
+	struct list_head free_page_list;
+	spinlock_t lock;
 };
 
 static struct sgx_epc_bank sgx_epc_banks[SGX_MAX_EPC_BANKS];
@@ -383,6 +382,7 @@ static int sgx_init_epc_bank(unsigned long addr, unsigned long size,
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 	unsigned long i;
 	void *va;
+	struct sgx_epc_page *page;
 
 	if (IS_ENABLED(CONFIG_X86_64)) {
 		va = ioremap_cache(addr, size);
@@ -390,26 +390,23 @@ static int sgx_init_epc_bank(unsigned long addr, unsigned long size,
 			return -ENOMEM;
 	}
 
-	bank->pages = kzalloc(nr_pages * sizeof(void *), GFP_KERNEL);
-	if (!bank->pages) {
-		if (IS_ENABLED(CONFIG_X86_64))
-			iounmap(va);
+	spin_lock_init(&bank->lock);
+	INIT_LIST_HEAD(&bank->free_page_list);
 
-		return -ENOMEM;
+	for (i = 0; i < nr_pages; i++) {
+		page = kzalloc(sizeof(*page), GFP_KERNEL);
+		if (!page)
+			return -ENOMEM;
+
+		page->desc = (addr + (i << PAGE_SHIFT)) | index;
+		list_add_tail(&page->list, &bank->free_page_list);
 	}
-
-	for (i = 0; i < nr_pages; i++)
-		bank->pages[i] = (void *)((addr + (i << PAGE_SHIFT)) | index);
 
 	bank->pa = addr;
 	bank->size = size;
 
 	if (IS_ENABLED(CONFIG_X86_64))
 		bank->va = (unsigned long)va;
-
-	atomic_set(&bank->free_cnt, nr_pages);
-
-	init_rwsem(&bank->lock);
 
 	sgx_nr_total_pages += nr_pages;
 	atomic_add(nr_pages, &sgx_nr_free_pages);
@@ -440,8 +437,10 @@ int sgx_page_cache_init(struct device *parent)
 		dev_info(parent, "EPC bank 0x%lx-0x%lx\n", pa, pa + size);
 
 		ret = sgx_init_epc_bank(pa, size, i, &sgx_epc_banks[i]);
-		if (ret)
+		if (ret) {
+			sgx_page_cache_teardown();
 			return ret;
+		}
 
 		sgx_nr_epc_banks++;
 	}
@@ -459,6 +458,7 @@ int sgx_page_cache_init(struct device *parent)
 void sgx_page_cache_teardown(void)
 {
 	struct sgx_epc_bank *bank;
+	struct sgx_epc_page *page;
 	int i;
 
 	if (ksgxswapd_tsk) {
@@ -469,35 +469,47 @@ void sgx_page_cache_teardown(void)
 	for (i = 0; i < sgx_nr_epc_banks; i++) {
 		bank = &sgx_epc_banks[i];
 
+		spin_lock(&bank->lock);
+
 		if (IS_ENABLED(CONFIG_X86_64))
 			iounmap((void *)bank->va);
 
-		kfree(bank->pages);
+		while (!list_empty(&bank->free_page_list)) {
+			page = list_first_entry(&bank->free_page_list,
+						struct sgx_epc_page, list);
+			list_del(&page->list);
+			kfree(page);
+		}
+
+		spin_unlock(&bank->lock);
 	}
 }
 
-static void *sgx_try_alloc_page(void)
+static struct sgx_epc_page *sgx_try_alloc_page(void)
 {
 	struct sgx_epc_bank *bank;
-	void *page = NULL;
+	struct sgx_epc_page *page = NULL;
 	int i;
 
 	for (i = 0; i < sgx_nr_epc_banks; i++) {
 		bank = &sgx_epc_banks[i];
 
-		down_write(&bank->lock);
+		spin_lock(&bank->lock);
 
-		if (atomic_read(&bank->free_cnt))
-			page = bank->pages[atomic_dec_return(&bank->free_cnt)];
+		if (!list_empty(&bank->free_page_list)) {
+			page = list_first_entry(&bank->free_page_list, struct sgx_epc_page, list);
+			list_del_init(&page->list);
+			atomic_dec(&sgx_nr_free_pages);
+		}
 
-		up_write(&bank->lock);
+		spin_unlock(&bank->lock);
 
 		if (page)
 			break;
 	}
 
-	if (page)
-		atomic_dec(&sgx_nr_free_pages);
+	if (!page)
+		page = ERR_PTR(-ENOMEM);
 
 	return page;
 }
@@ -514,13 +526,13 @@ static void *sgx_try_alloc_page(void)
  *
  * Return: an EPC page or a system error code
  */
-void *sgx_alloc_page(unsigned int flags)
+struct sgx_epc_page *sgx_alloc_page(unsigned int flags)
 {
-	void *entry;
+	struct sgx_epc_page *entry;
 
 	for ( ; ; ) {
 		entry = sgx_try_alloc_page();
-		if (entry)
+		if (!IS_ERR(entry))
 			break;
 
 		/* We need at minimum two pages for the #PF handler. */
@@ -557,7 +569,7 @@ void *sgx_alloc_page(unsigned int flags)
  * @page:	any EPC page
  * @encl:	enclave that owns the given EPC page
  */
-void sgx_free_page(void *page, struct sgx_encl *encl)
+void sgx_free_page(struct sgx_epc_page *page, struct sgx_encl *encl)
 {
 	struct sgx_epc_bank *bank = SGX_EPC_BANK(page);
 	void *va;
@@ -570,14 +582,14 @@ void sgx_free_page(void *page, struct sgx_encl *encl)
 	if (ret)
 		sgx_crit(encl, "EREMOVE returned %d\n", ret);
 
-	down_read(&bank->lock);
-	bank->pages[atomic_inc_return(&bank->free_cnt) - 1] = page;
-	up_read(&bank->lock);
+	spin_lock(&bank->lock);
+	list_add_tail(&page->list, &bank->free_page_list);
+	spin_unlock(&bank->lock);
 
 	atomic_inc(&sgx_nr_free_pages);
 }
 
-void *sgx_get_page(void *page)
+void *sgx_get_page(struct sgx_epc_page *page)
 {
 	struct sgx_epc_bank *bank = SGX_EPC_BANK(page);
 

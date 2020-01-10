@@ -218,8 +218,8 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 	bool reserve = (flags & SGX_FAULT_RESERVE) != 0;
 	struct sgx_encl *encl = vma->vm_private_data;
 	struct sgx_encl_page *entry;
-	void *secs_epc_page = NULL;
-	void *epc_page = NULL;
+	struct sgx_epc_page *secs_epc_page = NULL;
+	struct sgx_epc_page *epc_page = NULL;
 	int rc = 0;
 
 	/* If process was forked, VMA is still there but vm_private_data is set

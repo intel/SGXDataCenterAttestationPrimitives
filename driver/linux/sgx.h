@@ -123,16 +123,21 @@
 #define SGX_VA_OFFSET_MASK ((SGX_VA_SLOT_COUNT - 1) << 3)
 
 #define SGX_EPC_BANK(epc_page) \
-	(&sgx_epc_banks[(unsigned long)(epc_page) & ~PAGE_MASK])
-#define SGX_EPC_PFN(epc_page) PFN_DOWN((unsigned long)(epc_page))
-#define SGX_EPC_ADDR(epc_page) ((unsigned long)(epc_page) & PAGE_MASK)
+	(&sgx_epc_banks[(unsigned long)(epc_page->desc) & ~PAGE_MASK])
+#define SGX_EPC_PFN(epc_page) PFN_DOWN((unsigned long)(epc_page->desc))
+#define SGX_EPC_ADDR(epc_page) ((unsigned long)(epc_page->desc) & PAGE_MASK)
+
+struct sgx_epc_page {
+	unsigned long desc;
+	struct list_head list;
+};
 
 enum sgx_alloc_flags {
 	SGX_ALLOC_ATOMIC	= BIT(0),
 };
 
 struct sgx_va_page {
-	void *epc_page;
+	struct sgx_epc_page *epc_page;
 	DECLARE_BITMAP(slots, SGX_VA_SLOT_COUNT);
 	struct list_head list;
 };
@@ -174,10 +179,8 @@ enum sgx_encl_page_flags {
 
 struct sgx_encl_page {
 	unsigned long desc;
-	union {
-		void *epc_page;
-		struct sgx_va_page *va_page;
-	};
+	struct sgx_epc_page *epc_page;
+	struct sgx_va_page *va_page;
 	struct sgx_encl *encl;
 	struct list_head list;
 };
@@ -251,9 +254,9 @@ struct page *sgx_get_backing(struct sgx_encl *encl,
 void sgx_put_backing(struct page *backing, bool write);
 void sgx_insert_pte(struct sgx_encl *encl,
 		    struct sgx_encl_page *encl_page,
-		    void *epc_page,
+		    struct sgx_epc_page *epc_page,
 		    struct vm_area_struct *vma);
-int sgx_eremove(void *epc_page);
+int sgx_eremove(struct sgx_epc_page *epc_page);
 void sgx_zap_tcs_ptes(struct sgx_encl *encl,
 		      struct vm_area_struct *vma);
 void sgx_invalidate(struct sgx_encl *encl, bool flush_cpus);
@@ -277,9 +280,9 @@ extern atomic_t sgx_va_pages_cnt;
 int sgx_add_epc_bank(resource_size_t start, unsigned long size, int bank);
 int sgx_page_cache_init(struct device *parent);
 void sgx_page_cache_teardown(void);
-void *sgx_alloc_page(unsigned int flags);
-void sgx_free_page(void *page, struct sgx_encl *encl);
-void *sgx_get_page(void *page);
+struct sgx_epc_page *sgx_alloc_page(unsigned int flags);
+void sgx_free_page(struct sgx_epc_page *page, struct sgx_encl *encl);
+void *sgx_get_page(struct sgx_epc_page *page);
 void sgx_put_page(void *ptr);
 
 
