@@ -43,7 +43,7 @@
 #include <dlfcn.h>
 #else
 #include <tchar.h>
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 #ifndef _MSC_VER

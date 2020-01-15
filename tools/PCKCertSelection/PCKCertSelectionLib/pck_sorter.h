@@ -36,6 +36,7 @@
 #include <vector>
 #include <memory>
 
+#include "tcb_manager.h"
 #include "pck_cert_selection.h"
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 
@@ -48,7 +49,7 @@ class PCKSorter
 {
 public:
 	/**
-	 * Initialize platformSvn, pceIsvSvn, pceID, tcbInfoString, pemCerts members with input data.
+	 * Initialize platformSvn, pceIsvSvn, pceID, pemCerts members with input data.
 	 * pcks, tcbInfo, buckets members are empty at construct.
 	 */
 	PCKSorter ( cpu_svn_t platform_svn,
@@ -98,8 +99,7 @@ private:
 	comp_res_t compare_tcb_components ( const std::vector<uint8_t>& left, int64_t left_pcesvn, const std::vector<uint8_t>& right, int64_t right_pcesvn );
 	void sort_to_buckets ( void );
 	pck_cert_selection_res_t find_best_pck ( uint32_t* best_cert_index );
-	std::vector<uint8_t> decompose_cpusvn_components ( /*intel::sgx::dcap::parser::json::TcbInfo::tcb_type_t*/int tcb_type, const std::vector<uint8_t>& cpusvn );
-
+	pck_cert_selection_res_t parse_input_tcb(void);
 	// private members
 private:
 	/** 
@@ -118,10 +118,9 @@ private:
 	uint16_t pceID;
 
 	/**
-	 * TCBInfo JSON	input string.
-	 */
-	const std::string tcbInfoString;
-
+	* Parsed TCBInfo class.
+	*/
+	TCBManager tcbmgr;
 	/**
 	 * Array of PCK Certs strings input, PEM format.
 	 */

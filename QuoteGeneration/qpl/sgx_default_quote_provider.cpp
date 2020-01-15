@@ -37,6 +37,7 @@
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "se_memcpy.h"
 #include "sgx_default_quote_provider.h"
 #include "sgx_default_qcnl_wrapper.h"
@@ -167,7 +168,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         (*pp_quote_collateral)->version = 1;
 
         // Set PCK CRL and certchain
-        qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strlen(pck_ca), &p_pck_crl_chain, &pck_crl_chain_size);
+        qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strnlen(pck_ca, USHRT_MAX), &p_pck_crl_chain, &pck_crl_chain_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
@@ -294,6 +295,20 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
 quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain)
 {
     sgx_qcnl_free_qve_identity(p_qve_identity, p_qve_identity_issuer_chain);
+
+    return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_ql_get_root_ca_crl (uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_cal_size)
+{
+    sgx_qcnl_error_t ret = sgx_qcnl_get_root_ca_crl(pp_root_ca_crl, p_root_ca_cal_size);
+
+    return qcnl_error_to_ql_error(ret);
+}
+
+quote3_error_t sgx_ql_free_root_ca_crl (uint8_t *p_root_ca_crl)
+{
+    sgx_qcnl_free_root_ca_crl(p_root_ca_crl);
 
     return SGX_QL_SUCCESS;
 }

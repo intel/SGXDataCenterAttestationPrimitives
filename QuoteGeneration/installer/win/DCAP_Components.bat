@@ -5,7 +5,7 @@ set QGFOLDER="..\..\"
 set QVFOLDER="%TOPFOLDER%\QuoteVerification"
 set DEBUGFILEFOLDER="..\..\..\x64\Debug\"
 set RELEASEFILEFOLDER="..\..\..\x64\Release\"
-set PACKAGETNAME=DCAP_Components.1.3.101.3
+set PACKAGETNAME=DCAP_Components.1.3.100.2
 set pwd=%~dp0DCAP_Components
 
 pushd "%~dp0"
@@ -28,10 +28,10 @@ copy /y "%SGXSDKInstallPath%\include\sgx_key.h" "%pwd%\Header Files\sgx_key.h"
 copy /y "%SGXSDKInstallPath%\include\sgx_report.h" "%pwd%\Header Files\sgx_report.h"
 
 copy /y "%DEBUGFILEFOLDER%\sgx_dcap_ql.lib" "%pwd%\lib\native\Debug Support\sgx_dcap_ql.lib"
-copy /y "%DEBUGFILEFOLDER%\dcap_quoteverify.lib" "%pwd%\lib\native\Debug Support\dcap_quoteverify.lib"
+copy /y "%DEBUGFILEFOLDER%\sgx_dcap_quoteverify.lib" "%pwd%\lib\native\Debug Support\sgx_dcap_quoteverify.lib"
 
 copy /y "%RELEASEFILEFOLDER%\sgx_dcap_ql.lib" "%pwd%\lib\native\Libraries\sgx_dcap_ql.lib"
-copy /y "%RELEASEFILEFOLDER%\dcap_quoteverify.lib" "%pwd%\lib\native\Libraries\dcap_quoteverify.lib"
+copy /y "%RELEASEFILEFOLDER%\sgx_dcap_quoteverify.lib" "%pwd%\lib\native\Libraries\sgx_dcap_quoteverify.lib"
 
 if exist %PACKAGETNAME%.nupkg del /Q %PACKAGETNAME%.nupkg
 

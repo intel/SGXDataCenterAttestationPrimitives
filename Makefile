@@ -31,11 +31,13 @@
 
 CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
-.PHONY: all clean rebuild QuoteGeneration QuoteVerification
+.PHONY: all clean rebuild QuoteGeneration QuoteVerification PCKCertSelection PCKRetrievalTool
 
 all:
 	$(MAKE) -C QuoteGeneration
 	$(MAKE) -C QuoteVerification
+	$(MAKE) -C tools/PCKCertSelection
+	$(MAKE) -C tools/PCKRetrievalTool
 
 QuoteGeneration:
 	$(MAKE) -C QuoteGeneration
@@ -43,9 +45,17 @@ QuoteGeneration:
 QuoteVerification:
 	$(MAKE) -C QuoteVerification
 
+PCKCertSelection:
+	$(MAKE) -C tools/PCKCertSelection
+
+PCKRetrievalTool:
+	$(MAKE) -C tools/PCKRetrievalTool
+
 clean:
 	$(MAKE) -C QuoteGeneration clean
 	$(MAKE) -C QuoteVerification clean
+	$(MAKE) -C tools/PCKCertSelection clean
+	$(MAKE) -C tools/PCKRetrievalTool clean
 
 rebuild:
 	$(MAKE) -f $(CUR_MKFILE) clean

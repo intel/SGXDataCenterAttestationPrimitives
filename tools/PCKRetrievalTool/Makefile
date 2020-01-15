@@ -73,6 +73,10 @@ else
     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
 endif
 
+ifdef MPA
+    COMMON_FLAGS += -DMPA
+endif
+
 COMMON_FLAGS += -ffunction-sections -fdata-sections
 
 # turn on compiler warnings as much as possible
@@ -93,14 +97,17 @@ CXXFLAGS += -std=c++11
 
 ######## App Settings ########
 
-App_Cpp_Files := $(wildcard App/*.cpp)
-App_Include_Paths := -I$(SGX_SDK)/include -I./App 
+App_Cpp_Files := $(wildcard App/linux/*.cpp App/*.cpp)
+App_Include_Paths := -I$(SGX_SDK)/include -I./App -I ./App/inc
+App_Include_Paths += -I ../../QuoteGeneration/common/inc/internal -I ../../QuoteGeneration/quote_wrapper/ql/inc 
+App_Include_Paths += -I ../../QuoteGeneration/pce_wrapper/inc -I ../../QuoteGeneration/quote_wrapper/common/inc
 
 App_C_Flags := $(COMMON_FLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack
-App_Link_Flags +=  -lsgx_urts -lsgx_dcap_ql -ldl -lpthread -Wl,-rpath=.
+App_Link_Flags +=  -L../../QuoteGeneration/build/linux -lsgx_dcap_ql 
+App_Link_Flags +=  -L$(SGX_SDK)/lib64 -lsgx_urts -lsgx_dcap_ql -lcurl -ldl -lpthread -Wl,-rpath=.
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)

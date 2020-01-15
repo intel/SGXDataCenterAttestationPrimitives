@@ -50,17 +50,17 @@ set openssl_chksum=1E3A91BC1F9DFCE01AF26026F856E064EAB4C8EE0A8F457B5AE30B40B8B71
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
 )
-   
+
 if not exist %build_script% (
-	call powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;Invoke-WebRequest %sgxssl_github_archive%/%sgxssl_ver_name%.zip -OutFile %sgxssl_dir%\%sgxssl_ver_name%.zip"
-	7z.exe x -y %sgxssl_dir%\%sgxssl_ver_name%.zip -o%sgxssl_dir% 
+	call powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;Invoke-WebRequest -URI %sgxssl_github_archive%/%sgxssl_ver_name%.zip -OutFile %sgxssl_dir%\%sgxssl_ver_name%.zip"
+	7z.exe x -y %sgxssl_dir%\%sgxssl_ver_name%.zip -o%sgxssl_dir%
     xcopy /y "%sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%" %sgxssl_dir% /e
 	del /f /q %sgxssl_dir%\%sgxssl_ver_name%.zip
 	rmdir /s /q %sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%
 )
- 
+
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
-	call powershell -Command "Invoke-WebRequest %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
 )
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
@@ -70,6 +70,5 @@ if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 
 	cd ..\
 )
-
 
 exit /b 0

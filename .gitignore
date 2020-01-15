@@ -3,8 +3,8 @@
 *.obj
 
 #library and symbol file
-*.a
-*.lib
+#*.a
+#*.lib
 *.pdb
 
 #share object and dynamic-link library

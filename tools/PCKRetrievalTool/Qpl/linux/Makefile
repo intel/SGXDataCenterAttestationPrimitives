@@ -80,16 +80,18 @@ COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 
 QPL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
 
-QPL_Lib_Include_Paths := -I../../../../QuoteGeneration/quote_wrapper/common/inc -I../inc -I$(SGX_SDK)/include -I../../../../QuoteGeneration/common/inc/internal
+QPL_Lib_Include_Paths := -I../../../../QuoteGeneration/quote_wrapper/common/inc -I../../../../QuoteGeneration/common/inc/internal
+QPL_Lib_Include_Paths += -I../../../../QuoteGeneration/pce_wrapper/inc -I../../../../QuoteGeneration/quote_wrapper/ql/inc 
+QPL_Lib_Include_Paths += -I../inc -I$(SGX_SDK)/include 
 
-QPL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(QPL_Lib_Include_Paths)
+QPL_Lib_C_Flags := $(COMMON_FLAGS) -fPIC -Wno-attributes $(QPL_Lib_Include_Paths)
 
 LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--gc-sections
 
 QPL_Lib_Cpp_Flags := $(QPL_Lib_C_Flags) -std=c++11
 
-QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(SGX_SDK)/lib64 -lpthread -ldl  -Wl,-rpath=.
+QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -L$(SGX_SDK)/lib64 -lpthread -ldl  -Wl,-rpath=.
 
 
 QPL_Lib_Cpp_Objects := $(QPL_Lib_Cpp_Files:.cpp=.o)

@@ -1,3 +1,0 @@
-DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/installer/linux/common/libsgx-dcap-default-qpl-dev/installConfig	<installdir>/installConfig	0	main	STP
-<deliverydir>/installer/linux/common/libsgx-dcap-default-qpl-dev/Makefile	<installdir>/Makefile	0	main	STP

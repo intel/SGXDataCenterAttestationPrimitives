@@ -50,6 +50,7 @@ COMMON_DIR            := $(ROOT_DIR)/common
 
 SGX_VER:= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
 SGX_MAJOR_VER:= $(shell echo $(SGX_VER) |awk -F. '{print $$1}')
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 CP    := /bin/cp -f
 MKDIR := mkdir -p

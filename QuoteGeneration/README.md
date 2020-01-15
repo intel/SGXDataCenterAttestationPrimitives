@@ -37,7 +37,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.3.1/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.4/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -69,7 +69,10 @@ For Linux* OS
 
 ## Build and Install Intel(R) SGX Driver
 A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DCAP. Please follow the instructions in the `README.md` to build and install Intel(R) SGX driver.
-
+- The enclave user needs to be added to the group of "sgx_prv" if customers want to use their own provision enclave:
+```
+  $ sudo usermod -aG sgx_prv user
+```
 
 ## Build the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library Package
 - To set the environment variables, enter the following command:
@@ -97,32 +100,42 @@ The target package named ``linux_dcap_interface.zip`` will be generated.
 ```
   $ make deb_pkg
 ```
-The installers will be generated in ./installer/linux/deb/.
-
+  You can find the generated installers located under `linux/installer/deb/`.
+  **Note**: On Ubuntu 18.04, the above command also generates another debug symbol package with extension name of `.ddeb` for debug purpose. On Ubuntu 16.04, if you want to keep debug symbols, you need to export an environment variable to ensure the debug symbols not stripped:
+   ```
+   $ export DEB_BUILD_OPTIONS="nostrip"
+   ```
+  **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
+  ```
+  $ make deb_pkg DEBUG=1
+  ```
 
 ## Install the Intel(R) SGX DCAP Quote Generation Library Package
-- Install prebuilt Intel(R) SGX common loader Installer from [01.org](https://01.org/intel-software-guard-extensions/downloads)
+- Install prebuilt Intel(R) SGX common loader and other prerequisites from [01.org](https://01.org/intel-software-guard-extensions/downloads)
 ```
-  & sudo dpkg -i libsgx-enclave-common_{version}-{revision}_{arch}.deb
+  & sudo dpkg -i --force-overwrite libsgx-ae-pce_*.deb libsgx-ae-qe3_*.deb libsgx-ae-qve_*.deb libsgx-enclave-common_*.deb libsgx-urts_*.deb
 ```
+**NOTE**: Because we've split libsgx-enclave-common into multiple packages since 2.8 release, you need to add `--force-overwrite` to overwrite existing files if you've installed libsgx-enclave-common< 2.8. If you're doing a fresh install, you can omit this option.
+
 - For production systems, package should be installed by the following command:
 ```
-  $ sudo dpkg -i libsgx-dcap-ql_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-ql_*.deb
 ```
 - For development systems, another two packages should be installed by the following commands:
 ```
-  $ sudo dpkg -i libsgx-dcap-ql-dev_${version}-${revision}_${arch}.deb
-  $ sudo dpkg -i libsgx-dcap-ql-dbg_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-ql-dev_*.deb
+  $ sudo dpkg -i libsgx-dcap-ql-dbgsym_*.deb
 ```
 
 ## Install the Intel(R) SGX Default Quote Provider Library Package
 - For production systems, package should be installed by the following commands:
 ```
-  $ sudo dpkg -i libsgx-dcap-default-qpl_${version}-${revision}_${arch}.deb
-  $ sudo dpkg -i libsgx-dcap-pccs_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-default-qpl_*.deb
+  $ sudo dpkg -i libsgx-dcap-pccs_*.deb
 ```
   Please refer to /opt/intel/libsgx-dcap-pccs/README.md for more details about the installation of libsgx-dcap-pccs.
 - For development systems, another two packages should be installed by the following commands:
 ```
-  $ sudo dpkg -i libsgx-dcap-default-qpl-dev_${version}-${revision}_${arch}.deb
-  $ sudo dpkg -i libsgx-dcap-default-qpl-dbg_${version}-${revision}_${arch}.deb
+  $ sudo dpkg -i libsgx-dcap-default-qpl-dev_*.deb
+  $ sudo dpkg -i libsgx-dcap-default-qpl-dbgsym_*.deb
+```

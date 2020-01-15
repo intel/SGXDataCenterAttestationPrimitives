@@ -34,6 +34,8 @@
 // IMPORTANT: keep this definition before any include to make sure API is exported
 #ifdef _WIN32
 #define EXPORT_API __declspec(dllexport) 
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "crypt32.lib")
 #else
 #define EXPORT_API __attribute__ ((visibility("default"))) 
 #endif
@@ -41,6 +43,8 @@
 #include "pck_cert_selection.h"
 #include "constants.h"
 #include "pck_sorter.h"
+#include "config_selector.h"
+#include "version.h"
 
 
 /*
@@ -62,5 +66,19 @@ pck_cert_selection_res_t pck_cert_select (
 	}
 	PCKSorter pckSorter ( *platform_svn, pce_isvsvn, pce_id, tcb_info, pem_certs, ncerts );
 	return pckSorter.select_best_pck ( best_cert_index );
+}
+
+pck_cert_selection_res_t platform_sgx_hw_config(
+	const cpu_svn_t * platform_svn, 
+	const char * tcb_info, 
+	uint32_t * configuration_id)
+{
+	// validate input
+	if (platform_svn == NULL || tcb_info == NULL || configuration_id == NULL)
+	{
+		return PCK_CERT_SELECT_INVALID_ARG;
+	}
+	ConfigSelect confSelect( *platform_svn, tcb_info);
+	return confSelect.get_configure_id(configuration_id);
 }
 

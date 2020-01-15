@@ -26,16 +26,17 @@
 * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 /**
  * @mainpage PCK Cert Selection Library
  *
  * @section Intro
  * PCK Cert Selection library enables a platform owner to choose from a cached PCK Cert list the PCK with highest TCB 
  * for the platform and use it.
+ * PCK Cert Selection library enables a platform owner to retrieve the HW type configuration representation in the CPUSVN.
  *
  * @section API
- * The library exposes a single function API
+ * The library exposes two function API
+ *
  * @ref pck_cert_select() enables the user to select the 'best' PCK to use for a platform attestation.
  *
  * The input is the raw platform CPU SVN and PCE ISV SVN along with a TCBInfo structure in JSON format and a list of
@@ -43,9 +44,15 @@
  *
  * The output is the index of the 'best" PCK in the input PCK Cert list.
  *
+ * @ref platform_sgx_hw_config() enables the user to retrieve the configuration representation in the CPUSVN
+ *
+ * The input is the raw platform CPU SVN and a TCBInfo structure in JSON format 
+ *
+ * The output is the HW type configuration representation in the CPUSVN 
+ *
  * @section Implementation
  * The library API is implemented in pck_cert_selection.cpp.
- * All logic is implemented in class @ref PCKSorter.
+ * All logic is implemented in class @ref PCKSorter, @ref TCBManager .
  */
 
 /**
@@ -158,6 +165,19 @@ EXPORT_API pck_cert_selection_res_t pck_cert_select (
 	uint32_t ncerts, 
 	uint32_t* best_cert_index );
 
+/**
+ * Extrace HW configuration from CPUSVN.
+ * @note Input TCBInfo structures are validated but it's signature and validity (Not Before - Not After) are not verified.
+ *		 It is client responsibility to verify the input.
+ *
+ * @param [in]  platform_svn	 - const cpu_svn_t*, Raw platform CPUSVN, can't be NULL.
+ * @param [in]  tcb_info		- const char*, Platform TCBInfo structure in JSON format, can't be NULL.
+ * @param [out] configuration_id - uint32_t*, the configuration id, can't be NULL, valid only if function returns PCK_CERT_SELECT_SUCCESS.
+ */
+EXPORT_API pck_cert_selection_res_t platform_sgx_hw_config(
+	const cpu_svn_t* platform_svn,
+	const char* tcb_info,
+	uint32_t* configuration_id);
 #ifdef __cplusplus
 }
 #endif

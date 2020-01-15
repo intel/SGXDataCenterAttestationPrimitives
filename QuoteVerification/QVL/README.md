@@ -119,7 +119,9 @@ Requirements:
 * cmake version 3.2 or higher
 * Perl (https://www.activestate.com/products/activeperl/downloads/) for OpenSSL building
 
-NOTE: Enclave build is currently not supported on Windows.
+NOTE: 
+    If you need to build QVL behind a proxy, please se "HTTP_PROXY" and "HTTPS_PROXY" in system enviorment 
+	Enclave build is currently not supported on Windows.
 
 #### Using Visual Studio with CMake support
 CMake project can be directly opened and built using Visual Studio with CMake support..

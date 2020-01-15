@@ -1,11 +1,13 @@
 {
-    "HTTPS_PORT": 8081,
-    "hosts": "127.0.0.1",
+    "HTTPS_PORT" : 8081,
+    "hosts" : "127.0.0.1",
     "uri": "https://api.trustedservices.intel.com/sgx/certification/v2/",
     "ApiKey": "",
-    "proxy": "",
+    "proxy" : "",
     "RefreshSchedule": "0 0 1 * * *",
+    "UserToken" : "",
     "AdminToken" : "",
+    "CachingFillMode" : "LAZY",
     "DB_CONFIG" : "sqlite",
     "sqlite" : {
         "database" : "database",
@@ -23,7 +25,7 @@
             "define": {
                 "freezeTableName": true
             },
-            "logging" : false,
+            "logging" : false, 
             "storage": "pckcache.db"
         }
     }, 

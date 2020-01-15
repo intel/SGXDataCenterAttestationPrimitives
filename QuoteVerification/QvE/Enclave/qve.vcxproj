@@ -205,7 +205,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -241,7 +242,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -277,7 +279,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -313,7 +316,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -347,7 +351,8 @@
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -382,7 +387,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -417,7 +423,8 @@
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -452,7 +459,8 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

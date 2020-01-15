@@ -37,7 +37,7 @@ SCRIPT_DIR=$(dirname "$0")
 COMMON_DIR="${SCRIPT_DIR}/../../common/libsgx-dcap-ql"
 
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.deb
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql-dbgsym*.ddeb
+rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.ddeb
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.gz
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.xz
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.dsc
