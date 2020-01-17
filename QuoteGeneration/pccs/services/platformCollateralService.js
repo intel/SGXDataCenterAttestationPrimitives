@@ -204,7 +204,7 @@ exports.addPlatformCollateral=async function(collateralJson) {
             rootCert[1] = await pcsCertificatesDao.upsertTcbInfoIssuerChain(collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
         }
         if (Boolean(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])) {
-            rootCert[2] = await pcsCertificatesDao.upsertPckCertificateIssuerChain(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
+            rootCert[2] = await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
         }
         if (!verify_cert(rootCert[0], rootCert[1]) ||
             !verify_cert(rootCert[0], rootCert[2]) ||
