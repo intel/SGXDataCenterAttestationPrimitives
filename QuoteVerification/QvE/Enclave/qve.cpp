@@ -34,12 +34,27 @@
  * An architectural enclave for quote verification.
  */
 
+#ifndef SGX_TRUSTED
+#define get_fmspc_ca_from_quote qvl_get_fmspc_ca_from_quote
+#define sgx_qve_verify_quote sgx_qvl_verify_quote
+#define sgx_qve_get_quote_supplemental_data_size sgx_qvl_get_quote_supplemental_data_size
+#include "sgx_dcap_qv_internal.h"
+#define memset_s(a,b,c,d) memset(a,b,d)
+#define memcpy_s(a,b,c,d) (memcpy(a,c,b) && 0)
+#define sgx_is_within_enclave(a,b) (1)
+#else //SGX_TRUSTED
 #include "qve_t.h"
-#include <string>
-#include <array>
+#include <mbusafecrt.h>
 #include <sgx_tcrypto.h>
 #include <sgx_trts.h>
 #include <sgx_utils.h>
+#endif //SGX_TRUSTED
+
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <string>
+#include <cstring>
+#include <array>
+#include <algorithm>
 #include "Verifiers/EnclaveIdentityParser.h"
 #include "Verifiers/EnclaveIdentity.h"
 #include "Verifiers/EnclaveIdentityV2.h"
@@ -49,7 +64,7 @@
 #include "AttestationParsers/src/Utils/TimeUtils.h"
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "qve_header.h"
-#include <mbusafecrt.h>
+
 
 using namespace intel::sgx::qvl;
 using namespace intel::sgx::dcap::parser;
@@ -322,7 +337,7 @@ static quote3_error_t extract_chain_from_quote(const uint8_t *p_quote,
         }
 
         //verify quote format, allocate memory for certification data, then fill it with the certification data from the quote
-        //sgxAttestationGetQECertificationDataSize doesn't calculate the value with '\0', 
+        //sgxAttestationGetQECertificationDataSize doesn't calculate the value with '\0',
         //hence we need to allocate p_pck_cert_chain_size + 1 (+1 for '\0')
         //
         *pp_pck_cert_chain = (uint8_t*)malloc(1 + *p_pck_cert_chain_size);
@@ -581,7 +596,7 @@ static quote3_error_t qve_get_earliest_dates(const CertificateChain* p_cert_chai
             break;
         }
 
-        //Earliest issue date 
+        //Earliest issue date
         //
         std::array <time_t, 8> earliest_issue;
         std::array <time_t, 8> earliest_expiration;
@@ -653,7 +668,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
     do {
         EnclaveIdentityParser parser;
         EnclaveIdentityV2* qe_identity_v2 = NULL;
-        
+
         //some of the required supplemental data exist only on V2 TCBInfo, validate TCBInfo version.
         //
         if (tcb_info_obj->getVersion() != 2) {
@@ -728,7 +743,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
         for (const auto & tcbLevel : qe_identity_tcb_levels) {
             if (tcbLevel.getIsvsvn() <= qe_report_isvsvn) {
                 tm matching_qe_identity_tcb_date = tcbLevel.getTcbDate();
-                qe_identity_date = mktime(&matching_qe_identity_tcb_date);
+                qe_identity_date = intel::sgx::dcap::parser::mktime(&matching_qe_identity_tcb_date);
                 break;
             }
         }
@@ -760,7 +775,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
             break;
         }
         supplemental_data->pck_crl_num = (uint32_t)pck_crl.getCrlNum();
-        
+
         //make sure that long int value returned in getCrlNum doesn't overflow
         //
         tmp_crl_num = root_ca_crl.getCrlNum();
@@ -823,7 +838,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
             ret = SGX_QL_ERROR_UNEXPECTED;
             break;
         }
-        
+
         //make sure unsigned int value returned in getPceSvn matches uint16_t size, prevent overflow
         //
         unsigned int tmp_pce_svn = pck_cert_tcb.getPceSvn();
@@ -864,6 +879,8 @@ quote3_error_t sgx_qve_get_quote_supplemental_data_size(
     return SGX_QL_SUCCESS;
 }
 
+
+#ifdef SGX_TRUSTED
 /**
  * Generate enclave report with:
  * SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00’s)
@@ -974,8 +991,9 @@ static quote3_error_t sgx_qve_generate_report(
     }
     return ret;
 }
+#endif //SGX_TRUSTED
 
-#define IS_IN_ENCLAVE_POINTER(p, size) (p && (strlen(p) == size - 1) && sgx_is_within_enclave(p, size))
+#define IS_IN_ENCLAVE_POINTER(p, size) (p && (strnlen(p, size) == size - 1) && sgx_is_within_enclave(p, size))
 
 static bool is_collateral_deep_copied(const struct _sgx_ql_qve_collateral_t *p_quote_collateral) {
     if (IS_IN_ENCLAVE_POINTER(p_quote_collateral->pck_crl_issuer_chain, p_quote_collateral->pck_crl_issuer_chain_size) &&
@@ -1024,7 +1042,7 @@ quote3_error_t sgx_qve_verify_quote(
     uint8_t *p_supplemental_data) {
 
     //validate result parameter pointers and set default values
-    //in case of any invalid result parameter, set outputs_set = 0 and then return invalid (after setting 
+    //in case of any invalid result parameter, set outputs_set = 0 and then return invalid (after setting
     //default values of valid result parameters)
     //
     bool outputs_set = 1;
@@ -1044,7 +1062,7 @@ quote3_error_t sgx_qve_verify_quote(
         outputs_set = 0;
     }
 
-    //check if supplemental data required, and validate its size matches sgx_ql_qv_supplemental_t struct. if so, set it to 0 before 
+    //check if supplemental data required, and validate its size matches sgx_ql_qv_supplemental_t struct. if so, set it to 0 before
     //
     if (p_supplemental_data) {
         if (supplemental_data_size == sizeof(sgx_ql_qv_supplemental_t) &&
@@ -1082,7 +1100,6 @@ quote3_error_t sgx_qve_verify_quote(
     time_t earliest_issue_date = 0;
     Status collateral_verification_res = STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
-    quote3_error_t generate_report_ret = SGX_QL_ERROR_INVALID_PARAMETER;
     uint32_t pck_cert_chain_size = 0;
     uint8_t *p_pck_cert_chain = NULL;
     time_t set_time = 0;
@@ -1095,7 +1112,7 @@ quote3_error_t sgx_qve_verify_quote(
         //setup expiration check date to verify against (trusted time)
         //
         set_time = intel::sgx::dcap::parser::getCurrentTime(&expiration_check_date);
-        
+
         // defense-in-depth to make sure current time is set as expected.
         //
         if (set_time != expiration_check_date) {
@@ -1209,7 +1226,7 @@ quote3_error_t sgx_qve_verify_quote(
         //
         if (p_supplemental_data && ret == SGX_QL_SUCCESS) {
             // We totaly trust user on this, it should be explicitly and clearly
-            // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ? 
+            // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
             const std::vector<uint8_t> vecQuote(p_quote, std::next(p_quote, quote_size));
 
             Quote quote;
@@ -1226,14 +1243,20 @@ quote3_error_t sgx_qve_verify_quote(
 
     } while (0);
 
+
+#ifdef SGX_TRUSTED
+
     //defense-in-depth: validate that input current_time still returned by getCurrentTime
     //
     if (ret == SGX_QL_SUCCESS && set_time != getCurrentTime(NULL)) {
         ret = SGX_QL_ERROR_UNEXPECTED;
     }
+
     //check if report is required
     //
     if (p_qve_report_info != NULL && ret == SGX_QL_SUCCESS) {
+
+        quote3_error_t generate_report_ret = SGX_QL_ERROR_INVALID_PARAMETER;
 
         //generate a report with the verification result and input collaterals
         //
@@ -1251,6 +1274,8 @@ quote3_error_t sgx_qve_verify_quote(
             memset_s(&(p_qve_report_info->qe_report), sizeof(p_qve_report_info->qe_report), 0, sizeof(p_qve_report_info->qe_report));
         }
     }
+ #endif //SGX_TRUSTED
+
     //clear and free allocated memory
     //
     if (p_pck_cert_chain) {

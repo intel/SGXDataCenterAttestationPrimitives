@@ -54,14 +54,14 @@ endif()
 hunter_add_package(OpenSSL)
 find_package(OpenSSL 1.1.1 EXACT REQUIRED)
 
-file(GLOB SOURCE_FILES src/*.cpp 
-    src/OpensslHelpers/*.cpp 
-    src/PckParser/*.cpp 
-    src/CertVerification/*.cpp
-    src/QuoteVerification/*.cpp
-    src/Verifiers/*.cpp
-    src/Utils/*.cpp
-)
+file(GLOB SOURCE_FILES src/*.cpp
+        src/OpensslHelpers/*.cpp
+        src/PckParser/*.cpp
+        src/CertVerification/*.cpp
+        src/QuoteVerification/*.cpp
+        src/Verifiers/*.cpp
+        src/Utils/*.cpp
+        )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 add_library(${PROJECT_NAME}Static STATIC ${SOURCE_FILES})
@@ -69,30 +69,32 @@ add_library(${PROJECT_NAME}Static STATIC ${SOURCE_FILES})
 set(ATTESTATION_LIBRARY_API_INCLUDE ${PROJECT_SOURCE_DIR}/include CACHE INTERNAL "${PROJECT_NAME} API")
 
 include_directories(
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${ATTESTATION_PARSERS_API_INCLUDE}
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/src
-    )
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        ${ATTESTATION_PARSERS_API_INCLUDE}
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    AttestationParsersStatic
-    rapidjson
-	OpenSSL::SSL
-    OpenSSL::Crypto
-    )
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        AttestationParsersStatic
+        rapidjson
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        )
 
-target_link_libraries(${PROJECT_NAME}Static PUBLIC
-    AttestationParsersStatic
-    rapidjson
-	OpenSSL::SSL
-    OpenSSL::Crypto
-    )
+target_link_libraries(${PROJECT_NAME}Static PRIVATE
+        AttestationParsersStatic
+        rapidjson
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        )
 
 if(MSVC)
-	target_compile_definitions(${PROJECT_NAME}Static PUBLIC ATTESTATIONLIBRARY_STATIC)
-	target_compile_definitions(${PROJECT_NAME} PUBLIC _ATTESTATIONLIBRARY_EXPORTS)
+    target_compile_definitions(${PROJECT_NAME}Static PUBLIC ATTESTATIONLIBRARY_STATIC)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _ATTESTATIONLIBRARY_EXPORTS)
+else()
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL") # hide external libs symbols in shared object, do not add it for Enclave as we use LDS file here
 endif()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
@@ -104,7 +106,7 @@ set_target_properties(AttestationLibraryStatic PROPERTIES OUTPUT_NAME "QuoteVeri
 
 ######### QVL Enclave related settings #################################################################################
 
-if (EXISTS ${SGX_SDK} AND EXISTS ${SGX_OPENSSL})
+if (BUILD_ENCLAVE)
     set_source_files_properties(src/Enclave/Enclave_t.c PROPERTIES GENERATED TRUE)
 
     set(SGX_EDGER8R_GENERATOR_COMMAND ${SGX_SDK}/bin/x64/sgx_edger8r

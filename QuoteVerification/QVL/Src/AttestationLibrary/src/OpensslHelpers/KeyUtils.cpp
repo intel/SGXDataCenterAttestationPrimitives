@@ -38,12 +38,7 @@ namespace intel { namespace sgx { namespace qvl { namespace crypto {
 
 crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey)
 {
-
     auto empty = crypto::make_unique<EVP_PKEY>(nullptr);
-
-    if (&ecKey == nullptr) {
-        return empty;
-    }
 
     auto copy = crypto::make_unique(EC_KEY_dup(&ecKey));
     if(!copy)

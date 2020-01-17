@@ -31,6 +31,7 @@
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <Version/Version.h>
+#include <Utils/SafeMemcpy.h>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -53,7 +54,7 @@ TEST(sgxAttestationGetVersion, checkIfVersionCanBeCopiedWithCAndCPPManner)
     memset(dest.get(), '\0', len + 1);
 
     // WHEN C-like copy
-    memcpy(dest.get(), sgxAttestationGetVersion(), len);
+    safeMemcpy(dest.get(), sgxAttestationGetVersion(), len);
 
     // WHEN CPP-like copy
     const std::string sgxVersion(sgxAttestationGetVersion());

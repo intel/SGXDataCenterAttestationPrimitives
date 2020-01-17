@@ -2309,15 +2309,10 @@ quote3_error_t ECDSA256Quote::get_quote_size(sgx_ql_att_key_id_t* p_att_key_id,
 * @param p_app_report
 *                   Pointer to the application enclave's report generated to target the QE.  Must not be NULL.
 * @param p_att_key_id Identifies the quoting enclave and the attestation algorithm requested by the caller.
-* @param p_nonce    Optional pointer the nonce the QE will use when generating the QE report if requested.  If it
-*                   is NULL, then the p_qe_report must be NULL and if it is non-NULL, p_qe_report must non-NULL.
 * @param p_qe_report
 *                   Optional pointer to the report structure that the QE will return.  The QE will use the target_info
 *                   extracted from the app's report so the app enclave can verify it.  If it is NULL, the p_nonce input
 *                   must be NULL.  If it is non-NULL, the p_nonce input must be non-NULL.
-* @param cur_pce_isv_svn
-*                   The currently installed PCE's ISVSVN.  The quote verifier can use this value to see if the PCE used
-*                   to certify the attestation key has changed since the attestation was certified.
 * @param p_quote    Pointer to the quote buffer that will contain the generated quote.  The buffer it points to must be
 *                   large enough to contain the full quote returned by the get_quote_size() function.  It must not be
 *                   NULL.

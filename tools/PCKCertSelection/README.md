@@ -31,11 +31,8 @@ Linux:
 * gcc 
 * bash shell
 
-Windows:
-* VS
+Prebuild openssl v1.1.1d in prebuilt/openssl will be used for Linux & Windows
 
-Additional libraries must be downloaded from official, public repositories and installed before first build:
-* openssl v1.1.0i or higher - http://www.openssl.org/source/ (AttestationParsers dependency) for Linux or Windows.
 
 
 

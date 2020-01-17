@@ -51,7 +51,7 @@ PCKSorter::PCKSorter ( cpu_svn_t platform_svn,
 	: platformSvn ( platform_svn ),
 	pceIsvSvn ( pce_isvsvn ),
 	pceID ( pce_id ),
-	tcbInfoString ( tcb_info ),
+	tcbmgr(tcb_info),
 	pemCerts ( pem_certs, pem_certs + ncerts ),
 	pcks {},
 	tcbInfo {},
@@ -109,26 +109,10 @@ pck_cert_selection_res_t PCKSorter::clean_pcks_return ( pck_cert_selection_res_t
 pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 {
 	// general TCBInfo format validation
-	try
-	{
-		this->tcbInfo = TcbInfo::parse ( this->tcbInfoString );
-	}
-	catch ( const std::exception& )
-	{
-		return PCK_CERT_SELECT_INVALID_TCB;
-	}
-
-	// TCB Type check, currently only type 0 is supported
-	// for TcbInfo::V1, TcbType field not present, default to 0
-	int tcbType = 0;
-	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>(TcbInfo::Version::V1) )
-	{
-		tcbType = this->tcbInfo.getTcbType ();
-		if ( tcbType != 0 )
-		{
-			return PCK_CERT_SELECT_UNSUPPORTED_TCB_TYPE;
-		}
-	}
+	pck_cert_selection_res_t ret = PCK_CERT_SELECT_SUCCESS;
+	ret = parse_input_tcb();
+	if (ret != PCK_CERT_SELECT_SUCCESS)
+		return ret;
 
 	// PCEID in JSON is big BE, convert to LE and compare with input PCEID
 	int16_t tcbPCEID = (this->tcbInfo.getPceId ()[0] << 8) + this->tcbInfo.getPceId ()[1];
@@ -172,7 +156,8 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 		// 4. verify CPUSVN match TCB Components
 		// in depth verification, valid PCK are expected to have match
 		// decompose CPUSVN based on algorithm (TCBType) and compare to TCB Components
-		vector < uint8_t > components = this->decompose_cpusvn_components ( tcbType, pckCert->getTcb().getCpuSvn () );
+		vector < uint8_t > components;
+		this->tcbmgr.decompose_cpusvn_components(pckCert->getTcb().getCpuSvn(), components);
 		if ( this->equal_bytes ( components, pckCert->getTcb().getSgxTcbComponents () ) == false )
 		{
 			return clean_pcks_return ( PCK_CERT_SELECT_INVALID_CERT_CPUSVN );
@@ -399,7 +384,8 @@ pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 	{
 		tcbType = this->tcbInfo.getTcbType ();
 	}
-	vector < uint8_t > components = this->decompose_cpusvn_components ( tcbType, rawCPUSVN );
+	vector < uint8_t > components;
+	this->tcbmgr.decompose_cpusvn_components(rawCPUSVN, components);
 	
 	// iterate through ordered buckets, find first PCK with TCB lower than raw TCB
 	for ( size_t bucket_index = 0; bucket_index < this->buckets.size(); bucket_index++ )
@@ -427,25 +413,23 @@ pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 	return PCK_CERT_SELECT_PCK_NOT_FOUND;
 }
 
-
 /**
- * Decompose raw platform CPUSVN to TCB Components vector based on TCBType algorithm.
- * @note the composition of raw platform CPUSVN is not architecturally defined and its composition can change with the release of a new TCBInfo for any given FMSPC.
- *
- * @param[in] tcb_type - int, The TCBType value, for current version must be 0.
- * @param[in] cpusvn - const vector<uint8_t>& , Input raw CPUSVN in byte vector format.
- * @return A vector of TCB Components decomposition of CPUSVN.
+ * parse_input_tcb function to do a jeneral check for tcb
+ * just handle over the result from tcbmgr to caller
+ * @param [in] void - pck_cert_selection_res_t, The result to return.
+ * @return [ret] pck_cert_selection_res_t
  */
-vector<uint8_t> PCKSorter::decompose_cpusvn_components ( int tcb_type, const vector<uint8_t>& cpusvn )
+pck_cert_selection_res_t PCKSorter::parse_input_tcb(void)
 {
-	vector<uint8_t> res;
-	if ( tcb_type == 0 )
-	{
-		// for TCB Type 0 it is simple copy
-		res = cpusvn;
-	}
-	return res;
+	pck_cert_selection_res_t ret = PCK_CERT_SELECT_SUCCESS;
+	ret = tcbmgr.tcb_parse_wrapper();
+
+	// if no error, keep one copy tcbInfo in pck_sorter
+	if (ret == PCK_CERT_SELECT_SUCCESS)
+		tcbInfo = tcbmgr.get_tcb_info();
+	return ret;
 }
+
 
 
 /*

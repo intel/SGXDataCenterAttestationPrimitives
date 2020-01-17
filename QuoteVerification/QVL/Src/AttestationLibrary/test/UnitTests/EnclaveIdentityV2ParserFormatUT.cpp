@@ -74,7 +74,7 @@ TEST_F(EnclaveIdentityV2ParserFormatUT, positiveQE)
         EXPECT_EQ(jsonObject->getTcbStatus(6), TcbStatus::ConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(5), TcbStatus::OutOfDateConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(4), TcbStatus::Revoked);
-        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::OutOfDate);
+        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::Revoked);
     }
     catch(const ParserException &ex)
     {
@@ -150,7 +150,7 @@ TEST_F(EnclaveIdentityV2ParserFormatUT, positiveQVE)
         EXPECT_EQ(jsonObject->getTcbStatus(6), TcbStatus::ConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(5), TcbStatus::OutOfDateConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(4), TcbStatus::Revoked);
-        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::OutOfDate);
+        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::Revoked);
     }
     catch(const ParserException &ex)
     {

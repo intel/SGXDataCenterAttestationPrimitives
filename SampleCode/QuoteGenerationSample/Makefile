@@ -30,7 +30,7 @@
 #
 
 ######## SGX SDK Settings ########
-DEBUG ?= 0
+SGX_DEBUG ?= 0
 
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
@@ -42,7 +42,7 @@ SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 
-ifeq ($(DEBUG), 1)
+ifeq ($(SGX_DEBUG), 1)
         SGX_COMMON_CFLAGS += -O0 -g
 else
         SGX_COMMON_CFLAGS += -O2
@@ -59,9 +59,9 @@ App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 # Two configuration modes - Debug, Release
-#   Debug - Macro DEBUG enabled.
-#   Release - Macro NDEBUG enabled.
-ifeq ($(DEBUG), 1)
+#   Debug - Macro SGX_DEBUG enabled.
+#   Release - Macro SGX_DEBUG disabled.
+ifeq ($(SGX_DEBUG), 1)
         App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
@@ -69,7 +69,7 @@ endif
 
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread 
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
@@ -117,7 +117,7 @@ Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
 Enclave_Config_File := Enclave/Enclave.config.xml
 
-ifeq ($(DEBUG), 1)
+ifeq ($(SGX_DEBUG), 1)
         Build_Mode = HW_DEBUG
 else
         Build_Mode = HW_RELEASE
@@ -194,6 +194,6 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 
 .PHONY: clean
 clean:
-	@rm -f  $(App_Name)  App/*.o App/Enclave_u.* .config_*  
+	@rm -f  $(App_Name)  App/*.o App/Enclave_u.* .config_*
 	@rm -f  $(Enclave_Name) $(Signed_Enclave_Name) $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 

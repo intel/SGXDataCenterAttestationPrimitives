@@ -47,6 +47,7 @@ struct AppOptions
     std::string tcbSigningChainFile;
     std::string quoteFile;
     std::string qeIdentityFile;
+    std::string qveIdentityFile;
     time_t expirationDate;
 };
 

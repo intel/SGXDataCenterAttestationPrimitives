@@ -39,9 +39,12 @@
     <ClCompile Include="..\..\..\QuoteGeneration\common\src\se_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\QvE\Enclave\qve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="dcap_quoteverify.def">
+    <None Include="sgx_dcap_quoteverify.def">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
@@ -61,9 +64,12 @@
     <ClInclude Include="..\inc\sgx_dcap_quoteverify.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\sgx_dcap_qv_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="dcap_quoteverify.rc">
+    <ResourceCompile Include="sgx_dcap_quoteverify.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

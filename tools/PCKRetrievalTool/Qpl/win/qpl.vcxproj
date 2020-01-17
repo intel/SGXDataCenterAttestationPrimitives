@@ -61,7 +61,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;$(SGXDCAPComponentsPath)\Header Files;../inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)\include;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
@@ -85,7 +85,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;$(SGXDCAPComponentsPath)\Header Files;../inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)\include;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -104,7 +104,6 @@
     <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="qpl.def" />
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +114,5 @@
     <ResourceCompile Include="qpl.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

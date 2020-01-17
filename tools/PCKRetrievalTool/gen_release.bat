@@ -30,7 +30,7 @@
 @echo off 
 
 set svn_ver=%1%
-set rel_dir_base=PCKIDRetrievalTool_v1.3.100.4
+set rel_dir_base=PCKIDRetrievalTool_v1.4.100.0
 set rel_dir_name=%rel_dir_base%%svn_ver%
 
 
@@ -41,6 +41,7 @@ mkdir %rel_dir_name%
 copy x64\release\enclave.signed.dll %rel_dir_name%
 copy x64\release\dcap_quoteprov.dll %rel_dir_name%
 copy x64\release\PCKIDRetrievalTool.exe %rel_dir_name%
+copy network_setting.conf %rel_dir_name%
 copy README.txt %rel_dir_name%
 copy License.txt %rel_dir_name%
 

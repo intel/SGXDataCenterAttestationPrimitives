@@ -29,25 +29,35 @@
 #
 #
 
-include scripts/installConfig
+include installConfig
 
-SOURCE_FOLDER=package
+PACKAGE_ROOT_FOLDER=pkgroot
+PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
-NGA_ETC_PATH=$(SOURCE_FOLDER)/$(ETC_DIR)
-NGA_LIB_PATH=$(SOURCE_FOLDER)/$(LIB_DIR)
-USR_ETC_PATH=$(shell readlink -m $(DESTDIR)/$(ETC_DIR))
-USR_LIB_PATH=$(shell readlink -m $(DESTDIR)/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null))
+USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
+
 USR_LIB_VER=1.0.0
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 default:
 
-install:
-	install -d $(USR_ETC_PATH)
-	install -d $(USR_LIB_PATH)
-	install $(NGA_ETC_PATH)/* $(USR_ETC_PATH)
-	install $(NGA_LIB_PATH)/* $(USR_LIB_PATH)
-	cd $(USR_LIB_PATH) && \
+install: $(PACKAGES)
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QPL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libdcap_quoteprov.so libdcap_quoteprov.so.$(USR_LIB_VER) && \
-	ln -s libdcap_quoteprov.so.$(USR_LIB_VER) libdcap_quoteprov.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}') && \
+	ln -fs libdcap_quoteprov.so.$(USR_LIB_VER) libdcap_quoteprov.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
 	mv libsgx_default_qcnl_wrapper.so libsgx_default_qcnl_wrapper.so.$(USR_LIB_VER) && \
-	ln -s libsgx_default_qcnl_wrapper.so.$(USR_LIB_VER) libsgx_default_qcnl_wrapper.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}')
+	ln -fs libsgx_default_qcnl_wrapper.so.$(USR_LIB_VER) libsgx_default_qcnl_wrapper.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
+	install -d $(shell readlink -m $(DESTDIR)/$(DCAP_QPL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH))
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QPL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
+	ln -fs libdcap_quoteprov.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libdcap_quoteprov.so && \
+	ln -fs libsgx_default_qcnl_wrapper.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_default_qcnl_wrapper.so
+
+$(PACKAGES):
+	install -d $(shell readlink -m $(DESTDIR)/$@)
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$@/$(USR_LIB_PATH))
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(ETC_DIR)/.*), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(ETC_DIR)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(ETC_DIR)/* $(DESTDIR)/$@/$(ETC_DIR))
+

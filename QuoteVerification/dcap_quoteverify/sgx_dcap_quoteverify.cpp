@@ -36,6 +36,7 @@
 
 #include "sgx_dcap_quoteverify.h"
 #include "sgx_dcap_pcs_com.h"
+#include "sgx_dcap_qv_internal.h"
 #ifndef _MSC_VER
 #include "linux/qve_u.h"
 #else //_MSC_VER
@@ -90,7 +91,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
     int launch_token_updated = 0;
 #if defined(_MSC_VER)
     TCHAR qve_enclave_path[MAX_PATH] = _T("");
-#else 
+#else
     char qve_enclave_path[MAX_PATH] = "";
 #endif
     //should be replaced with memset_s, but currently can't find proper header file for it
@@ -119,7 +120,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
         {
             SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QvE. %s\n", qve_enclave_path);
             sgx_status = sgx_create_enclave(qve_enclave_path,
-                DEBUG_MODE,
+                0, // Don't support debug load QvE by default
                 p_launch_token,
                 &launch_token_updated,
                 p_qve_eid,
@@ -200,13 +201,9 @@ quote3_error_t sgx_qv_set_enclave_load_policy(
 }
 
 
-
-
-
-
 /* Initialize the enclave:
-*   Call sgx_create_enclave to initialize an enclave instance
-*/
+ * Call sgx_create_enclave to initialize an enclave instance
+ **/
 static int initialize_enclave(sgx_enclave_id_t* eid)
 {
     sgx_launch_token_t token = { 0 };
@@ -223,25 +220,8 @@ static int initialize_enclave(sgx_enclave_id_t* eid)
 
 /**
  * Perform quote verification. This API will load QvE and call the verification Ecall.
- *
- * @param p_quote[IN] - Pointer to SGX Quote.
- * @param quote_size[IN] - Size of the buffer pointed to by p_quote (in bytes).
- * @param p_quote_collateral[IN] - This is a pointer to the Quote Certification Collateral provided by the caller.
- * @param expiration_check_date[IN] - This is the date that the QvE will use to determine if any of the inputted collateral have expired.
- * @param p_collateral_expiration_status[OUT] - Address of the outputted expiration status.  This input must not be NULL.
- * @param p_quote_verification_result[OUT] - Address of the outputted quote verification result.
- * @param p_qve_report_info[IN/OUT] - This parameter is optional.  If not NULL, the QvE will generate a report with using the target_info provided in the sgx_ql_qe_report_info_t structure.
- * @param supplemental_data_size[IN] - Size of the buffer pointed to by p_quote (in bytes).
- * @param p_supplemental_data[OUT] - The parameter is optional.  If it is NULL, supplemental_data_size must be 0.
- *
- * @return Status code of the operation, one of:
- *      - SGX_QL_SUCCESS
- *      - SGX_QL_ERROR_INVALID_PARAMETER
- *      - SGX_QL_QUOTE_FORMAT_UNSUPPORTED
- *      - SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED
- *      - SGX_QL_UNABLE_TO_GENERATE_REPORT
- *      - SGX_QL_ERROR_UNEXPECTED
  **/
+
 quote3_error_t sgx_qv_verify_quote(
     const uint8_t *p_quote,
     uint32_t quote_size,
@@ -274,6 +254,150 @@ quote3_error_t sgx_qv_verify_quote(
     unsigned char ca_from_quote[CA_SIZE] = { 0 };
     struct _sgx_ql_qve_collateral_t* qve_collaterals_from_qp = NULL;
 
+    //decide trusted VS untrusted verification
+    //
+    if (p_qve_report_info) {
+        do {
+            //create and initialize QvE
+            //
+            if (initialize_enclave(&qve_eid) == -1) {
+                qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
+                break;
+            }
+
+            //in case input collateral is NULL, dynamically load and call QPL to retrieve verification collateral
+            //
+            if (NULL_POINTER(p_quote_collateral)) {
+
+                //call QvE to extract fmspc and CA from the quote, these values are required inorder to query collateral from QPL
+                //
+                ecall_ret = get_fmspc_ca_from_quote(qve_eid, &qve_ret, p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
+                if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info: get_fmspc_ca_from_quote successfully returned.\n");
+                }
+                else {
+                    SE_TRACE(SE_TRACE_DEBUG, "Error: get_fmspc_ca_from_quote failed: 0x%04x\n", qve_ret);
+                    break;
+                }
+
+                //retrieve verification collateral using QPL
+                //
+                qve_ret = sgx_dcap_retrieve_verification_collateral(
+                    (const char *)fmspc_from_quote,
+                    FMSPC_SIZE,
+                    (const char *)ca_from_quote,
+                    &qve_collaterals_from_qp);
+                if (qve_ret == SGX_QL_SUCCESS) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_dcap_retrieve_verification_collateral successfully returned.\n");
+                }
+                else {
+                    SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_dcap_retrieve_verification_collateral failed: 0x%04x\n", qve_ret);
+                    break;
+                }
+                p_quote_collateral = qve_collaterals_from_qp;
+            }
+
+            ecall_ret = sgx_qve_verify_quote(
+                qve_eid, &qve_ret,
+                p_quote, quote_size,
+                p_quote_collateral,
+                expiration_check_date,
+                p_collateral_expiration_status,
+                p_quote_verification_result,
+                p_qve_report_info,
+                supplemental_data_size,
+                p_supplemental_data);
+            if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS) {
+                SE_TRACE(SE_TRACE_DEBUG, "Info: QvE: sgx_qve_verify_quote successfully returned.\n");
+            }
+            else {
+                SE_TRACE(SE_TRACE_DEBUG, "Error: QvE: sgx_qve_verify_quote failed: 0x%04x\n", qve_ret);
+                break;
+            }
+
+        } while (0);
+
+        //destroy QvE enclave
+        //
+        if (qve_eid != 0) {
+            unload_qve();
+        }
+    }
+    else {
+        do {
+            //in case input collateral is NULL, dynamically load and call QPL to retrieve verification collateral
+            //
+            if (NULL_POINTER(p_quote_collateral)) {
+
+                //extract fmspc and CA from the quote, these values are required inorder to query collateral from QPL
+                //
+                qve_ret = qvl_get_fmspc_ca_from_quote(p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
+                if (qve_ret == SGX_QL_SUCCESS) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info: get_fmspc_ca_from_quote successfully returned.\n");
+                }
+                else {
+                    SE_TRACE(SE_TRACE_DEBUG, "Error: get_fmspc_ca_from_quote failed: 0x%04x\n", qve_ret);
+                    break;
+                }
+
+                //retrieve verification collateral using QPL
+                //
+                qve_ret = sgx_dcap_retrieve_verification_collateral(
+                    (const char *)fmspc_from_quote,
+                    FMSPC_SIZE,
+                    (const char *)ca_from_quote,
+                    &qve_collaterals_from_qp);
+                if (qve_ret == SGX_QL_SUCCESS) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_dcap_retrieve_verification_collateral successfully returned.\n");
+                }
+                else {
+                    SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_dcap_retrieve_verification_collateral failed: 0x%04x\n", qve_ret);
+                    break;
+                }
+                p_quote_collateral = qve_collaterals_from_qp;
+            }
+            qve_ret = sgx_qvl_verify_quote(
+                p_quote, quote_size,
+                p_quote_collateral,
+                expiration_check_date,
+                p_collateral_expiration_status,
+                p_quote_verification_result,
+                p_qve_report_info,
+                supplemental_data_size,
+                p_supplemental_data);
+
+            if (qve_ret == SGX_QL_SUCCESS) {
+                SE_TRACE(SE_TRACE_DEBUG, "Info: QVL: sgx_qve_verify_quote successfully returned.\n");
+            }
+            else {
+                SE_TRACE(SE_TRACE_DEBUG, "Error: QVL: sgx_qve_verify_quote failed: 0x%04x\n", qve_ret);
+                break;
+            }
+        } while (0);
+    }
+    //free verification collateral using QPL
+    //
+    if (qve_collaterals_from_qp) {
+        sgx_dcap_free_verification_collateral(qve_collaterals_from_qp);
+    }
+
+
+    return qve_ret;
+}
+
+/**
+ * Get supplemental data required size.
+ **/
+quote3_error_t sgx_qv_get_quote_supplemental_data_size(
+    uint32_t *p_data_size) {
+    if (NULL_POINTER(p_data_size)) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    uint32_t trusted_size = 0, untrusted_size = 0;
+    bool flag = false;
+    sgx_status_t ecall_ret = SGX_ERROR_UNEXPECTED;
+    sgx_enclave_id_t qve_eid = 0;
+    quote3_error_t qve_ret = SGX_QL_ERROR_INVALID_PARAMETER;
 
     do {
         //create and initialize QvE
@@ -283,110 +407,44 @@ quote3_error_t sgx_qv_verify_quote(
             break;
         }
 
-        //in case input collateral is NULL, dynamically load and call QPL to retrieve verification collateral
+        //call QvE to get supplemental data size
         //
-        if (NULL_POINTER(p_quote_collateral)) {
-
-            //call QvE to extract fmspc and CA from the quote, these values are required inorder to query collateral from QPL
-            //
-            ecall_ret = get_fmspc_ca_from_quote(qve_eid, &qve_ret, p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
-            if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS) {
-                SE_TRACE(SE_TRACE_DEBUG, "Info: get_fmspc_ca_from_quote successfully returned.\n");
-            }
-            else {
-                SE_TRACE(SE_TRACE_DEBUG, "Error: get_fmspc_ca_from_quote failed: 0x%04x\n", qve_ret);
-                break;
-            }
-
-            //retrieve verification collateral using QPL
-            //
-            qve_ret = sgx_dcap_retrieve_verification_collateral(
-                (const char *)fmspc_from_quote,
-                FMSPC_SIZE,
-                (const char *)ca_from_quote,
-                &qve_collaterals_from_qp);
-            if (qve_ret == SGX_QL_SUCCESS) {
-                SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_dcap_retrieve_verification_collateral successfully returned.\n");
-            }
-            else {
-                SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_dcap_retrieve_verification_collateral failed: 0x%04x\n", qve_ret);
-                break;
-            }
-            p_quote_collateral = qve_collaterals_from_qp;
-        }
-
-        ecall_ret = sgx_qve_verify_quote(
-            qve_eid, &qve_ret,
-            p_quote, quote_size,
-            p_quote_collateral,
-            expiration_check_date,
-            p_collateral_expiration_status,
-            p_quote_verification_result,
-            p_qve_report_info,
-            supplemental_data_size,
-            p_supplemental_data);
-
-        if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS) {
-            SE_TRACE(SE_TRACE_DEBUG, "Info: QvE: sgx_qve_verify_quote successfully returned.\n");
+        ecall_ret = sgx_qve_get_quote_supplemental_data_size(qve_eid, &qve_ret, &trusted_size);
+        if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS && trusted_size == sizeof(sgx_ql_qv_supplemental_t)) {
+            SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_qve_get_quote_supplemental_data_size successfully returned.\n");
         }
         else {
-            SE_TRACE(SE_TRACE_DEBUG, "Error: QvE: sgx_qve_verify_quote failed: 0x%04x\n", qve_ret);
+            SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_size failed: 0x%04x\n", qve_ret);
+            trusted_size = 0;
             break;
         }
 
-        qve_ret = SGX_QL_SUCCESS;
+        flag = true;
 
     } while (0);
 
-    //free verification collateral using QPL
-    //
-    if (qve_collaterals_from_qp) {
-        sgx_dcap_free_verification_collateral(qve_collaterals_from_qp);
-    }
-    
-    //destroy QvE enclave
-    //
-    if (qve_eid != 0) {
-        unload_qve();
-    }
 
-    return qve_ret;
-}
+    do {
+        //call untrusted API to get supplemental data size
+        qve_ret = sgx_qvl_get_quote_supplemental_data_size(&untrusted_size);
+        if (qve_ret != SGX_QL_SUCCESS || untrusted_size != sizeof(sgx_ql_qv_supplemental_t)) {
+            SE_TRACE(SE_TRACE_DEBUG, "Error: untrusted API sgx_qvl_get_quote_supplemental_data_size failed: 0x%04x\n", qve_ret);
+            untrusted_size = 0;
+            *p_data_size = 0;
+            break;
+        }
 
-/**
- * Get supplemental data required size.
- * @param p_data_size[OUT] - Pointer to hold the size of the buffer in bytes required to contain all of the supplemental data.
- *
- * @return Status code of the operation, one of:
- *      - SGX_QL_SUCCESS
- *      - SGX_QL_ERROR_INVALID_PARAMETER
- *      - SGX_QL_ENCLAVE_LOAD_ERROR
- **/
-quote3_error_t sgx_qv_get_quote_supplemental_data_size(
-    uint32_t *p_data_size) {
-    if (NULL_POINTER(p_data_size)) {
-        return SGX_QL_ERROR_INVALID_PARAMETER;
-    }
-    sgx_status_t ecall_ret = SGX_ERROR_UNEXPECTED;
-    sgx_enclave_id_t qve_eid = 0;
-    quote3_error_t qve_ret = SGX_QL_ERROR_INVALID_PARAMETER;
+        if (flag && trusted_size != untrusted_size) {
+            SE_TRACE(SE_TRACE_DEBUG, "Error: quote_supplemental_data_size is different between trusted QvE and untrsuted QVL.\n");
+            *p_data_size = 0;
+            qve_ret = SGX_QL_ERROR_QVL_QVE_MISMATCH;
+            break;
+        }
 
-    //create and initialize QvE
-    //
-    if (initialize_enclave(&qve_eid) == -1) {
-        return SGX_QL_ENCLAVE_LOAD_ERROR;
-    }
+        *p_data_size = untrusted_size;
 
-    //call QvE to get supplemental data size
-    //
-    ecall_ret = sgx_qve_get_quote_supplemental_data_size(qve_eid, &qve_ret, p_data_size);
-    if (qve_ret == SGX_QL_SUCCESS && ecall_ret == SGX_SUCCESS && *p_data_size == sizeof(sgx_ql_qv_supplemental_t)) {
-        SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_qve_get_quote_supplemental_data_size successfully returned.\n");
-    }
-    else {
-        SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_size failed: 0x%04x\n", qve_ret);
-        *p_data_size = 0;
-    }
+    } while (0) ;
+
 
     //destroy QvE enclave
     //

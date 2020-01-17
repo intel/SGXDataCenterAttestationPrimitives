@@ -66,7 +66,11 @@ public:
     virtual bool isRevoked(const dcap::parser::x509::Certificate& cert) const;
 
 private:
+#ifdef _DCAP_QUOTEVERIFY_LIB
+    intel::sgx::dcap::crypto::X509_CRL_uptr _crl;
+#else
     crypto::X509_CRL_uptr _crl;
+#endif
 
     Issuer _issuer;
     Validity _validity;

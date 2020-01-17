@@ -39,8 +39,7 @@ cmake ../../ -DBUILD_ATTESTATION_APP=$BUILD_ATTESTATION_APP \
              -DBUILD_TESTS=$BUILD_TESTS \
              -DCMAKE_C_COMPILER=clang \
              -DCMAKE_CXX_COMPILER=clang++ \
-             -DCUSTOM_FLAGS="-fsanitize=address" \
-             -DSGX_SDK="ommit" \
+             -DSANITIZE_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
              -DCMAKE_BUILD_TYPE=$type \
              "$@" \
              && make -j6 runTests || exit 1

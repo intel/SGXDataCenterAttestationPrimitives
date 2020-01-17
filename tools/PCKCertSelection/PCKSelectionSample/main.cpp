@@ -152,7 +152,25 @@ int main ( void )
 	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), 3, &best_index );
 	if ( res == PCK_CERT_SELECT_SUCCESS )
 	{
-		cout << "Unexpected Success index: " << res << ", exit\n";
+		cout << " Success index: " << res << ", exit\n";
+		return 1;
+	}
+	else
+	{
+		cout << "Error returned: " << res << "\n";
+	}
+
+	cout << "Below test case to get the hw config ID" << endl;
+	
+	// check the 
+	plat_svn = { 0, 1, 2, 3, 4, 5, 19, 7, 8, 9, 0, 0, 0, 0, 0, 0 };
+	plat_pcesvn = 4;
+	uint32_t configuration_id = 0;
+	cout << "Call with PCESVN (4), CPUSVN {0, 1, 2, 3, 4, 5, 19, 7, 8, 9, 0, 0, 0, 0, 0, 0 }, expecting success with HW type 19\n";
+	res = platform_sgx_hw_config(&plat_svn, tcb.c_str(), &configuration_id);
+	if (res == PCK_CERT_SELECT_SUCCESS)
+	{
+		cout << "Success get hw type : " << configuration_id << endl;
 		return 1;
 	}
 	else
@@ -161,6 +179,5 @@ int main ( void )
 	}
 
 	cout << "Sample successfully complete\n";
-
 	return 0;
 }

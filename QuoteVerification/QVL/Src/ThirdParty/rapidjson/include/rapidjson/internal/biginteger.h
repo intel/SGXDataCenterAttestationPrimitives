@@ -16,6 +16,7 @@
 #define RAPIDJSON_BIGINTEGER_H_
 
 #include "../rapidjson.h"
+#include "../utils/SafeMemcpy.h"
 
 #if defined(_MSC_VER) && defined(_M_AMD64)
 #include <intrin.h> // for _umul128
@@ -30,7 +31,7 @@ public:
     typedef uint64_t Type;
 
     BigInteger(const BigInteger& rhs) : count_(rhs.count_) {
-        std::memcpy(digits_, rhs.digits_, count_ * sizeof(Type));
+        safeMemcpy(digits_, rhs.digits_, count_ * sizeof(Type));
     }
 
     explicit BigInteger(uint64_t u) : count_(1) {
@@ -56,7 +57,7 @@ public:
     {
         if (this != &rhs) {
             count_ = rhs.count_;
-            std::memcpy(digits_, rhs.digits_, count_ * sizeof(Type));
+            safeMemcpy(digits_, rhs.digits_, count_ * sizeof(Type));
         }
         return *this;
     }

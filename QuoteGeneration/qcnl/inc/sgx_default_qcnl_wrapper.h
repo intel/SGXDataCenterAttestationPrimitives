@@ -99,6 +99,11 @@ sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_
 
 void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl);
 
+sgx_qcnl_error_t sgx_qcnl_register_platform (const sgx_ql_pck_cert_id_t *p_pck_cert_id, 
+                                            const uint8_t *platform_manifest,
+                                            uint16_t platform_manifest_size,
+                                            const uint8_t *user_token,
+                                            uint16_t user_token_size);
 #if defined(__cplusplus)
 }
 #endif

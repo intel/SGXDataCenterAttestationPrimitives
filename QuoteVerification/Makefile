@@ -34,14 +34,14 @@ CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 .PHONY: clean
 
 all:
-	$(MAKE) -C dcap_quoteverify/linux
 	$(MAKE) -C QvE
-
-dcap_quoteverify:
 	$(MAKE) -C dcap_quoteverify/linux
 
-QvE: dcap_quoteverify
+QvE:
 	$(MAKE) -C QvE
+
+dcap_quoteverify: QvE
+	$(MAKE) -C dcap_quoteverify/linux
 
 clean:
 	$(MAKE) -C dcap_quoteverify/linux clean

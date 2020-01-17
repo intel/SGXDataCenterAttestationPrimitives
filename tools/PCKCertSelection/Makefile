@@ -67,6 +67,8 @@ release:
 clean: $(PROJECTS)
 	$(VERBOSE)echo projects clean: done
 
+PCKSelectionSample : PCKCertSelectionLib
+
 $(PROJECTS): $(BIN_DIR)
 	$(VERBOSE)$(MAKE) -C $@ $(MAKECMDGOALS)
 	$(VERBOSE)echo "$@ : done"

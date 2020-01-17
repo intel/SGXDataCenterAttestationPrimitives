@@ -44,6 +44,7 @@ namespace {
     static const std::string rootCaCrlDefaultPath = "rootCaCrl.pem";
     static const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
     static const std::string qeIdentityDefaultPath = "";
+    static const std::string qveIdentityDefaultPath = "";
     static const std::string expirationDateDefault = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 }
 
@@ -55,6 +56,7 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     auto tcbSigningChainFile = arg_str0(NULL, "tcbSignChain", NULL, "TCB Signing Certificate chain file path, PEM format [=tcbSignChain.pem]");
     auto tcbInfoFile = arg_str0(NULL, "tcbInfo", NULL, "TCB Info file path, JSON format [=tcbInfo.json]");
     auto qeIdentityFile = arg_str0(NULL, "qeIdentity", NULL, "QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]");
+    auto qveIdentityFile = arg_str0(NULL, "qveIdentity", NULL, "QveIdentity file path, JSON format. QveIdentity verification is optional, will not run by default [=]");
     auto rootCaCrlFile = arg_str0(NULL, "rootCaCrl", NULL, "Root Ca CRL file path, PEM format [=rootCaCrl.pem]");
     auto intermediateCaCrlFile = arg_str0(NULL, "intermediateCaCrl", NULL, "Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]");
     auto quoteFile = arg_str0(NULL, "quote", NULL, "Quote file path, binary format [=quote.dat]");
@@ -63,7 +65,7 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     auto end = arg_end(20);
 
     void *argtable[] = {trustedRootCACertificateFile, pckSigningChainFile, pckCertificateFile,
-                        tcbSigningChainFile, tcbInfoFile, qeIdentityFile,
+                        tcbSigningChainFile, tcbInfoFile, qeIdentityFile, qveIdentityFile,
                         rootCaCrlFile, intermediateCaCrlFile, quoteFile, expirationDate, help, end};
 
     if (arg_nullcheck(argtable) != 0)
@@ -78,6 +80,7 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     tcbSigningChainFile->sval[0] = tcbSignChainDefaultPath.c_str();
     tcbInfoFile->sval[0] = tcbInfoDefaultPath.c_str();
     qeIdentityFile->sval[0] = qeIdentityDefaultPath.c_str();
+    qveIdentityFile->sval[0] = qveIdentityDefaultPath.c_str();
     rootCaCrlFile->sval[0] = rootCaCrlDefaultPath.c_str();
     intermediateCaCrlFile->sval[0] = intermediateCaCrlDefaultPath.c_str();
     quoteFile->sval[0] = quoteDefaultPath.c_str();
@@ -106,6 +109,7 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     options->tcbSigningChainFile = std::string(tcbSigningChainFile->sval[0]);
     options->tcbInfoFile = std::string(tcbInfoFile->sval[0]);
     options->qeIdentityFile = std::string(qeIdentityFile->sval[0]);
+    options->qveIdentityFile = std::string(qveIdentityFile->sval[0]);
     options->rootCaCrlFile = std::string(rootCaCrlFile->sval[0]);
     options->intermediateCaCrlFile = std::string(intermediateCaCrlFile->sval[0]);
     options->quoteFile = std::string(quoteFile->sval[0]);

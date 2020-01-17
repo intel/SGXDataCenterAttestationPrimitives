@@ -130,50 +130,50 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -205,8 +205,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -238,8 +242,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|Win32'">
     <ClCompile>
@@ -271,8 +279,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <ClCompile>
@@ -304,8 +316,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -335,8 +351,12 @@
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|Win32'">
     <ClCompile>
@@ -367,8 +387,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -399,8 +423,12 @@
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|x64'">
     <ClCompile>
@@ -431,8 +459,12 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="qve.edl">
@@ -483,6 +515,9 @@
   <ItemGroup>
     <ClInclude Include="..\Include\collateral_files.h" />
     <ClInclude Include="..\Include\qve_header.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="win\qve.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

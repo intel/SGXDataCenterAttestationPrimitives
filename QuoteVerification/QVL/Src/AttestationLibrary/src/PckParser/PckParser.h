@@ -134,7 +134,11 @@ void cleanUpOpenSSL();
 //
 ////////////////////////////////////////////////////////////////////////////
 
+#ifdef _DCAP_QUOTEVERIFY_LIB
+intel::sgx::dcap::crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
+#else
 crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
+#endif
 long getVersion(const X509_CRL& crl);
 Issuer getIssuer(const X509_CRL& crl);
 int getExtensionCount(const X509_CRL& crl);

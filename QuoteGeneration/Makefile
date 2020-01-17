@@ -87,38 +87,42 @@ sample: quote_wrapper
 deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper qve_wrapper
 	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
-.PHONY: deb_sgx_dcap_ql_dbg_pkg
-deb_sgx_dcap_ql_dbg_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper qve_wrapper
-ifndef DEBUG
-	./installer/linux/deb/libsgx-dcap-ql-dbg/build.sh
-endif
-
-.PHONY: deb_sgx_dcap_ql_dev_pkg
-deb_sgx_dcap_ql_dev_pkg:
-	./installer/linux/deb/libsgx-dcap-ql-dev/build.sh
-
 .PHONY: deb_sgx_dcap_default_qpl_pkg
-deb_sgx_dcap_default_qpl_pkg: $(CHECK_OPT) qcnl_wrapper qpl_wrapper
+deb_sgx_dcap_default_qpl_pkg: qcnl_wrapper qpl_wrapper
 	./installer/linux/deb/libsgx-dcap-default-qpl/build.sh
-
-.PHONY:deb_sgx_dcap_default_qpl_dbg_pkg
-deb_sgx_dcap_default_qpl_dbg_pkg: $(CHECK_OPT) qcnl_wrapper qpl_wrapper
-ifndef DEBUG
-	./installer/linux/deb/libsgx-dcap-default-qpl-dbg/build.sh
-endif
-
-.PHONY: deb_sgx_dcap_default_qpl_dev_pkg
-deb_sgx_dcap_default_qpl_dev_pkg:
-	./installer/linux/deb/libsgx-dcap-default-qpl-dev/build.sh
 
 .PHONY: deb_sgx_dcap_pccs_pkg
 deb_sgx_dcap_pccs_pkg:
-	./installer/linux/deb/libsgx-dcap-pccs/build.sh
+	$(MAKE) -C ../tools/PCKCertSelection/
+	mkdir -p pccs/lib/
+	cp ../tools/PCKCertSelection/out/libPCKCertSelection.so pccs/lib/
+	./installer/linux/deb/sgx-dcap-pccs/build.sh
+
+.PHONY: deb_sgx_ae_qe3_pkg
+deb_sgx_ae_qe3_pkg: $(CHECK_OPT)
+	./installer/linux/deb/libsgx-ae-qe3/build.sh
+
+.PHONY: deb_sgx_ae_qve_pkg
+deb_sgx_ae_qve_pkg: $(CHECK_OPT)
+	./installer/linux/deb/libsgx-ae-qve/build.sh
 
 .PHONY: deb_pkg
-deb_pkg: deb_sgx_dcap_ql_pkg deb_sgx_dcap_ql_dbg_pkg deb_sgx_dcap_ql_dev_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_default_qpl_dbg_pkg deb_sgx_dcap_default_qpl_dev_pkg deb_sgx_dcap_pccs_pkg
-	@$(RM) -f ./installer/linux/deb/*.deb
-	cp `find ./installer/linux/deb/ -name "*.deb"` ./installer/linux/deb/
+deb_pkg: deb_sgx_dcap_ql_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_qve_pkg
+	@$(RM) -f ./installer/linux/deb/*.deb ./installer/linux/deb/*.ddeb
+	cp `find ./installer/linux/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
+
+.PHONY: rpm_sgx_ae_qe3_pkg
+rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
+	./installer/linux/rpm/libsgx-ae-qe3/build.sh
+
+.PHONY: rpm_sgx_ae_qve_pkg
+rpm_sgx_ae_qve_pkg: $(CHECK_OPT)
+	./installer/linux/rpm/libsgx-ae-qve/build.sh
+
+.PHONY: rpm_pkg
+rpm_pkg: rpm_sgx_ae_qe3_pkg rpm_sgx_ae_qve_pkg
+	@$(RM) -f ./installer/linux/rpm/*.rpm
+	cp `find ./installer/linux/rpm/ -name "*.rpm"` ./installer/linux/rpm/
 
 clean:
 	$(MAKE) -C pce_wrapper/linux clean
@@ -130,13 +134,15 @@ clean:
 	@$(RM) -rf linux_dcap_interface.zip
 	@$(RM) -rf ./build/
 	@$(RM) -f ./installer/linux/deb/*.deb
+	@$(RM) -f ./installer/linux/deb/*.ddeb
+	@$(RM) -f ./installer/linux/rpm/*.rpm
 	./installer/linux/deb/libsgx-dcap-ql/clean.sh
-	./installer/linux/deb/libsgx-dcap-ql-dbg/clean.sh
-	./installer/linux/deb/libsgx-dcap-ql-dev/clean.sh
+	./installer/linux/deb/libsgx-ae-qe3/clean.sh
+	./installer/linux/deb/libsgx-ae-qve/clean.sh
 	./installer/linux/deb/libsgx-dcap-default-qpl/clean.sh
-	./installer/linux/deb/libsgx-dcap-default-qpl-dbg/clean.sh
-	./installer/linux/deb/libsgx-dcap-default-qpl-dev/clean.sh
-	./installer/linux/deb/libsgx-dcap-pccs/clean.sh
+	./installer/linux/deb/sgx-dcap-pccs/clean.sh
+	./installer/linux/rpm/libsgx-ae-qe3/clean.sh
+	./installer/linux/rpm/libsgx-ae-qve/clean.sh
 
 
 rebuild:

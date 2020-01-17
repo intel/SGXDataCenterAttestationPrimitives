@@ -51,7 +51,7 @@ sgx_dcap_ql.dll
 qe3.signed.dll
 pce.signed.dll
 qve.signed.dll
-dcap_quoteverify.dll
+sgx_dcap_quoteverify.dll
 
 [License_CopyFiles]
 License.txt
@@ -62,7 +62,7 @@ sgx_dcap_ql.dll = 1
 qe3.signed.dll = 1
 pce.signed.dll = 1
 qve.signed.dll = 1
-dcap_quoteverify.dll = 1
+sgx_dcap_quoteverify.dll = 1
 License.txt = 1
 ThirdPartyLicenses.txt = 1
 
