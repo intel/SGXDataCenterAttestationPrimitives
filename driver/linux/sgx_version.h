@@ -55,6 +55,6 @@
 #define _SGX_VERSION_H
 
 #define DRV_DESCRIPTION "Intel SGX Driver"
-#define DRV_VERSION "1.21"
+#define DRV_VERSION "1.22"
 
 #endif /* _SGX_VERSION_H */

@@ -66,11 +66,20 @@ intel_sgx-y := \
 else
 
 KDIR := /lib/modules/$(shell uname -r)/build
+
+INKERNEL_SGX :=$(shell cat $(KDIR)/.config | grep "CONFIG_INTEL_SGX=y")
+ifneq ($(INKERNEL_SGX),)
+default:
+	$(error Can't install DCAP SGX driver with inkernel SGX support)
+
+else
+
 PWD  := $(shell pwd)
 
 default:
 	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules
 
+endif
 endif
 
 clean:

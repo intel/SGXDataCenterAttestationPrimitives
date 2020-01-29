@@ -881,7 +881,7 @@ int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 
 	/* Check that the required attributes have been authorized. */
 	if (encl->attributes & ~encl->allowed_attributes)
-		return -EINVAL;
+		return -EACCES;
 
 	flush_work(&encl->add_page_work);
 
