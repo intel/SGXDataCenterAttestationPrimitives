@@ -79,9 +79,7 @@
 #endif //CLEAR_FREE_MEM
 
 #define EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN 3
-#ifndef SGX_QL_MK_ERROR
 #define SGX_QL_MK_ERROR(x)              (0x0000A000|(x))
-#endif //SGX_QL_MK_ERROR
 /** Contains the possible values of the quote verification result. */
 typedef enum _sgx_ql_qv_result_t
 {
