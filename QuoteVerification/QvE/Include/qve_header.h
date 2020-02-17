@@ -79,26 +79,26 @@
 #endif //CLEAR_FREE_MEM
 
 #define EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN 3
-#ifndef SGX_QL_MK_ERROR
-#define SGX_QL_MK_ERROR(x)              (0x0000A000|(x))
-#endif //SGX_QL_MK_ERROR
+#ifndef SGX_QL_QV_MK_ERROR
+#define SGX_QL_QV_MK_ERROR(x)              (0x0000A000|(x))
+#endif //SGX_QL_QV_MK_ERROR
 /** Contains the possible values of the quote verification result. */
 typedef enum _sgx_ql_qv_result_t
 {
    SGX_QL_QV_RESULT_OK = 0x0000,                                            ///< The Quote verification passed and
                                                                             ///< is at the latest TCB level 
-   SGX_QL_QV_RESULT_MIN = SGX_QL_MK_ERROR(0x0001),
-   SGX_QL_QV_RESULT_CONFIG_NEEDED = SGX_QL_MK_ERROR(0x0001),                ///< The Quote verification passed and 
+   SGX_QL_QV_RESULT_MIN = SGX_QL_QV_MK_ERROR(0x0001),
+   SGX_QL_QV_RESULT_CONFIG_NEEDED = SGX_QL_QV_MK_ERROR(0x0001),             ///< The Quote verification passed and 
                                                                             ///< the platform is patched to the
                                                                             ///< latest TCB level but additional                    
                                                                             ///< configuration of the SGX platform 
                                                                             ///< may be needed.
-   SGX_QL_QV_RESULT_OUT_OF_DATE = SGX_QL_MK_ERROR(0x0002),                  ///< The Quote is good but the TCB 
+   SGX_QL_QV_RESULT_OUT_OF_DATE = SGX_QL_QV_MK_ERROR(0x0002),               ///< The Quote is good but the TCB 
                                                                             ///< level of the platform is out of 
                                                                             ///< date.
                                                                             ///< The platform needs patching to be 
                                                                             ///< at the latest TCB level.     
-   SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED = SGX_QL_MK_ERROR(0x0003),    ///< The Quote is good but the TCB
+   SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED = SGX_QL_QV_MK_ERROR(0x0003), ///< The Quote is good but the TCB
                                                                             ///< level of the platform is out of
                                                                             ///< date and additional configuration
                                                                             ///< of the SGX Platform at its
@@ -106,14 +106,14 @@ typedef enum _sgx_ql_qv_result_t
                                                                             ///< needed. The platform needs
                                                                             ///< patching to be at the latest TCB
                                                                             ///< level.     
-   SGX_QL_QV_RESULT_INVALID_SIGNATURE = SGX_QL_MK_ERROR(0x0004),            ///< The signature over the 
+   SGX_QL_QV_RESULT_INVALID_SIGNATURE = SGX_QL_QV_MK_ERROR(0x0004),         ///< The signature over the 
                                                                             ///< application 
                                                                             ///< report is invalid.
-   SGX_QL_QV_RESULT_REVOKED = SGX_QL_MK_ERROR(0x0005),                      ///< The attestation key or platform 
+   SGX_QL_QV_RESULT_REVOKED = SGX_QL_QV_MK_ERROR(0x0005),                   ///< The attestation key or platform 
                                                                             ///< has been revoked.
-   SGX_QL_QV_RESULT_UNSPECIFIED = SGX_QL_MK_ERROR(0x0006),                ///< The Quote verification failed due
+   SGX_QL_QV_RESULT_UNSPECIFIED = SGX_QL_QV_MK_ERROR(0x0006),               ///< The Quote verification failed due
                                                                             ///< to an error in one of the input.
-   SGX_QL_QV_RESULT_MAX = SGX_QL_MK_ERROR(0x00FF),                          ///< Indicate max result to allow better translation.
+   SGX_QL_QV_RESULT_MAX = SGX_QL_QV_MK_ERROR(0x00FF),                       ///< Indicate max result to allow better translation.
 
 } sgx_ql_qv_result_t;
 
