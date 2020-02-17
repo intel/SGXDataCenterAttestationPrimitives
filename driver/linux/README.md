@@ -63,12 +63,22 @@ $ sudo dkms build -m sgx -v <version>
 $ sudo dkms install -m sgx -v <version>
 $ sudo /sbin/modprobe intel_sgx
 ```
+- To automatically load the driver at boot time:
+```
+$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"
+```
 ### Uninstall the Intel(R) SGX Driver
 To uninstall the Intel(R) SGX driver, enter the following commands with root privilege:
 ```
 $ sudo /sbin/modprobe -r intel_sgx
 $ sudo dkms remove -m sgx -v <version> --all
 ```
+
+To remove intel_sgx from /etc/modules:
+```
+$ /bin/sed -i '/^intel_sgx$/d' /etc/modules
+```
+
 You should also remove the sources from `/usr/src/sgx-<version>/`
 
 Launching an Enclave with Provision Bit Set
