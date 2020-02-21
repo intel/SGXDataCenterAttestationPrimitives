@@ -76,7 +76,7 @@ $ sudo dkms remove -m sgx -v <version> --all
 
 To remove intel_sgx from /etc/modules:
 ```
-$ sudo /bin/sed -i '/^intel_sgx$/d' /etc/modules
+$ /bin/sed -i '/^intel_sgx$/d' /etc/modules
 ```
 
 You should also remove the sources from `/usr/src/sgx-<version>/`
