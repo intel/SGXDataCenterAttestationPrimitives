@@ -281,18 +281,16 @@ static int sgx_vma_fault(struct vm_fault *vmf)
 		goto out;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
-	ret = vmf_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
-	if (ret != VM_FAULT_NOPAGE) {
+		ret = vmf_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
+		if (ret != VM_FAULT_NOPAGE) {
 #else
-	ret = vm_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
-	if (!ret){
-		ret = VM_FAULT_NOPAGE;
-	}
-	else{
+		ret = vm_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
+		if (ret) {
 #endif
 		ret = VM_FAULT_SIGBUS;
 		goto out;
 	}
+
 	sgx_encl_test_and_clear_young(vma->vm_mm, entry);
 
 out:
