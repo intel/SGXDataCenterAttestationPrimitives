@@ -321,6 +321,12 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 {
 	unsigned long idx, idx_start, idx_end;
 	struct sgx_encl_page *page;
+       /*
+        * Disallow RIE tasks as their VMA permissions might conflict with the
+        * enclave page permissions.
+        */
+       if (!!(current->personality & READ_IMPLIES_EXEC))
+               return -EACCES;
 
 	/* PROT_NONE always succeeds. */
 	if (!vm_prot_bits)
