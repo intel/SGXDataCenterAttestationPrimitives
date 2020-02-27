@@ -79,6 +79,9 @@ PWD  := $(shell pwd)
 default:
 	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules
 
+install: default
+	$(MAKE) INSTALL_MOD_DIR=kernel/drivers/intel/sgx -C $(KDIR) M=$(PWD) modules_install
+
 endif
 endif
 
