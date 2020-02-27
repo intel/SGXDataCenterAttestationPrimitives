@@ -64,6 +64,7 @@
 #include <linux/version.h>
 #include <linux/sched/signal.h>
 #include <linux/slab.h>
+#include <linux/io.h>
 #include "sgx.h"
 
 #define SGX_NR_LOW_PAGES 32
