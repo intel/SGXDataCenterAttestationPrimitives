@@ -167,7 +167,7 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 		ret = !sgx_encl_test_and_clear_young(encl_mm->mm, page);
 		up_read(&encl_mm->mm->mmap_sem);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
 		mmput(encl_mm->mm);
 #else
 		mmput_async(encl_mm->mm);
@@ -208,7 +208,7 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 
 		up_read(&encl_mm->mm->mmap_sem);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
 		mmput(encl_mm->mm);
 #else
 		mmput_async(encl_mm->mm);
@@ -270,7 +270,7 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 
 		cpumask_or(cpumask, cpumask, mm_cpumask(encl_mm->mm));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
 		mmput(encl_mm->mm);
 #else
 		mmput_async(encl_mm->mm);
