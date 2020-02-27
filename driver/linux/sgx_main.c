@@ -117,19 +117,19 @@ static bool sgx_is_enabled(void)
 		return false;
 	}
 
-	rdmsrl(MSR_IA32_FEATURE_CONTROL, fc);
-	if (!(fc & FEATURE_CONTROL_LOCKED)) {
-		pr_err("intel_sgx: FEATURE_CONTROL MSR is not locked!\n");
+	rdmsrl(MSR_IA32_FEAT_CTL, fc);
+	if (!(fc & FEAT_CTL_LOCKED)) {
+		pr_err("intel_sgx: FEAT_CTL MSR is not locked!\n");
 		return false;
 	}
 
-	if (!(fc & FEATURE_CONTROL_SGX_ENABLE)) {
-		pr_err("intel_sgx: SGX is not enalbed in FEATURE_CONTROL MSR!\n");
+	if (!(fc & FEAT_CTL_SGX_ENABLED)) {
+		pr_err("intel_sgx: SGX is not enalbed in FEAT_CTL MSR!\n");
 		return false;
 	}
 
-	if (!(fc & FEATURE_CONTROL_SGX_LE_WR)) {
-		pr_err("intel_sgx: FLC feature is not enalbed in FEATURE_CONTROL MSR!\n");
+	if (!(fc & FEAT_CTL_SGX_LE_WR)) {
+		pr_err("intel_sgx: FLC feature is not enalbed in FEAT_CTL MSR!\n");
 		return false;
 	}
 

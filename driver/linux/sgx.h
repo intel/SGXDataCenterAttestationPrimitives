@@ -78,14 +78,14 @@
         #define X86_FEATURE_SGX 			(9 * 32 + 2)
 #endif
 
-#define FEATURE_CONTROL_SGX_ENABLE			(1<<18)
+#define FEAT_CTL_SGX_ENABLED			(1<<18)
 
-#ifndef MSR_IA32_FEATURE_CONTROL
-    #define MSR_IA32_FEATURE_CONTROL 		0x0000003a
+#ifndef MSR_IA32_FEAT_CTL
+    #define MSR_IA32_FEAT_CTL 		0x0000003a
 #endif
 
-#ifndef FEATURE_CONTROL_SGX_LE_WR
-    #define FEATURE_CONTROL_SGX_LE_WR		(1<<17)
+#ifndef FEAT_CTL_SGX_LE_WR
+    #define FEAT_CTL_SGX_LE_WR		(1<<17)
 #endif
 
 #ifndef X86_FEATURE_SGX_LC
