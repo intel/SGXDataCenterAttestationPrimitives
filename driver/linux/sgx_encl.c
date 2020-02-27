@@ -940,8 +940,7 @@ void sgx_encl_release(struct kref *ref)
 	put_pid(encl->tgid);
 
 	if (encl->mmu_notifier.ops)
-		mmu_notifier_unregister_no_release(&encl->mmu_notifier,
-						   encl->mm);
+		mmu_notifier_put(&encl->mmu_notifier);
 
 	list_for_each_entry(entry, &encl->load_list, list)
 		sgx_free_page(entry->epc_page, encl);
