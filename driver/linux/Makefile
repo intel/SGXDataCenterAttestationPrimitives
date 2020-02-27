@@ -54,8 +54,8 @@
 
 ifneq ($(KERNELRELEASE),)
 
-obj-m += intel_sgx.o
-intel_sgx-y := \
+obj-m += dcap.o
+dcap-y := \
 	sgx_ioctl.o \
 	sgx_encl.o \
 	sgx_main.o \
