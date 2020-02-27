@@ -10,6 +10,7 @@
 #include <asm/asm.h>
 #include <asm/traps.h>
 #include "sgx.h"
+#include "dcap.h"
 
 enum sgx_encls_leaf {
 	ECREATE	= 0x00,

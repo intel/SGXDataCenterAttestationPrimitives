@@ -19,7 +19,7 @@ else
 
 PWD  := $(shell pwd)
 default:
-	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-include dcap.h -I$(PWD) -I$(PWD)/include" modules
+	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include" modules
 
 endif
 endif

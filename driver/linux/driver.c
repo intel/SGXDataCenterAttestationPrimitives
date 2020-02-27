@@ -9,6 +9,7 @@
 #include <asm/traps.h>
 #include "driver.h"
 #include "encl.h"
+#include "dcap.h"
 
 #include "version.h"
 #include "driver_info.h"

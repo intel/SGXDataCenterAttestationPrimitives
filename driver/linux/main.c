@@ -13,6 +13,14 @@
 
 #include <linux/module.h>
 #include "version.h"
+#include "dcap.h"
+#ifndef MSR_IA32_FEAT_CTL
+#define MSR_IA32_FEAT_CTL MSR_IA32_FEATURE_CONTROL
+#endif
+
+#ifndef FEAT_CTL_LOCKED
+#define FEAT_CTL_LOCKED FEATURE_CONTROL_LOCKED
+#endif
 
 struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 int sgx_nr_epc_sections;
@@ -22,13 +30,13 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
 {
     unsigned long long fc;
 
-    rdmsrl(MSR_IA32_FEATURE_CONTROL, fc);
-    if (!(fc & FEATURE_CONTROL_LOCKED)) {
+    rdmsrl(MSR_IA32_FEAT_CTL, fc);
+    if (!(fc & FEAT_CTL_LOCKED)) {
         pr_err_once("sgx: The feature control MSR is not locked\n");
         return false;
     }
 
-    if (!(fc & FEATURE_CONTROL_SGX_ENABLE)) {
+    if (!(fc & FEAT_CTL_SGX_ENABLED)) {
         pr_err_once("sgx: SGX is not enabled in IA32_FEATURE_CONTROL MSR\n");
         return false;
     }
@@ -38,7 +46,7 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
         return false;
     }
 
-    if (!(fc & FEATURE_CONTROL_SGX_LE_WR)) {
+    if (!(fc & FEAT_CTL_SGX_LC_ENABLED)) {
         pr_info_once("sgx: The launch control MSRs are not writable\n");
         return false;
     }

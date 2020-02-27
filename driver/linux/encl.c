@@ -11,6 +11,7 @@
 #include "encl.h"
 #include "encls.h"
 #include "sgx.h"
+#include "dcap.h"
 
 #include <linux/version.h>
 

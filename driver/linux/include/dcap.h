@@ -20,12 +20,12 @@
 	#define X86_FEATURE_SGX_LC			(16*32+30) /* supports SGX launch configuration */
 #endif
 
-#ifndef FEATURE_CONTROL_SGX_ENABLE
-	#define FEATURE_CONTROL_SGX_ENABLE                       (1<<18)
+#ifndef FEAT_CTL_SGX_ENABLED
+	#define FEAT_CTL_SGX_ENABLED                             (1<<18)
 #endif
 
-#ifndef FEATURE_CONTROL_SGX_LE_WR
-	#define FEATURE_CONTROL_SGX_LE_WR                        (1<<17)
+#ifndef FEAT_CTL_SGX_LC_ENABLED
+	#define FEAT_CTL_SGX_LC_ENABLED                         (1<<17)
 #endif
 
 #ifndef MSR_IA32_SGXLEPUBKEYHASH0
