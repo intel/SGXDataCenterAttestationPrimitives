@@ -8,7 +8,6 @@
 #ifndef _ASM_X86_SGX_ARCH_H
 #define _ASM_X86_SGX_ARCH_H
 
-#include <linux/bits.h>
 #include <linux/types.h>
 
 #define SGX_CPUID				0x12

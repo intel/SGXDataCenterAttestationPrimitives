@@ -521,10 +521,18 @@ static long sgx_ioc_enclave_add_pages(struct sgx_encl *encl, void __user *arg)
 		return -EINVAL;
 
 	if (!(access_ok(
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) && (!defined(RHEL_RELEASE_CODE)))
 		VERIFY_READ,
+#else
+    #if( defined(RHEL_RELEASE_VERSION) && defined(RHEL_RELEASE_CODE))
+        #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 0))
+            #error "RHEL version not supported"
+        #elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 1))
+		VERIFY_READ,
+        #endif
+    #endif
 #endif
-		addp.src, PAGE_SIZE)))
+	        addp.src, PAGE_SIZE)))
 		return -EFAULT;
 
 	if (addp.length & (PAGE_SIZE - 1))
