@@ -109,6 +109,10 @@ $ sudo groupadd sgx_prv
 $ sudo udevadm trigger
 ```
 
+- To automatically load the driver at boot time:
+```
+$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"
+```
 ### Uninstall the Intel(R) SGX Driver
 
 ```
@@ -116,6 +120,12 @@ $ sudo /sbin/modprobe -r intel_sgx
 $ sudo dkms remove -m sgx -v <version> --all
 $ sudo rm -rf /usr/src/sgx-<version>
 ```
+
+To remove intel_sgx from /etc/modules:
+```
+$ /bin/sed -i '/^intel_sgx$/d' /etc/modules
+```
+
 You should also remove the udev rules and sgx_prv user group.
 
 Launching an Enclave with Provision Bit Set
