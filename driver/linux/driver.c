@@ -12,7 +12,6 @@
 #include "dcap.h"
 
 #include "version.h"
-#include "driver_info.h"
 
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
@@ -163,23 +162,6 @@ static struct miscdevice sgx_dev_provision = {
 	.fops = &sgx_provision_fops,
 };
 
-static struct kobject *kobj_dir;
-
-static ssize_t info_show(struct kobject *kobj,
-					struct kobj_attribute *attr, char *buf)
-{
-    return sprintf(buf, "0x%08X\n", SGX_DRIVER_INFO_DCAP);
-}
-
-static ssize_t version_show(struct kobject *kobj,
-					struct kobj_attribute *attr, char *buf)
-{
-    return sprintf(buf, "v"  DRV_VERSION "\n");
-}
-
-struct kobj_attribute info_attr = __ATTR_RO(info);
-struct kobj_attribute version_attr = __ATTR_RO(version);
-
 
 int __init sgx_drv_init(void)
 {
@@ -228,19 +210,12 @@ int __init sgx_drv_init(void)
 		return ret;
 	}
 
-	kobj_dir = kobject_create_and_add("sgx", kernel_kobj);
-	sysfs_create_file(kobj_dir, &info_attr.attr);
-	sysfs_create_file(kobj_dir, &version_attr.attr);
 
 	return 0;
 }
 
 int __exit sgx_drv_exit(void)
 {
-	sysfs_remove_file(kobj_dir, &info_attr.attr);
-	sysfs_remove_file(kobj_dir, &version_attr.attr);
-	kobject_put(kobj_dir);
-
 	misc_deregister(&sgx_dev_enclave);
 	misc_deregister(&sgx_dev_provision);
 
