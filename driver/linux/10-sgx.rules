@@ -1,3 +1,3 @@
 SUBSYSTEM=="sgx",KERNEL=="sgx",RUN+="/bin/chmod 666 /dev/$name"
-SUBSYSTEM=="sgx_prv",KERNEL=="sgx",GROUP="sgx_prv",RUN+="/bin/chmod 660 /dev/$name"
+SUBSYSTEM=="sgx",KERNEL=="sgx_prv",GROUP="sgx_prv",RUN+="/bin/chmod 660 /dev/$name"
 
