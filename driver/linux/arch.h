@@ -56,7 +56,7 @@ enum sgx_miscselect {
 
 #define SGX_MISC_RESERVED_MASK	GENMASK_ULL(63, 1)
 
-#define SGX_SSA_GPRS_SIZE		182
+#define SGX_SSA_GPRS_SIZE		184
 #define SGX_SSA_MISC_EXINFO_SIZE	16
 
 /**
@@ -338,58 +338,6 @@ struct sgx_sigstruct {
 	u8  q2[SGX_MODULUS_SIZE];
 } __packed;
 
-#define SGX_EINITTOKEN_RESERVED1_SIZE 11
-#define SGX_EINITTOKEN_RESERVED2_SIZE 32
-#define SGX_EINITTOKEN_RESERVED3_SIZE 32
-#define SGX_EINITTOKEN_RESERVED4_SIZE 24
-
-/**
- * struct sgx_einittoken - a token permitting to launch an enclave
- * @valid:			one if valid and zero if invalid
- * @attributes:			attributes for enclave
- * @xfrm:			XSave-Feature Request Mask (subset of XCR0)
- * @mrenclave:			SHA256-hash of the enclave contents
- * @mrsigner:			SHA256-hash of the public key used to sign the
- *				SIGSTRUCT
- * @le_cpusvn:			a value that reflects the SGX implementation
- *				running in in the CPU
- * @le_isvprodid:		a user-defined value that is used in key
- *				derivation
- * @le_isvsvn:			a user-defined value that is used in key
- *				derivation
- * @le_keyed_miscselect:	LE's miscselect masked with the token keys
- *				miscselect
- * @le_keyed_attributes:	LE's attributes masked with the token keys
- *				attributes
- * @le_keyed_xfrm:		LE's XFRM masked with the token keys xfrm
- * @salt:			random salt for wear-out protection
- * @mac:			CMAC over the preceding fields
- *
- * An enclave with EINITTOKENKEY attribute can access a key with the same name
- * by using ENCLS(EGETKEY) and use this to sign cryptographic tokens that can
- * be passed to ENCLS(EINIT) to permit the launch of other enclaves. This is
- * the only viable way to launch enclaves if IA32_SGXLEPUBKEYHASHn MSRs are
- * locked assuming that there is a Launch Enclave (LE) available that can be
- * used for generating these tokens.
- */
-struct sgx_einittoken {
-	u32 valid;
-	u32 reserved1[SGX_EINITTOKEN_RESERVED1_SIZE];
-	u64 attributes;
-	u64 xfrm;
-	u8  mrenclave[32];
-	u8  reserved2[SGX_EINITTOKEN_RESERVED2_SIZE];
-	u8  mrsigner[32];
-	u8  reserved3[SGX_EINITTOKEN_RESERVED3_SIZE];
-	u8  le_cpusvn[16];
-	u16 le_isvprodid;
-	u16 le_isvsvn;
-	u8  reserved4[SGX_EINITTOKEN_RESERVED4_SIZE];
-	u32 le_keyed_miscselect;
-	u64 le_keyed_attributes;
-	u64 le_keyed_xfrm;
-	u8  salt[32];
-	u8  mac[16];
-} __packed __aligned(512);
+#define SGX_LAUNCH_TOKEN_SIZE 304
 
 #endif /* _ASM_X86_SGX_ARCH_H */

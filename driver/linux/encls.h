@@ -187,10 +187,9 @@ static inline int __eadd(struct sgx_pageinfo *pginfo, void *addr)
 	return __encls_2(EADD, pginfo, addr);
 }
 
-static inline int __einit(void *sigstruct, struct sgx_einittoken *einittoken,
-			  void *secs)
+static inline int __einit(void *sigstruct, void* token, void *secs)
 {
-	return __encls_ret_3(EINIT, sigstruct, secs, einittoken);
+	return __encls_ret_3(EINIT, sigstruct, secs, token);
 }
 
 static inline int __eremove(void *addr)

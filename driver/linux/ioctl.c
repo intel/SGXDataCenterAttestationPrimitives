@@ -602,14 +602,10 @@ static void sgx_update_lepubkeyhash_msrs(u64 *lepubkeyhash, bool enforce)
 	}
 }
 
-static int sgx_einit(struct sgx_sigstruct *sigstruct,
-		     struct sgx_einittoken *token,
+static int sgx_einit(struct sgx_sigstruct *sigstruct, void *token,
 		     struct sgx_epc_page *secs, u64 *lepubkeyhash)
 {
 	int ret;
-
-	if (!boot_cpu_has(X86_FEATURE_SGX_LC))
-		return __einit(sigstruct, token, sgx_epc_addr(secs));
 
 	preempt_disable();
 	sgx_update_lepubkeyhash_msrs(lepubkeyhash, false);
@@ -623,7 +619,7 @@ static int sgx_einit(struct sgx_sigstruct *sigstruct,
 }
 
 static int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
-			 struct sgx_einittoken *token)
+			 void *token)
 {
 	u64 mrsigner[4];
 	int ret;
@@ -710,10 +706,10 @@ err_out:
  */
 static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 {
-	struct sgx_einittoken *einittoken;
 	struct sgx_sigstruct *sigstruct;
 	struct sgx_enclave_init einit;
 	struct page *initp_page;
+	void* token;
 	int ret;
 
 	if (!(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
@@ -727,9 +723,8 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 		return -ENOMEM;
 
 	sigstruct = kmap(initp_page);
-	einittoken = (struct sgx_einittoken *)
-		((unsigned long)sigstruct + PAGE_SIZE / 2);
-	memset(einittoken, 0, sizeof(*einittoken));
+        token = (void *)((unsigned long)sigstruct + PAGE_SIZE / 2);
+        memset(token, 0, SGX_LAUNCH_TOKEN_SIZE);
 
 	if (copy_from_user(sigstruct, (void __user *)einit.sigstruct,
 			   sizeof(*sigstruct))) {
@@ -737,7 +732,7 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 		goto out;
 	}
 
-	ret = sgx_encl_init(encl, sigstruct, einittoken);
+	ret = sgx_encl_init(encl, sigstruct, token);
 
 out:
 	kunmap(initp_page);
