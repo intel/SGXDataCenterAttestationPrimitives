@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -168,6 +168,7 @@ struct ql_global_data{
     sgx_launch_token_t m_launch_token;
     uint8_t m_ecdsa_blob[SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK];
     uint8_t *m_pencryptedppid;
+    sgx_pce_info_t m_pce_info;
 
     ql_global_data():
         m_load_policy(SGX_QL_DEFAULT),
@@ -179,6 +180,7 @@ struct ql_global_data{
         memset(&m_attributes, 0, sizeof(m_attributes));
         memset(&m_launch_token, 0, sizeof(m_launch_token));
         memset(m_ecdsa_blob, 0, sizeof(m_ecdsa_blob));
+        memset(&m_pce_info, 0, sizeof(m_pce_info));
     }
     ql_global_data(const ql_global_data&);
     ql_global_data& operator=(const ql_global_data&);
@@ -713,7 +715,8 @@ static quote3_error_t getencryptedppid(sgx_target_info_t& pce_target_info, uint8
     }
 
     if (0 != memcpy_s(g_ql_global_data.m_pencryptedppid, REF_RSA_OAEP_3072_MOD_SIZE, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE) ||
-        0 != memcpy_s(p_buf, buf_size, g_ql_global_data.m_pencryptedppid, REF_RSA_OAEP_3072_MOD_SIZE)) {
+        0 != memcpy_s(p_buf, buf_size, g_ql_global_data.m_pencryptedppid, REF_RSA_OAEP_3072_MOD_SIZE) ||
+        0 != memcpy_s(&g_ql_global_data.m_pce_info, sizeof(g_ql_global_data.m_pce_info), &pce_info, sizeof (pce_info))) {
         SE_TRACE(SE_TRACE_ERROR, "Fail to copy memory.\n");
         return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -1140,7 +1143,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
     ref_plaintext_ecdsa_data_sdk_t plaintext_data;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
     uint8_t encrypted_ppid[REF_RSA_OAEP_3072_MOD_SIZE];
-    uint32_t encrypted_ppid_ret_size;
     int blob_mutex_rc = 0;
 
     // Verify inputs
@@ -1290,8 +1292,8 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
 
         if (SGX_QL_SUCCESS != (refqt_ret = getencryptedppid(pce_target_info, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE))){
             SE_TRACE(SE_TRACE_DEBUG, "Fail to retrieve encrypted PPID.\n");
-        goto CLEANUP;
-    }
+            goto CLEANUP;
+        }
 
         // Determine if the raw-TCB has changed since the blob was last generated or the platform library
         // has a new TCBm. If the raw-TCB was downgraded, the ECDSA blob will not be accessible and fail
@@ -1420,10 +1422,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
 
     if (true == gen_new_key) {
         sgx_report_t qe3_report;
-        uint32_t enc_key_size = REF_RSA_OAEP_3072_MOD_SIZE + REF_RSA_OAEP_3072_EXP_SIZE;
-        uint8_t enc_public_key[REF_RSA_OAEP_3072_MOD_SIZE + REF_RSA_OAEP_3072_EXP_SIZE];
-        sgx_pce_info_t pce_info;
-        uint8_t signature_scheme;
 
         // Authentication data is added to by the QE owner and will be 'signed' by the certification key.  It's use is dependent of the owner.
         // Just use a fixed value for the reference.
@@ -1435,61 +1433,10 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         // It is possible that the public key is supplied by the attestation server.  In this case, the QE3 does not need to
         // generate the encryption key.  The reference, however, always generates the encryption key.
         // NOTE:  Typically, a certification_key_type of PPID_RSA3072_ENCRYPTED implies the private keys is owned by the attestation service
-        // and the QE3 does not need to generate a key pair.  The reference will generate a key for both PPID_CLEARTEXT and PPID_3072_ENCRYPTED
-        if ((PPID_CLEARTEXT == certification_key_type) ||
-            (PPID_RSA3072_ENCRYPTED == certification_key_type)) {
-            // Get the QE_REPORT with the encryption key required by the PCE
-            SE_TRACE(SE_TRACE_DEBUG, "Get PPID Encryption key and QE Report.\n");
-            sgx_status = get_pce_encrypt_key(qe3_eid,
-                                             (uint32_t*)&qe3_error,
-                                             &pce_target_info,
-                                             &qe3_report,
-                                             PCE_ALG_RSA_OAEP_3072,
-                                             (uint16_t)certification_key_type,
-                                             enc_key_size,
-                                             enc_public_key);
-            if (SGX_SUCCESS != sgx_status) {
-                SE_TRACE(SE_TRACE_ERROR, "Failed call into the QE3. 0x%04x.\n", sgx_status);
-                // /todo:  May want to retry on SGX_ERROR_ENCLAVE_LOST caused by power transition
-                refqt_ret = (quote3_error_t)sgx_status;
-                goto CLEANUP;
-            }
-            if (REFQE3_SUCCESS != qe3_error) {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to generated PCE encryption key.\n");
-                refqt_ret = (quote3_error_t)qe3_error;
-                goto CLEANUP;
-            }
-            if(0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
-                             &qe3_report.body.mr_enclave, sizeof(qe3_report.body.mr_enclave))) {
-                refqt_ret = SGX_QL_ERROR_UNEXPECTED;
-                goto CLEANUP;
-            }
-
-            // Call into the PCE to get the PCE identity information
-            SE_TRACE(SE_TRACE_DEBUG, "Get PCE Info\n");
-            pce_error = sgx_get_pce_info(&qe3_report,
-                                          enc_public_key,
-                                          enc_key_size,
-                                          PCE_ALG_RSA_OAEP_3072,
-                                          encrypted_ppid,
-                                          REF_RSA_OAEP_3072_MOD_SIZE,
-                                          &encrypted_ppid_ret_size,
-                                          &pce_info.pce_isv_svn,
-                                          &pce_info.pce_id,
-                                          &signature_scheme);
-            if (SGX_PCE_SUCCESS != pce_error) {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to get PCE info, 0x%04x.\n", pce_error);
-                refqt_ret = translate_pce_errors(pce_error);
-                goto CLEANUP;
-            }
-            if (signature_scheme != PCE_NIST_P256_ECDSA_SHA256) {
-                SE_TRACE(SE_TRACE_ERROR, "PCE returned incorrect signature scheme.\n");
-                refqt_ret = SGX_QL_ERROR_INVALID_PCE_SIG_SCHEME;
-                goto CLEANUP;
-            }
-            if (encrypted_ppid_ret_size != REF_RSA_OAEP_3072_MOD_SIZE) {
-                SE_TRACE(SE_TRACE_ERROR, "PCE returned unexpected returned encrypted PPID size.\n");
-                refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        // and the QE3 does not need to generate a key pair.  The reference will generate a key for PPID_3072_ENCRYPTED
+        if (PPID_RSA3072_ENCRYPTED == certification_key_type) {
+            if (SGX_QL_SUCCESS != (refqt_ret = getencryptedppid(pce_target_info, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE))) {
+                SE_TRACE(SE_TRACE_DEBUG, "Fail to retrieve encrypted PPID.\n");
                 goto CLEANUP;
             }
         } else {
@@ -1520,8 +1467,9 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
 
-        if (SGX_QL_SUCCESS != (refqt_ret = getencryptedppid(pce_target_info, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE))){
-                SE_TRACE(SE_TRACE_DEBUG, "Fail to retrieve encrypted PPID.\n");
+        if(0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
+                    &qe3_report.body.mr_enclave, sizeof(qe3_report.body.mr_enclave))) {
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
 
@@ -1534,11 +1482,11 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
         pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
         pck_cert_id.p_platform_cpu_svn = &qe3_report.body.cpu_svn;
-        pck_cert_id.p_platform_pce_isv_svn = &pce_info.pce_isv_svn;
+        pck_cert_id.p_platform_pce_isv_svn = &g_ql_global_data.m_pce_info.pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
         pck_cert_id.encrypted_ppid_size = REF_RSA_OAEP_3072_MOD_SIZE;
         pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
-        pck_cert_id.pce_id = pce_info.pce_id;
+        pck_cert_id.pce_id = g_ql_global_data.m_pce_info.pce_id;
         refqt_ret = get_platform_quote_cert_data(&pck_cert_id,
                                                  &pce_cert_psvn.cpu_svn,
                                                  &pce_cert_psvn.isv_svn,
@@ -1571,14 +1519,14 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
-        plaintext_data.raw_pce_info.pce_isv_svn = pce_info.pce_isv_svn;
-        plaintext_data.raw_pce_info.pce_id = pce_info.pce_id;
+        plaintext_data.raw_pce_info.pce_isv_svn = g_ql_global_data.m_pce_info.pce_isv_svn;
+        plaintext_data.raw_pce_info.pce_id = g_ql_global_data.m_pce_info.pce_id;
         if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
                          &qe3_report, sizeof(qe3_report))) {
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
-        plaintext_data.signature_scheme = signature_scheme;
+        plaintext_data.signature_scheme = PCE_NIST_P256_ECDSA_SHA256;
         if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                          &pce_target_info, sizeof(pce_target_info))) {
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
@@ -1588,7 +1536,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         refqt_ret = certify_key(g_ql_global_data.m_ecdsa_blob,
                                 &plaintext_data,
                                 encrypted_ppid,
-                                encrypted_ppid_ret_size,
+                                REF_RSA_OAEP_3072_MOD_SIZE,
                                 certification_key_type,
                                 &qe3_eid);
         if (SGX_QL_SUCCESS != refqt_ret) {

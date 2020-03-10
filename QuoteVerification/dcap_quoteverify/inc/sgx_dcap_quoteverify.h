@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,6 +111,45 @@ quote3_error_t sgx_qv_verify_quote(
     sgx_ql_qe_report_info_t *p_qve_report_info,
     uint32_t supplemental_data_size,
     uint8_t *p_supplemental_data);
+
+
+
+/**
+ * Call quote provider library to get QvE identity.
+ *
+ * @param pp_qveid[OUT] - Pointer to the pointer of QvE identity
+ * @param p_qveid_size[OUT] -  Pointer to the size of QvE identity
+ * @param pp_qveid_issue_chain[OUT] - Pointer to the pointer QvE identity certificate chain
+ * @param p_qveid_issue_chain_size[OUT] - Pointer to the QvE identity certificate chain size
+ * @param pp_root_ca_crl[OUT] - Pointer to the pointer of Intel Root CA CRL
+ * @param p_root_ca_crl_size[OUT] - Pointer to the Intel Root CA CRL size
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_NO_QVE_IDENTITY_DATA
+ *      - SGX_QL_ERROR_OUT_OF_MEMORY
+ *      - SGX_QL_NETWORK_ERROR
+ *      - SGX_QL_MESSAGE_ERROR
+ *      - SGX_QL_ERROR_UNEXPECTED
+ **/
+quote3_error_t sgx_qv_get_qve_identity(
+        uint8_t **pp_qveid,
+        uint32_t *p_qveid_size,
+        uint8_t **pp_qveid_issue_chain,
+        uint32_t *p_qveid_issue_chain_size,
+        uint8_t **pp_root_ca_crl,
+        uint16_t *p_root_ca_crl_size);
+
+
+
+/**
+ * Call quote provider library to free the p_qve_id, p_qveid_issuer_chain buffer and p_root_ca_crl allocated by sgx_qv_get_qve_identity
+ **/
+quote3_error_t sgx_qv_free_qve_identity(uint8_t *p_qveid,
+                                        uint8_t *p_qveid_issue_chain,
+                                        uint8_t *p_root_ca_crl);
+
 
 #if defined(__cplusplus)
 }

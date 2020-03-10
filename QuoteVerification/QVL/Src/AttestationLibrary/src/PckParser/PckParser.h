@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -134,11 +134,7 @@ void cleanUpOpenSSL();
 //
 ////////////////////////////////////////////////////////////////////////////
 
-#ifdef _DCAP_QUOTEVERIFY_LIB
-intel::sgx::dcap::crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
-#else
 crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
-#endif
 long getVersion(const X509_CRL& crl);
 Issuer getIssuer(const X509_CRL& crl);
 int getExtensionCount(const X509_CRL& crl);

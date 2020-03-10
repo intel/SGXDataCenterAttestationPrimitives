@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,9 +55,9 @@ extern const std::vector<uint8_t> DEFAULT_FMSPC;
 extern const std::vector<uint8_t> DEFAULT_PCEID;
 extern const std::vector<uint8_t> DEFAULT_SIGNATURE;
 extern const std::vector<uint8_t> DEFAULT_INFO_BODY;
-extern const std::time_t DEFAULT_ISSUE_DATE;
-extern const std::time_t DEFAULT_NEXT_UPDATE;
-extern const std::time_t DEFAULT_TCB_DATE;
+extern const std::string DEFAULT_ISSUE_DATE;
+extern const std::string DEFAULT_NEXT_UPDATE;
+extern const std::string DEFAULT_TCB_DATE;
 extern const int DEFAULT_TCB_TYPE;
 extern const int DEFAULT_TCB_RECOVERY_NUMBER;
 

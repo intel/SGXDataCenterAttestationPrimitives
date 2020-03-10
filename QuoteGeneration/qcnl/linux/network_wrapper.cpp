@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -287,7 +287,6 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
 
         // Perform request
         if((curl_ret = curl_easy_perform(curl))!=CURLE_OK) {
-            printf("%d\n", curl_ret);
             ret = curl_error_to_qcnl_error(curl_ret);
             break;
         }

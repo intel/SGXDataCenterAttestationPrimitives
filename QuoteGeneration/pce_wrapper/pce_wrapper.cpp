@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -339,6 +339,80 @@ sgx_pce_error_t sgx_get_pce_info(const sgx_report_t *p_report,
             break;
         case AE_OUT_OF_MEMORY_ERROR:
             pce_status = SGX_PCE_OUT_OF_EPC;
+            break;
+        default:
+            pce_status = SGX_PCE_UNEXPECTED;
+        }
+    }
+    unload_pce();
+
+    return pce_status;
+}
+
+sgx_pce_error_t sgx_get_pce_info_without_ppid(sgx_isv_svn_t* p_pce_isvsvn, uint16_t* p_pce_id)
+{
+    sgx_pce_error_t pce_status = SGX_PCE_SUCCESS;
+    sgx_enclave_id_t pce_eid = 0;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_misc_attribute_t pce_attributes;
+    sgx_launch_token_t launch_token = { 0 };
+    uint32_t ae_error;
+    uint32_t enclave_lost_retry_time = 1;
+    pce_info_t pce_info;
+
+    if ((NULL == p_pce_isvsvn) ||
+        (NULL == p_pce_id))
+    {
+        return(SGX_PCE_INVALID_PARAMETER);
+    }
+
+    do {
+        // Load the PCE enclave
+        pce_status = load_pce(&pce_eid,
+            &pce_attributes,
+            &launch_token);
+        if (SGX_PCE_SUCCESS != pce_status)
+        {
+            return pce_status;
+        }
+        int rc = se_mutex_lock(&g_pce_status.m_pce_mutex);
+        if (rc != 1)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex");
+            return SGX_PCE_INTERFACE_UNAVAILABLE;
+        }
+        // Call get_pc_info_without_ppid ecall
+        sgx_status = get_pc_info_without_ppid(pce_eid, &ae_error, &pce_info);
+        rc = se_mutex_unlock(&g_pce_status.m_pce_mutex);
+        if (rc != 1)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            return SGX_PCE_INTERFACE_UNAVAILABLE;
+        }
+        if (SGX_ERROR_ENCLAVE_LOST != sgx_status)
+            break;
+        unload_pce(true);
+    } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
+
+    if (SGX_SUCCESS != sgx_status)
+    {
+        SE_TRACE(SE_TRACE_ERROR, "call to get_pc_info_without_ppid() failed. sgx_status = %04x.\n", sgx_status);
+        // /todo:  May want to retry on SGX_PCE_ENCLAVE_LOST caused by power transition
+        if (SGX_ERROR_OUT_OF_EPC == sgx_status)
+            pce_status = SGX_PCE_OUT_OF_EPC;
+        else
+            pce_status = SGX_PCE_INTERFACE_UNAVAILABLE;
+    }
+    else {
+        switch (ae_error)
+        {
+        case AE_SUCCESS:
+            *p_pce_isvsvn = pce_info.pce_isvn;
+            *p_pce_id = pce_info.pce_id;
+            pce_status = SGX_PCE_SUCCESS;
+            break;
+        case AE_INVALID_PARAMETER:
+            pce_status = SGX_PCE_INVALID_PARAMETER;
             break;
         default:
             pce_status = SGX_PCE_UNEXPECTED;

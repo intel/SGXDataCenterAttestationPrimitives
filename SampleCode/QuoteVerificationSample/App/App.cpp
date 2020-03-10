@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "Enclave_u.h"
 #include "sgx_ql_quote.h"
 #include "sgx_dcap_quoteverify.h"
-#include "get_qve_identity.h"
 
 #ifndef _MSC_VER
 
@@ -182,9 +181,10 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             printf("\tError: App: sgx_qv_verify_quote failed: 0x%04x\n", qve_ret);
         }
 
-        //call QPL to retrieve QvE Identity and Root CA CRL from PCCS
+        //call quote verificaiton lib to retrieve QvE Identity and Root CA CRL
+        //quote verification lib will try to load QPL and get info from PCCS
         //
-        qpl_ret = get_qve_identity(&p_qveid,
+        qpl_ret = sgx_qv_get_qve_identity(&p_qveid,
             &qveid_size,
             &p_qveid_issue_chain,
             &qveid_issue_chain_size,
@@ -192,7 +192,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             &root_ca_crl_size);
         if (qpl_ret != SGX_QL_SUCCESS) {
             printf("\tError: App: Get QvE Identity and Root CA CRL from PCCS failed: 0x%04x\n", qpl_ret);
-            free_qve_identity(p_qveid, p_qveid_issue_chain, p_root_ca_crl);
+            sgx_qv_free_qve_identity(p_qveid, p_qveid_issue_chain, p_root_ca_crl);
             sgx_destroy_enclave(eid);
             return -1;
         }
@@ -240,6 +240,8 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
         case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
+        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
             printf("\tWarning: App: Verification completed with Non-terminal result: %x\n", p_quote_verification_result);
             ret = 1;
             break;
@@ -305,6 +307,8 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
         case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
+        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
             printf("\tWarning: App: Verification completed with Non-terminal result: %x\n", p_quote_verification_result);
             ret = 1;
             break;
@@ -321,7 +325,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
 
     if (p_qveid || p_qveid_issue_chain || p_root_ca_crl) {
-        free_qve_identity(p_qveid, p_qveid_issue_chain, p_root_ca_crl);
+        sgx_qv_free_qve_identity(p_qveid, p_qveid_issue_chain, p_root_ca_crl);
     }
 
     if (eid) {

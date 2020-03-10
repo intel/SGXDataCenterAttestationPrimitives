@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,6 +57,9 @@ quote3_error_t sgx_qvl_verify_quote(
 
 quote3_error_t sgx_qvl_get_quote_supplemental_data_size(
     uint32_t *p_data_size);
+
+quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
+    uint32_t *p_version);
 
 
  quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,

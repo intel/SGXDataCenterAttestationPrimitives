@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -322,6 +322,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
 Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, const char *pemPckCertificate, const char* pckCrl,
                                  const char* tcbInfoJson, const char* qeIdentityJson)
 {
+    /// 4.1.2.4.1
     if(!rawQuote ||
        !pemPckCertificate ||
        !pckCrl ||
@@ -330,22 +331,25 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         return STATUS_MISSING_PARAMETERS;
     }
    
-    // We totaly trust user on this, it should be explicitly and clearly
+    // We totally trust user on this, it should be explicitly and clearly
     // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ? 
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
-    
+
+    /// 4.1.2.4.2
     qvl::Quote quote;
     if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
-  
+
+    /// 4.1.2.4.5
     qvl::pckparser::CrlStore pckCrlStore;
     if(!pckCrlStore.parse(pckCrl))
     {
         return STATUS_UNSUPPORTED_PCK_RL_FORMAT;
     }
 
+    /// 4.1.2.4.8
     dcap::parser::json::TcbInfo tcbInfo;
     try
     {
@@ -375,12 +379,16 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
 
     try
     {
-        auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate);
+        auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate); /// 4.1.2.4.3
         return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), qvl::EnclaveReportVerifier());
     }
     catch (const dcap::parser::FormatException &ex)
     {
         return STATUS_UNSUPPORTED_PCK_CERT_FORMAT;
+    }
+    catch (const dcap::parser::InvalidExtensionException &ex) /// 4.1.2.4.4
+    {
+        return STATUS_INVALID_PCK_CERT;
     }
 }
 
@@ -391,6 +399,7 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
+    /// 4.1.2.9.1
     const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + qvl::constants::ENCLAVE_REPORT_BYTE_LEN);
     qvl::Quote quote;
     if(!quote.parseEnclaveReport(vecEnclaveReport))
@@ -398,6 +407,7 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
+    /// 4.1.2.9.2
     qvl::EnclaveIdentityParser parser;
     std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentityParsed;
     try

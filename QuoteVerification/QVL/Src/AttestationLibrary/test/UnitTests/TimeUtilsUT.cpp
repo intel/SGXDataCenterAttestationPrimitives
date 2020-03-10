@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ const time_t positiveInput[] = {
         rand(),
 };
 
-INSTANTIATE_TEST_CASE_P(TestsWithParameters, TimeUtilsUT, ::testing::ValuesIn(positiveInput),);
+INSTANTIATE_TEST_SUITE_P(TestsWithParameters, TimeUtilsUT, ::testing::ValuesIn(positiveInput));
 
 TEST_P(TimeUtilsUT, mktime)
 {

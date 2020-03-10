@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -379,7 +379,7 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
 		WCHAR whostname[MAX_URL];
 		size_t count;
 		count = 0;
-		if (mbstowcs_s(&count, wurl, url, strlen(url)) != 0) {
+		if (mbstowcs_s(&count, wurl, url, strnlen_s(url, MAX_URL)) != 0) {
 			ret = SGX_QCNL_UNEXPECTED_ERROR;
 			break;
 		}

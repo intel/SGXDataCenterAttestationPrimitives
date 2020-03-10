@@ -104,7 +104,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src\AttestationParsers\src;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src\AttestationParsers\src;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -165,7 +165,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src\AttestationParsers\src;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -196,7 +196,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src\AttestationParsers\src;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

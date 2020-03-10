@@ -161,11 +161,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="get_qve_identity.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Enclave_u.h" />
-    <ClInclude Include="get_qve_identity.h" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />

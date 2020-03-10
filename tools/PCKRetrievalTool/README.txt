@@ -12,11 +12,10 @@ For Linux version:
     sudo ./sgx_linux_x64_driver.bin
 - Please install bellow Debian packages, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
     a. libsgx-enclave-common_{version}-{revision}_{arch}.deb
-    b. libsgx-urts_{version}-{revision}_{arch}.deb
-    c. libsgx-ae-pce_{version}-{revision}_{arch}.deb
-    d. libsgx-ae-qe3_{version}-{revision}_{arch}.deb
-    e. libsgx-ae-qve_{version}-{revision}_{arch}.deb
-    f. libsgx-dcap-ql_{version}-{revision}_{arch}.deb
+    b. libsgx-ae-pce_{version}-{revision}_{arch}.deb
+    c. libsgx-ae-qe3_{version}-{revision}_{arch}.deb
+    d. libsgx-ae-qve_{version}-{revision}_{arch}.deb
+    e. libsgx-dcap-ql_{version}-{revision}_{arch}.deb
 - Configure the system with the **Intel(R) SGX hardware enabled** option.
 
 For Windows version:
@@ -27,7 +26,7 @@ For Windows version:
 
 ## Usage
 PCKIDRetrievalTool [OPTION]
-Example: PCKIDRetrievalTool -f retrieval_result.csv, -url http://localhost:8081, -user_token 123456, -user_ecure_cert true
+Example: PCKIDRetrievalTool -f retrieval_result.csv, -url https://localhost:8081, -user_token 123456, -user_secure_cert true
 
 Options:
   -f filename                       - output the retrieval result to the "filename"
@@ -50,8 +49,8 @@ command line option has higher priority.
 If the retrieved data is saved to file:
    the outputed file is CSV format and the values are CSV delimited Base16(HEX):
 
- EncryptedPPID(384 byte array),PCE_ID (16 bit integer),CPUSVN (16 byte array),PCE ISVSVN (16 bit integer),QE_ID (16 byte array)
-   Big Endian                    Little Endian        Big Endian                Little Endian               Big Endian
+ EncryptedPPID(384 byte array),PCE_ID (16 bit integer),CPUSVN (16 byte array),PCE ISVSVN (16 bit integer),QE_ID (16 byte array)[,PLATFORM_MANIFEST (28229 byte array)]
+   Big Endian                    Little Endian        Big Endian                Little Endian               Big Endian                    Big Endian
 
 And the retrieved data can also be uploaded to cache server if user provide the cache server's url and access token.
 

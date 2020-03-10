@@ -23,16 +23,10 @@
     <ClCompile Include="Enclave_u.c">
       <Filter>Generated Files</Filter>
     </ClCompile>
-    <ClCompile Include="get_qve_identity.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Enclave_u.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="get_qve_identity.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -5,3 +5,4 @@ EXPORTS
     sgx_pce_get_target                 @2
     sgx_get_pce_info                   @3
     sgx_pce_sign_report                @4
+    sgx_get_pce_info_without_ppid      @5

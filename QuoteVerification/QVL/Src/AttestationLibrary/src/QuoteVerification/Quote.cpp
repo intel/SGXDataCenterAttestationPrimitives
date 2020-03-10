@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,7 +70,8 @@ constexpr size_t QUOTE_MIN_BYTE_LEN =
 template<typename T>
 void copyAndAdvance(T& val, std::vector<uint8_t>::const_iterator& from, size_t amount, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
-	if (std::distance(from, totalEnd) < (unsigned) amount)
+    const auto available = std::distance(from, totalEnd);
+	if (available < 0 || (unsigned) available < amount)
 	{
 		return;
 	}
@@ -94,8 +95,9 @@ void copyAndAdvance(std::array<uint8_t, N>& arr, std::vector<uint8_t>::const_ite
 
 void copyAndAdvance(uint16_t& val, std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
+    const auto available = std::distance(from, totalEnd);
     const auto capacity = sizeof(uint16_t);
-	if (std::distance(from, totalEnd) < (unsigned) capacity)
+	if (available < 0 || (unsigned) available < capacity)
 	{
 		return;
 	}
@@ -107,8 +109,9 @@ void copyAndAdvance(uint16_t& val, std::vector<uint8_t>::const_iterator& from, c
 
 void copyAndAdvance(uint32_t& val, std::vector<uint8_t>::const_iterator& position, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
+    const auto available = std::distance(position, totalEnd);
     const auto capacity = sizeof(uint32_t);
-	if (std::distance(position, totalEnd) < (unsigned) capacity)
+	if (available < 0 || (unsigned) available < capacity)
 	{
 		return;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -167,9 +167,9 @@ const std::vector<uint8_t> DEFAULT_INFO_BODY = { 0x7B, 0x22, 0x76, 0x65, 0x72, 0
 												 0x75, 0x73, 0x22, 0x3A, 0x22, 0x55, 0x70, 0x54,
 												 0x6F, 0x44, 0x61, 0x74, 0x65, 0x22, 0x7D, 0x5D,
 												 0x7D };
-const std::time_t DEFAULT_ISSUE_DATE = 1507111845;
-const std::time_t DEFAULT_NEXT_UPDATE = 1529580962;
-const std::time_t DEFAULT_TCB_DATE = 1558604162;
+const std::string DEFAULT_ISSUE_DATE = "2017-10-04T11:10:45Z";
+const std::string DEFAULT_NEXT_UPDATE = "2018-06-21T12:36:02Z";
+const std::string  DEFAULT_TCB_DATE = "2019-05-23T10:36:02Z";
 
 std::string TcbInfoGenerator::generateTcbInfo(const std::string &tcbInfoTemplate,
 											  const std::string &tcbLevelsJson,

@@ -23,7 +23,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.10)
 if (POLICY CMP0074)
 	cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
 endif()
@@ -156,8 +156,8 @@ option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/ruslo/hunter/archive/v0.23.214.tar.gz"
-		SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.23.240.tar.gz"
+		SHA1 "ca19f3769e6c80cfdd19d8b12ba5102c27b074e0"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
@@ -290,6 +290,16 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	add_compile_definitions(_WINDOWS)
 else()
 	message(FATAL_ERROR "Unsupported compiler '${CMAKE_CXX_COMPILER_ID}'. Clang 5.0, GCC and MSVC are supported")
+endif()
+
+# Settings for coverage support in CLion (version 2019.3 and up)
+if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang"
+		OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
+	message("Building with llvm Code Coverage Tools")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+	message("Building with lcov Code Coverage Tools")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
 endif()
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/lib)

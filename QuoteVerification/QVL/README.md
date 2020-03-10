@@ -29,7 +29,7 @@ This library provides ra reference implementation for parsing ECDSA Attestation 
 ### Linux
 Requirements:
 
-* cmake version 3.2 or higher
+* cmake version 3.10 or higher
 * make
 * clang++ with c++11 support (5.0.2 or higher is recommended)
 * doxygen version 1.8.14 if BUILD_DOCS is enabled
@@ -119,9 +119,7 @@ Requirements:
 * cmake version 3.2 or higher
 * Perl (https://www.activestate.com/products/activeperl/downloads/) for OpenSSL building
 
-NOTE: 
-    If you need to build QVL behind a proxy, please se "HTTP_PROXY" and "HTTPS_PROXY" in system enviorment 
-	Enclave build is currently not supported on Windows.
+NOTE: Enclave build is currently not supported on Windows.
 
 #### Using Visual Studio with CMake support
 CMake project can be directly opened and built using Visual Studio with CMake support..

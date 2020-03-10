@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -211,14 +211,14 @@ void printf(const char *fmt, ...)
  *                            KEY_POLICY =MRSIGNER,
  *                            KEY_ID = 0, Current CPUSVN,
  *                            Current ISVSVN)
- * 2) Block 1 = AES-CMAC(Sealing Key, QE3 string with Counter = 0x01)
- * 3) Block 2 = AES-CMAC(Sealing Key, QE3 ring with Counter = 0x02)
- * 4) Block 3 = AES-CMAC(Sealing Key, QE3 string with Counter = = 0x03)
+ * 2) Block 1 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x01)
+ * 3) Block 2 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x02)
+ * 4) Block 3 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x03)
  * 5) QE3 ATT Seed = most significant 320 bits of (Block 1 || Block 2 || Block 3).
  * 6) QE3 ATT key pair ir is generated d using NIST SP 186-4 4 section B 4.1 "Key Pair Generation Using Extra Random
  *    Bits." AE ATT Seed are used for the random bits.
  *
- *    QE3 String:
+ *    QE ATT String:
  *       Byte Position  |  Value
  *         0            |  Counter (See Description)
  *         1-10         |  "QE_KEY_DER" (ascii encoded)
@@ -306,7 +306,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     ref_static_assert(sizeof(sgx_cmac_128bit_key_t) == sizeof(sgx_key_128bit_t));
     ref_static_assert(2 * sizeof(sgx_cmac_128bit_tag_t) <= HASH_DRBG_OUT_LEN && 3 * sizeof(sgx_cmac_128bit_tag_t) >= HASH_DRBG_OUT_LEN);
 
-    //Block 1 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x01)
+    //Block 1 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x01)
     content[0] = 0x01;
     if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
@@ -322,7 +322,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     }
     memcpy(hash_drg_output, block, sizeof(sgx_cmac_128bit_tag_t));
 
-    //Block 2 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x02)
+    //Block 2 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x02)
     content[0] = 0x02;
     if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
@@ -338,7 +338,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     }
     memcpy(hash_drg_output + sizeof(sgx_cmac_128bit_tag_t), block, sizeof(sgx_cmac_128bit_tag_t));
 
-    //Block 3 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x03)
+    //Block 3 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x03)
     content[0] = 0x03;
     if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
