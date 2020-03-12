@@ -13,6 +13,17 @@ Documentation
 - [Intel(R) SGX for Linux\* OS](https://01.org/intel-softwareguard-extensions) project home page on [01.org](http://01.org)
 - [Intel(R) SGX Programming Reference](https://software.intel.com/sites/default/files/managed/48/88/329298-002.pdf)
 
+Change Log
+----------
+### V1.22
+- Exposed a new device for provisioning control: /dev/sgx_prv. This requires udev rules and user group "sgx_prv" to set proper permissions. See [installation section](#install) for details.
+- Added a new ioctl SET_ATTRIBUTE. Apps loading provisioning enclave need to call this ioctl before INIT_ENCLAVE ioctl. 
+- Added instructions for RHEL 8.
+- Removed in-kernel Launch Enclave.
+- Changed Makefile to fail the build on an SGX enabled kernel. This driver can't co-exist with in-kernel driver.
+- Minor bug fixes
+
+
 
 Build and Install the Intel(R) SGX Driver
 -----------------------------------------
@@ -66,7 +77,7 @@ Build and Install the Intel(R) SGX Driver
 **Note:** Refer to the *"Intel® SGX Resource Enumeration Leaves"* section in the [Intel SGX Programming reference guide](https://software.intel.com/sites/default/files/managed/48/88/329298-002.pdf) to make sure your cpu has the SGX feature.
 
 
-### Build the Intel(R) SGX Driver
+### Build
 To build the Intel(R) SGX Driver use the following command line:
 ```
 $ make
@@ -75,7 +86,7 @@ To clean the build area and remove all the generated and build files use:
 ```
 $ make clean
 ```
-### Install the Intel(R) SGX Driver
+### Install
 The Intel(R) SGX driver supports DKMS installation, to install the driver follow the following steps:
 - Ensure that the DKMS package is installed, or install it using:
   ``` $ sudo apt-get install dkms  ```
