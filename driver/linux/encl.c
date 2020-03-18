@@ -207,6 +207,13 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 	struct sgx_encl_mm *encl_mm;
 	int ret;
 
+	/*
+	 * This flow relies on mmap_sem being held for write to prevent adding
+	 * multiple encl_mm instances for a single mm_struct, i.e. it prevents
+	 * races between checking sgx_encl_find_mm() and adding to mm_list.
+	 */
+	lockdep_assert_held_write(&mm->mmap_sem);
+
 	if (atomic_read(&encl->flags) & SGX_ENCL_DEAD)
 		return -EINVAL;
 
@@ -234,10 +241,22 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 
 	spin_lock(&encl->mm_lock);
 	list_add_rcu(&encl_mm->list, &encl->mm_list);
+	/*
+	 * Ensure the mm is added to mm_list before updating the generation.
+	 * Pairs with the smp_rmb() in sgx_reclaimer_block().
+	 */
+	smp_wmb();
+	encl->mm_list_gen++;
 	spin_unlock(&encl->mm_lock);
 
-	synchronize_srcu(&encl->srcu);
-
+	/*
+	 * DO NOT call synchronize_srcu()!  When this is called via dup_mmap(),
+	 * mmap_sem is held for write in both the old mm and new mm, and the
+	 * reclaimer may be holding srcu for read while waiting on down_read()
+	 * for the old mm's mmap_sem, i.e. synchronize_srcu() will deadlock.
+	 * Incrementing mm_list_gen ensures readers that must not race with a
+	 * mm being added will see the updated list.
+	 */
 	return 0;
 }
 
