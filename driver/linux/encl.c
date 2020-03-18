@@ -212,7 +212,11 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 	 * multiple encl_mm instances for a single mm_struct, i.e. it prevents
 	 * races between checking sgx_encl_find_mm() and adding to mm_list.
 	 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
 	lockdep_assert_held_write(&mm->mmap_sem);
+#else
+	lockdep_assert_held_exclusive(&mm->mmap_sem);
+#endif
 
 	if (atomic_read(&encl->flags) & SGX_ENCL_DEAD)
 		return -EINVAL;
