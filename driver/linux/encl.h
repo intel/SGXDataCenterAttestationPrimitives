@@ -5,6 +5,7 @@
 #ifndef _X86_ENCL_H
 #define _X86_ENCL_H
 
+#include <linux/version.h>
 #include <linux/cpumask.h>
 #include <linux/kref.h>
 #include <linux/list.h>
@@ -63,6 +64,9 @@ struct sgx_encl_mm {
 	struct mm_struct *mm;
 	struct list_head list;
 	struct mmu_notifier mmu_notifier;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
+	struct rcu_head rcu;
+#endif
 };
 
 struct sgx_encl {
@@ -74,6 +78,7 @@ struct sgx_encl {
 	struct mutex lock;
 	struct list_head mm_list;
 	spinlock_t mm_lock;
+	unsigned long mm_list_gen;
 	struct file *backing;
 	struct kref refcount;
 	struct srcu_struct srcu;

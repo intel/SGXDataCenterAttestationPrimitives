@@ -157,6 +157,11 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 	bool ret = true;
 	int idx;
 
+	/*
+	 * Note, this can race with sgx_encl_mm_add(), but worst case scenario
+	 * a page will be reclaimed immediately after it's accessed in the new
+	 * process/mm.
+	 */
 	idx = srcu_read_lock(&encl->srcu);
 
 	list_for_each_entry_rcu(encl_mm, &encl->mm_list, list) {
@@ -192,7 +197,17 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 	struct sgx_encl *encl = page->encl;
 	struct sgx_encl_mm *encl_mm;
 	struct vm_area_struct *vma;
+	unsigned long mm_list_gen;
 	int idx, ret;
+
+retry:
+	mm_list_gen = encl->mm_list_gen;
+	/*
+	 * Ensure mm_list_gen is snapshotted before walking mm_list to prevent
+	 * beginning the walk with the old list in the new generation.  Pairs
+	 * with the smp_wmb() in sgx_encl_mm_add().
+	 */
+	smp_rmb();
 
 	idx = srcu_read_lock(&encl->srcu);
 
@@ -216,6 +231,19 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 	}
 
 	srcu_read_unlock(&encl->srcu, idx);
+
+	/*
+	 * Redo the zapping if a mm was added to mm_list while zapping was in
+	 * progress.  dup_mmap() copies the PTEs for VM_PFNMAP VMAs, i.e. the
+	 * new mm won't take a page fault and so won't see that the page is
+	 * tagged RECLAIMED.  Note, vm_ops->open()/sgx_encl_mm_add() is called
+	 * _after_ PTEs are copied, and dup_mmap() holds the old mm's mmap_sem
+	 * for write, so the generation check is only needed to protect against
+	 * dup_mmap() running after the mm_list walk started but before the old
+	 * mm's PTEs were zapped.
+	 */
+	if (unlikely(encl->mm_list_gen != mm_list_gen))
+		goto retry;
 
 	mutex_lock(&encl->lock);
 
@@ -260,6 +288,11 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 	struct sgx_encl_mm *encl_mm;
 	int idx;
 
+	/*
+	 * Note, this can race with sgx_encl_mm_add(), but ETRACK has already
+	 * been executed, so CPUs running in the new mm will enter the enclave
+	 * in a different epoch.
+	 */
 	cpumask_clear(cpumask);
 
 	idx = srcu_read_lock(&encl->srcu);

@@ -134,6 +134,14 @@ static struct sgx_encl_page *sgx_encl_load_page(struct sgx_encl *encl,
 	return entry;
 }
 
+static void sgx_encl_mm_release_deferred(struct rcu_head *rcu)
+{
+	struct sgx_encl_mm *encl_mm =
+		container_of(rcu, struct sgx_encl_mm, rcu);
+
+	kfree(encl_mm);
+}
+
 static void sgx_mmu_notifier_release(struct mmu_notifier *mn,
 				     struct mm_struct *mm)
 {
@@ -159,7 +167,13 @@ static void sgx_mmu_notifier_release(struct mmu_notifier *mn,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0))
 		mmu_notifier_put(mn);
 #else
-		kfree(encl_mm);
+            /*
+            * Delay freeing encl_mm until after mmu_notifier synchronizes
+            * its SRCU to ensure encl_mm cannot be dereferenced.
+            */
+            mmu_notifier_unregister_no_release(mn, mm);
+            mmu_notifier_call_srcu(&encl_mm->rcu,
+                               &sgx_encl_mm_release_deferred);
 #endif
 	}
 }
@@ -207,6 +221,17 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 	struct sgx_encl_mm *encl_mm;
 	int ret;
 
+	/*
+	 * This flow relies on mmap_sem being held for write to prevent adding
+	 * multiple encl_mm instances for a single mm_struct, i.e. it prevents
+	 * races between checking sgx_encl_find_mm() and adding to mm_list.
+	 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
+	lockdep_assert_held_write(&mm->mmap_sem);
+#else
+	lockdep_assert_held_exclusive(&mm->mmap_sem);
+#endif
+
 	if (atomic_read(&encl->flags) & SGX_ENCL_DEAD)
 		return -EINVAL;
 
@@ -234,10 +259,22 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 
 	spin_lock(&encl->mm_lock);
 	list_add_rcu(&encl_mm->list, &encl->mm_list);
+	/*
+	 * Ensure the mm is added to mm_list before updating the generation.
+	 * Pairs with the smp_rmb() in sgx_reclaimer_block().
+	 */
+	smp_wmb();
+	encl->mm_list_gen++;
 	spin_unlock(&encl->mm_lock);
 
-	synchronize_srcu(&encl->srcu);
-
+	/*
+	 * DO NOT call synchronize_srcu()!  When this is called via dup_mmap(),
+	 * mmap_sem is held for write in both the old mm and new mm, and the
+	 * reclaimer may be holding srcu for read while waiting on down_read()
+	 * for the old mm's mmap_sem, i.e. synchronize_srcu() will deadlock.
+	 * Incrementing mm_list_gen ensures readers that must not race with a
+	 * mm being added will see the updated list.
+	 */
 	return 0;
 }
 
