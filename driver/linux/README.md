@@ -1,3 +1,4 @@
+
 Intel(R) Software Guard Extensions for Linux\* OS
 ================================================
 
@@ -89,9 +90,9 @@ $ make clean
 ### Install
 The Intel(R) SGX driver supports DKMS installation, to install the driver follow the following steps:
 - Ensure that the DKMS package is installed, or install it using:
-  ``` $ sudo apt-get install dkms  ```
-- With root priviledge, copy the sources to ``/usr/src/sgx-<version>/``
-	- ``<version>`` should match the version specified in the dkms.conf file
+  ```$ sudo apt-get install dkms ```
+- With root priviledge, copy the sources to `/usr/src/sgx-<version>/`
+	- `<version>` should match the version specified in the dkms.conf file
 - Follow the following steps to add and install the driver into the DKMS tree:
 ```
 $ sudo dkms add -m sgx -v <version>
@@ -100,7 +101,7 @@ $ sudo dkms install -m sgx -v <version>
 $ sudo /sbin/modprobe intel_sgx
 ```
 
-- Add udev rules and sgx_prv group to properly set permissions of the sgx and sgx_prv device nodes, more [background below](#launching-an-enclave-with-provision-bit-set).
+- Add udev rules and sgx_prv group to properly set permissions of the /dev/sgx/enclave and /dev/sgx/provision nodes, more [background below](#launching-an-enclave-with-provision-bit-set).
 
 ```
 $ sudo cp  10-sgx.rules /etc/udev/rules.d
@@ -108,6 +109,10 @@ $ sudo groupadd sgx_prv
 $ sudo udevadm trigger
 ```
 
+- To automatically load the driver at boot time:
+```
+$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"
+```
 ### Uninstall the Intel(R) SGX Driver
 
 ```
@@ -115,6 +120,12 @@ $ sudo /sbin/modprobe -r intel_sgx
 $ sudo dkms remove -m sgx -v <version> --all
 $ sudo rm -rf /usr/src/sgx-<version>
 ```
+
+To remove intel_sgx from /etc/modules:
+```
+$ sudo /bin/sed -i '/^intel_sgx$/d' /etc/modules
+```
+
 You should also remove the udev rules and sgx_prv user group.
 
 Launching an Enclave with Provision Bit Set
@@ -127,8 +138,8 @@ The current Intel(R) SGX driver allows Intel(R)’s provisioning enclaves to be 
 ### Driver Settings
 The Intel(R) SGX driver installation process described above creates 2 new devices on the platform, and setup these devices with the following permissions:
 ```
-crw-rw-rw- root root /dev/sgx
-crw-rw---- sgx_prv sgx_prv /dev/sgx_prv
+crw-rw-rw- root root      /dev/sgx/enclave
+crw-rw---- root sgx_prv   /dev/sgx/provision
 ```
 **Note:** The driver installer [BIN file provided by Intel(R)](https://01.org/intel-software-guard-extensions/downloads) automatically copy the udev rules and run ``udevadm trigger`` to activate the rules so that the permissions are set as above.
 
@@ -138,7 +149,7 @@ Failing to set these permissions may prevent processes that are not running unde
 ### Process Permissions and Flow
 As mentioned above, Intel(R) provisioning enclaves are signed with Intel(R) owned keys that will enable them to get launched unconditionally.
 A process that launches other provisioning enclaves is required to use the SET_ATTRIBUTE IOCTL before the INIT_ENCLAVE IOCTL to notify the driver that the enclave being launched requires provision key access.
-The SET_ATTRIBUTE IOCTL input is a file handle to /dev/sgx_prv, which will fail to open if the process doesn't have the required permission.
+The SET_ATTRIBUTE IOCTL input is a file handle to /dev/sgx/provision, which will fail to open if the process doesn't have the required permission.
 To summarize, the following flow is required by the platform admin and a process that require provision key access:
  - Software installation flow:
 	- Add the user running the process to the `sgx_prv` group:
@@ -147,7 +158,7 @@ To summarize, the following flow is required by the platform admin and a process
     ```
  - Enclave launch flow:
 	 - Create the enclave
-	 - Open handle to /dev/sgx_prv
+	 - Open handle to /dev/sgx/provision
 	 - Call SET_ATTRIBUTE with the handle as a parameter
 	 - Add pages and initialize the enclave
 
