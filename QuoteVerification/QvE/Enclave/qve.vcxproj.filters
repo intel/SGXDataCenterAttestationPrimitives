@@ -15,7 +15,7 @@
     <Xml Include="qve.config.xml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="qve_key.pem" />
+    <None Include="qve_test_key.pem" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource Files">
