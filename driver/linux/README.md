@@ -16,6 +16,19 @@ Documentation
 
 Change Log
 ----------
+### V1.32
+- Port the upstream candidate patch version 28.
+- Impact to [installation](#install):
+  * The device nodes are moved to /dev/sgx/enclave, /dev/sgx/provision
+  * The udev rules are updated to match sgx device nodes in "misc" subsystem.
+  * To load the driver on boot, the driver need be added to the auto-load list, e.g., /etc/modules.
+- Impact to user space code:
+  * One fd to /dev/sgx/enclave should be opened for each enclave.
+  * Source and target address/offset passed to EADD ioctl should be page aligned
+  * Page permissions are capped by the EPCM permissions(flags in secinfo) specified during EADD ioctl. Subsequent mprotect/mmap calls can not add more permissions.
+  * The application hosting enclaves can not have executable stack, i.e., use -z noexecstack linker flag.
+- **Note**: Intel(R) SGX PSW 2.9+ release and DCAP 1.6+ release are compatible with these changes.
+
 ### V1.22
 - Exposed a new device for provisioning control: /dev/sgx_prv. This requires udev rules and user group "sgx_prv" to set proper permissions. See [installation section](#install) for details.
 - Added a new ioctl SET_ATTRIBUTE. Apps loading provisioning enclave need to call this ioctl before INIT_ENCLAVE ioctl. 
