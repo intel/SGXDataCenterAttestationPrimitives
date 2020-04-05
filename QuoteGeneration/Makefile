@@ -63,7 +63,7 @@ dcap: $(CHECK_OPT) pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper qve_wrappe
 opt_check_failed:
 	@echo "ERROR: Please decompress prebuilt enclave package before compiling."
 	@echo "Exiting......"
-	@exit -2
+	@exit 3
 
 pce_wrapper: 
 	$(MAKE) -C pce_wrapper/linux
