@@ -57,7 +57,7 @@ dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper
 opt_check_failed:
 	@echo "Please run download_prebuilt.sh before compiling"
 	@echo "Exiting......"
-	@exit -2
+	@exit 3
 
 pce_logic:
 	$(MAKE) -C pce_wrapper/linux
