@@ -31,11 +31,33 @@
 
 const { pck_certchain }= require('./models/');
 const Constants = require('../constants/index.js');
+const {Sequelize, sequelize} = require('./models/');
 
-exports.upsertPckCertchain = async function() {
+exports.upsertPckCertchain = async function(ca) {
     return await pck_certchain.upsert({
-        id: 1,
+        ca: ca,
         root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-        intmd_cert_id: Constants.PROCESSOR_INTERMEDIATE_CERT_ID
+        intmd_cert_id: (ca == Constants.CA_PROCESSOR)? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID
     });
+}
+
+exports.getPckCertChain = async function(ca) {
+    const sql = 'select a.*,' +
+              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+              ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
+              ' from pck_certchain a ' +
+              ' where a.ca=$ca';
+    const certchain = await sequelize.query(sql,
+        {
+            type:  sequelize.QueryTypes.SELECT,
+            bind: { ca : ca }
+        });
+    if (certchain.length == 0)
+        return null;
+    else if (certchain.length == 1 ){
+        return certchain[0];
+    }
+    else 
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+
 }

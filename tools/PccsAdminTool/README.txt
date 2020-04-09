@@ -40,6 +40,7 @@ optional arguments:
                                 The input file name for platform list. If omitted, "platform_list.json" will be used.
           -o OUTPUT_FILE, --output_file OUTPUT_FILE
                                 The output file name for platform collaterals. If omitted, "platform_collaterals.json" will be used.
+          -u URL, --url URL     The URL of the Intel PCS service. If omitted, "https://api.trustedservices.intel.com/sgx/certification/v2/" will be used.
           -k KEY, --key KEY     Your Intel PCS API key
 
 
@@ -48,7 +49,7 @@ optional arguments:
 
   optional arguments:
           -h, --help            show this help message and exit
-          -u URL, --url URL     The URL of the PCCS service. If omitted, "https://api.trustedservices.intel.com/sgx/certification" will be used.
+          -u URL, --url URL     The URL of the PCCS service. If omitted, "https://localhost:8081" will be used.
           -i INPUT_FILE, --input_file INPUT_FILE
                                 The input file name for platform collaterals. If omitted, "platform_collaterals.json" will be used.
           -t TOKEN, --token TOKEN

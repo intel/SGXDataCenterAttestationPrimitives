@@ -82,6 +82,7 @@ bool Tcb::operator ==(const Tcb& other) const
 
 Tcb::Tcb(const ASN1_TYPE *tcbSeq)
 {
+    _pceSvn = 0;
     crypto::validateOid(oids::TCB, tcbSeq, V_ASN1_SEQUENCE);
 
     const auto stack = crypto::oidToStack(tcbSeq);

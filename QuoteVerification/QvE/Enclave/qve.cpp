@@ -458,13 +458,13 @@ quote3_error_t get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_si
 
         auto fmspc_from_cert = topmost_pck_cert.getFmspc();
         auto issuer = topmost_cert->getIssuer().getCommonName();
-        if (issuer.find(PROCESSOR_ISSUER)) {
+        if (issuer.find(PROCESSOR_ISSUER) != std::string::npos) {
             if (memcpy_s(p_ca_from_quote, ca_from_quote_size, PROCESSOR_ISSUER_ID, sizeof(PROCESSOR_ISSUER_ID)) != 0) {
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
         }
-        else if (issuer.find(PLATFORM_ISSUER)) {
+        else if (issuer.find(PLATFORM_ISSUER) != std::string::npos) {
             if (memcpy_s(p_ca_from_quote, ca_from_quote_size, PLATFORM_ISSUER_ID, sizeof(PLATFORM_ISSUER_ID)) != 0) {
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;

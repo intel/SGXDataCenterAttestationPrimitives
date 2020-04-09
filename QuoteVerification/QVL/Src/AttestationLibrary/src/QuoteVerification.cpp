@@ -105,7 +105,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     {
         currentTime = qvl::getCurrentTime(expirationDate);
     }
-    catch (const std::runtime_error &ex)
+    catch (const std::runtime_error&)
     {
         return STATUS_INVALID_PARAMETER;
     }
@@ -143,7 +143,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         auto rootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return qvl::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT;
     }
@@ -175,11 +175,11 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
         auto trustedRootCACert = dcap::parser::x509::Certificate::parse(pemTrustedRootCaCert);
         return qvl::PckCrlVerifier{}.verify(x509Crl, chain, trustedRootCACert);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex)
+    catch (const dcap::parser::InvalidExtensionException&)
     {
         return STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT;
     }
@@ -193,7 +193,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     {
         currentTime = qvl::getCurrentTime(expirationDate);
     }
-    catch (const std::runtime_error &ex)
+    catch (const std::runtime_error&)
     {
         return STATUS_INVALID_PARAMETER;
     }
@@ -211,11 +211,11 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     {
         tcbInfoJson = dcap::parser::json::TcbInfo::parse(tcbInfo);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex)
+    catch (const dcap::parser::InvalidExtensionException&)
     {
         return STATUS_SGX_TCB_INFO_INVALID;
     }
@@ -243,11 +243,11 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return qvl::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex)
+    catch (const dcap::parser::InvalidExtensionException&)
     {
         return STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS;
     }
@@ -262,7 +262,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     {
         currentTime = qvl::getCurrentTime(expirationDate);
     }
-    catch (const std::runtime_error &ex)
+    catch (const std::runtime_error&)
     {
         return STATUS_INVALID_PARAMETER;
     }
@@ -309,11 +309,11 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return qvl::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex)
+    catch (const dcap::parser::InvalidExtensionException&)
     {
         return STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS;
     }
@@ -355,11 +355,11 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     {
         tcbInfo = dcap::parser::json::TcbInfo::parse(tcbInfoJson);
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex)
+    catch (const dcap::parser::InvalidExtensionException&)
     {
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
@@ -371,7 +371,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         try {
             enclaveIdentity = parser.parse(qeIdentityJson);
         }
-        catch (const qvl::ParserException &e)
+        catch (const qvl::ParserException&)
         {
             return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
         }
@@ -382,11 +382,11 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate); /// 4.1.2.4.3
         return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), qvl::EnclaveReportVerifier());
     }
-    catch (const dcap::parser::FormatException &ex)
+    catch (const dcap::parser::FormatException&)
     {
         return STATUS_UNSUPPORTED_PCK_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException &ex) /// 4.1.2.4.4
+    catch (const dcap::parser::InvalidExtensionException&) /// 4.1.2.4.4
     {
         return STATUS_INVALID_PCK_CERT;
     }

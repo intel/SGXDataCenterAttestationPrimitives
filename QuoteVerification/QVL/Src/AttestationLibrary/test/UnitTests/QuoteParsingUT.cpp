@@ -156,6 +156,12 @@ TEST(quoteParsing, shouldParseQuoteHeader)
     qvl::test::QuoteGenerator::QuoteHeader testHeader;
     testHeader.version = 3;
     testHeader.attestationKeyType = 0xffaa;
+    testHeader.pceSvn = 0;
+    testHeader.qeSvn = 0;
+    testHeader.uuid = {};
+    testHeader.reserved = {};
+    testHeader.userData = {};
+
     qvl::test::QuoteGenerator generator;
 
     generator.withHeader(testHeader);

@@ -108,6 +108,28 @@ static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error)
     }
 }
 
+
+/**
+* This method converts PCCS HTTP status codes to QCNL error codes
+*
+* @param pccs_status_code PCCS HTTP status codes
+*
+* @return Collateral Network Library Error Codes
+*/
+static sgx_qcnl_error_t pccs_status_to_qcnl_error(long pccs_status_code)
+{
+    switch(pccs_status_code){
+        case 200:   // PCCS_STATUS_SUCCESS
+            return SGX_QCNL_SUCCESS;
+        case 404:   // PCCS_STATUS_NO_CACHE_DATA
+            return SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
+        case 461:   // PCCS_STATUS_PLATFORM_UNKNOWN
+            return SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN;
+        default:
+            return SGX_QCNL_ERROR_STATUS_UNEXPECTED;
+    }
+}
+
 /**
 * This method calls curl library to perform https GET request and returns response body and header
 *
@@ -169,12 +191,8 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
         }
         long http_code = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        if (http_code == 404) {
-            ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
-            break;
-        }
-        else if (http_code != 200) {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
+        if (http_code != 200) {
+            ret = pccs_status_to_qcnl_error(http_code);
             break;
         }
 
@@ -293,7 +311,7 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
         long http_code = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
         if (http_code == 404) {
-            ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
+            ret = SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
             break;
         }
         else if (http_code != 200) {

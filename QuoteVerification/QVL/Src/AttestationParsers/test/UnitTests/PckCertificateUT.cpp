@@ -159,3 +159,13 @@ TEST_F(PckCertificateUT, certificateOperators)
     ASSERT_FALSE(certificate1 == certificate3);
     ASSERT_FALSE(certificate2 == certificate3);
 }
+
+TEST_F(PckCertificateUT, pckCertificateParseWithWrongAmountOfExtensions)
+{
+    const auto& brokenCert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
+                                  constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
+                                  ppid, cpusvn, pcesvn, pceId, fmspc, true);
+    pemPckCert = certGenerator.x509ToString(brokenCert.get());
+    // Exception thrown because of SGX TCB extension is not equal 5 or 7
+    ASSERT_THROW(x509::PckCertificate::parse(pemPckCert), InvalidExtensionException);
+}

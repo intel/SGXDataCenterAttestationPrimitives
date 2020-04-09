@@ -176,11 +176,10 @@ std::string TcbInfoGenerator::generateTcbInfo(const std::string &tcbInfoTemplate
 											  const std::string &signature)
 {
 	auto jsonSize = tcbInfoTemplate.length() + tcbLevelsJson.length() + signature.length() + 1;
-	char *tcbInfo = new char[jsonSize];
-	sprintf(tcbInfo, tcbInfoTemplate.c_str(), tcbLevelsJson.c_str(), signature.c_str());
-	auto str = std::string(tcbInfo);
-	delete[]tcbInfo;
-	return str;
+	std::string tcbInfo;
+	tcbInfo.resize(jsonSize);
+	snprintf(&tcbInfo[0], jsonSize, tcbInfoTemplate.c_str(), tcbLevelsJson.c_str(), signature.c_str());
+	return tcbInfo;
 }
 
 std::string TcbInfoGenerator::generateTcbLevelV1(const std::string &tcbLevelTemplate,
@@ -188,11 +187,11 @@ std::string TcbInfoGenerator::generateTcbLevelV1(const std::string &tcbLevelTemp
                                                  const std::string &status)
 {
 	auto jsonSize = tcbLevelTemplate.length() + tcb.length() + status.length() + 1;
-	char *tcbInfo = new char[jsonSize];
-	sprintf(tcbInfo, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str());
-	auto str = std::string(tcbInfo);
-	delete[]tcbInfo;
-	return str;
+	std::string tcbInfo;
+	tcbInfo.resize(jsonSize);
+	snprintf(&tcbInfo[0], jsonSize, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str());
+	tcbInfo.resize(tcbInfo.find('\000')); // Remove extra characters ('\000')
+	return tcbInfo;
 }
 
 std::string TcbInfoGenerator::generateTcbLevelV2(const std::string &tcbLevelTemplate,
@@ -202,12 +201,10 @@ std::string TcbInfoGenerator::generateTcbLevelV2(const std::string &tcbLevelTemp
                                                  const std::string &advisoryIDs)
 {
     auto jsonSize = tcbLevelTemplate.length() + tcb.length() + status.length() + tcbDate.length() + advisoryIDs.length() + 1;
-    char *tcbInfo = new char[jsonSize];
-    sprintf(tcbInfo, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str(), tcbDate.c_str(), advisoryIDs.c_str());
-    auto str = std::string(tcbInfo);
-    delete[]tcbInfo;
-    return str;
+    std::string tcbInfo;
+    tcbInfo.resize(jsonSize);
+    snprintf(&tcbInfo[0], jsonSize, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str(), tcbDate.c_str(), advisoryIDs.c_str());
+    return tcbInfo;
 }
-
 
 }}}

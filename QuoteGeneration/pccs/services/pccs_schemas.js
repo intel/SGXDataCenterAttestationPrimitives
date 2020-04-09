@@ -393,7 +393,15 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                     }
                 },
                 "pckcacrl": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                        "processorCrl":{
+                            "type": "string"
+                        },
+                        "platformCrl":{
+                            "type": "string"
+                        }
+                    }
                 },
                 "qeidentity": {
                     "type": "string"
@@ -405,7 +413,15 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                     "type": "object",
                     "properties": {
                         "sgx-pck-certificate-issuer-chain": {
-                            "type": "string"
+                            "type": "object",
+                            "properties": {
+                                "PROCESSOR":{
+                                    "type": "string"
+                                },
+                                "PLATFORM":{
+                                    "type": "string"
+                                }
+                            }
                         },
                         "sgx-tcb-info-issuer-chain": {
                             "type": "string"

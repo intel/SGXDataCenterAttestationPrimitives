@@ -45,7 +45,8 @@ CrlStore::CrlStore()
       _validity{},
       _revoked{},
       _extensions{},
-      _signature{}
+      _signature{},
+      _crlNum{}
 {
 }
 

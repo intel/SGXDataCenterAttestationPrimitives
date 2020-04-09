@@ -38,15 +38,15 @@
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace test {
 
-const std::string SGX_EXTENSIONS_OID_STR = "1.2.840.113741.1.13.1";
-const std::string SGX_PPID_OID_STR       = "1.2.840.113741.1.13.1.1";
-const std::string SGX_TCB_OID_STR        = "1.2.840.113741.1.13.1.2";
-const std::string SGX_PCESVN_OID_STR     = "1.2.840.113741.1.13.1.2.17";
-const std::string SGX_CPUSVN_OID_STR     = "1.2.840.113741.1.13.1.2.18";
-const std::string SGX_PCEID_OID_STR      = "1.2.840.113741.1.13.1.3";
-const std::string SGX_FMSPC_OID_STR      = "1.2.840.113741.1.13.1.4";
-const std::string SGX_SGXTYPE_OID_STR    = "1.2.840.113741.1.13.1.5";
-const std::string SGX_DYNAMIC_P_OID_STR  = "1.2.840.113741.1.13.1.6";
+const std::string SGX_EXTENSIONS_OID_STR            = "1.2.840.113741.1.13.1";
+const std::string SGX_PPID_OID_STR                  = "1.2.840.113741.1.13.1.1";
+const std::string SGX_TCB_OID_STR                   = "1.2.840.113741.1.13.1.2";
+const std::string SGX_PCESVN_OID_STR                = "1.2.840.113741.1.13.1.2.17";
+const std::string SGX_CPUSVN_OID_STR                = "1.2.840.113741.1.13.1.2.18";
+const std::string SGX_PCEID_OID_STR                 = "1.2.840.113741.1.13.1.3";
+const std::string SGX_FMSPC_OID_STR                 = "1.2.840.113741.1.13.1.4";
+const std::string SGX_SGXTYPE_OID_STR               = "1.2.840.113741.1.13.1.5";
+const std::string SGX_UNEXPECTED_EXTENSION_OID_STR  = "1.2.840.113741.1.13.1.20";
 
 const int OID_FORMAT_NUMERIC = 1;
 
@@ -100,11 +100,11 @@ crypto::X509_uptr X509CertGenerator::generatePCKCert(int version, const Bytes &s
                                const dcap::parser::x509::DistinguishedName &issuer,
                                const Bytes& ppid, const Bytes& cpusvn, const Bytes& pcesvn,
                                const Bytes& pceId, const Bytes &fmspc,
-                               bool dynamicPlatform, bool includeDynamicPlatform) const
+                               bool unexpectedExtension) const
 {
     auto cert = generateBaseCert(version, serialNumber, notBeforeOffset, notAfterOffset, pubKey, subject, issuer);
     addStandardNonCaExtensions(cert);
-    addSGXPckExtensions(cert, ppid, cpusvn, pcesvn, pceId, fmspc, dynamicPlatform, includeDynamicPlatform);
+    addSGXPckExtensions(cert, ppid, cpusvn, pcesvn, pceId, fmspc, unexpectedExtension);
     signCert(cert, signingKey);
     return cert;
 }
@@ -163,17 +163,17 @@ void X509CertGenerator::createTcbComp(const std::string &parentOid, int index, u
 }
 
 void X509CertGenerator::addSGXPckExtensions(const crypto::X509_uptr &cert, const Bytes &ppid, const Bytes &cpusvn,
-                                            const Bytes &pcesvn, const Bytes &pceId, const Bytes &fmspc, bool dynamicPlatform, bool includeDynamicPlatform) const
+                                            const Bytes &pcesvn, const Bytes &pceId, const Bytes &fmspc, bool unexpectedExtension) const
 {
-    auto mainSequenceOID     = crypto::make_unique(OBJ_txt2obj(SGX_EXTENSIONS_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto ppidOID             = crypto::make_unique(OBJ_txt2obj(SGX_PPID_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto tcbSequenceOID      = crypto::make_unique(OBJ_txt2obj(SGX_TCB_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto tcbPceSvnOID        = crypto::make_unique(OBJ_txt2obj(SGX_PCESVN_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto tcbCpuSvnOID        = crypto::make_unique(OBJ_txt2obj(SGX_CPUSVN_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto pceIdOID            = crypto::make_unique(OBJ_txt2obj(SGX_PCEID_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto fmspcOID            = crypto::make_unique(OBJ_txt2obj(SGX_FMSPC_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto sgxTypeOID          = crypto::make_unique(OBJ_txt2obj(SGX_SGXTYPE_OID_STR.c_str(), OID_FORMAT_NUMERIC));
-    auto dynamicPlatformOID  = crypto::make_unique(OBJ_txt2obj(SGX_DYNAMIC_P_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto mainSequenceOID         = crypto::make_unique(OBJ_txt2obj(SGX_EXTENSIONS_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto ppidOID                 = crypto::make_unique(OBJ_txt2obj(SGX_PPID_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto tcbSequenceOID          = crypto::make_unique(OBJ_txt2obj(SGX_TCB_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto tcbPceSvnOID            = crypto::make_unique(OBJ_txt2obj(SGX_PCESVN_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto tcbCpuSvnOID            = crypto::make_unique(OBJ_txt2obj(SGX_CPUSVN_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto pceIdOID                = crypto::make_unique(OBJ_txt2obj(SGX_PCEID_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto fmspcOID                = crypto::make_unique(OBJ_txt2obj(SGX_FMSPC_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto sgxTypeOID              = crypto::make_unique(OBJ_txt2obj(SGX_SGXTYPE_OID_STR.c_str(), OID_FORMAT_NUMERIC));
+    auto unexpectedExtensionOID  = crypto::make_unique(OBJ_txt2obj(SGX_UNEXPECTED_EXTENSION_OID_STR.c_str(), OID_FORMAT_NUMERIC));
 
     auto sgxExtensions = crypto::make_unique(crypto::SGX_EXTENSIONS_new()); // everything in this struct should be freed by uptr!
 
@@ -223,12 +223,12 @@ void X509CertGenerator::addSGXPckExtensions(const crypto::X509_uptr &cert, const
     sgxCpusvn->oid = tcbCpuSvnOID.release();
     ASN1_OCTET_STRING_set(sgxCpusvn->value, cpusvn.data(), static_cast<int>(cpusvn.size()));
 
-    auto sgxDynamicPlatform = crypto::make_unique(crypto::SGX_BOOL_new());
-    sgxDynamicPlatform->oid = dynamicPlatformOID.release();
-    sgxDynamicPlatform->value = reinterpret_cast<ASN1_BOOLEAN *>(dynamicPlatform ? &dynamicPlatform : nullptr);
-    if(includeDynamicPlatform)
+    if(unexpectedExtension)
     {
-        sgxExtensions->dynamicPlatform = sgxDynamicPlatform.release();
+        auto sgxUnexpectedExtension = crypto::make_unique(crypto::SGX_BOOL_new());
+        sgxUnexpectedExtension->oid = unexpectedExtensionOID.release();
+        sgxUnexpectedExtension->value = reinterpret_cast<ASN1_BOOLEAN *>(sgxUnexpectedExtension ? &sgxUnexpectedExtension : nullptr);
+        sgxExtensions->unexpectedExtension = sgxUnexpectedExtension.release();
     }
 
     auto sgxExtensionsOctet = crypto::make_unique(ASN1_OCTET_STRING_new());

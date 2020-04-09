@@ -53,7 +53,7 @@ public:
         std::array<uint8_t, 16> uuid;
         std::array<uint8_t, 20> userData;
 
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
 
     struct EnclaveReport
@@ -71,7 +71,7 @@ public:
         std::array<uint8_t, 60> reserved4;
         std::array<uint8_t, 64> reportData;
         
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
         std::array<uint8_t,384> rawBlob() const;
     };
 
@@ -79,21 +79,21 @@ public:
     {
         std::array<uint8_t, 64> signature;
 
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
 
     struct Ecdsa256BitPubkey
     {
         std::array<uint8_t, 64> pubKey;
 
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
 
     struct QeAuthData
     {
         uint16_t parsedDataSize;
         std::vector<uint8_t> data;
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
 
     struct QeCertData
@@ -101,7 +101,7 @@ public:
         uint16_t type;
         uint32_t parsedDataSize;
         std::vector<uint8_t> data;
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
 
     struct Ecdsa256BitQuoteAuthData
@@ -114,7 +114,7 @@ public:
         QeAuthData qeAuthData;
         QeCertData qeCertData;
 
-        void insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     }; 
 
     bool parse(const std::vector<uint8_t>& rawQuote);

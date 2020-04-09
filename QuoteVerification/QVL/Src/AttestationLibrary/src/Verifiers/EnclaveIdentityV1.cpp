@@ -40,7 +40,7 @@
 
 namespace intel { namespace sgx { namespace qvl {
 
-    EnclaveIdentityV1::EnclaveIdentityV1(const ::rapidjson::Value &p_body)
+    EnclaveIdentityV1::EnclaveIdentityV1(const ::rapidjson::Value &p_body) : isvSvn(0)
     {
         if(!p_body.IsObject())
         {

@@ -41,6 +41,8 @@
 #include "se_trace.h"
 #include "se_thread.h"
 
+#define MAX(x, y) (((x)>(y))?(x):(y))
+#define PATH_SEPARATOR '/'
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
 
@@ -55,6 +57,27 @@ extern sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity;
 
 extern sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl;
 extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
+
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+static char g_qpl_path[MAX_PATH];
+
+
+extern "C" bool sgx_qv_set_qpl_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_qpl_path)
+    size_t len = strnlen(p_path, sizeof(g_qpl_path));
+    // Make sure there is enough space for the '\0'
+    // after this line len <= sizeof(g_qpl_path) - 1
+    if(len > sizeof(g_qpl_path) - 1)
+        return false;
+    strncpy(g_qpl_path, p_path, sizeof(g_qpl_path) - 1);
+    // Make sure the full path is ended with "\0"
+    g_qpl_path[len] = '\0';
+    return true;
+}
 
 
 bool sgx_dcap_load_qpl()
@@ -78,23 +101,34 @@ bool sgx_dcap_load_qpl()
     }
 
     do {
-        //try to dynamically load libdcap_quoteprov.so
-        //
-        g_qpl_handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-        if (NULL == g_qpl_handle)
-        {
-            ///TODO:
-            // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-            // We shalll remove this when we have a major version change later and drop the backward compatible
-            // support for old lib name.
-            g_qpl_handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+        if (g_qpl_path[0]) {
+            g_qpl_handle = dlopen(g_qpl_path, RTLD_LAZY);
+            if (NULL == g_qpl_handle) {
+                SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s\n",
+                    g_qpl_path);
+                 ret = false;
+                 goto end;
+             }
         }
-        if (g_qpl_handle == NULL) {
-            fputs(dlerror(), stderr);
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s or %s\n",
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
-            break;
+        else {
+            //try to dynamically load libdcap_quoteprov.so
+            g_qpl_handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+
+            if (NULL == g_qpl_handle)
+            {
+                ///TODO:
+                // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
+                // We shalll remove this when we have a major version change later and drop the backward compatible
+                // support for old lib name.
+                g_qpl_handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+            }
+            if (g_qpl_handle == NULL) {
+                fputs(dlerror(), stderr);
+                SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s or %s\n",
+                    SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
+                    SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
+                break;
+            }
         }
 
         //search for sgx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library

@@ -43,6 +43,8 @@ public:
     TCBSigningChain(std::unique_ptr<CommonVerifier>&& commonVerifier, std::unique_ptr<PckCrlVerifier>&& crlVerifier);
     TCBSigningChain(const TCBSigningChain&) = delete;
     TCBSigningChain(TCBSigningChain&&) = delete;
+    TCBSigningChain operator=(const TCBSigningChain&) = delete;
+    TCBSigningChain operator=(TCBSigningChain&&) = delete;
     virtual ~TCBSigningChain() = default;
 
     /**

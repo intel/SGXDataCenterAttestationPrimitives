@@ -42,7 +42,7 @@ exports.getTcbInfoFromPCS=async function(fmspc) {
     const pck_server_res = await PcsClient.getTcb(fmspc);
 
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     let result = {};
@@ -71,7 +71,7 @@ exports.getTcbInfo=async function(fmspc) {
             result = await this.getTcbInfoFromPCS(fmspc);    
         }
         else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
         }
     }
     else {

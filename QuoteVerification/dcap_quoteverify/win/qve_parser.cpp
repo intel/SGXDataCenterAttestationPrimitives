@@ -40,7 +40,7 @@
  */
 
 #include <tchar.h>
-#include "se_map.h"
+#include <windows.h>
 
 #define QvE_ENCLAVE_NAME _T("qve.signed.dll")
 bool get_qve_path(

@@ -77,6 +77,28 @@ static sgx_qcnl_error_t windows_last_error_to_qcnl_error(void)
     }
 }
 
+
+/**
+* This method converts PCCS HTTP status codes to QCNL error codes
+*
+* @param pccs_status_code PCCS HTTP status codes
+*
+* @return Collateral Network Library Error Codes
+*/
+static sgx_qcnl_error_t pccs_status_to_qcnl_error(DWORD pccs_status_code)
+{
+    switch(pccs_status_code){
+        case 200:   // PCCS_STATUS_SUCCESS
+            return SGX_QCNL_SUCCESS;
+        case 404:   // PCCS_STATUS_NO_CACHE_DATA
+            return SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
+        case 461:   // PCCS_STATUS_PLATFORM_UNKNOWN
+            return SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN;
+        default:
+            return SGX_QCNL_ERROR_STATUS_UNEXPECTED;
+    }
+}
+
 sgx_qcnl_error_t qcnl_https_get(const char* url, 
                                       char **resp_msg, 
                                       uint32_t& resp_size, 
@@ -249,15 +271,10 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
             header_size++;
             delete[] lpOutBuffer;
         }
-        else if (dwStatus == HTTP_STATUS_NOT_FOUND) // 404
-        {
-            ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
-            break;
-        }
-        else {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
-            break;
-        }
+		else {
+			ret = pccs_status_to_qcnl_error(dwStatus);
+			break;
+		}
 
         resp_size = 0;
         // Keep checking for data until there is nothing left.
@@ -568,7 +585,7 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
 		}
 		else if (dwStatus == HTTP_STATUS_NOT_FOUND) // 404
 		{
-			ret = SGX_QCNL_ERROR_STATUS_NOT_FOUND;
+			ret = SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
 			break;
 		}
 		else {

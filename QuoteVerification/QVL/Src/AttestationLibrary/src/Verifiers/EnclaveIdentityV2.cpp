@@ -38,6 +38,7 @@
 namespace intel { namespace sgx { namespace qvl {
 
     EnclaveIdentityV2::EnclaveIdentityV2(const ::rapidjson::Value &p_body)
+        : tcbEvaluationDataNumber(0), id(QE)
     {
         if(!p_body.IsObject())
         {
@@ -110,7 +111,7 @@ namespace intel { namespace sgx { namespace qvl {
         {
             struct tm tcbDate{};
             std::string tcbStatus;
-            unsigned int isvsvn;
+            unsigned int isvsvn = 0;
 
             std::tie(tcbDate, l_status) = jsonParser.getDateFieldOf(*itr, "tcbDate");
             if (!l_status)

@@ -44,34 +44,61 @@ const {sequelize, Sequelize} = require('../dao/models/');
 const X509 = require('../x509/x509.js');
 const PckLib = require('../lib_wrapper/pcklib_wrapper.js');
 
+exports.getPcsVersion = function()
+{
+    let pcs_url = Config.get('uri');
+    let verstr = pcs_url.match(/\/v([1-9][0-9]*)\//);
+    if (verstr.length == 0)
+        return 1;
+
+    let ver = verstr[0].substr(2).slice(0,-1);
+    return parseInt(ver);
+}
+
 // Get PCK cert from PCS for platform {qeid, cpusvn, pcesvn, pce_id, enc_ppid} and update cache DB
 exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform_manifest)
 {
     let result = {};
-    if (enc_ppid == null) {
+    if (enc_ppid == null && platform_manifest == null) {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
     }
 
-    // if enc_ppid is all zero, return NOT_FOUND
-    if (enc_ppid.match(/^0+$/)) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+    let pck_server_res;
+    if (platform_manifest && this.getPcsVersion() >= 3) {
+        // if platform manifest is provided, will call Intel PCS API with platform manifest
+        pck_server_res = await PcsClient.getCertsWithManifest(platform_manifest, pceid);
     }
+    else {
+        // if enc_ppid is all zero, return NOT_FOUND
+        if (enc_ppid.match(/^0+$/)) {
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        }
 
-    // contact Intel PCS service to get PCK certs for this platform
-    let pck_server_res = await PcsClient.getCerts(enc_ppid, pceid);
+        // Call Intel PCS API with encrypted PPID
+        pck_server_res = await PcsClient.getCerts(enc_ppid, pceid);
+    }
 
     // check HTTP status
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     // Get PCK certificate issuer chain
     const pck_certchain = pck_server_res.headers[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN];
 
     // Parse the response body
-    const pckcerts = JSON.parse(pck_server_res.body);
+    let pckcerts = null;
+    if (typeof pck_server_res.body === 'object') {
+        pckcerts = pck_server_res.body;
+    }
+    else if (typeof pck_server_res.body === 'string') {
+        pckcerts = JSON.parse(pck_server_res.body);
+    }
+    else {
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+    }
     if (pckcerts.length == 0) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     // parse arbitary cert to get fmspc value
@@ -80,7 +107,7 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
     }
 
-    if (x509.fmspc == null) {
+    if (x509.fmspc == null || x509.ca == null) {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
     }
     const fmspc = x509.fmspc.toUpperCase();
@@ -88,7 +115,7 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
     // get tcbinfo for this fmspc
     pck_server_res = await PcsClient.getTcb(fmspc);
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     const tcbinfo = JSON.parse(pck_server_res.body);
@@ -98,7 +125,7 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
     var pem_certs = pckcerts.map(o => unescape(o.cert));
     let cert_index = PckLib.pck_cert_select(cpusvn, pcesvn, pceid, tcbinfo_str, pem_certs, pem_certs.length);
     if (cert_index == -1) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     result[Constants.SGX_TCBM] = pckcerts[cert_index].tcbm;
@@ -112,7 +139,8 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
             pceid, 
             platform_manifest, 
             enc_ppid, 
-            fmspc
+            fmspc,
+            x509.ca
         );
 
         // flush and add PCK certs
@@ -141,7 +169,7 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
             cert_index = PckLib.pck_cert_select(platform_tcb.cpu_svn, 
                 platform_tcb.pce_svn, platform_tcb.pce_id, tcbinfo_str, pem_certs, pem_certs.length);
             if (cert_index == -1) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
             }
             await platformTcbsDao.upsertPlatformTcbs(platform_tcb.qe_id, 
                 platform_tcb.pce_id, 
@@ -156,10 +184,53 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
             tcbinfo: tcbinfo
         });
         // Update or insert PCK Certchain
-        await pckCertchainDao.upsertPckCertchain();
+        await pckCertchainDao.upsertPckCertchain(x509.ca);
         // Update or insert PCS certificates 
-        await pcsCertificatesDao.upsertPckCertificateIssuerChain(pck_certchain);
+        await pcsCertificatesDao.upsertPckCertificateIssuerChain(x509.ca, pck_certchain);
     });
+
+    return result;
+}
+
+// If a new raw TCB was reported, needs to run PCK Cert Selection for this raw TCB 
+exports.pckCertSelection = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid, fmspc, ca)
+{
+    let result = {};
+    let pck_certs = await pckcertDao.getCerts(qeid, pceid);
+    if (pck_certs == null)
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+
+    let pem_certs = [];
+    for (i = 0; i < pck_certs.length; i++) {
+        pem_certs.push(pck_certs[i].pck_cert);
+    }
+
+
+    let tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
+    if (tcbinfo == null || tcbinfo.tcbinfo == null)
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+    
+    let tcbinfo_str = tcbinfo.tcbinfo.toString('utf8');
+    let cert_index = PckLib.pck_cert_select(cpusvn, pcesvn, pceid, tcbinfo_str, pem_certs, pem_certs.length);
+    if (cert_index == -1) {
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+    }
+
+    let certchain = await pckCertchainDao.getPckCertChain(ca);
+    if (certchain == null)
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+
+    result[Constants.SGX_TCBM] = pck_certs[cert_index].tcbm;
+    result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] = certchain.intmd_cert + certchain.root_cert;;
+    result["cert"] = pem_certs[cert_index];
+
+    // create an entry for the new TCB level in platform_tcbs table
+    await platformTcbsDao.upsertPlatformTcbs(qeid, 
+        pceid, 
+        cpusvn, 
+        pcesvn, 
+        pck_certs[cert_index].tcbm 
+    );
 
     return result;
 }
@@ -180,7 +251,12 @@ exports.getPckCert=async function(qeid, cpusvn, pcesvn, pceid, enc_ppid) {
             result = await this.getPckCertFromPCS(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform ? platform.platform_manifest : '');
         }
         else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            if (platform == null) {
+                throw new PccsError(PCCS_STATUS.PCCS_STATUS_PLATFORM_UNKNOWN);    
+            }
+            else {
+                result = await this.pckCertSelection(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform.fmspc, platform.ca);
+            }
         }
     }
     else {

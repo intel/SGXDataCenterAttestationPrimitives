@@ -31,7 +31,7 @@
 
 module.exports = (sequelize, DataTypes) => {
     const PckCertchain = sequelize.define('pck_certchain', {
-      id: { type: DataTypes.INTEGER, primaryKey: true},
+      ca: { type: DataTypes.STRING, primaryKey: true},
       root_cert_id: { type: DataTypes.INTEGER },
       intmd_cert_id: { type: DataTypes.INTEGER }
     },{

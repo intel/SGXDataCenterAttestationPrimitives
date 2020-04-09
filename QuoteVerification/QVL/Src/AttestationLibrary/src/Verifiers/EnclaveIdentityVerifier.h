@@ -49,6 +49,8 @@ public:
     std::unique_ptr<TCBSigningChain>&& tcbSigningChain);
     EnclaveIdentityVerifier(const EnclaveIdentityVerifier&) = delete;
     EnclaveIdentityVerifier(EnclaveIdentityVerifier&&) = delete;
+    EnclaveIdentityVerifier& operator=(const EnclaveIdentityVerifier&) = delete;
+    EnclaveIdentityVerifier& operator=(EnclaveIdentityVerifier&&) = delete;
     ~EnclaveIdentityVerifier() = default;
 
 

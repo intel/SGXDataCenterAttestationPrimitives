@@ -75,6 +75,7 @@ TEST_P(TimeUtilsUT, mktime)
 {
     std::cout << "mktime input value: " << GetParam() << std::endl;
     auto val = std::gmtime(&GetParam());
+    assert(val != nullptr);
     ASSERT_EQ(standard::mktime(val), enclave::mktime(val) - timeZoneDiff);
 }
 

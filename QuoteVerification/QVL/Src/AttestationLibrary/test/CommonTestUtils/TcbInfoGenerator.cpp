@@ -75,11 +75,10 @@ const std::string validSignatureTemplate = R"json("signature": "62f2eb97227d906c
 std::string generateTcbInfo(const std::string& tcbInfoTemplate, const std::string& tcbLevelsJson, const std::string& signature)
 {
     auto jsonSize = tcbInfoTemplate.length() + tcbLevelsJson.length() + signature.length() + 1;
-	char* tcbInfo = new char[jsonSize];
-    sprintf(tcbInfo, tcbInfoTemplate.c_str(), tcbLevelsJson.c_str(), signature.c_str());
-    auto str = std::string(tcbInfo);
-	delete[]tcbInfo;
-	return str;
+    std::string tcbInfo;
+    tcbInfo.resize(jsonSize);
+    snprintf(&tcbInfo[0], jsonSize, tcbInfoTemplate.c_str(), tcbLevelsJson.c_str(), signature.c_str());
+    return tcbInfo;
 }
 
 std::string generateTcbLevel(const std::string& tcbLevelTemplate,
@@ -87,9 +86,8 @@ std::string generateTcbLevel(const std::string& tcbLevelTemplate,
                              const std::string& status)
 {
     auto jsonSize = tcbLevelTemplate.length() + tcb.length() + status.length() + 1;
-	char* tcbInfo = new char[jsonSize];
-    sprintf(tcbInfo, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str());
-	auto str = std::string(tcbInfo);
-	delete[]tcbInfo;
-	return str;
+    std::string tcbInfo;
+    tcbInfo.resize(jsonSize);
+    snprintf(&tcbInfo[0], jsonSize, tcbLevelTemplate.c_str(), tcb.c_str(), status.c_str());
+    return tcbInfo;
 }

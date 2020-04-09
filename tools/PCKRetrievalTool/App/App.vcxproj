@@ -121,7 +121,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;DEBUG;_CONSOLE;MPA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SGXSDKInstallPath)\include;inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SGXSDKInstallPath)\include;$(SGXDCAPMPAUEFIComponentsPATH)\native\include;inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -177,7 +177,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MPA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SGXSDKInstallPath)\include;inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SGXSDKInstallPath)\include;$(SGXDCAPMPAUEFIComponentsPATH)\native\include;inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

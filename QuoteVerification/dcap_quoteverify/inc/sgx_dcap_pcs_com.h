@@ -98,7 +98,10 @@ quote3_error_t sgx_dcap_retrieve_qve_identity(
 quote3_error_t sgx_dcap_free_qve_identity(uint8_t *p_qveid,
                                           uint8_t *p_qveid_issue_chain,
                                           uint8_t *p_root_ca_crl);
-
+#ifndef _MSC_VER
+bool sgx_qv_set_qpl_path(const char* p_path);
+bool sgx_qv_set_qve_path(const char* p_path);
+#endif
 
 #if defined(__cplusplus)
 }

@@ -29,8 +29,8 @@
  *
  */
 /**
- * File: sgx_dcap_ql_wrapper.h 
- *  
+ * File: sgx_dcap_ql_wrapper.h
+ *
  * Description: Definitions and prototypes for SGX's quote library for
  * use in the DCAP SDK.
  *
@@ -57,6 +57,16 @@ quote3_error_t sgx_qe_get_quote(const sgx_report_t *p_app_report,
                                 uint8_t *p_quote);
 
 quote3_error_t sgx_qe_cleanup_by_policy();
+
+#ifndef _MSC_VER
+typedef enum
+{
+    SGX_QL_QE3_PATH,
+    SGX_QL_PCE_PATH,
+    SGX_QL_QPL_PATH
+} sgx_ql_path_type_t;
+quote3_error_t sgx_ql_set_path(sgx_ql_path_type_t path_type, const char *p_path);
+#endif
 
 #if defined(__cplusplus)
 }

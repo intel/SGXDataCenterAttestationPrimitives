@@ -88,6 +88,6 @@ exports.getRootCACrl=async function() {
         return this.getRootCACrlFromPCS(rootca);
     }
     else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 }

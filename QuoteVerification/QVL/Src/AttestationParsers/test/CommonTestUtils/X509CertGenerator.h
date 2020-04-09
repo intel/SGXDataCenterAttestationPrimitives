@@ -64,7 +64,7 @@ public:
                                    const dcap::parser::x509::DistinguishedName &issuer,
                                    const Bytes& ppid, const Bytes& cpusvn, const Bytes& pcesvn,
                                    const Bytes& pceId, const Bytes& fmspc,
-                                   bool dynamicPlatform = false, bool includeDynamicPlatform = false) const;
+                                   bool unexpectedExtension = false) const;
 
     crypto::EVP_PKEY_uptr generateEcKeypair() const;
 
@@ -79,8 +79,7 @@ private:
     void addStandardCaExtensions(const crypto::X509_uptr& cert) const;
     void addStandardNonCaExtensions(const crypto::X509_uptr& cert) const;
     void addSGXPckExtensions(const crypto::X509_uptr &cert, const Bytes &ppid, const Bytes &cpusvn, const Bytes &pcesvn,
-                             const Bytes &pceId, const Bytes &fmspc,
-                             bool dynamicPlatform = false, bool includeDynamicPlatform = false) const;
+                             const Bytes &pceId, const Bytes &fmspc, bool unexpectedExtension) const;
 
     void add_ext(X509 *cert, int nid, char *value) const;
     void createTcbComp(const std::string &parentOid, int index, unsigned char value, crypto::SGX_INT* dest) const;

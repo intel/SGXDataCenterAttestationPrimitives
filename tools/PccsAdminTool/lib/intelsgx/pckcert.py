@@ -12,9 +12,11 @@ import struct
 class SgxPckCertificateExtensions:
 	id_ce_sGXExtensions = '1.2.840.113741.1.13.1'
 	id_ce_sGXExtensions_tCB= id_ce_sGXExtensions+".2"
+	id_ce_sGXExtensions_configuration= id_ce_sGXExtensions+".7"
 	id_cdp_extension = '2.5.29.31'
 	decoder= asn1.Decoder()
 	_data= {}
+	ca= ''
 	oids= {
 		id_ce_sGXExtensions: 'sGXExtensions',
 		id_ce_sGXExtensions+".1": 'pPID',
@@ -40,8 +42,11 @@ class SgxPckCertificateExtensions:
 		id_ce_sGXExtensions+".3": 'pCE-ID',
 		id_ce_sGXExtensions+".4": 'fMSPC',
 		id_ce_sGXExtensions+".5": 'sGXType',
-		id_ce_sGXExtensions+".6": 'dynamicPlatform',
-		id_ce_sGXExtensions+".7": 'keysCached'
+		id_ce_sGXExtensions+".6": 'platformInstanceID',
+		id_ce_sGXExtensions_configuration: 'configuration',
+		id_ce_sGXExtensions_configuration+".1": 'dynamicPlatform',
+		id_ce_sGXExtensions_configuration+".2": 'cachedKeys',
+		id_ce_sGXExtensions_configuration+".3": 'sMTEnabled'
 	}
 
 	def _parse_asn1(self, d, oid, lnr=asn1.Numbers.ObjectIdentifier):
@@ -68,6 +73,14 @@ class SgxPckCertificateExtensions:
 	def parse_pem_certificate(self, pem):
 		self._data= {}
 		cert= x509.load_pem_x509_certificate(pem, default_backend())
+		issuerCN = cert.issuer.rfc4514_string()
+		if (issuerCN.find('Processor') != -1) :
+			self.ca = 'PROCESSOR'
+		elif (issuerCN.find('Platform') != -1) :
+			self.ca = 'PLATFORM'
+		else :
+			self.ca = None
+		
 		sgxext= cert.extensions.get_extension_for_oid(
 			ObjectIdentifier(self.id_ce_sGXExtensions)
 		)
@@ -108,6 +121,9 @@ class SgxPckCertificateExtensions:
 
 	def get_fmspc(self):
 		return self._hex_data('fMSPC')
+
+	def get_ca(self):
+		return self.ca
 
 	def get_tcbm(self):
 		tcb= self.data('tCB')

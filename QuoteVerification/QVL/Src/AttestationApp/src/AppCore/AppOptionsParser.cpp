@@ -88,14 +88,14 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
 
 
     auto nerrors = arg_parse(argc, argv, argtable);
-    if (nerrors > 0)
+    if (end && nerrors > 0)
     {
         arg_print_errors(stdout, end, "Sample app");
         printHelp(argtable);
         arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
         return nullptr;
     }
-    if (help->count > 0)
+    if (help && help->count > 0)
     {
         printHelp(argtable);
         arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));

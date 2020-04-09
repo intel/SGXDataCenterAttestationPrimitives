@@ -118,10 +118,11 @@ void PckCertificate::setMembers()
 
     const auto stack = crypto::oidToStack(topSequence.get());
     const auto stackEntries = sk_ASN1_TYPE_num(stack.get());
-    if(stackEntries != 5)
+    if(stackEntries != PROCESSOR_CA_EXTENSION_COUNT && stackEntries != PLATFORM_CA_EXTENSION_COUNT)
     {
-        std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [5] elements when given [" +
-                          std::to_string(stackEntries) + "]";
+        std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [" +
+                          std::to_string(PROCESSOR_CA_EXTENSION_COUNT) + "] or [" + std::to_string(PLATFORM_CA_EXTENSION_COUNT) +
+                          "] elements when given [" + std::to_string(stackEntries) + "]";
         throw InvalidExtensionException(err);
     }
 

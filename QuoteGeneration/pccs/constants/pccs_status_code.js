@@ -40,8 +40,9 @@ function define(name, value) {
 define("PCCS_STATUS_SUCCESS",               [200,"Operation successful."]);
 define("PCCS_STATUS_INVALID_REQ",           [400,"Invalid request parameters."]);
 define("PCCS_STATUS_UNAUTHORIZED",          [401,"Authentication failed."]);
-define("PCCS_STATUS_NOT_FOUND",             [404,"Resource not found."]);
+define("PCCS_STATUS_NO_CACHE_DATA",         [404,"No cache data for this platform."]);
 define("PCCS_STATUS_INTEGRITY_ERROR",       [460,"The integrity of the data can't be verified."]);
+define("PCCS_STATUS_PLATFORM_UNKNOWN",      [461,"The platform was not found in the cache."]);
 define("PCCS_STATUS_INTERNAL_ERROR",        [500,"Internal server error occurred."]);
 define("PCCS_STATUS_SERVICE_UNAVAILABLE",   [503,"Server is currently unable to process the request."]);
 define("PCCS_STATUS_PCS_ACCESS_FAILURE",    [504,"Unable to retrieve the collateral from the Intel SGX PCS."]);

@@ -655,7 +655,8 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
 
         enum SgxType
         {
-            Standard
+            Standard,
+            SGX_TEM
         };
 
         class PckCertificate;
@@ -780,6 +781,9 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             std::vector<uint8_t> _fmspc;
             Tcb _tcb;
             SgxType _sgxType;
+
+            uint8_t PROCESSOR_CA_EXTENSION_COUNT = 5;
+            uint8_t PLATFORM_CA_EXTENSION_COUNT = 7;
 
             void setMembers();
 

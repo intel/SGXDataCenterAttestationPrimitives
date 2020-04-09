@@ -34,11 +34,16 @@ TOP_DIR  = ../../..
 include $(TOP_DIR)/buildenv.mk
 
 Quote_Library_Dir := ../../quote/linux
-Quote_Library := $(Quote_Library_Dir)/libquote.a
+Quote_Library := $(Quote_Library_Dir)/libsgx_qe3_logic.so
+
+PCE_Library_Dir := ../../../pce_wrapper/linux/
+PCE_Library := $(PCE_Library_Dir)/libsgx_pce_logic.so
 
 ######## SGX QL Library Settings ########
+vpath %.c $(COMMON_DIR)/src
 
 QL_Lib_Cpp_Files := $(wildcard ../*.cpp)
+QL_Lib_C_Files := se_trace.c se_thread.c
 
 QL_Lib_Include_Paths := -I../../common/inc -I./ -I$(SGX_SDK)/include -I../../../common/inc/internal 
 QL_Lib_Include_Paths += -I../../quote/inc -I../../../pce_wrapper/inc -I../inc
@@ -49,59 +54,43 @@ LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--version-script=dcap_ql_wrapper.lds -Wl,--gc-sections -Wl,-rpath=.
 
 QL_Lib_Cpp_Flags := $(QL_Lib_C_Flags) -std=c++11
-QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
+QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(Quote_Library_Dir) -lsgx_qe3_logic -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
 
-ifndef DEBUG
 QL_Lib_Cpp_Flags += -DDISABLE_TRACE
 QL_Lib_Link_Flags += -DDISABLE_TRACE
-endif
 
 QL_Lib_Cpp_Objects := $(QL_Lib_Cpp_Files:.cpp=.o)
-QL_Lib_Cpp_Deps := $(QL_Lib_Cpp_Objects:%.o=%.d)
+QL_Lib_C_Objects := $(QL_Lib_C_Files:.c=.o)
 
 QL_Lib_Name_Dynamic  := libsgx_dcap_ql.so
-ifndef DEBUG
-QL_Lib_Name_Dynamic_Debug := libsgx_dcap_ql.so.debug
-endif
 
 .PHONY: all run
 
-all: $(QL_Lib_Name) install_lib
+all: install_lib
 
-install_lib: $(QL_Lib_Name_Dynamic) $(QL_Lib_Name_Dynamic_Debug) | $(BUILD_DIR)
+install_lib: $(QL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(QL_Lib_Name_Dynamic) $|
-ifndef DEBUG
-	@$(CP) $(QL_Lib_Name_Dynamic_Debug) $|
-endif
 
 run: all
 
 ######## QL Library Objects ########
 
--include $(QL_Lib_Cpp_Deps)
+$(QL_Lib_C_Objects): %.o: %.c
+	@$(CC) $(QL_Lib_C_Flags) -c $< -o $@
+	@echo "CC  <=  $<"
 
 $(QL_Lib_Cpp_Objects): %.o: %.cpp
 	@$(CXX) $(QL_Lib_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(QL_Lib_Name_Dynamic): $(QL_Lib_Cpp_Objects) $(Quote_Library)
-	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(Quote_Library) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
-
-$(QL_Lib_Name_Dynamic_Debug): $(QL_Lib_Name_Dynamic)
-	((test -f $(QL_Lib_Name_Dynamic_Debug)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(QL_Lib_Name_Dynamic) $(QL_Lib_Name_Dynamic).orig
-	$(OBJCOPY) --only-keep-debug $(QL_Lib_Name_Dynamic) $(QL_Lib_Name_Dynamic_Debug)
-	$(STRIP) -g $(QL_Lib_Name_Dynamic)
-	$(OBJCOPY) --add-gnu-debuglink=$(QL_Lib_Name_Dynamic_Debug) $(QL_Lib_Name_Dynamic)
-endif
-
+$(QL_Lib_Name_Dynamic): $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) $(PCE_Library) $(Quote_Library)
+	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
 
 $(Quote_Library): force_look
 	@make -C $(Quote_Library_Dir)
+
+$(PCE_Library): force_look
+	@make -C $(PCE_Library_Dir)
 
 force_look:
 	true
@@ -109,7 +98,7 @@ force_look:
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(QL_Lib_Name) $(QL_Lib_Cpp_Objects) $(QL_Lib_Cpp_Deps) libdcapnocorequote.a $(QL_Lib_Name_Dynamic) $(QL_Lib_Name_Dynamic).orig $(QL_Lib_Name_Dynamic_Debug)
+	@rm -f .config_* $(QL_Lib_Name) $(QL_Lib_Cpp_Objects) $(QL_Lib_Cpp_Deps) $(QL_Lib_Name_Dynamic) 
 	@make -C $(Quote_Library_Dir) clean
 
 

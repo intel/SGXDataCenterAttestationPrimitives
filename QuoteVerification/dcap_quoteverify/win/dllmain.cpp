@@ -124,12 +124,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
         {
             se_mutex_init(&g_qpl_mutex);
             break;
         }
-    case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
         // try to unload QPL if exist
         {
@@ -170,6 +168,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
            break;
         }
+    case DLL_THREAD_ATTACH:
+	    break;
+    case DLL_THREAD_DETACH:
+	    break;
     }
     return TRUE;
 }

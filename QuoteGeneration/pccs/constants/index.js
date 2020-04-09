@@ -54,9 +54,11 @@ define("SGX_TCBM", 'sgx-tcbm');
 define("PROCESSOR_ROOT_CERT_ID", 1);
 define("PROCESSOR_INTERMEDIATE_CERT_ID", 2);
 define("PROCESSOR_SIGNING_CERT_ID", 3);
+define("PLATFORM_INTERMEDIATE_CERT_ID", 4);
 
 //CAs
-define("CA_PROCESSOR", "processor");
+define("CA_PROCESSOR", "PROCESSOR");
+define("CA_PLATFORM", "PLATFORM");
 
 //Certchain names
 define("SGX_PCK_CERTIFICATE_ISSUER_CHAIN", "sgx-pck-certificate-issuer-chain");

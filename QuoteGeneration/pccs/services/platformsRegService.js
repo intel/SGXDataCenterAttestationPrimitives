@@ -64,17 +64,6 @@ checkPCKCertCacheStatus=async function(platformInfoJson)
             platformInfoJson.platform_manifest = platform.platform_manifest;
         }
         else if (platform.platform_manifest != platformInfoJson.platform_manifest) {
-            // If PLATFORM_MANIFEST has changed, we should delete old data
-            await sequelize.transaction(async (t)=>{
-                // Update the platform entry in the cache
-                await platformsDao.upsertPlatform(platform.qe_id, platform.pce_id, 
-                    platformInfoJson.platform_manifest, platform.enc_ppid, platform.fmspc);
-                // delete pck_cert
-                await pckcertDao.deleteCerts(platform.qe_id, platform.pce_id);
-                // delete platform_tcb 
-                await platformTcbsDao.deletePlatformTcbsById(platform.qe_id, platform.pce_id);
-            });
-
             // cached status is false
             break;
         }
@@ -92,9 +81,15 @@ checkPCKCertCacheStatus=async function(platformInfoJson)
 checkQuoteVerificationCollateral=async function()
 {
     // pck crl
-    const pckcrl = await pckcrlDao.getPckCrl(Constants.CA_PROCESSOR);
+    let pckcrl = await pckcrlDao.getPckCrl(Constants.CA_PROCESSOR);
     if (pckcrl == null) {
         await pckcrlService.getPckCrlFromPCS(Constants.CA_PROCESSOR);
+    }
+    if (pckcertService.getPcsVersion() >= 3) {
+        pckcrl = await pckcrlDao.getPckCrl(Constants.CA_PLATFORM);
+        if (pckcrl == null) {
+            await pckcrlService.getPckCrlFromPCS(Constants.CA_PLATFORM);
+        }
     }
     // QE identity
     const qeid = await qeidentityDao.getQEIdentity();

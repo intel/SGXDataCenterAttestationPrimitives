@@ -40,13 +40,38 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
+#include <string.h>
 #include <fcntl.h>
 #include <dlfcn.h>
 #include "se_trace.h"
-#include "se_map.h"
 #include "sgx_urts.h"
+#include "sgx_dcap_pcs_com.h"
 
 #define QvE_ENCLAVE_NAME "libsgx_qve.signed.so"
+
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+static char g_qve_path[MAX_PATH];
+
+
+extern "C" bool sgx_qv_set_qve_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_qve_path)
+    size_t len = strnlen(p_path, sizeof(g_qve_path));
+    // Make sure there is enough space for the '\0'
+    // after this line len <= sizeof(g_qve_path) - 1
+    if(len > sizeof(g_qve_path) - 1)
+        return false;
+    strncpy(g_qve_path, p_path, sizeof(g_qve_path) - 1);
+    // Make sure the full path is ended with "\0"
+    g_qve_path[len] = '\0';
+    return true;
+}
+
+
 bool get_qve_path(
     char *p_file_path,
     size_t buf_size)
@@ -55,7 +80,13 @@ bool get_qve_path(
         return false;
 
     Dl_info dl_info;
-    if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
+    if(g_qve_path[0])
+    {
+        strncpy(p_file_path, g_qve_path, buf_size -1);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
+        return true;
+    }
+    else if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
         NULL != dl_info.dli_fname)
     {
         if(strnlen(dl_info.dli_fname,buf_size)>=buf_size)

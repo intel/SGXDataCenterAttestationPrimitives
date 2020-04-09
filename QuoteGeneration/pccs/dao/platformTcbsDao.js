@@ -53,10 +53,10 @@ exports.getPlatformTcbs = async function(fmspc){
                 });
     }
     else {
-        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc=$fmspc';
+        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc in(:FMSPC)';
         return await sequelize.query(sql,
                 { type:  sequelize.QueryTypes.SELECT,
-                  bind: {fmspc : fmspc}
+                  replacements: {FMSPC : fmspc.split(',')}
                 });
     }
 }

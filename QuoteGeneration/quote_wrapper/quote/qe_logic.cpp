@@ -59,7 +59,7 @@
 #include "sgx_ql_ecdsa_quote.h"
 #include "ecdsa_quote.h"
 #include "se_thread.h"
-
+#include "sgx_ql_core_wrapper.h"
 
 #ifndef _MSC_VER
     #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so"
@@ -169,6 +169,8 @@ struct ql_global_data{
     uint8_t m_ecdsa_blob[SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK];
     uint8_t *m_pencryptedppid;
     sgx_pce_info_t m_pce_info;
+    char qe3_path[MAX_PATH];
+    char qpl_path[MAX_PATH];
 
     ql_global_data():
         m_load_policy(SGX_QL_DEFAULT),
@@ -181,6 +183,8 @@ struct ql_global_data{
         memset(&m_launch_token, 0, sizeof(m_launch_token));
         memset(m_ecdsa_blob, 0, sizeof(m_ecdsa_blob));
         memset(&m_pce_info, 0, sizeof(m_pce_info));
+        memset(qe3_path, 0, sizeof(qe3_path));
+        memset(qpl_path, 0, sizeof(qpl_path));
     }
     ql_global_data(const ql_global_data&);
     ql_global_data& operator=(const ql_global_data&);
@@ -197,6 +201,70 @@ struct ql_global_data{
 };
 
 static ql_global_data g_ql_global_data;
+
+quote3_error_t sgx_set_qe3_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_pce_status.pce_path)
+    size_t len = strnlen(p_path, sizeof(g_ql_global_data.qe3_path));
+    // Make sure there is enough space for the '\0',
+    // after this line len <= sizeof(g_ql_global_data.qe3_path) - 1
+    if(len > sizeof(g_ql_global_data.qe3_path) - 1)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+#ifndef _MSC_VER
+    strncpy(g_ql_global_data.qe3_path, p_path, sizeof(g_ql_global_data.qe3_path) - 1);
+#else
+    strncpy_s(g_ql_global_data.qe3_path, sizeof(g_ql_global_data.qe3_path), p_path, sizeof(g_ql_global_data.qe3_path));
+#endif
+    g_ql_global_data.qe3_path[len] = '\0';
+    return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_set_qpl_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_pce_status.pce_path)
+    size_t len = strnlen(p_path, sizeof(g_ql_global_data.qpl_path));
+    // Make sure there is enough space for the '\0',
+    // after this line len <= sizeof(g_ql_global_data.qpl_path) - 1
+    if(len > sizeof(g_ql_global_data.qpl_path) - 1)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+#ifndef _MSC_VER
+    strncpy(g_ql_global_data.qpl_path, p_path, sizeof(g_ql_global_data.qpl_path) - 1);
+#else
+    strncpy_s(g_ql_global_data.qpl_path, sizeof(g_ql_global_data.qpl_path), p_path, sizeof(g_ql_global_data.qpl_path));
+#endif
+    g_ql_global_data.qpl_path[len] = '\0';
+    return SGX_QL_SUCCESS;
+}
+
+#ifndef _MSC_VER
+void * get_qpl_handle()
+{
+    void * handle = NULL;
+    if (g_ql_global_data.qpl_path[0]) {
+        handle = dlopen(g_ql_global_data.qpl_path, RTLD_LAZY);
+        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s\n", g_ql_global_data.qpl_path);
+        return handle;
+    }
+    else {
+        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
+        if (NULL == handle)
+        {
+            ///TODO:
+            // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
+            // We shall remove this when we have a major version change later and drop the backward compatible
+            // support for old lib name.
+    #ifndef DISABLE_TRACE
+            old_libname_used = true;
+    #endif
+            handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+        }
+    }
+    return handle;
+}
+#endif
+
 
 #ifdef ENABLE_QE3_LOGGING
 /* OCall functions for debug */
@@ -242,9 +310,6 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     void *handle = NULL;
     char *error1 = NULL;
     char *error2 = NULL;
-    #ifndef DISABLE_TRACE
-    bool old_libname_used = false;
-    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -260,21 +325,8 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     }
 
     #ifndef _MSC_VER
-    handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-    if (NULL == handle)
-    {
-        ///TODO:
-        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-        // We shalll remove this when we have a major version change later and drop the backward compatible
-        // support for old lib name.
-        #ifndef DISABLE_TRACE
-        old_libname_used = true;
-        #endif
-        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
-    }
+    handle = get_qpl_handle();
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
-            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_get_quote_config = (sgx_get_quote_config_func_t)dlsym(handle, "sgx_ql_get_quote_config");
         error1 = dlerror();
         p_sgx_free_quote_config = (sgx_free_quote_config_func_t)dlsym(handle, "sgx_ql_free_quote_config");
@@ -289,7 +341,6 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
                 SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
-                ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
             if(NULL == p_pck_cert_config) {
@@ -364,7 +415,6 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
                 SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
-                ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
             if (NULL == p_pck_cert_config) {
@@ -447,10 +497,16 @@ static bool get_qe_path(const TCHAR *p_file_name,
     if(!p_file_name || !p_file_path) {
         return false;
     }
-    #ifndef _MSC_VER
-#ifndef AESM_ECDSA_BUNDLE
+
+#ifndef _MSC_VER
     Dl_info dl_info;
-    if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
+    if(g_ql_global_data.qe3_path[0])
+    {
+        strncpy(p_file_path, g_ql_global_data.qe3_path, buf_size -1);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
+        return true;
+    }
+    else if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
         NULL != dl_info.dli_fname)
     {
         if(strnlen(dl_info.dli_fname,buf_size)>=buf_size) {
@@ -459,7 +515,6 @@ static bool get_qe_path(const TCHAR *p_file_name,
         (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
     }
     else //not a dynamic executable
-#endif
     {
         ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
         if (i == -1)
@@ -480,7 +535,7 @@ static bool get_qe_path(const TCHAR *p_file_name,
         return false;
     }
     (void)strncat(p_file_path,p_file_name, strnlen(p_file_name,buf_size));
-    #else
+#else
     HMODULE hModule = NULL;
 #ifndef AESM_ECDSA_BUNDLE
     if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _T(__FUNCTION__), &hModule))
@@ -504,9 +559,10 @@ static bool get_qe_path(const TCHAR *p_file_name,
         return false;
     if (_tcscat_s(p_file_path, buf_size, p_file_name))
         return false;
-    #endif
+#endif
     return true;
 }
+
 
 /**
  *
@@ -559,7 +615,7 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
         return SGX_QL_ENCLAVE_LOAD_ERROR;
     }
 
-    // Load the QE
+    // Load the QE3
     if (g_ql_global_data.m_eid == 0) {
         if (!get_qe_path(QE3_ENCLAVE_NAME, qe_enclave_path, MAX_PATH)) {
             SE_TRACE(SE_TRACE_ERROR, "Couldn't find QE file.\n");
@@ -746,9 +802,6 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
     #ifndef _MSC_VER
     void *handle;
     char *error;
-    #ifndef DISABLE_TRACE
-    bool old_libname_used = false;
-    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -760,21 +813,8 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
     }
 
     #ifndef _MSC_VER
-    handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-    if (NULL == handle)
-    {
-        ///TODO:
-        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-        // We shalll remove this when we have a major version change later and drop the backward compatible
-        // support for old lib name.
-        #ifndef DISABLE_TRACE
-        old_libname_used = true;
-        #endif
-        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
-    }
+    handle = get_qpl_handle();
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
-            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)dlsym(handle, "sgx_ql_write_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_write_persistent_data) {
@@ -843,9 +883,6 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
     #ifndef _MSC_VER
     void *handle;
     char *error;
-    #ifndef DISABLE_TRACE
-    bool old_libname_used = false;
-    #endif
     #else
     HINSTANCE handle;
     #endif
@@ -857,21 +894,8 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
     }
 
     #ifndef _MSC_VER
-    handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-    if (NULL == handle)
-    {
-        ///TODO:
-        // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-        // We shalll remove this when we have a major version change later and drop the backward compatible
-        // support for old lib name.
-        #ifndef DISABLE_TRACE
-        old_libname_used = true;
-        #endif
-        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
-    }
+    handle = get_qpl_handle();
     if (handle) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n",
-            old_libname_used ? SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY : SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)dlsym(handle, "sgx_ql_read_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_read_persistent_data) {

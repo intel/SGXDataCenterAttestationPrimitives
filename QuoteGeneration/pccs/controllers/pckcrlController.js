@@ -37,8 +37,9 @@ const Constants = require('../constants/');
 exports.getPckCrl = async function(req,res,next) {
     try {
         // validate request parameters
-        const ca = req.query.ca;
-        if (ca != Constants.CA_PROCESSOR) {
+        let ca = req.query.ca;
+        if (ca) ca = ca.toUpperCase();
+        if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
             throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
         }
 

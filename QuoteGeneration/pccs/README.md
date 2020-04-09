@@ -23,7 +23,8 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
     1) Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a 
        web service.
     2) Install python if it's not already installed
-    3) From the root directory of the PCCS, run ./install.sh
+    3) Goto ../../tools/PCKCertSelection/ and build libPCKCertSelection.so, copy it to ./lib/ 
+    4) From the root directory of the PCCS, run ./install.sh
 
 - **Windows manual installation**
 
@@ -59,7 +60,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
     **NOTE** : If self-signed insecure key and certificate are used, you need to set USE_SECURE_CERT=FALSE when 
     configuring the default QPL library (see ../qpl/README.md)
 
-## Configuration file (config/default.json)
+## Configuration file (config/production-0.json)
 - **HTTPS_PORT** - The port you want the PCCS to listen on. The default listening port is 8081.
 - **hosts** - The hosts that will be accepted for connections. Default is localhost only. To accept all connections use 0.0.0.0
 - **uri** - The URL of Intel Provisioning Certificate Service. The default URL is https://api.trustedservices.intel.com/sgx/certification/v2/
@@ -67,7 +68,6 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **proxy** - Specify the proxy server for internet connection, for example, "http://192.168.1.1:80". Leave blank for no proxy or system proxy.
 - **RefreshSchedule** - cron-style refresh schedule for the PCCS to refresh cached artifacts including CRL/TCB Info/QE Identity/QVE Identity.
   The default setting is "0 0 1 * * *", which means refresh at 1:00 am every day.
-- **CacheDB** - File name of the cache database. Default value is pckcache.db.
 - **UserToken** - Sha512 hashed token for the PCCS client user to register a platform. For example, PCK Cert ID retrieval tool will use this token to send platform information to pccs.
 - **AdminToken** - Sha512 hashed token for the PCCS administrator to perform a manual refresh of cached artifacts. 
 
@@ -75,6 +75,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 		<nul: set /p password="mytoken" | openssl dgst -sha512
 - **CachingFillMode** - The method used to fill the cache DB. Can be one of the following: REQ/LAZY/OFFLINE. For more details see section "Caching Fill Mode".
+- **LogLevel** - Log level. Use the same levels as npm: error, warn, info, http, verbose, debug, silly. Default is info.
 - **DB_CONFIG** - You can choose sqlite or mysql and many other DBMSes. For sqlite, you don't need to change anything. For other DBMSes, you need to set database connection options correctly. Normally you need to change database, username, password, host and dialect to connect to your DBMS.
 
 ## Caching Fill Mode

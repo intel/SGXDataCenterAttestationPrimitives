@@ -44,7 +44,8 @@ TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                    unsigned int pceSvn,
                    const std::string& status): _cpuSvnComponents(cpuSvnComponents),
                                                _pceSvn(pceSvn),
-                                               _status(status)
+                                               _status(status),
+                                               _tcbDate(0)
 {}
 
 TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,

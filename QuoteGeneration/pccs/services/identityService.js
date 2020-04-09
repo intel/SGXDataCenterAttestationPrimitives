@@ -42,7 +42,7 @@ exports.getQEIdentityFromPCS = async function(){
     const pck_server_res = await PcsClient.getQEIdentity();
 
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     let result = {};
@@ -69,7 +69,7 @@ exports.getQEIdentity=async function() {
             result = await this.getQEIdentityFromPCS();
         }
         else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
         }
     }
     else {
@@ -84,7 +84,7 @@ exports.getQvEIdentityFromPCS = async function(){
     const pck_server_res = await PcsClient.getQvEIdentity();
 
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     let result = {};
@@ -111,7 +111,7 @@ exports.getQvEIdentity=async function() {
             result = await this.getQvEIdentityFromPCS();
         }
         else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
         }
     }
     else {

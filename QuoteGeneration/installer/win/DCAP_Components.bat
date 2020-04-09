@@ -26,6 +26,7 @@ copy /y "%QVFOLDER%\dcap_quoteverify\inc\sgx_dcap_pcs_com.h" "%pwd%\Header Files
 copy /y "%SGXSDKInstallPath%\include\sgx_attributes.h" "%pwd%\Header Files\sgx_attributes.h"
 copy /y "%SGXSDKInstallPath%\include\sgx_key.h" "%pwd%\Header Files\sgx_key.h"
 copy /y "%SGXSDKInstallPath%\include\sgx_report.h" "%pwd%\Header Files\sgx_report.h"
+copy /y "%SGXSDKInstallPath%\include\sgx_quote.h" "%pwd%\Header Files\sgx_quote.h"
 
 copy /y "%DEBUGFILEFOLDER%\sgx_dcap_ql.lib" "%pwd%\lib\native\Debug Support\sgx_dcap_ql.lib"
 copy /y "%DEBUGFILEFOLDER%\sgx_dcap_quoteverify.lib" "%pwd%\lib\native\Debug Support\sgx_dcap_quoteverify.lib"

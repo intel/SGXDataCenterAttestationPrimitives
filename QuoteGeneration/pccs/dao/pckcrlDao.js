@@ -77,7 +77,7 @@ exports.upsertPckCrl = async function(ca, crl){
             ca: ca,
             pck_crl: crl,
             root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-            intmd_cert_id: Constants.PROCESSOR_INTERMEDIATE_CERT_ID
+            intmd_cert_id: (ca == Constants.CA_PROCESSOR) ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID
     });
 }
 

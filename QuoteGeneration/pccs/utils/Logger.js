@@ -29,18 +29,19 @@
  *
  */
 
+const config = require('config');
 var winston = require('winston');
 
 var options = {
   file: {
-    level: 'info',
+    level: config.has('LogLevel') ? config.get('LogLevel') : "info",
     filename: __dirname + `/../logs/pccs_server.log`,
     handleExceptions: true,
     json: false,
     colorize: true,
   },
   console: {
-    level: 'info',
+    level: config.has('LogLevel') ? config.get('LogLevel') : "info",
     handleExceptions: true,
     json: false,
     colorize: true,

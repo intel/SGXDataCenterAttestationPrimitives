@@ -2,6 +2,10 @@
 
 arg1=$1
 argnum=$#
+## Set mydir to the directory containing the script
+mydir="${0%/*}"
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
 # check if nodejs is installed
 function checkNodeJs() {
@@ -22,6 +26,12 @@ function postConfiguration() {
     if [[ "$argnum" == 0 || "$arg1" != "postinst" ]]; then
         pm2cfg=`pm2 startup systemd | grep 'sudo'` 
         eval $pm2cfg
+    fi
+}
+
+function checkPCKSelectionLib() {
+    if [ ! -f "$mydir"/lib/libPCKCertSelection.so ]; then
+        echo -e "${YELLOW}Warning: lib/libPCKCertSelection.so not found. ${NC} "
     fi
 }
 
@@ -64,9 +74,6 @@ do
         doconfig=""
     fi
 done
-
-YELLOW='\033[1;33m'
-NC='\033[0m'
 
 #Ask for HTTPS port number
 port=""
@@ -219,3 +226,6 @@ else
 fi
 
 postConfiguration
+
+#Check PCK Cert Selection Library
+checkPCKSelectionLib

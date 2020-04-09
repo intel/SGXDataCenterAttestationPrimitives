@@ -39,7 +39,6 @@ const pckcrlService = require('./pckcrlService.js');
 const identityService = require('./identityService.js');
 const rootcacrlService = require('./rootcacrlService.js');
 const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
 const Constants = require('../constants/index.js');
 const Ajv = require('ajv');
 const Schema = require('./pccs_schemas.js');

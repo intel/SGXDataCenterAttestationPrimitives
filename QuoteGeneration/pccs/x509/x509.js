@@ -32,6 +32,7 @@
 const { Certificate } = require('@fidm/x509')
 const { ASN1 } = require('@fidm/asn1')
 const logger = require('../utils/Logger.js');
+const Constants = require('../constants/index.js');
 
 const SGX_EXTENSIONS_OID = '1.2.840.113741.1.13.1';
 const TAG_OID = 6;
@@ -45,14 +46,25 @@ function X509(){
 
     this.fmspc = null;
     this.cdp_uri = null;
+    this.ca = null;
 }
 
 X509.prototype.parseCert=function(cert_buffer) {
     try {
         let cert = Certificate.fromPEM(cert_buffer);
+        let issuerCN = cert.issuer.attributes[0].value;
         let extensions = cert.extensions;
         let sgx_extensions = null;
         let cdp_extensions = null;
+
+        // parse the issuer CN
+        if (issuerCN.includes('Platform')) {
+            this.ca = Constants.CA_PLATFORM;
+        }
+        else if (issuerCN.includes('Processor')) {
+            this.ca = Constants.CA_PROCESSOR;
+        }
+
         for (var i = 0; i < extensions.length; i++)
         {
             if (extensions[i].oid === SGX_EXTENSIONS_OID)

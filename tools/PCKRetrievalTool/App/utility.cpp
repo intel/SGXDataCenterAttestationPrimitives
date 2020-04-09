@@ -70,6 +70,9 @@
 #endif 
 
 #ifdef MPA     
+#ifdef _MSC_VER
+#pragma warning(disable: 4201)
+#endif 
 #include "MPUefi.h"
 typedef MpResult(*mp_uefi_init_func_t)(const char* path, const LogLevel logLevel);
 typedef MpResult(*mp_uefi_get_request_type_func_t)(MpRequestType* type);
@@ -359,9 +362,9 @@ bool is_valid_proxy_type(std::string& proxy_type) {
     }                
 }
 
-bool is_valid_user_secure_cert(std::string& user_secure_cert) {
-    if (user_secure_cert.compare("TRUE") == 0 ||
-        user_secure_cert.compare("FALSE") == 0 ) {
+bool is_valid_use_secure_cert(std::string& use_secure_cert) {
+    if (use_secure_cert.compare("TRUE") == 0 ||
+        use_secure_cert.compare("FALSE") == 0 ) {
         return true;
     }
     else {

@@ -68,56 +68,58 @@ constexpr size_t QUOTE_MIN_BYTE_LEN =
                         AUTH_DATA_MIN_BYTE_LEN;
 
 template<typename T>
-void copyAndAdvance(T& val, std::vector<uint8_t>::const_iterator& from, size_t amount, const std::vector<uint8_t>::const_iterator& totalEnd)
+bool copyAndAdvance(T& val, std::vector<uint8_t>::const_iterator& from, size_t amount, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
     const auto available = std::distance(from, totalEnd);
-	if (available < 0 || (unsigned) available < amount)
-	{
-		return;
-	}
+    if (available < 0 || (unsigned) available < amount)
+    {
+        return false;
+    }
     const auto end = std::next(from, static_cast<long>(amount));
-    val.insert(from, end);
-
+    return val.insert(from, end);
 }
 
 template<size_t N>
-void copyAndAdvance(std::array<uint8_t, N>& arr, std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& totalEnd) 
+bool copyAndAdvance(std::array<uint8_t, N>& arr, std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& totalEnd) 
 {
-	const auto capacity = std::distance(arr.cbegin(), arr.cend());
-	if (std::distance(from, totalEnd) < capacity)
-	{
-		return;
-	}
+    const auto capacity = std::distance(arr.cbegin(), arr.cend());
+    if (std::distance(from, totalEnd) < capacity)
+    {
+        return false;
+    }
     const auto end = std::next(from, capacity);      
     std::copy(from, end, arr.begin());
     std::advance(from, capacity);
+    return true;
 } 
 
-void copyAndAdvance(uint16_t& val, std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& totalEnd)
+bool copyAndAdvance(uint16_t& val, std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
     const auto available = std::distance(from, totalEnd);
     const auto capacity = sizeof(uint16_t);
-	if (available < 0 || (unsigned) available < capacity)
-	{
-		return;
-	}
+    if (available < 0 || (unsigned) available < capacity)
+    {
+        return false;
+    }
     
     val = swapBytes(toUint16(*from, *(std::next(from))));
     std::advance(from, capacity);
+    return true;
 } 
 
 
-void copyAndAdvance(uint32_t& val, std::vector<uint8_t>::const_iterator& position, const std::vector<uint8_t>::const_iterator& totalEnd)
+bool copyAndAdvance(uint32_t& val, std::vector<uint8_t>::const_iterator& position, const std::vector<uint8_t>::const_iterator& totalEnd)
 {
     const auto available = std::distance(position, totalEnd);
     const auto capacity = sizeof(uint32_t);
-	if (available < 0 || (unsigned) available < capacity)
-	{
-		return;
-	}
+    if (available < 0 || (unsigned) available < capacity)
+    {
+        return false;
+    }
     
     val = swapBytes(toUint32(*position, *(std::next(position)), *(std::next(position, 2)), *(std::next(position, 3))));
     std::advance(position, capacity);
+    return true;
 }
 
 } // anonymous namespace
@@ -131,21 +133,29 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
 
     auto from = rawQuote.cbegin();
     Header localHeader;
-    copyAndAdvance(localHeader, from, HEADER_BYTE_LEN, rawQuote.cend());
+    if (!copyAndAdvance(localHeader, from, HEADER_BYTE_LEN, rawQuote.cend())) {
+        return false;
+    }
 
     EnclaveReport localBody; 
-    copyAndAdvance(localBody, from, BODY_BYTE_LEN, rawQuote.cend());  
+    if (!copyAndAdvance(localBody, from, BODY_BYTE_LEN, rawQuote.cend())) {
+        return false;
+    }
 
     uint32_t localAuthDataSize;
-    copyAndAdvance(localAuthDataSize, from, rawQuote.cend());
+    if (!copyAndAdvance(localAuthDataSize, from, rawQuote.cend())) {
+        return false;
+    }
     const auto remainingDistance = std::distance(from, rawQuote.cend());
     if(localAuthDataSize != remainingDistance)
     {
         return false;
     }
-	
+    
     Ecdsa256BitQuoteAuthData localQuoteAuth;
-    copyAndAdvance(localQuoteAuth, from, static_cast<size_t>(localAuthDataSize), rawQuote.cend());
+    if (!copyAndAdvance(localQuoteAuth, from, static_cast<size_t>(localAuthDataSize), rawQuote.cend())) {
+        return false;
+    }
 
     // parsing done, we should be precisely at the end of our buffer
     // if we're not it means inconsistency in internal structure
@@ -174,7 +184,9 @@ bool Quote::parseEnclaveReport(const std::vector<uint8_t> &enclaveReport)
     EnclaveReport localBody;
     auto from = enclaveReport.cbegin();
     auto end = enclaveReport.cend();
-    copyAndAdvance(localBody, from, BODY_BYTE_LEN, end);
+    if (!copyAndAdvance(localBody, from, BODY_BYTE_LEN, end)) {
+        return false;
+    }
 
     if(from != end)
     {
@@ -211,31 +223,33 @@ const std::vector<uint8_t>& Quote::getSignedData() const
     return signedData;
 }
 
-void Quote::Header::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::Header::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 { 
-    copyAndAdvance(version, from, end);
-    copyAndAdvance(attestationKeyType, from, end);
-    copyAndAdvance(reserved, from, end);
-    copyAndAdvance(qeSvn, from, end);
-    copyAndAdvance(pceSvn, from, end);
-    copyAndAdvance(uuid, from, end);
-    copyAndAdvance(userData, from, end);
+    if (!copyAndAdvance(version, from, end)) { return false; }
+    if (!copyAndAdvance(attestationKeyType, from, end)) { return false; }
+    if (!copyAndAdvance(reserved, from, end)) { return false; }
+    if (!copyAndAdvance(qeSvn, from, end)) { return false; }
+    if (!copyAndAdvance(pceSvn, from, end)) { return false; }
+    if (!copyAndAdvance(uuid, from, end)) { return false; }
+    if (!copyAndAdvance(userData, from, end)) { return false; }
+    return true;
 }
 
-void Quote::EnclaveReport::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::EnclaveReport::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {    
-    copyAndAdvance(cpuSvn, from, end);
-    copyAndAdvance(miscSelect, from, end);
-    copyAndAdvance(reserved1, from, end);
-    copyAndAdvance(attributes, from, end);
-    copyAndAdvance(mrEnclave, from, end);
-    copyAndAdvance(reserved2, from, end);
-    copyAndAdvance(mrSigner, from, end);
-    copyAndAdvance(reserved3, from, end);
-    copyAndAdvance(isvProdID, from, end);
-    copyAndAdvance(isvSvn, from, end);
-    copyAndAdvance(reserved4, from, end);
-    copyAndAdvance(reportData, from, end); 
+    if (!copyAndAdvance(cpuSvn, from, end)) { return false; }
+    if (!copyAndAdvance(miscSelect, from, end)) { return false; }
+    if (!copyAndAdvance(reserved1, from, end)) { return false; }
+    if (!copyAndAdvance(attributes, from, end)) { return false; }
+    if (!copyAndAdvance(mrEnclave, from, end)) { return false; }
+    if (!copyAndAdvance(reserved2, from, end)) { return false; }
+    if (!copyAndAdvance(mrSigner, from, end)) { return false; }
+    if (!copyAndAdvance(reserved3, from, end)) { return false; }
+    if (!copyAndAdvance(isvProdID, from, end)) { return false; }
+    if (!copyAndAdvance(isvSvn, from, end)) { return false; }
+    if (!copyAndAdvance(reserved4, from, end)) { return false; }
+    if (!copyAndAdvance(reportData, from, end)) { return false; }
+    return true;
 }
 
 std::array<uint8_t,384> Quote::EnclaveReport::rawBlob() const
@@ -284,95 +298,118 @@ std::array<uint8_t,384> Quote::EnclaveReport::rawBlob() const
     return ret;
 }
 
-void Quote::Ecdsa256BitSignature::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::Ecdsa256BitSignature::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 { 
-    copyAndAdvance(signature, from, end);
+    return copyAndAdvance(signature, from, end);
 }
 
-void Quote::Ecdsa256BitPubkey::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::Ecdsa256BitPubkey::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
-    copyAndAdvance(pubKey, from, end);
+    return copyAndAdvance(pubKey, from, end);
 }
 
-void Quote::QeAuthData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::QeAuthData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
     const size_t amount = static_cast<size_t>(std::distance(from, end));
     if(from > end || amount < QE_AUTH_DATA_SIZE_BYTE_LEN)
     {
-        return;
+        return false;
     }
    
     this->data.clear();
-    copyAndAdvance(parsedDataSize, from, end);
+    if (!copyAndAdvance(parsedDataSize, from, end)) 
+    { 
+        return false; 
+    }
 
     if(parsedDataSize != amount - QE_AUTH_DATA_SIZE_BYTE_LEN)
     {
         // invalid format
         // moving back pointer
         from = std::prev(from, sizeof(decltype(parsedDataSize)));
-        return;
+        return false;
     }
 
     if(parsedDataSize == 0)
     {
         // all good, parsed size is zero
         // data are cleared and from is moved
-        return;
+        return true;
     }
 
     data.reserve(parsedDataSize);
     std::copy_n(from, parsedDataSize, std::back_inserter(data));
     std::advance(from, parsedDataSize);
+    return true;
 }
 
-void Quote::QeCertData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::QeCertData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
     const auto minLen = QE_CERT_DATA_SIZE_BYTE_LEN + QE_CERT_DATA_TYPE_BYTE_LEN;
     const size_t amount = static_cast<size_t>(std::distance(from, end));
     if(from > end || amount < minLen)
     {
-        return;
+        return false;
     }
  
     data.clear();
-    copyAndAdvance(type, from, end);
-    copyAndAdvance(parsedDataSize, from, end);
+    if (!copyAndAdvance(type, from, end)) { return false; }
+    if (!copyAndAdvance(parsedDataSize, from, end)) { return false; }
     if(parsedDataSize != amount - minLen)
     {
         // invalid format, moving back pointer
         from = std::prev(from, sizeof(decltype(type)) + sizeof(decltype(parsedDataSize)));
-        return; 
+        return false;
     }
 
     if(parsedDataSize == 0)
     {
         // all good, parsed size is 0
         // data cleared and pointer moved
-        return;
+        return true;
     }
 
     data.reserve(parsedDataSize);
     std::copy_n(from, parsedDataSize, std::back_inserter(data));
     std::advance(from, parsedDataSize);
+    return true;
 }
 
-void Quote::Ecdsa256BitQuoteAuthData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool Quote::Ecdsa256BitQuoteAuthData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
-    copyAndAdvance(ecdsa256BitSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end);
-    copyAndAdvance(ecdsaAttestationKey, from, ECDSA_PUBKEY_BYTE_LEN, end);
-    copyAndAdvance(qeReport, from, ENCLAVE_REPORT_BYTE_LEN, end);
-    copyAndAdvance(qeReportSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end);
+    if (!copyAndAdvance(ecdsa256BitSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end)) { return false; }
+    if (!copyAndAdvance(ecdsaAttestationKey, from, ECDSA_PUBKEY_BYTE_LEN, end)) { return false; }
+    if (!copyAndAdvance(qeReport, from, ENCLAVE_REPORT_BYTE_LEN, end)) { return false; }
+    if (!copyAndAdvance(qeReportSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end)) { return false; }
     
     uint16_t authSize = 0;
-    copyAndAdvance(authSize, from, end);
+    if (!copyAndAdvance(authSize, from, end)) 
+    {
+        return false;
+    }
     from = std::prev(from, sizeof(uint16_t));
-    copyAndAdvance(qeAuthData, from, authSize + sizeof(uint16_t), end);
+    if (!copyAndAdvance(qeAuthData, from, authSize + sizeof(uint16_t), end)) 
+    {
+        return false;
+    }
 
     uint32_t qeCertSize = 0;
+    const auto available = std::distance(from, end);
+    if (available < 0 || (unsigned) available < sizeof(uint16_t))
+    {
+        return false;
+    }
     std::advance(from, sizeof(uint16_t)); // skip type
-    copyAndAdvance(qeCertSize, from, end);
+    if (!copyAndAdvance(qeCertSize, from, end)) 
+    {
+        return false;
+    }
     from = std::prev(from, sizeof(uint32_t) + sizeof(uint16_t)); // go back to beg of struct data
-    copyAndAdvance(qeCertData, from, qeCertSize + sizeof(uint16_t) + sizeof(uint32_t), end);
+    if (!copyAndAdvance(qeCertData, from, qeCertSize + sizeof(uint16_t) + sizeof(uint32_t), end)) 
+    {
+        return false;
+    }
+    return true;
 }
 
 std::vector<uint8_t> Quote::getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote) const

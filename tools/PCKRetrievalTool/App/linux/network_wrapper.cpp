@@ -68,7 +68,7 @@ extern string server_url_string;
 extern string proxy_type_string;
 extern string proxy_url_string;
 extern string user_token_string;
-extern string user_secure_cert_string;
+extern string use_secure_cert_string;
 
 typedef enum _network_proxy_type {
     DIRECT = 0,
@@ -213,13 +213,13 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                 }
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {
-                if (user_secure_cert_string.empty() == true) {
+                if (use_secure_cert_string.empty() == true) {
                     std::transform(value.begin(), value.end(), value.begin(), ::toupper);
                     if (value.compare("FALSE") == 0) {
                         g_use_secure_cert = false;
                     }
                 }
-                else if (user_secure_cert_string.compare("FALSE") == 0 || user_secure_cert_string.compare("false") == 0) {
+                else if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
                     g_use_secure_cert = false;
                 }
             }
@@ -245,7 +245,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
         }
     }
     else {
-        if (user_secure_cert_string.compare("FALSE") == 0 || user_secure_cert_string.compare("false") == 0) {
+        if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
             g_use_secure_cert = false;
         }
 

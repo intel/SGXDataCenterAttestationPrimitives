@@ -71,9 +71,13 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret)
         case SGX_QCNL_NETWORK_INIT_ERROR:
             return SGX_QL_NETWORK_ERROR;
         case SGX_QCNL_MSG_ERROR:
-            return SGX_QL_MESSAGE_ERROR;
-        case SGX_QCNL_ERROR_STATUS_NOT_FOUND:
+            return SGX_QL_ERROR_MESSAGE_PARSING_ERROR;
+        case SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA:
             return SGX_QL_NO_QUOTE_COLLATERAL_DATA;
+        case SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN:
+            return SGX_QL_PLATFORM_UNKNOWN;
+        case SGX_QCNL_ERROR_STATUS_UNEXPECTED:
+            return SGX_QL_UNKNOWN_MESSAGE_RESPONSE;
         default:
             return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -83,7 +87,7 @@ quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_cert_id, sg
 {
     sgx_qcnl_error_t ret = sgx_qcnl_get_pck_cert_chain(p_cert_id, pp_quote_config);
 
-    if (ret == SGX_QCNL_ERROR_STATUS_NOT_FOUND)
+    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA)
         return SGX_QL_NO_PLATFORM_CERT_DATA;
     else
         return qcnl_error_to_ql_error(ret);
@@ -286,7 +290,7 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
 {
     sgx_qcnl_error_t ret = sgx_qcnl_get_qve_identity(pp_qve_identity, p_qve_identity_size, pp_qve_identity_issuer_chain, p_qve_identity_issuer_chain_size);
 
-    if (ret == SGX_QCNL_ERROR_STATUS_NOT_FOUND)
+    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA)
         return SGX_QL_NO_QVE_IDENTITY_DATA;
     else
         return qcnl_error_to_ql_error(ret);

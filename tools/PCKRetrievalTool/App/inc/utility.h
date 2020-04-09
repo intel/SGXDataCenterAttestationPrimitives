@@ -48,6 +48,6 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size);
 
 bool is_valid_proxy_type(std::string& proxy_type);
 
-bool is_valid_user_secure_cert(std::string& user_secure_cert);
+bool is_valid_use_secure_cert(std::string& use_secure_cert);
 
 #endif

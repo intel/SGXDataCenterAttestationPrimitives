@@ -106,8 +106,8 @@ App_C_Flags := $(COMMON_FLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack
-App_Link_Flags +=  -L../../QuoteGeneration/build/linux -lsgx_dcap_ql 
-App_Link_Flags +=  -lsgx_urts -lsgx_dcap_ql -lcurl -ldl -lpthread -Wl,-rpath=.
+App_Link_Flags +=  -L../../QuoteGeneration/build/linux -Wl,-rpath=../../QuoteGeneration/build/linux -lsgx_dcap_ql
+App_Link_Flags +=  -L $(SGX_SDK)/lib64 -lsgx_urts -lcurl -ldl -lpthread -Wl,-rpath=.
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
