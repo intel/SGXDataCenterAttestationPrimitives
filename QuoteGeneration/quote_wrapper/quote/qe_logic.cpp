@@ -255,9 +255,6 @@ void * get_qpl_handle()
             // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
             // We shall remove this when we have a major version change later and drop the backward compatible
             // support for old lib name.
-    #ifndef DISABLE_TRACE
-            old_libname_used = true;
-    #endif
             handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
         }
     }
