@@ -4,6 +4,7 @@ arg1=$1
 argnum=$#
 ## Set mydir to the directory containing the script
 mydir="${0%/*}"
+configFile="$mydir"/config/production-0.json
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
@@ -81,7 +82,7 @@ read -p "Set HTTPS listening port [8081] (1024-65535) :" port
 if [[ $port -lt 1024  ||  $port -gt 65535 ]] ; then
     port=8081
 fi
-sed "/\"HTTPS_PORT\"*/c\ \ \ \ \"HTTPS_PORT\" \: ${port}," -i config/default.json
+sed "/\"HTTPS_PORT\"*/c\ \ \ \ \"HTTPS_PORT\" \: ${port}," -i ${configFile}
 
 #Ask for HTTPS port number
 local_only=""
@@ -91,10 +92,10 @@ do
     if [[ -z $local_only  || "$local_only" == "Y" || "$local_only" == "y" ]] 
     then
         local_only="Y"
-        sed "/\"hosts\"*/c\ \ \ \ \"hosts\" \: \"127.0.0.1\"," -i config/default.json
+        sed "/\"hosts\"*/c\ \ \ \ \"hosts\" \: \"127.0.0.1\"," -i ${configFile}
     elif [[ "$local_only" == "N" || "$local_only" == "n" ]] 
     then
-        sed "/\"hosts\"*/c\ \ \ \ \"hosts\" \: \"0.0.0.0\"," -i config/default.json
+        sed "/\"hosts\"*/c\ \ \ \ \"hosts\" \: \"0.0.0.0\"," -i ${configFile}
     else
         local_only=""
     fi
@@ -107,9 +108,9 @@ do
     read -p "Set your Intel PCS API key (Press ENTER to skip) :" apikey 
     if [ -z $apikey ]
     then
-        echo -e "${YELLOW}You didn't set Intel PCS API key. You can set it later in config/default.json. ${NC} "
+        echo -e "${YELLOW}You didn't set Intel PCS API key. You can set it later in config/production-0.json. ${NC} "
         break
-    elif [[ $apikey =~ ^[a-zA-Z0-9]{32}$ ]] && sed "/\"ApiKey\"*/c\ \ \ \ \"ApiKey\" \: \"${apikey}\"," -i config/default.json
+    elif [[ $apikey =~ ^[a-zA-Z0-9]{32}$ ]] && sed "/\"ApiKey\"*/c\ \ \ \ \"ApiKey\" \: \"${apikey}\"," -i ${configFile}
     then
         break
     else
@@ -119,7 +120,7 @@ done
 
 if [ "$https_proxy" != "" ]
 then
-    sed "/\"proxy\"*/c\ \ \ \ \"proxy\" \: \"${https_proxy}\"," -i config/default.json
+    sed "/\"proxy\"*/c\ \ \ \ \"proxy\" \: \"${https_proxy}\"," -i ${configFile}
 fi
 
 #Ask for CachingFillMode
@@ -130,10 +131,10 @@ do
     if [[ -z $caching_mode  || "$caching_mode" == "LAZY" ]] 
     then
         caching_mode="LAZY"
-        sed "/\"CachingFillMode\"*/c\ \ \ \ \"CachingFillMode\" \: \"${caching_mode}\"," -i config/default.json
+        sed "/\"CachingFillMode\"*/c\ \ \ \ \"CachingFillMode\" \: \"${caching_mode}\"," -i ${configFile}
     elif [[ "$caching_mode" == "OFFLINE" || "$caching_mode" == "REQ" ]] 
     then
-        sed "/\"CachingFillMode\"*/c\ \ \ \ \"CachingFillMode\" \: \"${caching_mode}\"," -i config/default.json
+        sed "/\"CachingFillMode\"*/c\ \ \ \ \"CachingFillMode\" \: \"${caching_mode}\"," -i ${configFile}
     else
         caching_mode=""
     fi
@@ -164,7 +165,7 @@ do
         admintoken2=""
     else
         HASH="$(echo -n "$admintoken1" | sha512sum | tr -d '[:space:]-')"
-        sed "/\"AdminToken\"*/c\ \ \ \ \"AdminToken\" \: \"${HASH}\"," -i config/default.json
+        sed "/\"AdminToken\"*/c\ \ \ \ \"AdminToken\" \: \"${HASH}\"," -i ${configFile}
         admin_pass_set=true
     fi
 done
@@ -194,7 +195,7 @@ do
         usertoken2=""
     else
         HASH="$(echo -n "$usertoken1" | sha512sum | tr -d '[:space:]-')"
-        sed "/\"UserToken\"*/c\ \ \ \ \"UserToken\" \: \"${HASH}\"," -i config/default.json
+        sed "/\"UserToken\"*/c\ \ \ \ \"UserToken\" \: \"${HASH}\"," -i ${configFile}
         user_pass_set=true
     fi
 done
