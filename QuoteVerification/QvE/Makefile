@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -255,7 +255,7 @@ $(Enclave_Name): $(Enclave_Cpp_Objects) Enclave/qve_t.o
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_key.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 print-%  : ; @echo $* = $($*)

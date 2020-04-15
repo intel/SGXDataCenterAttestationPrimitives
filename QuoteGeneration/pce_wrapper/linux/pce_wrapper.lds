@@ -4,6 +4,8 @@ global:
     sgx_pce_get_target;
     sgx_get_pce_info;
     sgx_pce_sign_report;
+    sgx_get_pce_info_without_ppid;
+    sgx_set_pce_path;
 local:
     *;
 };

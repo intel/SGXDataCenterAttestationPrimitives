@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -394,7 +393,15 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                     }
                 },
                 "pckcacrl": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                        "processorCrl":{
+                            "type": "string"
+                        },
+                        "platformCrl":{
+                            "type": "string"
+                        }
+                    }
                 },
                 "qeidentity": {
                     "type": "string"
@@ -406,7 +413,15 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                     "type": "object",
                     "properties": {
                         "sgx-pck-certificate-issuer-chain": {
-                            "type": "string"
+                            "type": "object",
+                            "properties": {
+                                "PROCESSOR":{
+                                    "type": "string"
+                                },
+                                "PLATFORM":{
+                                    "type": "string"
+                                }
+                            }
                         },
                         "sgx-tcb-info-issuer-chain": {
                             "type": "string"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,11 +48,13 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
     const auto miscselectMask = vectorToUint32(enclaveIdentity->getMiscselectMask());
     const auto miscselect = vectorToUint32(enclaveIdentity->getMiscselect());
 
+    /// 4.1.2.9.5
     if((enclaveReport.miscSelect & miscselectMask) != miscselect)
     {
         return STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH;
     }
 
+    /// 4.1.2.9.6
     auto attributesReport = enclaveReport.attributes;
     std::vector<uint8_t> attributes(attributesReport.begin(), attributesReport.end());
     if(applyMask(attributes, enclaveIdentity->getAttributesMask()) != enclaveIdentity->getAttributes())
@@ -60,26 +62,31 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
         return STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH;
     }
 
+    /// 4.1.2.9.8
     std::vector<uint8_t> mrSigner(enclaveReport.mrSigner.begin(), enclaveReport.mrSigner.end());
     if(!enclaveIdentity->getMrsigner().empty() && enclaveIdentity->getMrsigner() != mrSigner)
     {
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
 
+    /// 4.1.2.9.9
     if(enclaveReport.isvProdID != enclaveIdentity->getIsvProdId())
     {
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
 
+    /// 4.1.2.9.10 & 4.1.2.9.11
     auto enclaveIdentityStatus = enclaveIdentity->getTcbStatus(enclaveReport.isvSvn);
     if(enclaveIdentityStatus != TcbStatus::UpToDate)
     {
         if (enclaveIdentityStatus == TcbStatus::Revoked)
         {
-            return STATUS_TCB_REVOKED;
+            return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED;
         }
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;
     }
+
+    /// 4.1.2.9.12
     return STATUS_OK;
 }
 

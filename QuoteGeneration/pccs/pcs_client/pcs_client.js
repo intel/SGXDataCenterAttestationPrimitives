@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +46,7 @@ do_request = async function(options, src) {
         return response;
     }
     catch(err) {
+        logger.debug(err);
         if (err.response && err.response.headers) {
             logger.info('Request-ID is : ' + err.response.headers['request-id'] + ' ' + src);
         }
@@ -100,12 +100,35 @@ exports.getCerts=async function(enc_ppid,pceid){
     return do_request(options, 'pckcerts');
 };
 
+exports.getCertsWithManifest = async function(platform_manifest, pceid){
+    const options = {
+        uri: config.get('uri')+ 'pckcerts',
+        proxy: config.get('proxy'),
+        qs: {},
+        body: {
+            platformManifest: platform_manifest,
+            pceid: pceid
+        },
+        method: 'POST',
+        json: true,
+        timeout: HTTP_TIMEOUT,
+        resolveWithFullResponse: true, 
+        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
+    };
+
+    logger.debug('getCerts......');
+    logger.debug('platform_manifest : ' + platform_manifest);
+    logger.debug('pceid : ' + pceid);
+
+    return do_request(options, 'pckcerts');
+}
+
 exports.getPckCrl=async function(ca){
     const options = {
         uri: config.get('uri')+ 'pckcrl',
         proxy: config.get('proxy'),
         qs: {
-            ca:ca
+            ca:ca.toLowerCase()
         },
         method: 'GET',
         timeout: HTTP_TIMEOUT,

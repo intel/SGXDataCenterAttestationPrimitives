@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: sgx_ql_core_wrapper.h 
- *  
+/** File: sgx_ql_core_wrapper.h
+ *
  * Description: Definitions and prototypes for the core quoting API's for genererting generic attestaion key
  *              quotes.
  *
@@ -40,9 +40,10 @@
 #include "sgx_quote_3.h"
 #include "sgx_ql_quote.h"
 
+
 #define SGX_QL_MAX_ATT_KEY_IDS 10
 
-#define SGX_QL_CERT_TYPE PPID_RSA3072_ENCRYPTED 
+#define SGX_QL_CERT_TYPE PPID_RSA3072_ENCRYPTED
 
 #if defined(__cplusplus)
 extern "C" {
@@ -50,9 +51,6 @@ extern "C" {
 
 quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy);
 
-quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_att_key_id_list,
-                                        sgx_ql_att_key_id_t **p_selected_key_id);
-    
 quote3_error_t sgx_ql_init_quote(sgx_ql_att_key_id_t *p_att_key_id,
                                  sgx_target_info_t *p_qe_target_info,
                                  bool refresh_att_key,
@@ -68,6 +66,9 @@ quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
                                 uint8_t *p_quote,
                                 uint32_t quote_size);
 
+quote3_error_t sgx_set_qe3_path(const char *p_path);
+quote3_error_t sgx_set_qpl_path(const char *p_path);
+quote3_error_t sgx_ql_get_keyid(sgx_att_key_id_ext_t *p_att_key_id_ext);
 #if defined(__cplusplus)
 }
 #endif

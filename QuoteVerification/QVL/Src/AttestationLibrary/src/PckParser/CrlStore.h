@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,11 +66,7 @@ public:
     virtual bool isRevoked(const dcap::parser::x509::Certificate& cert) const;
 
 private:
-#ifdef _DCAP_QUOTEVERIFY_LIB
-    intel::sgx::dcap::crypto::X509_CRL_uptr _crl;
-#else
     crypto::X509_CRL_uptr _crl;
-#endif
 
     Issuer _issuer;
     Validity _validity;

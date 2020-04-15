@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,24 +29,79 @@
  *
  */
 /**
- * File: sgx_dcap_pcs_com.h 
- *  
- * Description: Definitions and prototypes for the PCS communication APIs.
+ * File: sgx_dcap_pcs_com.h
+ *
+ * Description: Definitions and prototypes for the PCS/PCCS communication APIs.
  *
  */
 
 #ifndef _SGX_DCAP_PCS_COM_H_
 #define _SGX_DCAP_PCS_COM_H_
 
+#include "sgx_ql_lib_common.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#define QL_API_GET_QUOTE_VERIFICATION_COLLATERAL "sgx_ql_get_quote_verification_collateral"
+#define QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL "sgx_ql_free_quote_verification_collateral"
+
+#define QL_API_GET_QVE_IDENTITY "sgx_ql_get_qve_identity"
+#define QL_API_FREE_QVE_IDENTITY "sgx_ql_free_qve_identity"
+
+#define QL_API_GET_ROOT_CA_CRL "sgx_ql_get_root_ca_crl"
+#define QL_API_FREE_ROOT_CA_CRL "sgx_ql_free_root_ca_crl"
+
+
+typedef quote3_error_t(*sgx_get_quote_verification_collateral_func_t)(const char *fmspc,
+        uint16_t fmspc_size,
+        const char *pck_ca,
+        struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
+
+typedef quote3_error_t(*sgx_free_quote_verification_collateral_func_t)(struct _sgx_ql_qve_collateral_t *p_quote_collateral);
+
+typedef quote3_error_t(*sgx_ql_get_qve_identity_func_t)(char **pp_qve_identity,
+        uint32_t *p_qve_identity_size,
+        char **pp_qve_identity_issuer_chain,
+        uint32_t *p_qve_identity_issuer_chain_size);
+
+typedef quote3_error_t(*sgx_ql_free_qve_identity_func_t)(char *p_qve_identity, char *p_qve_identity_issue_chain);
+
+typedef quote3_error_t(*sgx_ql_get_root_ca_crl_func_t)(uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_cal_size);
+
+typedef quote3_error_t(*sgx_ql_free_root_ca_crl_func_t)(uint8_t *p_root_ca_crl);
+
+
+
+
+bool sgx_dcap_load_qpl();
+
 quote3_error_t sgx_dcap_retrieve_verification_collateral(
-    const char *fmspc,
-    uint16_t fmspc_size,
-    const char *pck_ca,
-    struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
+        const char *fmspc,
+        uint16_t fmspc_size,
+        const char *pck_ca,
+        struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
+
 quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *pp_quote_collateral);
+
+
+quote3_error_t sgx_dcap_retrieve_qve_identity(
+        uint8_t **pp_qveid,
+        uint32_t *p_qveid_size,
+        uint8_t **pp_qveid_issue_chain,
+        uint32_t *p_qveid_issue_chain_size,
+        uint8_t **pp_root_ca_crl,
+        uint16_t *p_root_ca_crl_size);
+
+
+quote3_error_t sgx_dcap_free_qve_identity(uint8_t *p_qveid,
+                                          uint8_t *p_qveid_issue_chain,
+                                          uint8_t *p_root_ca_crl);
+#ifndef _MSC_VER
+bool sgx_qv_set_qpl_path(const char* p_path);
+bool sgx_qv_set_qve_path(const char* p_path);
+#endif
 
 #if defined(__cplusplus)
 }

@@ -40,6 +40,7 @@ def main():
     #  subparser for fetch
     parser_fetch = subparsers.add_parser('fetch')
     # add optional arguments for fetch
+    parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service")
     parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list")
     parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals")
     # add mandatory arguments for fetch
@@ -121,6 +122,14 @@ def pccs_put(args):
 
 def pcs_fetch(args):
     try :
+        url = 'https://api.trustedservices.intel.com/sgx/certification/v2/'
+        ApiVersion = 2
+
+        if args.url:
+            url = args.url
+        if url.find('/v3/')!=-1 :
+            ApiVersion = 3 
+
         apikey = args.key
         input_file = "platform_list.json"
         if args.input_file:
@@ -141,24 +150,25 @@ def pcs_fetch(args):
                     return
 
         # Initialize PCS object
-        pcsclient = PCS(apikey, 2)
+        pcsclient = PCS(url,ApiVersion,apikey)
         sgxext= SgxPckCertificateExtensions()
 
         input_fullpath = os.path.join(os.getcwd(), input_file)
         with open(input_fullpath) as ifile:
             plaformlist = json.load(ifile)
 
-        # construct output data : platforms
+        # construct output data
         output_json={}
         output_json["platforms"] = plaformlist
         output_json["collaterals"] = {
             "pck_certs" : [],
             "tcbinfos" : [],
-            "pckcacrl" : "",
+            "pckcacrl" : {
+            },
             "qeidentity" : "",
             "qveidentity" : "",
             "certificates" : {
-                "sgx-pck-certificate-issuer-chain": "",
+                "sgx-pck-certificate-issuer-chain": {},
                 "sgx-tcb-info-issuer-chain": "",
                 "sgx-enclave-identity-issuer-chain" : ""
             },
@@ -173,23 +183,31 @@ def pcs_fetch(args):
                                                                       "platform_manifest" : platform["platform_manifest"]}
         for platform_id in platform_dict:
             enc_ppid = platform_dict[platform_id]["enc_ppid"]
+            platform_manifest = platform_dict[platform_id]["platform_manifest"]
             pce_id = platform_id[1]
 
             # get pckcerts from Intel PCS, return value is [certs, chain]
-            pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, 'ascii')
+            pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
             if pckcerts == None:
                 print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
                 return
             # convert to JSON object
             pckcerts_json = json.loads(pckcerts[0])
-            # set pck-certificate-issuer-chain
-            if output_json["collaterals"]["certificates"]["sgx-pck-certificate-issuer-chain"] == '':
-                output_json["collaterals"]["certificates"]["sgx-pck-certificate-issuer-chain"] = pckcerts[1]
 
             # parse the first cert to get FMSPC value and put it into a set
             cert = pckcerts_json[0]["cert"]
             sgxext.parse_pem_certificate(unquote(cert).encode('utf-8'))
             fmspc_set.add(sgxext.get_fmspc())
+
+            # set pck-certificate-issuer-chain
+            ca = sgxext.get_ca()
+            if ca is None:
+                print("Wrong certificate format!")
+                return
+
+            pckchain = output_json["collaterals"]["certificates"]["sgx-pck-certificate-issuer-chain"]
+            if not hasattr(pckchain, ca) or pckchain[ca] == '':
+                pckchain[ca] = pckcerts[1]
 
             output_json["collaterals"]["pck_certs"].append({
                 "qe_id" : platform_id[0],
@@ -215,11 +233,18 @@ def pcs_fetch(args):
             
 
         # output.collaterals.pckcacrl
-        pckcacrl = pcsclient.get_pck_crl('processor', 'ascii')
-        if pckcacrl == None:
-            print("Failed to get PCK CRL.")
+        processorCrl = pcsclient.get_pck_crl('processor', 'ascii')
+        if processorCrl == None:
+            print("Failed to get processor PCK CRL.")
             return
-        output_json["collaterals"]["pckcacrl"] = pckcacrl[0]
+        output_json["collaterals"]["pckcacrl"]["processorCrl"] = processorCrl[0]
+
+        if ApiVersion >= 3:
+            platformCrl = pcsclient.get_pck_crl('platform', 'ascii')
+            if platformCrl == None:
+                print("Failed to get platform PCK CRL.")
+                return
+            output_json["collaterals"]["pckcacrl"]["platformCrl"] = platformCrl[0]
 
         # output.collaterals.qeidentity
         qe_identity = pcsclient.get_qe_id('ascii')

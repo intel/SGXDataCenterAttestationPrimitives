@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,6 +88,6 @@ exports.getRootCACrl=async function() {
         return this.getRootCACrlFromPCS(rootca);
     }
     else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 }

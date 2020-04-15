@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +40,8 @@ module.exports = (sequelize, DataTypes) => {
           else return "";}
       },
       enc_ppid: { type: DataTypes.BLOB, get(){return this.getDataValue('enc_ppid').toString('utf8');}  },
-      fmspc: { type: DataTypes.STRING }
+      fmspc: { type: DataTypes.STRING },
+      ca: { type: DataTypes.STRING }
     },{
         timestamps: true,
         createdAt: 'created_time',

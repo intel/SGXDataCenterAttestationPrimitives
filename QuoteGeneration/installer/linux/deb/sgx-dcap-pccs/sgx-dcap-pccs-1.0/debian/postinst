@@ -27,9 +27,12 @@ case "$1" in
         else
             npm install -g pm2
         fi
-        /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh postinst" $(logname)
-        pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" $(logname)` || true
-        eval $pm2cfg 
+        if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
+        then
+            /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh postinst" $(logname)
+            pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" $(logname)` || true
+            eval $pm2cfg
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

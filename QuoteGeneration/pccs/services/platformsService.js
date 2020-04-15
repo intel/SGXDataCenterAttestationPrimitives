@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +39,6 @@ const pckcrlService = require('./pckcrlService.js');
 const identityService = require('./identityService.js');
 const rootcacrlService = require('./rootcacrlService.js');
 const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
 const Constants = require('../constants/index.js');
 const Ajv = require('ajv');
 const Schema = require('./pccs_schemas.js');

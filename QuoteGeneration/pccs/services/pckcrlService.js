@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +42,7 @@ exports.getPckCrlFromPCS = async function(ca) {
     const pck_server_res = await PcsClient.getPckCrl(ca);
 
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     let result = {};
@@ -54,7 +53,7 @@ exports.getPckCrlFromPCS = async function(ca) {
         // update or insert PCK CRL
         await pckcrlDao.upsertPckCrl(ca, pck_server_res.body);
         // update or insert certificate chain
-        await pcsCertificatesDao.upsertPckCrlCertchain(pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
+        await pcsCertificatesDao.upsertPckCrlCertchain(ca, pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
     });
     return result;
 }
@@ -68,7 +67,7 @@ exports.getPckCrl=async function(ca) {
             result = await this.getPckCrlFromPCS(ca);
         }
         else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
         }
     }
     else {

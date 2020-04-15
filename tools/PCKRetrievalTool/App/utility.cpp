@@ -1,33 +1,33 @@
 /*
-* Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-*
-*   * Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*   * Redistributions in binary form must reproduce the above copyright
-*     notice, this list of conditions and the following disclaimer in
-*     the documentation and/or other materials provided with the
-*     distribution.
-*   * Neither the name of Intel Corporation nor the names of its
-*     contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HODERS AND CONTRIBUTORS
-* "AS IS" AND ANY EXPRESS OR IMPIED WARRANTIES, INCUDING, BUT NOT
-* IMITED TO, THE IMPIED WARRANTIES OF MERCHANTABIITY AND FITNESS FOR
-* A PARTICUAR PURPOSE ARE DISCAIMED. IN NO EVENT SHA THE COPYRIGHT
-* OWNER OR CONTRIBUTORS BE IABE FOR ANY DIRECT, INDIRECT, INCIDENTA,
-* SPECIA, EXEMPARY, OR CONSEQUENTIA DAMAGES (INCUDING, BUT NOT
-* IMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; OSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-* THEORY OF IABIITY, WHETHER IN CONTRACT, STRICT IABIITY, OR TORT
-* (INCUDING NEGIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBIITY OF SUCH DAMAGE.
-*
-*/
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
 /**
  * File: utility.cpp
  *
@@ -70,6 +70,9 @@
 #endif 
 
 #ifdef MPA     
+#ifdef _MSC_VER
+#pragma warning(disable: 4201)
+#endif 
 #include "MPUefi.h"
 typedef MpResult(*mp_uefi_init_func_t)(const char* path, const LogLevel logLevel);
 typedef MpResult(*mp_uefi_get_request_type_func_t)(MpRequestType* type);
@@ -359,9 +362,9 @@ bool is_valid_proxy_type(std::string& proxy_type) {
     }                
 }
 
-bool is_valid_user_secure_cert(std::string& user_secure_cert) {
-    if (user_secure_cert.compare("TRUE") == 0 ||
-        user_secure_cert.compare("FALSE") == 0 ) {
+bool is_valid_use_secure_cert(std::string& use_secure_cert) {
+    if (use_secure_cert.compare("TRUE") == 0 ||
+        use_secure_cert.compare("FALSE") == 0 ) {
         return true;
     }
     else {

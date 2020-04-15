@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,7 @@
 #include "sgx_ql_ecdsa_quote.h"
 #include "sgx_ql_core_wrapper.h"
 #include "qe3.h"
+#include "se_memcpy.h"
 
 #ifdef USE_DEBUG_MRSIGNER
 // This is the mrsigner for debug key
@@ -131,83 +132,6 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
     return(ret_val);
 }
 
-#ifndef AESM_ECDSA_BUNDLE
-/**
- * Used to select the attestation key from the list provided by the off-platform Quote verifier.  When none of the keys
- * in the list are supported by the platform, the platform will return an error and a NULL for the inputted attestation
- * key id pointer.  The reference uses a sample list that includes only the attestation key identity for the ECDSA QE.
- *
- * If this API is never called before the subsequent quoting API's are called, then Quoting Library will use a default
- * sgx_ql_att_key_id_t.  The Quoting Library will support at least one QE and Attestation key type described by
- * sgx_ql_att_key_id_t.  When this API is not called, the p_att_key_id in the subsequent quoting API's should be NULL
- * to notify the library it should use its default QE and algorithm.
- *
- * @param p_att_key_id_list [In] List of the supported attestation key IDs provided by the quote verifier. Can not be
- *                          NULL. it will use the p_att_key_id_list and compare it with the
- *                          supported values.
- * @param pp_selected_key_id [In, Out] Pointer to the selected attestation key in the list.  This should be used by the
- *                           application as input to the quoting and remote attestation APIs.  Must not be NULL.  Note,
- *                           it will point to one of the entries in the p_att_key_id_list and the application must copy
- *                           it if the memory for p_att_key_id_list will not persist for future quoting APIs calls.
- *
- * @return SGX_QL_SUCCESS Successfully selected an attestation key.  The pp_selected_key_id will point an entry in the
- *         p_att_key_id_list.
- * @return SGX_ERROR_INVALID_PARAMETER  Invalid parameter if p_att_key_id_list, pp_selected_key_id is NULL,
- *         list header is incorrect, or the number of key IDs in the list exceed the maximum.
- * @return SGX_QL_UNSUPPORTED_ATT_KEY_ID The platform quoting infrastructure does not support any of the keys in the
- *         list.  This can be because it doesn't carry the QE that owns the attestation key or the platform is in a
- *         mode that doesn't allow any of the listed keys; for example, for privacy reasons.
- * @return SGX_QL_ERROR_UNEXPECTED Unexpected internal error.
- */
-extern "C" quote3_error_t sgx_ql_select_att_key_id(sgx_ql_att_key_id_list_t *p_att_key_id_list,
-                                                   sgx_ql_att_key_id_t **pp_selected_key_id)
-{
-    quote3_error_t ret_val = SGX_QL_ERROR_UNEXPECTED;
-    uint32_t id_idx = 0;
-
-    if ((NULL == p_att_key_id_list) || (NULL == pp_selected_key_id))
-    {
-        return(SGX_QL_ERROR_INVALID_PARAMETER);
-    }
-    if(0 != p_att_key_id_list->header.id)
-    {
-        return(SGX_QL_ERROR_INVALID_PARAMETER);
-    }
-    if (0 != p_att_key_id_list->header.version)
-    {
-        return(SGX_QL_ERROR_INVALID_PARAMETER);
-    }
-    if (p_att_key_id_list->header.num_att_ids > SGX_QL_MAX_ATT_KEY_IDS)
-    {
-        return(SGX_QL_ERROR_INVALID_PARAMETER);
-    }
-
-    *pp_selected_key_id = NULL;
-    for (id_idx = 0; id_idx < p_att_key_id_list->header.num_att_ids; id_idx++)
-    {
-        if((0 == p_att_key_id_list->id_list[id_idx].id) &&
-           (0 == p_att_key_id_list->id_list[id_idx].version) &&
-           (1 == p_att_key_id_list->id_list[id_idx].prod_id) &&
-           (32 == p_att_key_id_list->id_list[id_idx].mrsigner_length) &&
-           (SGX_QL_ALG_ECDSA_P256 == p_att_key_id_list->id_list[id_idx].algorithm_id) &&
-           (0 == memcmp(p_att_key_id_list->id_list[id_idx].mrsigner, g_qe_mrsigner, 32)) &&
-           (0 == memcmp(p_att_key_id_list->id_list[id_idx].extended_prod_id, g_qe_ext_prod_id, 16)) &&
-           (0 == memcmp(p_att_key_id_list->id_list[id_idx].config_id, g_qe_config_id, 64)) &&
-           (0 == memcmp(p_att_key_id_list->id_list[id_idx].family_id, g_qe_family_id, 16)))
-        {
-            *pp_selected_key_id = &p_att_key_id_list->id_list[id_idx];
-            ret_val = SGX_QL_SUCCESS;
-        }
-    }
-
-    if (NULL == *pp_selected_key_id)
-    {
-        ret_val = SGX_QL_UNSUPPORTED_ATT_KEY_ID;
-    }
-
-    return(ret_val);
- }
-#endif
 
 /**
  * The application calls this API to request the selected platform's attestation key owner to generate or obtain
@@ -788,4 +712,17 @@ extern "C" quote3_error_t sgx_ql_get_quote(const sgx_report_t *p_app_report,
     return(ret_val);
 }
 
+extern "C" quote3_error_t sgx_ql_get_keyid(sgx_att_key_id_ext_t *p_att_key_id_ext)
+{
+    if(NULL == p_att_key_id_ext)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    memset(p_att_key_id_ext, 0, sizeof(*p_att_key_id_ext));
+    memcpy_s(&p_att_key_id_ext->base, sizeof(p_att_key_id_ext->base),
+        &g_default_ecdsa_p256_att_key_id, sizeof(g_default_ecdsa_p256_att_key_id));
+    p_att_key_id_ext->base.algorithm_id = SGX_QL_ALG_ECDSA_P256;
+    p_att_key_id_ext->base.prod_id = 1;
+    //p_att_key_id_ext.att_key_type and p_att_key_id_ext.reserved should be 0
+    return SGX_QL_SUCCESS;
+}
 

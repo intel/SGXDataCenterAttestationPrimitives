@@ -1,8 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_MP|x64">
+      <Configuration>Debug_MP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_MP|x64">
+      <Configuration>Release_MP</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -20,7 +28,15 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
@@ -34,7 +50,19 @@
     <IncludePath>$(NoInherit)</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(NoInherit)</IncludePath>
+    <LibraryPath>$(NoInherit)</LibraryPath>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(NoInherit)</IncludePath>
+    <LibraryPath>$(NoInherit)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">
     <GenerateManifest>false</GenerateManifest>
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(NoInherit)</IncludePath>
@@ -62,6 +90,29 @@
       <Message>sign the enclave</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">
+    <ClCompile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)\include;$(SGXSDKInstallPath)\include\tlibc;$(SGXSDKInstallPath)\include\libc++;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcrypto.lib;sgx_tcxx.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\debug</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
+      <NoEntryPoint>true</NoEntryPoint>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
+      <Message>sign the enclave</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -74,9 +125,34 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcrypto.lib;sgx_tcxx.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EntryPointSymbol />
+      <NoEntryPoint>true</NoEntryPoint>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
+      <Message>signing the enclave</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">
+    <ClCompile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)\include;$(SGXSDKInstallPath)\include\tlibc;$(SGXSDKInstallPath)\include\libc++;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcrypto.lib;sgx_tcxx.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\Release</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <NoEntryPoint>true</NoEntryPoint>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -96,13 +172,21 @@
   <ItemGroup>
     <CustomBuild Include="Enclave.edl">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(SGXSDKInstallPath)\bin\win32\release\sgx_edger8r.exe" --trusted "%(FullPath)" --search-path "$(SGXSDKInstallPath)\include"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">"$(SGXSDKInstallPath)\bin\win32\release\sgx_edger8r.exe" --trusted "%(FullPath)" --search-path "$(SGXSDKInstallPath)\include"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Creating proxy/bridge routines</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">Creating proxy/bridge routines</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename)_t.h;%(Filename)_t.c;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">%(Filename)_t.h;%(Filename)_t.c;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Enclave.config.xml;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release_MP|x64'">Enclave.config.xml;%(AdditionalInputs)</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(SGXSDKInstallPath)\bin\win32\release\sgx_edger8r.exe" --trusted "%(FullPath)" --search-path "$(SGXSDKInstallPath)\include"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">"$(SGXSDKInstallPath)\bin\win32\release\sgx_edger8r.exe" --trusted "%(FullPath)" --search-path "$(SGXSDKInstallPath)\include"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Creating proxy/bridge routines</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">Creating proxy/bridge routines</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_t.h;%(Filename)_t.c;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">%(Filename)_t.h;%(Filename)_t.c;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Enclave.config.xml;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug_MP|x64'">Enclave.config.xml;%(AdditionalInputs)</AdditionalInputs>
     </CustomBuild>
     <None Include="Enclave_private.pem" />
   </ItemGroup>

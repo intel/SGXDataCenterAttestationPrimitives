@@ -190,10 +190,8 @@
     <ClInclude Include="..\inc\sgx_pce.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\src\se_map.c" />
     <ClCompile Include="..\..\common\src\se_thread.c" />
     <ClCompile Include="..\..\common\src\se_trace.c" />
-    <ClCompile Include="..\..\parser\section.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

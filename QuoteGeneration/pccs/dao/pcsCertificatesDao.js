@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,16 +72,17 @@ upsertPcsCertchain = async function(certchain, first_cert_id, second_cert_id){
 }
 
 // Update or insert pck-certificate-issuer-chain
-exports.upsertPckCertificateIssuerChain = async function(pck_certchain) {
+exports.upsertPckCertificateIssuerChain = async function(ca, pck_certchain) {
     return await upsertPcsCertchain(pck_certchain, 
-        Constants.PROCESSOR_INTERMEDIATE_CERT_ID, 
+        (ca == Constants.CA_PROCESSOR) ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID, 
         Constants.PROCESSOR_ROOT_CERT_ID);
 }
 
 // Update or insert pck-crl-issuer-chain
-exports.upsertPckCrlCertchain = async function(pck_crl_certchain) {
+exports.upsertPckCrlCertchain = async function(ca, pck_crl_certchain) {
+    
     return await upsertPcsCertchain(pck_crl_certchain, 
-        Constants.PROCESSOR_INTERMEDIATE_CERT_ID, 
+        (ca == Constants.CA_PROCESSOR) ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID, 
         Constants.PROCESSOR_ROOT_CERT_ID);
 }
 

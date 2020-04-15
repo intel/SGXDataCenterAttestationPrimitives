@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
  *
  */
 /**
- * File: qve_parser.cpp 
- *  
- * Description: Wrapper functions for the 
+ * File: qve_parser.cpp
+ *
+ * Description: Wrapper functions for the
  * reference implementing the QvE
  * function defined in sgx_qve.h. This
  * would be replaced or used to wrap the
@@ -40,7 +40,7 @@
  */
 
 #include <tchar.h>
-#include "se_map.h"
+#include <windows.h>
 
 #define QvE_ENCLAVE_NAME _T("qve.signed.dll")
 bool get_qve_path(

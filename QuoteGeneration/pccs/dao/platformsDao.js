@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,13 +32,14 @@
 const { platforms}= require('./models/');
 const {Sequelize, sequelize} = require('./models/');
 
-exports.upsertPlatform = async function(qe_id, pce_id, platform_manifest, enc_ppid, fmspc) {
+exports.upsertPlatform = async function(qe_id, pce_id, platform_manifest, enc_ppid, fmspc, ca) {
     return await platforms.upsert({
         qe_id: qe_id,
         pce_id: pce_id,
         platform_manifest: platform_manifest,
         enc_ppid: enc_ppid,
-        fmspc: fmspc
+        fmspc: fmspc,
+        ca: ca
     });
 }
 

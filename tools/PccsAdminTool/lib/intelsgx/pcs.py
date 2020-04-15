@@ -10,32 +10,30 @@ from OpenSSL import crypto
 from pypac import PACSession
 from platform import system
 
-DefApiVersion= 1
 certBegin= '-----BEGIN CERTIFICATE-----'
 certEnd= '-----END CERTIFICATE-----'
 certEndOffset= len(certEnd)
 
 class PCS:
-	BaseUrl= 'https://api.trustedservices.intel.com/sgx/certification'
-	#BaseUrl= 'https://api-integr.azure-api.net/sgx/certification/sbx'
-	Key= ''
+	BaseUrl= ''
 	ApiVersion= 2
+	Key= ''
 	HttpError= 200
 	Errors= []
 	Verbose= True
 
-	def __init__(self, key, version=DefApiVersion):
+	def __init__(self, url, apiVersion,key):
+		self.BaseUrl = url
+		self.ApiVersion = apiVersion
 		self.Key= key
-		self.ApiVersion= version
 
 	def api_version(self):
 		return self.ApiVersion
 
 	def _geturl(self, func):
-		return "{:s}/v{:d}/{:s}".format(self.BaseUrl, self.ApiVersion,
-			func)
+		return urllib.parse.urljoin(self.BaseUrl, func)
 
-	def _send_request(self, url, needKey):
+	def _get_request(self, url, needKey):
 		if self.Verbose:
 			print(url)
 
@@ -45,6 +43,19 @@ class PCS:
 		
 		PARAMS = {}
 		r = requests.get(url = url, headers=headers, params = PARAMS, verify=True)
+
+		return r
+
+	def _post_request(self, url, data, needKey):
+		if self.Verbose:
+			print(url)
+
+		headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+		if needKey :
+			headers['Ocp-Apim-Subscription-Key'] = self.Key
+		
+		PARAMS = {}
+		r = requests.post(url = url, headers=headers, params = PARAMS, data=json.dumps(data), verify=True)
 
 		return r
 
@@ -299,7 +310,7 @@ class PCS:
 		url+= "?encrypted_ppid={:s}&pceid={:s}&cpusvn={:s}&pcesvn={:s}".format(
 			eppid, pceid, cpusvn, pcesvn)
 
-		response= self._send_request(url, True)
+		response= self._get_request(url, True)
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -341,13 +352,20 @@ class PCS:
 
 		return [cert_pem, response.getheader('SGX-PCK-Certificate-Issuer-Chain')]
 
-	def get_pck_certs(self, eppid, pceid, dec=None):
+	def get_pck_certs(self, eppid, pceid, platform_manifest, dec=None):
 		self.clear_errors()
 		certs_pem= []
 		url= self._geturl('pckcerts')
-		url+= "?encrypted_ppid={:s}&pceid={:s}".format(eppid, pceid)
 
-		response= self._send_request(url, True)
+		if self.ApiVersion >= 3 and len(platform_manifest) > 0 :
+			data = {}
+			data["pceid"] = pceid
+			data["platformManifest"] = platform_manifest
+			response= self._post_request(url, data, True)
+		else:
+			url+= "?encrypted_ppid={:s}&pceid={:s}".format(eppid, pceid)
+			response= self._get_request(url, True)
+
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -400,14 +418,14 @@ class PCS:
 
 	def get_pck_crl(self, target, dec=None):
 		self.clear_errors()
-		if ( target != 'processor' ):
+		if ( target != 'processor' and target != 'platform' ):
 			self.error('Invalid argument')
 			return None
 
 		url= self._geturl('pckcrl')
 		url+= "?ca={:s}".format(target)
 
-		response= self._send_request(url, False)
+		response= self._get_request(url, False)
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -456,7 +474,7 @@ class PCS:
 		url= self._geturl('tcb')
 		url+= "?fmspc={:s}".format(fmspc)
 
-		response= self._send_request(url, False)
+		response= self._get_request(url, False)
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -533,7 +551,7 @@ class PCS:
 
 		url= self._geturl('qe/identity')
 
-		response= self._send_request(url, False)
+		response= self._get_request(url, False)
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -610,7 +628,7 @@ class PCS:
 
 		url= self._geturl('qve/identity')
 
-		response= self._send_request(url, False)
+		response= self._get_request(url, False)
 		if response.status_code != 200:
 			print(str(response.content, 'utf-8'))
 			return None
@@ -677,56 +695,6 @@ class PCS:
 			data = str(data, dec)
 
 		return [data, response.headers['SGX-Enclave-Identity-Issuer-Chain']]
-
-	def get_pck_crl(self, target, dec=None):
-		self.clear_errors()
-		if ( target != 'processor' ):
-			self.error('Invalid argument')
-			return None
-
-		url= self._geturl('pckcrl')
-		url+= "?ca={:s}".format(target)
-
-		response= self._send_request(url, False)
-		if response.status_code != 200:
-			print(str(response.content, 'utf-8'))
-			return None
-
-		# Verify expected headers
-
-		if not response.headers['Request-ID']:
-			self.error("Response missing Request-ID header")
-			return None
-		if not response.headers['SGX-PCK-CRL-Issuer-Chain']:
-			self.error("Response missing SGX-PCK-CRL-Issuer-Chain header")
-			return None
-
-		if response.headers['Content-Type'] != 'application/x-pem-file':
-			self.error("Content-Type should be application/x-pem-file")
-			return None
-	
-		# Validate the CRL 
-
-		chain= parse.unquote(
-			response.headers['SGX-PCK-CRL-Issuer-Chain']
-		)
-		chain_pems= self.parse_chain_pem(chain)
-		pychain= self.pems_to_pycerts(chain_pems)
-		pychain= self.sort_pycert_chain(pychain)
-		if pychain is None:
-			return None
-
-		crl_pem= response.content
-		pycrl= crypto.load_crl(crypto.FILETYPE_PEM, crl_pem)
-
-		if not self.verify_crl_trust(pychain, pycrl):
-			self.error("Could not validate certificate using trust chain")
-			return None
-
-		if dec is not None:
-			crl_pem = str(crl_pem, dec)
-
-		return [crl_pem, response.headers['SGX-PCK-CRL-Issuer-Chain']]
 
 	def getFileFromUrl(self, url):
 		self.clear_errors()

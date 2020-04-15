@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,6 +49,8 @@ public:
     std::unique_ptr<TCBSigningChain>&& tcbSigningChain);
     EnclaveIdentityVerifier(const EnclaveIdentityVerifier&) = delete;
     EnclaveIdentityVerifier(EnclaveIdentityVerifier&&) = delete;
+    EnclaveIdentityVerifier& operator=(const EnclaveIdentityVerifier&) = delete;
+    EnclaveIdentityVerifier& operator=(EnclaveIdentityVerifier&&) = delete;
     ~EnclaveIdentityVerifier() = default;
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -160,7 +160,7 @@ TEST_P(GetQECertificationDataPositiveTests, validQeCertDataShouldReturnOkStatusA
     EXPECT_EQ(expectedQeCertData, qeCertificationDataBuffer) << "QeCertData extracted from quote does not match expected";
 }
 
-INSTANTIATE_TEST_CASE_P(AllSupportedPckIdTypes,
+INSTANTIATE_TEST_SUITE_P(AllSupportedPckIdTypes,
                         GetQECertificationDataPositiveTests,
                         Values(
                           test::constants::PCK_ID_PLAIN_PPID,

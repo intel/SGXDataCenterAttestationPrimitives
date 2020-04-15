@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,11 +38,12 @@ const {Sequelize, sequelize} = require('./models/');
 // Query a PCK Certificate
 exports.getCert = async function(qe_id, cpu_svn, pce_svn, pce_id){
     const sql = 'select b.*,' +
-              ' (select cert from pcs_certificates c, pck_certchain d where c.id=d.root_cert_id and d.id=1) as root_cert,' +
-              ' (select cert from pcs_certificates c, pck_certchain d where c.id=d.intmd_cert_id and d.id=1) as intmd_cert' +
-              ' from platform_tcbs a, pck_cert b ' +
+              ' (select cert from pcs_certificates e where e.id=d.root_cert_id) as root_cert,' +
+              ' (select cert from pcs_certificates e where e.id=d.intmd_cert_id) as intmd_cert' +
+              ' from platform_tcbs a, pck_cert b, platforms c left join pck_certchain d on c.ca=d.ca ' +
               ' where a.qe_id=$qe_id and a.pce_id=$pce_id and a.cpu_svn=$cpu_svn and a.pce_svn=$pce_svn' +
-              ' and a.qe_id=b.qe_id and a.pce_id=b.pce_id and a.tcbm=b.tcbm';
+              ' and a.qe_id=b.qe_id and a.pce_id=b.pce_id and a.tcbm=b.tcbm' +
+              ' and a.qe_id=c.qe_id and a.pce_id=c.pce_id';
     const pckcert = await sequelize.query(sql,
         {
             type:  sequelize.QueryTypes.SELECT,
@@ -63,6 +63,14 @@ exports.getCert = async function(qe_id, cpu_svn, pce_svn, pce_id){
     }
     else 
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+}
+
+// Query all PCK Certificates for certain platform
+exports.getCerts = async function(qe_id, pce_id){
+    return await pck_cert.findAll({where:{
+        qe_id: qe_id,
+        pce_id: pce_id
+    }});
 }
 
 // Update or insert a record

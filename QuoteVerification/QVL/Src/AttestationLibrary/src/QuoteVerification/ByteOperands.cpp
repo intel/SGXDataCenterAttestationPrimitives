@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,8 +52,8 @@ uint32_t swapBytes(uint32_t val)
 uint16_t toUint16(uint8_t leftMostByte, uint8_t rightMostByte)
 {
     uint32_t ret = 0;
-    ret |= static_cast<uint16_t>(rightMostByte);
-    ret |= (static_cast<uint16_t>(leftMostByte) << 8) & 0xff00;
+    ret |= static_cast<uint32_t>(rightMostByte);
+    ret |= (static_cast<uint32_t>(leftMostByte) << 8) & 0xff00;
     return static_cast<uint16_t>(ret);
 }
 

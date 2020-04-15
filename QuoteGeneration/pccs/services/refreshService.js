@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -109,7 +108,7 @@ var refresh_all_pckcerts = async function(fmspc){
 
             // check HTTP status
             if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
             }
 
             pck_certchain = pck_server_res.headers[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN];
@@ -117,7 +116,7 @@ var refresh_all_pckcerts = async function(fmspc){
             // Parse the response body
             pckcerts = JSON.parse(pck_server_res.body);
             if (pckcerts.length == 0) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
             }
 
             // parse arbitary cert to get fmspc value
@@ -134,7 +133,7 @@ var refresh_all_pckcerts = async function(fmspc){
             // get tcbinfo for this fmspc
             pck_server_res = await PcsClient.getTcb(fmspc);
             if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
             }
 
             const tcbinfo = JSON.parse(pck_server_res.body);
@@ -156,7 +155,7 @@ var refresh_all_pckcerts = async function(fmspc){
         let cert_index = PckLib.pck_cert_select(platformTcb.cpu_svn, platformTcb.pce_svn, platformTcb.pce_id, 
             tcbinfo_str, pem_certs, pem_certs.length);
         if (cert_index == -1) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NOT_FOUND);
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
         }
         await platformTcbsDao.upsertPlatformTcbs(platformTcb.qe_id, 
             platformTcb.pce_id, 
@@ -182,7 +181,7 @@ var refresh_one_crl=async function(ca){
     if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
         // Then refresh cache DB
         await pckcrlDao.upsertPckCrl(ca, pck_server_res.body);
-        await pcsCertificatesDao.upsertPckCrlCertchain(pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
+        await pcsCertificatesDao.upsertPckCrlCertchain(ca, pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
     }
     else {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);

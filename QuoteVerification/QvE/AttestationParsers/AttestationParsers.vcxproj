@@ -134,7 +134,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|Win32'">
@@ -143,7 +143,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -164,7 +164,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
@@ -186,7 +186,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
@@ -208,7 +208,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -229,7 +229,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -250,7 +250,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
@@ -272,7 +272,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>

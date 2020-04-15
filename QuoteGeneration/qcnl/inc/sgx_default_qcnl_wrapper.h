@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@
 
 #include "sgx_ql_lib_common.h"
 
-#define SGX_QCNL_MK_ERROR(x)              (0x0000F000|(x))
+#define SGX_QCNL_MK_ERROR(x)              (0x0000B000|(x))
 typedef enum _sgx_qcnl_error_t{
     SGX_QCNL_SUCCESS = 0x0000,                                         ///< Success
     SGX_QCNL_UNEXPECTED_ERROR = SGX_QCNL_MK_ERROR(0x0001),              ///< Unexpected errors
@@ -54,8 +54,10 @@ typedef enum _sgx_qcnl_error_t{
     SGX_QCNL_NETWORK_UNKNOWN_OPTION = SGX_QCNL_MK_ERROR(0x000B),        ///< Network error : An option passed to libcurl is not recognized/known.
     SGX_QCNL_NETWORK_INIT_ERROR = SGX_QCNL_MK_ERROR(0x000C),            ///< Failed to initialize CURL library
     SGX_QCNL_MSG_ERROR = SGX_QCNL_MK_ERROR(0x000D),                     ///< HTTP message error
-    SGX_QCNL_ERROR_STATUS_NOT_FOUND = SGX_QCNL_MK_ERROR(0x000E),        ///< Data not found
-    SGX_QCNL_OUT_OF_MEMORY = SGX_QCNL_MK_ERROR(0x000F),                 ///< Out of memory error
+    SGX_QCNL_OUT_OF_MEMORY = SGX_QCNL_MK_ERROR(0x000E),                 ///< Out of memory error
+    SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA = SGX_QCNL_MK_ERROR(0x000F),    ///< No cache data
+    SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN = SGX_QCNL_MK_ERROR(0x0010), ///< Platform unknown
+    SGX_QCNL_ERROR_STATUS_UNEXPECTED = SGX_QCNL_MK_ERROR(0x0011),       ///< Unexpected cache error
 } sgx_qcnl_error_t;
 
 

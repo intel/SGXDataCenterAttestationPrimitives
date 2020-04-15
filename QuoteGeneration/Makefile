@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,26 +31,9 @@
 
 CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
-.PHONY: all pkg dcap opt_check_failed clean rebuild sdk sample pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper qve_wrapper
+.PHONY: all dcap opt_check_failed clean rebuild pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
 
-all: pkg deb_pkg
-
-pkg: dcap
-	zip -j linux_dcap_interface.zip                       \
-	README.txt                                            \
-	$(SGX_SDK)/include/sgx_attributes.h                   \
-	$(SGX_SDK)/include/sgx_defs.h                         \
-	$(SGX_SDK)/include/sgx_error.h                        \
-	$(SGX_SDK)/include/sgx_key.h                          \
-	$(SGX_SDK)/include/sgx_report.h                       \
-	pce_wrapper/inc/sgx_pce.h                             \
-	quote_wrapper/ql/inc/sgx_dcap_ql_wrapper.h            \
-	quote_wrapper/common/inc/sgx_ql_lib_common.h          \
-	build/linux/libsgx_pce_wrapper.so                     \
-	build/linux/libsgx_dcap_ql.so                         \
-	psw/ae/data/prebuilt/libsgx_qe3.signed.so             \
-	psw/ae/data/prebuilt/libsgx_pce.signed.so             \
-	../SampleCode/sample.zip
+all: dcap
 
 # DCAP requires prebuilt enclaves.
 CHECK_OPT :=
@@ -58,17 +41,17 @@ ifeq ("$(wildcard psw/ae/data/prebuilt)", "")
 CHECK_OPT := opt_check_failed
 endif
 
-dcap: $(CHECK_OPT) pce_wrapper quote_wrapper qcnl_wrapper qpl_wrapper qve_wrapper sample
+dcap: $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
 
 opt_check_failed:
-	@echo "ERROR: Please decompress prebuilt enclave package before compiling."
+	@echo "Please run download_prebuilt.sh before compiling"
 	@echo "Exiting......"
 	@exit -2
 
-pce_wrapper: 
+pce_logic: 
 	$(MAKE) -C pce_wrapper/linux
 
-quote_wrapper: pce_wrapper 
+qe3_logic: pce_logic 
 	$(MAKE) -C quote_wrapper/ql/linux
 
 qcnl_wrapper:
@@ -80,11 +63,8 @@ qpl_wrapper: qcnl_wrapper
 qve_wrapper:
 	$(MAKE) -C ../QuoteVerification
 
-sample: quote_wrapper
-	cd ../SampleCode && zip -r sample.zip ./
-
 .PHONY: deb_sgx_dcap_ql_pkg
-deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_wrapper quote_wrapper qve_wrapper
+deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic qve_wrapper
 	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
 .PHONY: deb_sgx_dcap_default_qpl_pkg
@@ -106,10 +86,33 @@ deb_sgx_ae_qe3_pkg: $(CHECK_OPT)
 deb_sgx_ae_qve_pkg: $(CHECK_OPT)
 	./installer/linux/deb/libsgx-ae-qve/build.sh
 
+.PHONY: deb_sgx_qe3_logic_pkg
+deb_sgx_qe3_logic_pkg: qe3_logic
+	./installer/linux/deb/libsgx-qe3-logic/build.sh
+
+.PHONY: deb_sgx_pce_logic_pkg
+deb_sgx_pce_logic_pkg: pce_logic
+	./installer/linux/deb/libsgx-pce-logic/build.sh
+
 .PHONY: deb_pkg
-deb_pkg: deb_sgx_dcap_ql_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_qve_pkg
+deb_pkg: deb_sgx_pce_logic_pkg deb_sgx_qe3_logic_pkg deb_sgx_dcap_ql_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_qve_pkg
 	@$(RM) -f ./installer/linux/deb/*.deb ./installer/linux/deb/*.ddeb
 	cp `find ./installer/linux/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
+
+.PHONY: rpm_sgx_dcap_ql_pkg
+rpm_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic qve_wrapper
+	./installer/linux/rpm/libsgx-dcap-ql/build.sh
+
+.PHONY: rpm_sgx_dcap_default_qpl_pkg
+rpm_sgx_dcap_default_qpl_pkg: qcnl_wrapper qpl_wrapper
+	./installer/linux/rpm/libsgx-dcap-default-qpl/build.sh
+
+.PHONY: rpm_sgx_dcap_pccs_pkg
+rpm_sgx_dcap_pccs_pkg:
+	$(MAKE) -C ../tools/PCKCertSelection/
+	mkdir -p pccs/lib/
+	cp ../tools/PCKCertSelection/out/libPCKCertSelection.so pccs/lib/
+	./installer/linux/rpm/sgx-dcap-pccs/build.sh
 
 .PHONY: rpm_sgx_ae_qe3_pkg
 rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
@@ -119,8 +122,16 @@ rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
 rpm_sgx_ae_qve_pkg: $(CHECK_OPT)
 	./installer/linux/rpm/libsgx-ae-qve/build.sh
 
+.PHONY: rpm_sgx_qe3_logic_pkg
+rpm_sgx_qe3_logic_pkg: qe3_logic
+	./installer/linux/rpm/libsgx-qe3-logic/build.sh
+
+.PHONY: rpm_sgx_pce_logic_pkg
+rpm_sgx_pce_logic_pkg: pce_logic
+	./installer/linux/rpm/libsgx-pce-logic/build.sh
+
 .PHONY: rpm_pkg
-rpm_pkg: rpm_sgx_ae_qe3_pkg rpm_sgx_ae_qve_pkg
+rpm_pkg: rpm_sgx_dcap_ql_pkg rpm_sgx_dcap_default_qpl_pkg rpm_sgx_dcap_pccs_pkg rpm_sgx_ae_qe3_pkg rpm_sgx_ae_qve_pkg rpm_sgx_pce_logic_pkg rpm_sgx_qe3_logic_pkg
 	@$(RM) -f ./installer/linux/rpm/*.rpm
 	cp `find ./installer/linux/rpm/ -name "*.rpm"` ./installer/linux/rpm/
 
@@ -130,8 +141,6 @@ clean:
 	$(MAKE) -C qcnl/linux clean
 	$(MAKE) -C qpl/linux clean
 	$(MAKE) -C ../QuoteVerification clean
-	@$(RM) -rf ../SampleCode/sample.zip
-	@$(RM) -rf linux_dcap_interface.zip
 	@$(RM) -rf ./build/
 	@$(RM) -f ./installer/linux/deb/*.deb
 	@$(RM) -f ./installer/linux/deb/*.ddeb
@@ -139,12 +148,18 @@ clean:
 	./installer/linux/deb/libsgx-dcap-ql/clean.sh
 	./installer/linux/deb/libsgx-ae-qe3/clean.sh
 	./installer/linux/deb/libsgx-ae-qve/clean.sh
+	./installer/linux/deb/libsgx-pce-logic/clean.sh
+	./installer/linux/deb/libsgx-qe3-logic/clean.sh
 	./installer/linux/deb/libsgx-dcap-default-qpl/clean.sh
 	./installer/linux/deb/sgx-dcap-pccs/clean.sh
+	./installer/linux/rpm/libsgx-dcap-ql/clean.sh
 	./installer/linux/rpm/libsgx-ae-qe3/clean.sh
 	./installer/linux/rpm/libsgx-ae-qve/clean.sh
-
+	./installer/linux/rpm/libsgx-pce-logic/clean.sh
+	./installer/linux/rpm/libsgx-qe3-logic/clean.sh
+	./installer/linux/rpm/libsgx-dcap-default-qpl/clean.sh
+	./installer/linux/rpm/sgx-dcap-pccs/clean.sh
 
 rebuild:
 	$(MAKE) -f $(CUR_MKFILE) clean
-	$(MAKE) -f $(CUR_MKFILE) pkg
+	$(MAKE) -f $(CUR_MKFILE)

@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,7 +124,8 @@ exports.addPlatformCollateral=async function(collateralJson) {
             }
 
             let fmspc = x509.fmspc;
-            if (fmspc == null) {
+            let ca = x509.ca;
+            if (fmspc == null || ca == null) {
                 logger.error('Invalid certificate format.');
                 throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
             }
@@ -166,7 +166,8 @@ exports.addPlatformCollateral=async function(collateralJson) {
                     toUpper(platform.pce_id), 
                     toUpper(platform.platform_manifest), 
                     toUpper(platform.enc_ppid), 
-                    toUpper(fmspc)
+                    toUpper(fmspc),
+                    toUpper(ca)
                 );
             }
         }
@@ -179,7 +180,10 @@ exports.addPlatformCollateral=async function(collateralJson) {
 
         // Update or insert PCK CRL
         if (collaterals.pckcacrl) {
-            await pckcrlDao.upsertPckCrl(Constants.CA_PROCESSOR, unescape(collaterals.pckcacrl));
+            if (collaterals.pckcacrl.processorCrl)
+                await pckcrlDao.upsertPckCrl(Constants.CA_PROCESSOR, unescape(collaterals.pckcacrl.processorCrl));
+            if (collaterals.pckcacrl.platformCrl)
+                await pckcrlDao.upsertPckCrl(Constants.CA_PLATFORM, unescape(collaterals.pckcacrl.platformCrl));
         }
 
         // Update or insert QE Identity
@@ -193,22 +197,30 @@ exports.addPlatformCollateral=async function(collateralJson) {
         }
 
         // Update or insert PCK Certchain
-        await pckCertchainDao.upsertPckCertchain();
+        await pckCertchainDao.upsertPckCertchain(Constants.CA_PROCESSOR);
+        await pckCertchainDao.upsertPckCertchain(Constants.CA_PLATFORM);
 
         // Update or insert PCS certificates
         let rootCert = new Array();
         if (Boolean(collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN])) {
-            rootCert[0] = await pcsCertificatesDao.upsertPckCertificateIssuerChain(collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN]);
+            if (Boolean(collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN][Constants.CA_PROCESSOR])) {
+                rootCert[0] = await pcsCertificatesDao.upsertPckCertificateIssuerChain(Constants.CA_PROCESSOR, 
+                    collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN][Constants.CA_PROCESSOR]);
+            }
+            if (Boolean(collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN][Constants.CA_PLATFORM])) {
+                rootCert[1] = await pcsCertificatesDao.upsertPckCertificateIssuerChain(Constants.CA_PLATFORM, 
+                    collaterals.certificates[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN][Constants.CA_PLATFORM]);
+            }
         }
         if (Boolean(collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN])) {
-            rootCert[1] = await pcsCertificatesDao.upsertTcbInfoIssuerChain(collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
+            rootCert[2] = await pcsCertificatesDao.upsertTcbInfoIssuerChain(collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
         }
         if (Boolean(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])) {
-            rootCert[2] = await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
+            rootCert[3] = await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(collaterals.certificates[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
         }
         if (!verify_cert(rootCert[0], rootCert[1]) ||
-            !verify_cert(rootCert[0], rootCert[2]) ||
-            !verify_cert(rootCert[1], rootCert[2])) {
+            !verify_cert(rootCert[1], rootCert[2]) ||
+            !verify_cert(rootCert[2], rootCert[3])) {
             throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTEGRITY_ERROR);
         }
 
@@ -218,4 +230,3 @@ exports.addPlatformCollateral=async function(collateralJson) {
         }
     });
 }
-

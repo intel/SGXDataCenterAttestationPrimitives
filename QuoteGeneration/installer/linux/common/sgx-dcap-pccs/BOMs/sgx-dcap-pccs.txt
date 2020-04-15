@@ -1,5 +1,5 @@
 DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/pccs/config/default.json	<installdir>/config/default.json	0	main	STP
+<deliverydir>/pccs/config/production-0.json	<installdir>/config/production-0.json	0	main	STP
 <deliverydir>/pccs/constants/index.js	<installdir>/constants/index.js	0	main	STP
 <deliverydir>/pccs/constants/pccs_status_code.js	<installdir>/constants/pccs_status_code.js	0	main	STP
 <deliverydir>/pccs/controllers/identityController.js	<installdir>/controllers/identityController.js	0	main	STP

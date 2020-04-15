@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,6 +61,7 @@ public:
     MOCK_CONST_METHOD0(getPpid, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getTcb, const dcap::parser::x509::Tcb&());
     MOCK_CONST_METHOD0(getFmspc, const std::vector<uint8_t>&());
+    MOCK_CONST_METHOD0(getPceId, const std::vector<uint8_t>&());
 
     MOCK_CONST_METHOD0(getPubKey, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getInfo, const std::vector<uint8_t>&());

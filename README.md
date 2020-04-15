@@ -23,7 +23,7 @@ Instruction
    `README.md` files are provided under [Windows driver](driver/win) folder and [Linux driver](driver/linux) folder individually. Please follow the instructions in the corresponding `README.md` to build and install the Intel(R) SGX driver based on your target OS.
 
 ## Build Intel(R) SGX DCAP Quote Generation and Intel(R) SGX DCAP Quote Verification projects
-Intel(R) SGX DCAP Quote Generation and Intel(R) SGX DCAP Quote Verification can be built using ``SGX_DCAP.sln``, or by running ``make`` from root directory.
+Intel(R) SGX DCAP Quote Generation and Intel(R) SGX DCAP Quote Verification can be built on Linux by running ``make`` from root directory. To build on Windows, please refer the README.md in subdirectories.
 
 ## Build and Install the Intel(R) SGX DCAP Quote Generation Library
 A [README.md](QuoteGeneration/README.md) is provided under [QuoteGeneration](QuoteGeneration) folder. Please follow the instructions in the `README.md` to build and install Intel(R) SGX DCAP Quote Generation Library.

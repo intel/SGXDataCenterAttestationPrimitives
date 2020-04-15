@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -51,6 +51,7 @@ main() {
     unpack_upstream_tarball
     generate_copyright
     update_version
+    update_install_path
     rename_tarball
     build_deb_package
     post_build
@@ -100,8 +101,11 @@ update_version() {
 
     FULL_VERSION=${SGX_VERSION}-$(get_os_code)${DEB_VERSION}
     sed -i "s#${INS_VERSION}#${FULL_VERSION}#" debian/changelog
-    sed -i "s#@dep_version@#${FULL_VERSION}#" debian/control
+    popd
+}
 
+update_install_path() {
+    pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/conffiles
     sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/postrm
     popd

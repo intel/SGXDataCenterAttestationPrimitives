@@ -201,7 +201,7 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -238,7 +238,7 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -275,7 +275,7 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -312,7 +312,7 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -383,7 +383,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -419,7 +419,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -455,7 +455,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -507,7 +507,7 @@
     <ClCompile Include="qve_t.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="qve_key.pem" />
+    <None Include="qve_test_key.pem" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="qve.config.xml" />

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,14 +58,14 @@
 
 void PrintHelp() {
     printf("Usage: %s [OPTION] \n", VER_PRODUCTNAME_STR);
-    printf("Example: %s -f pck_retrieval_result.csv, -url http://localhost:8081, -user_token 123456, -user_secure_cert true\n", VER_PRODUCTNAME_STR);
+    printf("Example: %s -f pck_retrieval_result.csv -url https://localhost:8081 -user_token 123456 -use_secure_cert true\n", VER_PRODUCTNAME_STR);
     printf( "\nOptions:\n");
     printf( " -f filename                       - output the retrieval result to the \"filename\"\n");
     printf( " -url cache_server_address         - cache server's address \n");
     printf( " -user_token token_string          - user token to access the cache server \n");
     printf( " -proxy_type proxy_type            - proxy setting when access the cache server \n");
     printf( " -proxy_url  proxy_server_address  - proxy server's address \n");
-    printf( " -user_secure_cert ture            - accept secure/insecure https cert \n");
+    printf( " -use_secure_cert [true | false]   - accept secure/insecure https cert, default value is true \n");
     printf( " -?                - show command help\n");
     printf( " -h                - show command help\n");
     printf( " -help             - show command help\n");
@@ -108,7 +108,7 @@ std::string server_url_string = "";
 std::string proxy_type_string = "";
 std::string proxy_url_string = "";
 std::string user_token_string = "";
-std::string user_secure_cert_string = "";
+std::string use_secure_cert_string = "";
 std::string output_filename = "";
 int parse_arg(int argc, const char *argv[])
 {
@@ -184,16 +184,16 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-user_secure_cert") == 0) {
+        else if (strcmp(argv[i], "-use_secure_cert") == 0) {
             if (i == argc - 1) {
-                fprintf(stderr, "No user secure cert  provided for -user_secure_cert\n");
+                fprintf(stderr, "Option is not provided for -use_secure_cert\n");
                 return -1;
             }
             else {
-                user_secure_cert_string = argv[i + 1];
-                std::transform(user_secure_cert_string.begin(), user_secure_cert_string.end(), user_secure_cert_string.begin(),toUpper);
-                if (!is_valid_user_secure_cert(user_secure_cert_string)) {
-                    fprintf(stderr, "Invalid user secure cert %s\n", user_secure_cert_string.c_str());
+                use_secure_cert_string = argv[i + 1];
+                std::transform(use_secure_cert_string.begin(), use_secure_cert_string.end(), use_secure_cert_string.begin(),toUpper);
+                if (!is_valid_use_secure_cert(use_secure_cert_string)) {
+                    fprintf(stderr, "Invalid user secure cert %s\n", use_secure_cert_string.c_str());
                     return -1;
                 }
                 i++;

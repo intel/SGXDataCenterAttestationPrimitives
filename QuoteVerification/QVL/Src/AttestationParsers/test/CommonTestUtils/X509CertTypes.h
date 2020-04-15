@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -148,7 +148,7 @@ typedef struct SGX_EXTENSIONS_st {
     SGX_OCTET_STRING *pceid;
     SGX_OCTET_STRING *fmspc;
     SGX_ENUM *sgxType;
-    SGX_BOOL *dynamicPlatform;
+    SGX_BOOL *unexpectedExtension;
 } SGX_EXTENSIONS;
 
 ASN1_SEQUENCE(SGX_EXTENSIONS) = {
@@ -157,7 +157,7 @@ ASN1_SEQUENCE(SGX_EXTENSIONS) = {
         ASN1_SIMPLE(SGX_EXTENSIONS, pceid, SGX_OCTET_STRING),
         ASN1_SIMPLE(SGX_EXTENSIONS, fmspc, SGX_OCTET_STRING),
         ASN1_SIMPLE(SGX_EXTENSIONS, sgxType, SGX_ENUM),
-        ASN1_OPT(SGX_EXTENSIONS, dynamicPlatform, SGX_BOOL)
+        ASN1_OPT(SGX_EXTENSIONS, unexpectedExtension, SGX_BOOL)
 } ASN1_SEQUENCE_END(SGX_EXTENSIONS)
 
 DECLARE_ASN1_FUNCTIONS(SGX_EXTENSIONS)

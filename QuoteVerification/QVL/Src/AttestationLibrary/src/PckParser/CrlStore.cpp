@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,8 @@ CrlStore::CrlStore()
       _validity{},
       _revoked{},
       _extensions{},
-      _signature{}
+      _signature{},
+      _crlNum{}
 {
 }
 

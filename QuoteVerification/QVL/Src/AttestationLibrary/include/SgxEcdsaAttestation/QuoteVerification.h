@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -161,7 +161,10 @@ typedef enum _status
     STATUS_SGX_PCK_CERT_CHAIN_EXPIRED,
     STATUS_SGX_CRL_EXPIRED,
     STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED,        // 80
-    STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED
+    STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED,
+    STATUS_TCB_SW_HARDENING_NEEDED,
+    STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED,
+    STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED
 } Status;
 
 /**
@@ -187,6 +190,9 @@ typedef enum _status
  *      - STATUS_TCB_OUT_OF_DATE
  *      - STATUS_TCB_REVOKED
  *      - STATUS_TCB_CONFIGURATION_NEEDED
+ *      - STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED
+ *      - STATUS_TCB_SW_HARDENING_NEEDED
+ *      - STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED
  *      - STATUS_TCB_NOT_SUPPORTED
  *      - STATUS_TCB_UNRECOGNIZED_STATUS
  *      - STATUS_UNSUPPORTED_QE_CERTIFICATION
@@ -211,12 +217,11 @@ QVL_API Status sgxAttestationVerifyQuote(const uint8_t* quote, uint32_t quoteSiz
  *      - STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION
  *      - STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH
  *      - STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH
- *      - STATUS_SGX_ENCLAVE_REPORT_MRENCLAVE_MISMATCH
  *      - STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH
  *      - STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH
  *      - STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE
+ *      - STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED
  */
-
 QVL_API Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const char* enclaveIdentity);
 
 /**

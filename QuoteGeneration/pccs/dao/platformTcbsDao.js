@@ -1,6 +1,5 @@
-/**
- *
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,10 +53,10 @@ exports.getPlatformTcbs = async function(fmspc){
                 });
     }
     else {
-        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc=$fmspc';
+        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc in(:FMSPC)';
         return await sequelize.query(sql,
                 { type:  sequelize.QueryTypes.SELECT,
-                  bind: {fmspc : fmspc}
+                  replacements: {FMSPC : fmspc.split(',')}
                 });
     }
 }

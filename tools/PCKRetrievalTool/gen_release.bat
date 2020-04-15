@@ -30,7 +30,7 @@
 @echo off 
 
 set svn_ver=%1%
-set rel_dir_base=PCKIDRetrievalTool_v1.4.100.0
+set rel_dir_base=PCKIDRetrievalTool_v1.6.100.2
 set rel_dir_name=%rel_dir_base%%svn_ver%
 
 

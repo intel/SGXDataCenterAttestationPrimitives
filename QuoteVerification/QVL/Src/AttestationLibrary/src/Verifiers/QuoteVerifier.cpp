@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 
 #include "QuoteVerifier.h"
 #include "EnclaveIdentity.h"
+#include "Utils/RuntimeException.h"
 
 #include <algorithm>
 #include <functional>
@@ -79,67 +80,86 @@ const std::string& getMatchingTcbLevel(const std::set<dcap::parser::json::TcbLev
         }
     }
 
-    throw std::runtime_error("Could not match PCK cert to provided TCB levels in TCB info");
+    /// 4.1.2.4.17.3
+    throw RuntimeException(STATUS_TCB_NOT_SUPPORTED);
 }
 
 Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert)
 {
-    try
-    {
-        const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson.getTcbLevels(), pckCert);
+    /// 4.1.2.4.17.1 & 4.1.2.4.17.2
+    const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson.getTcbLevels(), pckCert);
 
-        if (tcbLevelStatus == "OutOfDate")
+    if (tcbLevelStatus == "OutOfDate")
+    {
+        return STATUS_TCB_OUT_OF_DATE;
+    }
+
+    if (tcbLevelStatus == "Revoked")
+    {
+        return STATUS_TCB_REVOKED;
+    }
+
+    if (tcbLevelStatus == "ConfigurationNeeded")
+    {
+        return STATUS_TCB_CONFIGURATION_NEEDED;
+    }
+
+    if (tcbLevelStatus == "ConfigurationAndSWHardeningNeeded")
+    {
+        return STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED;
+    }
+
+    if (tcbLevelStatus == "UpToDate")
+    {
+        return STATUS_OK;
+    }
+
+    if (tcbLevelStatus == "SWHardeningNeeded")
+    {
+        return STATUS_TCB_SW_HARDENING_NEEDED;
+    }
+
+    if(tcbInfoJson.getVersion() == 2 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
+    {
+        return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
+    }
+
+    throw RuntimeException(STATUS_TCB_UNRECOGNIZED_STATUS);
+}
+
+Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
+{
+    if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
+    {
+        if (tcbLevelStatus == STATUS_OK ||
+            tcbLevelStatus == STATUS_TCB_SW_HARDENING_NEEDED)
         {
             return STATUS_TCB_OUT_OF_DATE;
         }
-
-        if (tcbLevelStatus == "Revoked")
-        {
-            return STATUS_TCB_REVOKED;
-        }
-
-        if (tcbLevelStatus == "ConfigurationNeeded")
-        {
-            return STATUS_TCB_CONFIGURATION_NEEDED;
-        }
-
-        if (tcbLevelStatus == "UpToDate")
-        {
-            return STATUS_OK;
-        }
-
-        if(tcbInfoJson.getVersion() == 2 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
+        if (tcbLevelStatus == STATUS_TCB_CONFIGURATION_NEEDED ||
+            tcbLevelStatus == STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED)
         {
             return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
         }
     }
-    catch (const std::runtime_error &e)
+    if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED)
     {
-        return STATUS_TCB_NOT_SUPPORTED;
+            return STATUS_TCB_REVOKED;
     }
 
-    return STATUS_TCB_UNRECOGNIZED_STATUS;
-}
-
-Status convergeTcbstatus(Status tcbInfoStatus, Status qeIdentityStatus)
-{
-    if (qeIdentityStatus == STATUS_OK)
+    switch (tcbLevelStatus)
     {
-        return tcbInfoStatus;
+        case STATUS_TCB_OUT_OF_DATE:
+        case STATUS_TCB_REVOKED:
+        case STATUS_TCB_CONFIGURATION_NEEDED:
+        case STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED:
+        case STATUS_TCB_SW_HARDENING_NEEDED:
+        case STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED:
+        case STATUS_OK:
+            return tcbLevelStatus;
+        default:
+            return STATUS_TCB_UNRECOGNIZED_STATUS;
     }
-    if (qeIdentityStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
-    {
-        switch (tcbInfoStatus)
-        {
-            case STATUS_OK:
-                return STATUS_TCB_OUT_OF_DATE;
-            case STATUS_TCB_CONFIGURATION_NEEDED:
-                return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
-            default:
-                return tcbInfoStatus;
-        }
-    }
-    return STATUS_INVALID_PARAMETER;
 }
 
 }//anonymous namespace
@@ -152,23 +172,24 @@ Status QuoteVerifier::verify(const Quote& quote,
                              const EnclaveReportVerifier& enclaveReportVerifier)
 {
     Status qeIdentityStatus = STATUS_QE_IDENTITY_MISMATCH;
-    Status convergedTcbStatus = STATUS_TCB_NOT_SUPPORTED;
 
-    if(!_baseVerififer.commonNameContains(pckCert.getSubject(), constants::SGX_PCK_CN_PHRASE))
-    {
+    /// 4.1.2.4.4
+    if (!_baseVerififer.commonNameContains(pckCert.getSubject(), constants::SGX_PCK_CN_PHRASE)) {
         return STATUS_INVALID_PCK_CERT;
     }
 
-    if(!PckCrlVerifier{}.checkIssuer(crl) || crl.getIssuer().raw != pckCert.getIssuer().getRaw())
-    {
+    /// 4.1.2.4.6
+    if (!PckCrlVerifier{}.checkIssuer(crl) || crl.getIssuer().raw != pckCert.getIssuer().getRaw()) {
         return STATUS_INVALID_PCK_CRL;
     }
 
+    /// 4.1.2.4.7
     if(crl.isRevoked(pckCert))
     {
         return STATUS_PCK_REVOKED;
     }
 
+    /// 4.1.2.4.9
     if(pckCert.getFmspc() != tcbInfoJson.getFmspc())
     {
         return STATUS_TCB_INFO_MISMATCH;
@@ -179,6 +200,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_TCB_INFO_MISMATCH;
     }
 
+    /// 4.1.2.4.10 ?
     const auto qeCertData = quote.getQuoteAuthData().qeCertData;
     auto qeCertDataVerificationStatus = verifyQeCertData(qeCertData);
     if(qeCertDataVerificationStatus != STATUS_OK)
@@ -192,7 +214,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_PCK_CERT; // if there were issues with parsing public key it means cert was invalid.
                                         // Probably it will never happen because parsing cert should fail earlier.
     }
-
+    /// 4.1.2.4.13
     if(!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().qeReportSignature.signature,
                                            quote.getQuoteAuthData().qeReport.rawBlob(),
                                            *pubKey))
@@ -200,6 +222,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_QE_REPORT_SIGNATURE;
     }
 
+    /// 4.1.2.4.14
     const auto hashedConcatOfAttestKeyAndQeReportData = [&]() -> std::vector<uint8_t>
     {
         const auto attestKeyData = quote.getQuoteAuthData().ecdsaAttestationKey.pubKey;
@@ -219,12 +242,36 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_QE_REPORT_DATA;
     }
 
+    /// 4.1.2.4.15
+    if (enclaveIdentity)
+    {
+        qeIdentityStatus = enclaveReportVerifier.verify(enclaveIdentity, quote.getQuoteAuthData().qeReport);
+        switch(qeIdentityStatus) {
+            case STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT:
+                return STATUS_UNSUPPORTED_QUOTE_FORMAT;
+            case STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT:
+            case STATUS_SGX_ENCLAVE_IDENTITY_INVALID:
+            case STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION:
+                return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
+            case STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH:
+            case STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH:
+            case STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH:
+            case STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH:
+                return STATUS_QE_IDENTITY_MISMATCH;
+            case STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE:
+            case STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED:
+            default:
+                break;
+        }
+    }
+
     const auto attestKey = crypto::rawToP256PubKey(quote.getQuoteAuthData().ecdsaAttestationKey.pubKey);
     if(!attestKey)
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
+    /// 4.1.2.4.16
     if (!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().ecdsa256BitSignature.signature,
                                             quote.getSignedData(),
                                             *attestKey))
@@ -232,35 +279,22 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_QUOTE_SIGNATURE;
     }
 
-    if (enclaveIdentity && enclaveIdentity->getStatus() == STATUS_OK)
-    {
-        qeIdentityStatus = verifyQeIdentity(quote, enclaveIdentity, enclaveReportVerifier);
-        if (STATUS_OK != qeIdentityStatus && 
-            STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE != qeIdentityStatus)
-        {
-            //will return STATUS_TCB_REVOKED or STATUS_QE_IDENTITY_MISMATCH
-            return qeIdentityStatus;
-        }
-    }
-
     try
     {
+        /// 4.1.2.4.17
         const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert);
-        if (enclaveIdentity && enclaveIdentity->getStatus() == STATUS_OK)
-        {
-            convergedTcbStatus = convergeTcbstatus(tcbLevelStatus, qeIdentityStatus);
-        }
-        else
-        {
-            convergedTcbStatus = tcbLevelStatus;
-        }
-    }
-    catch (const dcap::parser::FormatException &e)
-    {
-        return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
-    }
 
-    return convergedTcbStatus;
+        if (enclaveIdentity)
+        {
+            return convergeTcbStatus(tcbLevelStatus, qeIdentityStatus);
+        }
+
+        return tcbLevelStatus;
+    }
+    catch (const RuntimeException &ex)
+    {
+        return ex.getStatus();
+    }
 }
 
 Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) const
@@ -270,19 +304,6 @@ Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) cons
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
     return STATUS_OK;
-}
-
-Status QuoteVerifier::verifyQeIdentity(const Quote& quote, const EnclaveIdentity *qeIdentityJson, const EnclaveReportVerifier& enclaveReportVerifier)
-{
-    Status status = enclaveReportVerifier.verify(qeIdentityJson, quote.getQuoteAuthData().qeReport);
-
-    if(status != STATUS_OK &&
-       status != STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE &&
-       status != STATUS_TCB_REVOKED)
-    {
-        return STATUS_QE_IDENTITY_MISMATCH;
-    }
-    return status;
 }
 
 }}} // namespace intel { namespace sgx { namespace qvl {

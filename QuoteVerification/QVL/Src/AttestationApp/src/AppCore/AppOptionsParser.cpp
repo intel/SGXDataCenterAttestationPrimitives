@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,14 +88,14 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
 
 
     auto nerrors = arg_parse(argc, argv, argtable);
-    if (nerrors > 0)
+    if (end && nerrors > 0)
     {
         arg_print_errors(stdout, end, "Sample app");
         printHelp(argtable);
         arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
         return nullptr;
     }
-    if (help->count > 0)
+    if (help && help->count > 0)
     {
         printHelp(argtable);
         arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));

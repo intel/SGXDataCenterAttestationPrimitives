@@ -24,7 +24,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.10)
 if (POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
 endif()
@@ -73,13 +73,13 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/src
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson
         )
 
-target_link_libraries(${PROJECT_NAME}Static PRIVATE
+target_link_libraries(${PROJECT_NAME}Static PUBLIC
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,17 +15,17 @@
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HODERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPIED WARRANTIES, INCUDING, BUT NOT
- * IMITED TO, THE IMPIED WARRANTIES OF MERCHANTABIITY AND FITNESS FOR
- * A PARTICUAR PURPOSE ARE DISCAIMED. IN NO EVENT SHA THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE IABE FOR ANY DIRECT, INDIRECT, INCIDENTA,
- * SPECIA, EXEMPARY, OR CONSEQUENTIA DAMAGES (INCUDING, BUT NOT
- * IMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; OSS OF USE,
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
  * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF IABIITY, WHETHER IN CONTRACT, STRICT IABIITY, OR TORT
- * (INCUDING NEGIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBIITY OF SUCH DAMAGE.
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 /**
@@ -71,7 +71,7 @@ extern string server_url_string;
 extern string proxy_type_string;
 extern string proxy_url_string ;
 extern string user_token_string ;
-extern string user_secure_cert_string ;
+extern string use_secure_cert_string ;
 
 static network_post_error_t windows_last_error_to_network_post_error(void)
 {
@@ -125,13 +125,13 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                 }
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {
-                if (user_secure_cert_string.empty() == true) {
+                if (use_secure_cert_string.empty() == true) {
                     std::transform(value.begin(), value.end(), value.begin(), [](auto ch) {return static_cast<char>(::towupper(ch)); });
                     if (value.compare("FALSE") == 0) {
                         g_use_secure_cert = false;
                     }
                 }
-                else if (user_secure_cert_string.compare("FALSE") == 0 || user_secure_cert_string.compare("false") == 0) {
+                else if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
                     g_use_secure_cert = false;
                 }
             }
@@ -182,7 +182,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
         }
     }
     else {
-        if (user_secure_cert_string.compare("FALSE") == 0 || user_secure_cert_string.compare("false") == 0) {
+        if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
             g_use_secure_cert = true;
         }
 

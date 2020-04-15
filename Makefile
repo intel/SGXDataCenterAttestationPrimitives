@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,11 +33,7 @@ CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
 .PHONY: all clean rebuild QuoteGeneration QuoteVerification PCKCertSelection PCKRetrievalTool
 
-all:
-	$(MAKE) -C QuoteGeneration
-	$(MAKE) -C QuoteVerification
-	$(MAKE) -C tools/PCKCertSelection
-	$(MAKE) -C tools/PCKRetrievalTool
+all: QuoteGeneration QuoteVerification PCKCertSelection PCKRetrievalTool
 
 QuoteGeneration:
 	$(MAKE) -C QuoteGeneration
@@ -48,7 +44,7 @@ QuoteVerification:
 PCKCertSelection:
 	$(MAKE) -C tools/PCKCertSelection
 
-PCKRetrievalTool:
+PCKRetrievalTool: QuoteGeneration
 	$(MAKE) -C tools/PCKRetrievalTool
 
 clean:

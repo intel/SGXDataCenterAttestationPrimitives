@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ namespace {
 
 std::string printStatus(Status s)
 {
-    static constexpr Status MAX_STATUS = STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED;
+    static constexpr Status MAX_STATUS = STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED;
     static std::array<std::string, MAX_STATUS + 1> statusStrs = {{
         "STATUS_OK",
         "STATUS_UNSUPPORTED_CERT_FORMAT",
@@ -134,7 +134,10 @@ std::string printStatus(Status s)
         "STATUS_SGX_PCK_CERT_CHAIN_EXPIRED",
         "STATUS_SGX_CRL_EXPIRED",
         "STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED",
-        "STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED"
+        "STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED",
+        "STATUS_TCB_SW_HARDENING_NEEDED",
+        "STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED",
+        "STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED"
     }};
 
     const auto statusNumberStr = "(" + std::to_string(s) + ")";

@@ -74,7 +74,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -83,7 +83,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
@@ -105,7 +105,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -126,7 +126,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>_WINDOWS</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>

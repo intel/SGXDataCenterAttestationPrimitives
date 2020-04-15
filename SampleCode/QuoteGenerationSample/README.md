@@ -30,9 +30,11 @@ Build and run QuoteGenerationSample to generate an ECDSA quote
    $ make
    Or Debug build:
    $ make SGX_DEBUG=1
+   Run application in "in-proc" mode:
    $ ./app
+   Run application in "out-of-proc" mode:
+   $ SGX_AESM_ADDR=1 ./app
 ```
-
 
 ## Windows
 Supported operating systems:
