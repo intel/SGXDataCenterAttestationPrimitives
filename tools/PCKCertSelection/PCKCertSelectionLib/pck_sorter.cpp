@@ -1,30 +1,33 @@
 /*
-* Copyright (c) 2017-2019, Intel Corporation
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-
-* 1. Redistributions of source code must retain the above copyright notice,
-*    this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright notice,
-*    this list of conditions and the following disclaimer in the documentation
-*    and/or other materials provided with the distribution.
-* 3. Neither the name of the copyright holder nor the names of its contributors
-*    may be used to endorse or promote products derived from this software
-*    without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-* THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
 
 /**
  * @file pck_sorter.cpp PCKSorter class implementation
@@ -51,7 +54,7 @@ PCKSorter::PCKSorter ( cpu_svn_t platform_svn,
 	: platformSvn ( platform_svn ),
 	pceIsvSvn ( pce_isvsvn ),
 	pceID ( pce_id ),
-	tcbInfoString ( tcb_info ),
+	tcbmgr(tcb_info),
 	pemCerts ( pem_certs, pem_certs + ncerts ),
 	pcks {},
 	tcbInfo {},
@@ -109,26 +112,10 @@ pck_cert_selection_res_t PCKSorter::clean_pcks_return ( pck_cert_selection_res_t
 pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 {
 	// general TCBInfo format validation
-	try
-	{
-		this->tcbInfo = TcbInfo::parse ( this->tcbInfoString );
-	}
-	catch ( const std::exception& )
-	{
-		return PCK_CERT_SELECT_INVALID_TCB;
-	}
-
-	// TCB Type check, currently only type 0 is supported
-	// for TcbInfo::V1, TcbType field not present, default to 0
-	int tcbType = 0;
-	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>(TcbInfo::Version::V1) )
-	{
-		tcbType = this->tcbInfo.getTcbType ();
-		if ( tcbType != 0 )
-		{
-			return PCK_CERT_SELECT_UNSUPPORTED_TCB_TYPE;
-		}
-	}
+	pck_cert_selection_res_t ret = PCK_CERT_SELECT_SUCCESS;
+	ret = parse_input_tcb();
+	if (ret != PCK_CERT_SELECT_SUCCESS)
+		return ret;
 
 	// PCEID in JSON is big BE, convert to LE and compare with input PCEID
 	int16_t tcbPCEID = (this->tcbInfo.getPceId ()[0] << 8) + this->tcbInfo.getPceId ()[1];
@@ -172,7 +159,8 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 		// 4. verify CPUSVN match TCB Components
 		// in depth verification, valid PCK are expected to have match
 		// decompose CPUSVN based on algorithm (TCBType) and compare to TCB Components
-		vector < uint8_t > components = this->decompose_cpusvn_components ( tcbType, pckCert->getTcb().getCpuSvn () );
+		vector < uint8_t > components;
+		this->tcbmgr.decompose_cpusvn_components(pckCert->getTcb().getCpuSvn(), components);
 		if ( this->equal_bytes ( components, pckCert->getTcb().getSgxTcbComponents () ) == false )
 		{
 			return clean_pcks_return ( PCK_CERT_SELECT_INVALID_CERT_CPUSVN );
@@ -399,7 +387,8 @@ pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 	{
 		tcbType = this->tcbInfo.getTcbType ();
 	}
-	vector < uint8_t > components = this->decompose_cpusvn_components ( tcbType, rawCPUSVN );
+	vector < uint8_t > components;
+	this->tcbmgr.decompose_cpusvn_components(rawCPUSVN, components);
 	
 	// iterate through ordered buckets, find first PCK with TCB lower than raw TCB
 	for ( size_t bucket_index = 0; bucket_index < this->buckets.size(); bucket_index++ )
@@ -427,25 +416,23 @@ pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 	return PCK_CERT_SELECT_PCK_NOT_FOUND;
 }
 
-
 /**
- * Decompose raw platform CPUSVN to TCB Components vector based on TCBType algorithm.
- * @note the composition of raw platform CPUSVN is not architecturally defined and its composition can change with the release of a new TCBInfo for any given FMSPC.
- *
- * @param[in] tcb_type - int, The TCBType value, for current version must be 0.
- * @param[in] cpusvn - const vector<uint8_t>& , Input raw CPUSVN in byte vector format.
- * @return A vector of TCB Components decomposition of CPUSVN.
+ * parse_input_tcb function to do a jeneral check for tcb
+ * just handle over the result from tcbmgr to caller
+ * @param [in] void - pck_cert_selection_res_t, The result to return.
+ * @return [ret] pck_cert_selection_res_t
  */
-vector<uint8_t> PCKSorter::decompose_cpusvn_components ( int tcb_type, const vector<uint8_t>& cpusvn )
+pck_cert_selection_res_t PCKSorter::parse_input_tcb(void)
 {
-	vector<uint8_t> res;
-	if ( tcb_type == 0 )
-	{
-		// for TCB Type 0 it is simple copy
-		res = cpusvn;
-	}
-	return res;
+	pck_cert_selection_res_t ret = PCK_CERT_SELECT_SUCCESS;
+	ret = tcbmgr.tcb_parse_wrapper();
+
+	// if no error, keep one copy tcbInfo in pck_sorter
+	if (ret == PCK_CERT_SELECT_SUCCESS)
+		tcbInfo = tcbmgr.get_tcb_info();
+	return ret;
 }
+
 
 
 /*

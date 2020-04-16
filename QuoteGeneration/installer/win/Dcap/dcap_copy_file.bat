@@ -30,7 +30,7 @@ copy /y "%PREBUILTFILEFOLDER%\qe3.signed.dll" "%~dp0output\qe3.signed.dll"
 copy /y "%RELEASEFILEFOLDER%\sgx_dcap_ql.dll" "%~dp0output\sgx_dcap_ql.dll"
 
 copy /y "%PREBUILTFILEFOLDER%\qve.signed.dll" "%~dp0output\qve.signed.dll"
-copy /y "%RELEASEFILEFOLDER%\dcap_quoteverify.dll" "%~dp0output\dcap_quoteverify.dll"
+copy /y "%RELEASEFILEFOLDER%\sgx_dcap_quoteverify.dll" "%~dp0output\sgx_dcap_quoteverify.dll"
 copy /y "%LICENSEFOLDER%\License.txt" "%~dp0output\License.txt"
 copy /y "%THIRDPARTYLICENSEFOLDER%\ThirdPartyLicenses.txt" "%~dp0output\ThirdPartyLicenses.txt"
 
@@ -38,7 +38,7 @@ echo **************************************************
 echo * Signing components files *
 echo **************************************************
 call "%TOOLSFOLDER%\Sign.bat"  "%~dp0output\sgx_dcap_ql.dll"
-call "%TOOLSFOLDER%\Sign.bat"  "%~dp0output\dcap_quoteverify.dll"
+call "%TOOLSFOLDER%\Sign.bat"  "%~dp0output\sgx_dcap_quoteverify.dll"
 
 echo **************************************************
 echo * Done *

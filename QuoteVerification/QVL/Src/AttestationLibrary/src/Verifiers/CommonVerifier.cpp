@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -107,7 +107,12 @@ bool CommonVerifier::checkSignature(const pckparser::CrlStore &crl, const dcap::
 
 bool CommonVerifier::checkSha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message,
                                                const std::vector<uint8_t> &publicKey) const {
-    return crypto::verifySha256EcdsaSignature(signature, message, *crypto::rawToP256PubKey(publicKey));
+    auto pubKey = crypto::rawToP256PubKey(publicKey);
+    if (pubKey == nullptr)
+    {
+        return false;
+    }
+    return crypto::verifySha256EcdsaSignature(signature, message, *pubKey);
 }
 
 }}} // namespace intel { namespace sgx { namespace qvl {

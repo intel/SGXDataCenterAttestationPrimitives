@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,20 +37,21 @@ SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../../../"
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer/linux"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
-LINUX_INSTALLER_COMMON_NGA_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-dcap-default-qpl"
+LINUX_INSTALLER_COMMON_DCAP_QPL_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-dcap-default-qpl"
 
-source ${LINUX_INSTALLER_COMMON_NGA_DIR}/installConfig.x64
-DEB_FOLDER=${NGA_PKG_NAME}-${NGA_VERSION}
+source ${LINUX_INSTALLER_COMMON_DCAP_QPL_DIR}/installConfig
+DEB_FOLDER=${DCAP_QPL_PACKAGE_NAME}-${DCAP_QPL_VERSION}
 
 SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
-DEB_BUILD_FOLDER=${NGA_PKG_NAME}-${SGX_VERSION}
+DEB_BUILD_FOLDER=${DCAP_QPL_PACKAGE_NAME}-${SGX_VERSION}
 
 main() {
     pre_build
     create_upstream_tarball
     unpack_upstream_tarball
-    generate_copyright_file
-    update_changelog_version
+    generate_install
+    generate_copyright
+    update_version
     rename_tarball
     build_deb_package
     post_build
@@ -66,8 +67,8 @@ post_build() {
 }
 
 create_upstream_tarball() {
-    ${LINUX_INSTALLER_COMMON_NGA_DIR}/createTarball.sh
-    cp ${LINUX_INSTALLER_COMMON_NGA_DIR}/output/${TARBALL_NAME} ${SCRIPT_DIR}
+    ${LINUX_INSTALLER_COMMON_DCAP_QPL_DIR}/createTarball.sh
+    cp ${LINUX_INSTALLER_COMMON_DCAP_QPL_DIR}/output/${TARBALL_NAME} ${SCRIPT_DIR}
 }
 
 unpack_upstream_tarball() {
@@ -78,26 +79,39 @@ unpack_upstream_tarball() {
     popd
 }
 
-generate_copyright_file() {
+generate_install() {
+    echo "debian/tmp/${DCAP_QPL_PACKAGE_NAME}/* ." > ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}/debian/${DCAP_QPL_PACKAGE_NAME}.install
+    echo "debian/tmp/${DCAP_QPL_DEV_PACKAGE_NAME}/* ." > ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}/debian/${DCAP_QPL_DEV_PACKAGE_NAME}.install
+}
+
+generate_copyright() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     rm -f debian/copyright
     find package/licenses/ -type f -print0 | xargs -0 -n1 cat >> debian/copyright
     popd
 }
 
-update_changelog_version() {
-    pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
+get_os_code() {
+    OS_CODE=$(lsb_release -cs 2> /dev/null)
+    if [ -z ${OS_CODE} ]; then
+        OS_CODE=$(grep "VERSION_CODENAME" /etc/os-release 2> /dev/null | cut -d= -f2)
+    fi
+    echo ${OS_CODE}
+}
 
+update_version() {
+    pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     INS_VERSION=$(echo $(dpkg-parsechangelog |grep "Version" | cut -d: -f2))
     DEB_VERSION=$(echo $INS_VERSION | cut -d- -f2)
 
-    sed -i "s/${INS_VERSION}/${SGX_VERSION}-$(lsb_release -cs)${DEB_VERSION}/" debian/changelog
-
+    FULL_VERSION=${SGX_VERSION}-$(get_os_code)${DEB_VERSION}
+    sed -i "s/${INS_VERSION}/${FULL_VERSION}/" debian/changelog
+    sed -i "s/@dep_version@/${FULL_VERSION}/g" debian/control
     popd
 }
 
 rename_tarball() {
-    TARBALL_NAME_NEW_VERSION=$(echo ${TARBALL_NAME} | sed "s/${NGA_VERSION}/${SGX_VERSION}/")
+    TARBALL_NAME_NEW_VERSION=$(echo ${TARBALL_NAME} | sed "s/${DCAP_QPL_VERSION}/${SGX_VERSION}/")
     mv ${SCRIPT_DIR}/${TARBALL_NAME} ${SCRIPT_DIR}/${TARBALL_NAME_NEW_VERSION}
 }
 

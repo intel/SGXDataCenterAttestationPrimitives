@@ -95,6 +95,12 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Utils\GMTime.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="tcb_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="config_selector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pck_sorter.h">
@@ -237,6 +243,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Utils\TimeUtils.h">
       <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="tcb_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config_selector.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

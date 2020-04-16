@@ -195,10 +195,8 @@
     <ClInclude Include="..\inc\sgx_pce.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\src\se_map.c" />
     <ClCompile Include="..\..\common\src\se_thread.c" />
     <ClCompile Include="..\..\common\src\se_trace.c" />
-    <ClCompile Include="..\..\parser\section.cpp" />
     <ClCompile Include="pce_parser.cpp" />
     <ClCompile Include="pce_u.c" />
     <ClCompile Include="..\pce_wrapper.cpp" />

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,7 +88,7 @@ typedef enum _quote3_error_t {
     SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT = SGX_QL_MK_ERROR(0x0025),
     SGX_QL_QEIDENTITY_MISMATCH = SGX_QL_MK_ERROR(0x0026),
     SGX_QL_TCB_OUT_OF_DATE = SGX_QL_MK_ERROR(0x0027),
-    SGX_QL_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED = SGX_QL_MK_ERROR(0x0028),
+    SGX_QL_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED = SGX_QL_MK_ERROR(0x0028),      ///< TCB out of date and Configuration needed
     SGX_QL_SGX_ENCLAVE_IDENTITY_OUT_OF_DATE = SGX_QL_MK_ERROR(0x0029),
     SGX_QL_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE = SGX_QL_MK_ERROR(0x002a),
     SGX_QL_QE_IDENTITY_OUT_OF_DATE = SGX_QL_MK_ERROR(0x002b),
@@ -106,6 +106,23 @@ typedef enum _quote3_error_t {
     SGX_QL_CRL_UNSUPPORTED_FORMAT = SGX_QL_MK_ERROR(0x0038),
     SGX_QL_QEIDENTITY_CHAIN_ERROR = SGX_QL_MK_ERROR(0x0039),
     SGX_QL_TCBINFO_CHAIN_ERROR = SGX_QL_MK_ERROR(0x003a),
+    SGX_QL_ERROR_QVL_QVE_MISMATCH = SGX_QL_MK_ERROR(0x003b),          ///< QvE returned supplemental data version mismatched between QVL and QvE
+    SGX_QL_TCB_SW_HARDENING_NEEDED = SGX_QL_MK_ERROR(0x003c),         ///< TCB up to date but SW Hardening needed
+    SGX_QL_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED = SGX_QL_MK_ERROR(0x003d),        ///< TCB up to date but Configuration and SW Hardening needed
+
+    SGX_QL_UNSUPPORTED_MODE = SGX_QL_MK_ERROR(0x003e),
+
+    SGX_QL_NO_DEVICE = SGX_QL_MK_ERROR(0x003f),
+    SGX_QL_SERVICE_UNAVAILABLE = SGX_QL_MK_ERROR(0x0040),
+    SGX_QL_NETWORK_FAILURE = SGX_QL_MK_ERROR(0x0041),
+    SGX_QL_SERVICE_TIMEOUT = SGX_QL_MK_ERROR(0x0042),
+    SGX_QL_ERROR_BUSY = SGX_QL_MK_ERROR(0x0043),
+    
+    SGX_QL_UNKNOWN_MESSAGE_RESPONSE  = SGX_QL_MK_ERROR(0x0044),      /// Unexpected error from the cache service
+    SGX_QL_PERSISTENT_STORAGE_ERROR  = SGX_QL_MK_ERROR(0x0045),      /// Error storing the retrieved cached data in persistent memory
+    SGX_QL_ERROR_MESSAGE_PARSING_ERROR   = SGX_QL_MK_ERROR(0x0046),  /// Message parsing error
+    SGX_QL_PLATFORM_UNKNOWN  = SGX_QL_MK_ERROR(0x0047),              /// Platform was not found in the cache
+
     SGX_QL_ERROR_MAX = SGX_QL_MK_ERROR(0x00FF),                      ///< Indicate max error to allow better translation.
 
 } quote3_error_t;

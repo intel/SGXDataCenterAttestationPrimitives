@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -50,6 +50,7 @@ COMMON_DIR            := $(ROOT_DIR)/common
 
 SGX_VER:= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
 SGX_MAJOR_VER:= $(shell echo $(SGX_VER) |awk -F. '{print $$1}')
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 CP    := /bin/cp -f
 MKDIR := mkdir -p
@@ -65,6 +66,8 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 
+include $(SGX_SDK)/buildenv.mk
+
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
@@ -78,7 +81,7 @@ ifeq ($(SGX_ARCH), x86)
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
 	SGX_COMMON_CFLAGS := -m64
-	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+	SGX_LIBRARY_PATH := $(SGX_TRUSTED_LIBRARY_PATH)
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
@@ -191,9 +194,8 @@ COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 # When `pie' is enabled, the linker (both BFD and Gold) under Ubuntu 14.04
 # will hide all symbols from dynamic symbol table even if they are marked
 # as `global' in the LD version script.
-ENCLAVE_CFLAGS   = -ffreestanding -nostdinc -fvisibility=hidden -fpie
+ENCLAVE_CFLAGS   = -ffreestanding -nostdinc -fvisibility=hidden -fpie $(MITIGATION_CFLAGS)
 ENCLAVE_CXXFLAGS = $(ENCLAVE_CFLAGS) -nostdinc++
 ENCLAVE_LDFLAGS  = $(COMMON_LDFLAGS) -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
                    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
                    -Wl,--defsym,__ImageBase=0
-

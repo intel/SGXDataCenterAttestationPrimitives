@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -107,30 +107,6 @@ TEST_F(GetQECertificationDataTests, qeCertificationDataSizeAsParameterDiffersFro
                       quote.data(), (uint32_t) quote.size(), placeholderSize, placeholder, &placeholderQeCertificationDataType));
 }
 
-TEST_F(GetQECertificationDataTests, quoteQeCertificationDataTypeZeroShouldReturnUnsupportedQeCertificationDataTypeStatus)
-{
-    // GIVEN
-    const Bytes qeCertData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-    const auto quote = prepareQuoteWithCertData(0, qeCertData);
-
-    // WHEN/THEN
-    ASSERT_EQ(STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE,
-              sgxAttestationGetQECertificationData(
-                      quote.data(), (uint32_t) quote.size(), (uint32_t) qeCertData.size(), placeholder, &placeholderQeCertificationDataType));
-}
-
-TEST_F(GetQECertificationDataTests, quoteQeCertificationDataTypeNotSupportedShouldReturnUnsupportedQeCertificationDataTypeStatus)
-{
-    // GIVEN
-    const Bytes qeCertData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-    const auto quote = prepareQuoteWithCertData(test::constants::UNSUPPORTED_PCK_ID, qeCertData);
-
-    // WHEN/THEN
-    ASSERT_EQ(STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE,
-              sgxAttestationGetQECertificationData(
-                      quote.data(), (uint32_t) quote.size(), (uint32_t) qeCertData.size(), placeholder, &placeholderQeCertificationDataType));
-}
-
 TEST_F(GetQECertificationDataTests, positiveEmptyQeCertDataShouldReturnOkStatusAndUpdateQeCertificationDataAndType)
 {
     // GIVEN
@@ -184,7 +160,7 @@ TEST_P(GetQECertificationDataPositiveTests, validQeCertDataShouldReturnOkStatusA
     EXPECT_EQ(expectedQeCertData, qeCertificationDataBuffer) << "QeCertData extracted from quote does not match expected";
 }
 
-INSTANTIATE_TEST_CASE_P(AllSupportedPckIdTypes,
+INSTANTIATE_TEST_SUITE_P(AllSupportedPckIdTypes,
                         GetQECertificationDataPositiveTests,
                         Values(
                           test::constants::PCK_ID_PLAIN_PPID,

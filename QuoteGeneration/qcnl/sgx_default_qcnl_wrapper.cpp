@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +56,7 @@ using namespace std;
 #define PCESVN_SIZE     2
 #define PCEID_SIZE      2
 #define FMSPC_SIZE      6
+#define PLATFORM_MANIFEST_SIZE 53000
 
 // Default URL for PCCS server if configuration file doesn't exist
 extern char server_url[MAX_URL_LENGTH];
@@ -951,4 +952,150 @@ void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl)
     if(p_root_ca_crl) {
         free(p_root_ca_crl);
     }
+}
+
+/**
+* This function appends appends request parameters of byte array type to the JSON request body in HEX string format
+*
+* @param req_body   Request body in JSON string format
+* @param para_name  The name of the Request parameter as JSON key
+* @param para       The Request parameter in byte array which will be converted into HEX string as JSON value
+* @param para_size  Size of para in byte array
+*
+* @return true If the byte array was appended to the Request body successfully 
+*/
+static sgx_qcnl_error_t req_body_append_para(string& req_body, const string& para_name, const uint8_t *para, const uint32_t para_size)
+{
+    if (para_size >= UINT32_MAX /2)
+        return SGX_QCNL_INVALID_PARAMETER;
+
+    uint8_t *hex = (uint8_t *)malloc(para_size * 2);
+    if (!hex) return SGX_QCNL_OUT_OF_MEMORY;
+    if (!byte_array_to_hex_string(para, para_size, hex, para_size * 2)){
+        free(hex);
+        return SGX_QCNL_UNEXPECTED_ERROR;
+    }
+    string temp(req_body.substr(1, req_body.size() - 2));
+    temp.append(para_name + ":\"");
+    temp.append(reinterpret_cast<const char*>(hex), para_size * 2);
+    free(hex);
+    req_body = "{" + temp + "\"}";
+
+    return SGX_QCNL_SUCCESS;
+}
+
+
+/**
+* This API registers PCK certificate identify information(QE_ID, EncPPID, CPU_SVN, PCE_SVN, PCE_ID) and Platform manifest infomration
+* to PCCS server with user_token as server authentication token
+*
+* @param p_pck_cert_id          PCK cert identity information
+* @param platform_manifest      Pointer to the platform manifest information, could be NULL
+* @param platform_manifest_size Size of platform manifest information
+* @param user_token             Pointer to the user token to access PCCS server
+* @param user_token_size        Size of user token
+*
+* @return SGX_QCNL_SUCCESS If the PCK certificate chain and TCBm was retrieved from PCCS server successfully.
+*/
+sgx_qcnl_error_t sgx_qcnl_register_platform (const sgx_ql_pck_cert_id_t *p_pck_cert_id, 
+                                    const uint8_t *platform_manifest,
+                                    uint16_t platform_manifest_size,
+                                    const uint8_t *user_token,
+                                    uint16_t user_token_size)
+{
+    sgx_qcnl_error_t  ret = SGX_QCNL_UNEXPECTED_ERROR;
+
+    // Check input parameters
+    if (p_pck_cert_id == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (p_pck_cert_id->p_qe3_id == NULL || p_pck_cert_id->qe3_id_size != QE3_ID_SIZE) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (p_pck_cert_id->p_encrypted_ppid != NULL && p_pck_cert_id->encrypted_ppid_size != ENC_PPID_SIZE) {
+        // Allow ENCRYPTED_PPID to be NULL, but if it is not NULL, the size must match ENC_PPID_SIZE
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (p_pck_cert_id->p_platform_cpu_svn == NULL || p_pck_cert_id->p_platform_pce_isv_svn == NULL) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (p_pck_cert_id->crypto_suite != PCE_ALG_RSA_OAEP_3072) {
+        return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (platform_manifest != NULL && platform_manifest_size == 0) {
+		// Allow platform_manifest to be NULL, but if it is not NULL, the size must larger than 0
+       return SGX_QCNL_INVALID_PARAMETER;
+    }
+    if (user_token == NULL || user_token_size == 0) {
+       return SGX_QCNL_INVALID_PARAMETER;
+    }
+
+    
+    // initialize https request url
+    string url(server_url);
+
+    // Append platforms
+    url.append("platforms");
+
+    string req_body = "{}";
+    
+    // Append QE ID
+    if ((ret = req_body_append_para(req_body, "\"qe_id\"", p_pck_cert_id->p_qe3_id, p_pck_cert_id->qe3_id_size)) != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    // Append encrypted PPID
+   if (p_pck_cert_id->p_encrypted_ppid == NULL) {
+        uint8_t enc_ppid_unused[ENC_PPID_SIZE] = { 0 };
+        if ((ret = req_body_append_para(req_body, ",\"enc_ppid\"", reinterpret_cast<const uint8_t*>(enc_ppid_unused), sizeof(enc_ppid_unused))) != SGX_QCNL_SUCCESS)
+            return ret;
+    }
+    else {
+        if ((ret = req_body_append_para(req_body, ",\"enc_ppid\"", p_pck_cert_id->p_encrypted_ppid, p_pck_cert_id->encrypted_ppid_size)) != SGX_QCNL_SUCCESS)
+            return ret;
+    }
+
+    // Append cpusvn
+    if ((ret = req_body_append_para(req_body, ",\"cpu_svn\"", reinterpret_cast<const uint8_t*>(p_pck_cert_id->p_platform_cpu_svn), sizeof(sgx_cpu_svn_t))) != SGX_QCNL_SUCCESS)
+        return ret;
+   
+    // Append pcesvn
+    if ((ret = req_body_append_para(req_body, ",\"pce_svn\"", reinterpret_cast<const uint8_t*>(p_pck_cert_id->p_platform_pce_isv_svn), sizeof(sgx_isv_svn_t))) != SGX_QCNL_SUCCESS)
+        return ret;
+
+    // Append pceid
+    if ((ret = req_body_append_para(req_body, ",\"pce_id\"", reinterpret_cast<const uint8_t*>(&(p_pck_cert_id->pce_id)), sizeof(p_pck_cert_id->pce_id))) != SGX_QCNL_SUCCESS)
+        return ret;
+   
+    // Append platform manifest
+    if (platform_manifest == NULL) {
+        uint8_t platform_manifest_unused[PLATFORM_MANIFEST_SIZE] = { 0 };
+        if ((ret = req_body_append_para(req_body, ",\"platform_manifest\"", platform_manifest_unused, sizeof(platform_manifest_unused))) != SGX_QCNL_SUCCESS)
+            return ret;
+    }
+    else {
+        if ((ret = req_body_append_para(req_body, ",\"platform_manifest\"", platform_manifest, platform_manifest_size)) != SGX_QCNL_SUCCESS)
+            return ret;
+    }
+
+    char* resp_msg = NULL;
+    uint32_t resp_size;
+    char* resp_header = NULL;
+    uint32_t header_size;
+    
+    ret = qcnl_https_post(url.c_str(), req_body.c_str(), (uint32_t)req_body.size(), user_token, user_token_size, &resp_msg, resp_size, &resp_header, header_size);
+    if (ret != SGX_QCNL_SUCCESS) {
+        return ret;
+    }
+
+    if (resp_msg) {
+        free(resp_msg);
+        resp_msg = NULL;
+    }
+    if (resp_header){
+        free(resp_header);
+        resp_header = NULL;
+    }
+
+    return ret;
 }

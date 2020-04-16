@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
   *
   */
 
+#include <sgx_secure_align.h>
 #include <sgx_random_buffers.h>
 #include <string.h>
 
@@ -210,14 +211,14 @@ void printf(const char *fmt, ...)
  *                            KEY_POLICY =MRSIGNER,
  *                            KEY_ID = 0, Current CPUSVN,
  *                            Current ISVSVN)
- * 2) Block 1 = AES-CMAC(Sealing Key, QE3 string with Counter = 0x01)
- * 3) Block 2 = AES-CMAC(Sealing Key, QE3 ring with Counter = 0x02)
- * 4) Block 3 = AES-CMAC(Sealing Key, QE3 string with Counter = = 0x03)
+ * 2) Block 1 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x01)
+ * 3) Block 2 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x02)
+ * 4) Block 3 = AES-CMAC(Sealing Key, QE ATT string with Counter = 0x03)
  * 5) QE3 ATT Seed = most significant 320 bits of (Block 1 || Block 2 || Block 3).
  * 6) QE3 ATT key pair ir is generated d using NIST SP 186-4 4 section B 4.1 "Key Pair Generation Using Extra Random
  *    Bits." AE ATT Seed are used for the random bits.
  *
- *    QE3 String:
+ *    QE ATT String:
  *       Byte Position  |  Value
  *         0            |  Counter (See Description)
  *         1-10         |  "QE_KEY_DER" (ascii encoded)
@@ -242,7 +243,13 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     sgx_status_t sgx_status = SGX_SUCCESS;
 
     sgx_key_request_t att_priv_key_seed_req;
-    sgx_key_128bit_t key_tmp;
+    //sgx_key_128bit_t key_tmp;
+    //
+    // securely align seed
+    //
+    sgx::custom_alignment_aligned<sgx_key_128bit_t, sizeof(sgx_key_128bit_t), 0, sizeof(sgx_key_128bit_t)> okey_tmp;
+    sgx_key_128bit_t* pkey_tmp = &okey_tmp.v;
+
     uint8_t content[16];
     sgx_cmac_128bit_tag_t block;
     sgx_report_t qe3_report;
@@ -259,7 +266,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
 
     memset(&content, 0, sizeof(content));
     memset(&block, 0, sizeof(block));
-    memset(&key_tmp, 0, sizeof(key_tmp));
+    memset(pkey_tmp, 0, sizeof(*pkey_tmp));
     //1-10bytes: "QE_ATT_DER"(ascii encoded)
     memcpy(content + 1, QE_ATT_STRING, 10);
     //14-15bytes: 0x0140 (Big Endian)
@@ -288,10 +295,10 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     att_priv_key_seed_req.attribute_mask.xfrm = 0;
     att_priv_key_seed_req.misc_mask = 0xFFFFFFFF;
     att_priv_key_seed_req.attribute_mask.flags = ~SGX_FLAGS_MODE64BIT; //set all bits except the SGX_FLAGS_MODE64BIT
-    sgx_status = sgx_get_key(&att_priv_key_seed_req, &key_tmp);
+    sgx_status = sgx_get_key(&att_priv_key_seed_req, pkey_tmp);
     if (SGX_SUCCESS != sgx_status)
     {
-        (void)memset_s(&key_tmp, sizeof(key_tmp), 0, sizeof(key_tmp));
+        (void)memset_s(pkey_tmp, sizeof(*pkey_tmp), 0, sizeof(*pkey_tmp));
         ret = REFQE3_ERROR_CRYPTO;
         goto ret_point;
     }
@@ -299,9 +306,9 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     ref_static_assert(sizeof(sgx_cmac_128bit_key_t) == sizeof(sgx_key_128bit_t));
     ref_static_assert(2 * sizeof(sgx_cmac_128bit_tag_t) <= HASH_DRBG_OUT_LEN && 3 * sizeof(sgx_cmac_128bit_tag_t) >= HASH_DRBG_OUT_LEN);
 
-    //Block 1 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x01)
+    //Block 1 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x01)
     content[0] = 0x01;
-    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(key_tmp),
+    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
         sizeof(content),
         &block)) != SGX_SUCCESS) {
@@ -315,9 +322,9 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     }
     memcpy(hash_drg_output, block, sizeof(sgx_cmac_128bit_tag_t));
 
-    //Block 2 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x02)
+    //Block 2 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x02)
     content[0] = 0x02;
-    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(key_tmp),
+    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
         sizeof(content),
         &block)) != SGX_SUCCESS) {
@@ -331,9 +338,9 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
     }
     memcpy(hash_drg_output + sizeof(sgx_cmac_128bit_tag_t), block, sizeof(sgx_cmac_128bit_tag_t));
 
-    //Block 3 = AES-CMAC(Provisioning Key, PAK string with Counter = 0x03)
+    //Block 3 = AES-CMAC(Seal Key, QE ATT string with Counter = 0x03)
     content[0] = 0x03;
-    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(key_tmp),
+    if ((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(*pkey_tmp),
         content,
         sizeof(content),
         &block)) != SGX_SUCCESS) {
@@ -380,7 +387,7 @@ static qe3_error_t get_att_key_based_from_seal_key(sgx_ec256_private_t *p_att_pr
 ret_point:
     //clear and free objects
     //
-    (void)memset_s(&key_tmp, sizeof(key_tmp), 0, sizeof(key_tmp));
+    (void)memset_s(pkey_tmp, sizeof(*pkey_tmp), 0, sizeof(*pkey_tmp));
     (void)memset_s(&hash_drg_output, sizeof(hash_drg_output), 0, sizeof(hash_drg_output));
     (void)memset_s(&block, sizeof(block), 0, sizeof(block));
     if (ret != REFQE3_SUCCESS) {
@@ -519,9 +526,15 @@ static qe3_error_t verify_blob_internal(uint8_t *p_blob,
     sgx_status_t sgx_status = SGX_SUCCESS;
     qe3_error_t ret = REFQE3_SUCCESS;
     uint8_t resealed = FALSE;
-    ref_ciphertext_ecdsa_data_sdk_t local_secret_ecdsa_data;
+    //ref_ciphertext_ecdsa_data_sdk_t local_secret_ecdsa_data;
+    //
+    // securely align attestation key
+    //
+    sgx::custom_alignment_aligned<ref_ciphertext_ecdsa_data_sdk_t, 32, __builtin_offsetof(ref_ciphertext_ecdsa_data_sdk_t, ecdsa_private_key), sizeof(((ref_ciphertext_ecdsa_data_sdk_t*)0)->ecdsa_private_key)> osecret_ecdsa_data;
+    ref_ciphertext_ecdsa_data_sdk_t* plocal_secret_ecdsa_data = &osecret_ecdsa_data.v;
+
     uint32_t plaintext_length;
-    uint32_t decryptedtext_length = sizeof(local_secret_ecdsa_data);
+    uint32_t decryptedtext_length = sizeof(*plocal_secret_ecdsa_data);
     sgx_sealed_data_t *p_ecdsa_blob = (sgx_sealed_data_t *)p_blob;
     uint8_t local_ecdsa_blob[SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK] = { 0 };
     sgx_report_t report;
@@ -548,13 +561,13 @@ static qe3_error_t verify_blob_internal(uint8_t *p_blob,
         return(REFQE3_ECDSABLOB_ERROR);
     }
 
-    memset(&local_secret_ecdsa_data, 0, sizeof(local_secret_ecdsa_data));
+    memset(plocal_secret_ecdsa_data, 0, sizeof(*plocal_secret_ecdsa_data));
     memset(p_plaintext_ecdsa_data, 0, sizeof(*p_plaintext_ecdsa_data));
 
     sgx_status = sgx_unseal_data(p_ecdsa_blob,
         (uint8_t *)p_plaintext_ecdsa_data,
         &plaintext_length,
-        (uint8_t *)&local_secret_ecdsa_data,
+        (uint8_t *)plocal_secret_ecdsa_data,
         &decryptedtext_length);
     if (SGX_SUCCESS != sgx_status) {
         // The blob has been corrupted or the platform TCB has been downgraded.
@@ -599,8 +612,8 @@ static qe3_error_t verify_blob_internal(uint8_t *p_blob,
         (report.body.isv_svn != p_ecdsa_blob->key_request.isv_svn)) {
         sgx_status = sgx_seal_data(sizeof(*p_plaintext_ecdsa_data),
             (uint8_t*)p_plaintext_ecdsa_data,
-            sizeof(local_secret_ecdsa_data),
-            (uint8_t*)&local_secret_ecdsa_data,
+            sizeof(*plocal_secret_ecdsa_data),
+            (uint8_t*)plocal_secret_ecdsa_data,
             SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK,
             (sgx_sealed_data_t *)local_ecdsa_blob);
         if (SGX_SUCCESS != sgx_status) {
@@ -620,13 +633,13 @@ static qe3_error_t verify_blob_internal(uint8_t *p_blob,
         memcpy(p_pub_key_id, &p_plaintext_ecdsa_data->ecdsa_id, sizeof(p_plaintext_ecdsa_data->ecdsa_id));
     }
     if (NULL != p_secret_ecdsa_data) {
-        memcpy(p_secret_ecdsa_data, &local_secret_ecdsa_data, sizeof(*p_secret_ecdsa_data));
+        memcpy(p_secret_ecdsa_data, plocal_secret_ecdsa_data, sizeof(*p_secret_ecdsa_data));
     }
 
 ret_point:
 
     // Clear the output buffer to make sure nothing leaks.
-    memset_s(&local_secret_ecdsa_data, sizeof(local_secret_ecdsa_data), 0, sizeof(local_secret_ecdsa_data));
+    memset_s(plocal_secret_ecdsa_data, sizeof(*plocal_secret_ecdsa_data), 0, sizeof(*plocal_secret_ecdsa_data));
     if (REFQE3_SUCCESS == ret) {
         *p_is_resealed = resealed;
     }
@@ -974,9 +987,26 @@ uint32_t gen_att_key(uint8_t *p_blob,
     sgx_sha_state_handle_t sha_handle = NULL;
     sgx_report_data_t report_data = { 0 };
     ref_plaintext_ecdsa_data_sdk_t plaintext_data;
-    randomly_placed_buffer<ref_ciphertext_ecdsa_data_sdk_t, alignof(ref_ciphertext_ecdsa_data_sdk_t)> ciphertext_data_buf{};
-    auto *pciphertext_data = ciphertext_data_buf.randomize_object();
+    //
+    // provide extra protection for attestation key by
+    // randomizing its address and securely aligning it
+    //
+    using cciphertext_data = randomly_placed_object<
+        sgx::custom_alignment_aligned<
+        ref_ciphertext_ecdsa_data_sdk_t,
+        alignof(ref_ciphertext_ecdsa_data_sdk_t),
+        __builtin_offsetof(ref_ciphertext_ecdsa_data_sdk_t, ecdsa_private_key),
+        sizeof(((ref_ciphertext_ecdsa_data_sdk_t*)0)->ecdsa_private_key)>>;
+    //
+    // instance of randomly_placed_object
+    //
+    cciphertext_data ociphertext_data_buf;
+    //
+    // pointer to instance of custom_alignment_aligned
+    //
+    auto* ociphertext_data = ociphertext_data_buf.instantiate_object();
 
+    ref_ciphertext_ecdsa_data_sdk_t* pciphertext_data = &ociphertext_data->v;
 
     sgx_key_id_t req_key_id = { 0 };
 
@@ -1219,8 +1249,26 @@ uint32_t store_cert_data(ref_plaintext_ecdsa_data_sdk_t *p_plaintext_data,
 {
     qe3_error_t ret = REFQE3_SUCCESS;
     sgx_status_t sgx_status = SGX_SUCCESS;
-    randomly_placed_buffer<ref_ciphertext_ecdsa_data_sdk_t, alignof(ref_ciphertext_ecdsa_data_sdk_t)> ciphertext_data_buf{};
-    auto *pciphertext_data = ciphertext_data_buf.randomize_object();
+    //
+    // provide extra protection for attestation key by
+    // randomizing its address and securely aligning it
+    //
+    using cciphertext_data = randomly_placed_object<
+        sgx::custom_alignment_aligned<
+        ref_ciphertext_ecdsa_data_sdk_t,
+        alignof(ref_ciphertext_ecdsa_data_sdk_t),
+        __builtin_offsetof(ref_ciphertext_ecdsa_data_sdk_t, ecdsa_private_key),
+        sizeof(((ref_ciphertext_ecdsa_data_sdk_t*)0)->ecdsa_private_key)>>;
+    //
+    // instance of randomly_placed_object
+    //
+    cciphertext_data ociphertext_data_buf;
+    //
+    // pointer to instance of custom_alignment_aligned
+    //
+    auto* ociphertext_data = ociphertext_data_buf.instantiate_object();
+    ref_ciphertext_ecdsa_data_sdk_t* pciphertext_data = &ociphertext_data->v;
+
 #ifdef ALLOW_CLEARTEXT_PPID
     void *rsa_key = NULL;
     unsigned char* dec_dat = NULL;
@@ -1463,8 +1511,25 @@ uint32_t gen_quote(uint8_t *p_blob,
     sgx_report_t qe_report;
     size_t required_buffer_size = 0;
     ref_plaintext_ecdsa_data_sdk_t plaintext;
-    randomly_placed_buffer<ref_ciphertext_ecdsa_data_sdk_t, alignof(ref_ciphertext_ecdsa_data_sdk_t)> ciphertext_buf{};
-    auto *pciphertext = ciphertext_buf.randomize_object();
+    //
+    // provide extra protection for attestation key by
+    // randomizing its address and securely aligning it
+    //
+    using cciphertext = randomly_placed_object<
+        sgx::custom_alignment_aligned<
+        ref_ciphertext_ecdsa_data_sdk_t,
+        alignof(ref_ciphertext_ecdsa_data_sdk_t),
+        __builtin_offsetof(ref_ciphertext_ecdsa_data_sdk_t, ecdsa_private_key),
+        sizeof(((ref_ciphertext_ecdsa_data_sdk_t*)0)->ecdsa_private_key)>>;
+    //
+    // instance of randomly_placed_object
+    //
+    cciphertext ociphertext_buf;
+    //
+    // pointer to instance of custom_alignment_aligned
+    //
+    auto* ociphertext = ociphertext_buf.instantiate_object();
+    ref_ciphertext_ecdsa_data_sdk_t* pciphertext = &ociphertext->v;
 
     sgx_ecc_state_handle_t handle = NULL;
     sgx_ql_auth_data_t *p_auth_data;

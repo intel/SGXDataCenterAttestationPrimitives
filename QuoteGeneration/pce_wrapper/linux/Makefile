@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,21 +34,18 @@ include ../../buildenv.mk
 INCLUDE += -I. -I../inc
 INCLUDE += -I$(SGX_SDK)/include         \
            -I$(COMMON_DIR)/inc/internal \
-           -I$(COMMON_DIR)/inc/internal/linux \
+           -I$(COMMON_DIR)/inc/internal/linux
 
 INCLUDE += -I$(ROOT_DIR)/ae/common \
            -I$(ROOT_DIR)/ae/inc    \
-           -I$(ROOT_DIR)/ae/inc/internal    \
-           -I$(ROOT_DIR)/parser            \
-           -I$(ROOT_DIR)/parser/linux
+           -I$(ROOT_DIR)/ae/inc/internal
 
 CXXFLAGS += -fPIC -Werror -g
 
 CFLAGS += -fPIC -Werror -g
+Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl
 
-Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
-
-vpath %.cpp .. $(ROOT_DIR)/parser $(ROOT_DIR)/parser/linux
+vpath %.cpp ..
 vpath %.c   $(COMMON_DIR)/src
 
 pce_wrapper.o: pce_u.c
@@ -56,29 +53,24 @@ pce_wrapper.o: pce_u.c
 pce_u.c:  ${ROOT_DIR}/ae/pce/pce.edl
 	@$(SGX_EDGER8R) --untrusted --untrusted-dir . $<
 
-C_SRC   := pce_u.c se_trace.c se_map.c se_thread.c
+C_SRC := pce_u.c se_trace.c se_thread.c
 
-SRC :=       pce_wrapper.cpp pce_parser.cpp section.cpp elfparser.cpp
+SRC := pce_wrapper.cpp
 
 OBJ := $(C_SRC:.c=.o) $(SRC:.cpp=.o)
 
 LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--version-script=pce_wrapper.lds -Wl,--gc-sections
 
-LIBNAME  = libsgx_pce_wrapper.so
-LIBNAME_DEBUG  = libsgx_pce_wrapper.so.debug
-STATIC_LIBNAME  = libsgx_pce_wrapper.a
+LIBNAME  = libsgx_pce_logic.so
+STATIC_LIBNAME  = libsgx_pce_logic.a
 
 .PHONY: all
 all:  install_lib
  
 .PHONY: install_lib
-install_lib: $(LIBNAME) $(STATIC_LIBNAME)  $(LIBNAME_DEBUG) | $(BUILD_DIR)
+install_lib: $(LIBNAME) $(STATIC_LIBNAME) | $(BUILD_DIR)
 	@$(CP) $(LIBNAME) $|
-	@$(CP) $(STATIC_LIBNAME) $|
-ifndef DEBUG
-	@$(CP) $(LIBNAME_DEBUG) $|
-endif
 
 $(LIBNAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(Link_Flags) -o $@
@@ -86,33 +78,19 @@ $(LIBNAME): $(OBJ)
 $(STATIC_LIBNAME): $(OBJ)
 	$(AR) rcsD $@ $^
 
-$(LIBNAME_DEBUG): $(LIBNAME)
-	((test -f $(LIBNAME_DEBUG)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(LIBNAME) $(LIBNAME).orig
-	$(OBJCOPY) --only-keep-debug $(LIBNAME) $(LIBNAME_DEBUG)
-	$(STRIP) -g $(LIBNAME)
-	$(OBJCOPY) --add-gnu-debuglink=$(LIBNAME_DEBUG) $(LIBNAME)
-endif
-
 %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDE) -Werror -fPIC -c $< -o $@
-
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
 .PHONY: clean
 clean:
-	@$(RM) $(OBJ) $(LIBNAME).orig *_u.h *_u.c
+	@$(RM) $(OBJ) *_u.h *_u.c
 	@$(RM) $(LIBNAME) $(BUILD_DIR)/$(LIBNAME) 
 	@$(RM) $(STATIC_LIBNAME) $(BUILD_DIR)/$(STATIC_LIBNAME) 
-	@$(RM) $(LIBNAME_DEBUG) $(BUILD_DIR)/$(LIBNAME_DEBUG)
 
 .PHONY: rebuild
 rebuild:

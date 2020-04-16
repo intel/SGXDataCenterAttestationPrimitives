@@ -13,3 +13,4 @@ EXPORTS
     sgx_qcnl_free_qve_identity        @10
     sgx_qcnl_get_root_ca_crl          @11
     sgx_qcnl_free_root_ca_crl         @12
+    sgx_qcnl_register_platform        @13

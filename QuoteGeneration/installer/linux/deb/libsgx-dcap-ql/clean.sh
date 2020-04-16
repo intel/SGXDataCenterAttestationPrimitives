@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ SCRIPT_DIR=$(dirname "$0")
 COMMON_DIR="${SCRIPT_DIR}/../../common/libsgx-dcap-ql"
 
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.deb
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql-dbgsym*.ddeb
+rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.ddeb
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.gz
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.xz
 rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.dsc

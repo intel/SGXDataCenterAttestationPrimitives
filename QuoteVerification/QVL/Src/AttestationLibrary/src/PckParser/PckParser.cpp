@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include <map>
 #include <iomanip>
 #include <Utils/TimeUtils.h>
+#include <Utils/SafeMemcpy.h>
 
 #include "FormatException.h"
 #include "PckParserUtils.h"
@@ -158,7 +159,7 @@ std::vector<uint8_t> bn2Vec(const BIGNUM* bn)
 Signature getSignature(const ASN1_BIT_STRING* psig)
 {
     std::vector<uint8_t> rawDerSequence(static_cast<size_t>(psig->length));
-    std::memcpy(rawDerSequence.data(), psig->data, static_cast<size_t>(psig->length));
+    safeMemcpy(rawDerSequence.data(), psig->data, static_cast<size_t>(psig->length));
 
     const uint8_t *derSeqIt = rawDerSequence.data();
     const auto sig = crypto::make_unique(d2i_ECDSA_SIG(nullptr, &derSeqIt , static_cast<long>(rawDerSequence.size())));

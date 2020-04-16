@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,10 @@
 #include "TcbInfoGenerator.h"
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "X509Constants.h"
+#include <Utils/TimeUtils.h>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-
-#include<iostream>
 
 using namespace testing;
 using namespace intel::sgx::dcap;
@@ -65,8 +64,8 @@ TEST_F(TcbInfoUT, shouldSuccessfullyParseTcbV1WhenAllRequiredDataProvided)
     EXPECT_EQ(tcbInfo.getFmspc(), DEFAULT_FMSPC);
     EXPECT_EQ(tcbInfo.getSignature(), DEFAULT_SIGNATURE);
     EXPECT_EQ(tcbInfo.getInfoBody(), DEFAULT_INFO_BODY);
-    EXPECT_EQ(tcbInfo.getIssueDate(), DEFAULT_ISSUE_DATE);
-    EXPECT_EQ(tcbInfo.getNextUpdate(), DEFAULT_NEXT_UPDATE);
+    EXPECT_EQ(tcbInfo.getIssueDate(), parser::getEpochTimeFromString(DEFAULT_ISSUE_DATE));
+    EXPECT_EQ(tcbInfo.getNextUpdate(), parser::getEpochTimeFromString(DEFAULT_NEXT_UPDATE));
     EXPECT_EQ(tcbInfo.getVersion(), 1);
     EXPECT_EQ(1, tcbInfo.getTcbLevels().size());
     for (unsigned int i=0; i<constants::CPUSVN_BYTE_LEN; i++)
@@ -90,15 +89,15 @@ TEST_F(TcbInfoUT, shouldSuccessfullyParseTcbV2WhenAllRequiredDataProvided)
     EXPECT_EQ(tcbInfo.getSignature(), DEFAULT_SIGNATURE);
     EXPECT_EQ(tcbInfo.getTcbType(), DEFAULT_TCB_TYPE);
     EXPECT_EQ(tcbInfo.getTcbEvaluationDataNumber(), DEFAULT_TCB_RECOVERY_NUMBER);
-    EXPECT_EQ(tcbInfo.getIssueDate(), DEFAULT_ISSUE_DATE);
-    EXPECT_EQ(tcbInfo.getNextUpdate(), DEFAULT_NEXT_UPDATE);
+    EXPECT_EQ(tcbInfo.getIssueDate(), parser::getEpochTimeFromString(DEFAULT_ISSUE_DATE));
+    EXPECT_EQ(tcbInfo.getNextUpdate(), parser::getEpochTimeFromString(DEFAULT_NEXT_UPDATE));
     EXPECT_EQ(tcbInfo.getVersion(), 2);
     EXPECT_EQ(1, tcbInfo.getTcbLevels().size());
     for (unsigned int i=0; i<constants::CPUSVN_BYTE_LEN; i++)
     {
         EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getSgxTcbComponentSvn(i), DEFAULT_CPUSVN[i]);
     }
-    EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getTcbDate(), DEFAULT_TCB_DATE);
+    EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getTcbDate(), parser::getEpochTimeFromString(DEFAULT_TCB_DATE));
     EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getPceSvn(), DEFAULT_PCESVN);
     EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getStatus(), "UpToDate");
 }
@@ -918,15 +917,15 @@ TEST_F(TcbInfoUT, shouldSuccessWhenTcbLevelsV2AdvisoryIDsFieldIsPresent)
     EXPECT_EQ(tcbInfo.getSignature(), DEFAULT_SIGNATURE);
     EXPECT_EQ(tcbInfo.getTcbType(), DEFAULT_TCB_TYPE);
     EXPECT_EQ(tcbInfo.getTcbEvaluationDataNumber(), DEFAULT_TCB_RECOVERY_NUMBER);
-    EXPECT_EQ(tcbInfo.getIssueDate(), DEFAULT_ISSUE_DATE);
-    EXPECT_EQ(tcbInfo.getNextUpdate(), DEFAULT_NEXT_UPDATE);
+    EXPECT_EQ(tcbInfo.getIssueDate(), parser::getEpochTimeFromString(DEFAULT_ISSUE_DATE));
+    EXPECT_EQ(tcbInfo.getNextUpdate(), parser::getEpochTimeFromString(DEFAULT_NEXT_UPDATE));
     EXPECT_EQ(tcbInfo.getVersion(), 2);
     EXPECT_EQ(1, tcbInfo.getTcbLevels().size());
     for (unsigned int i=0; i<constants::CPUSVN_BYTE_LEN; i++)
     {
         EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getSgxTcbComponentSvn(i), DEFAULT_CPUSVN[i]);
     }
-    EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getTcbDate(), DEFAULT_TCB_DATE);
+    EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getTcbDate(), parser::getEpochTimeFromString(DEFAULT_TCB_DATE));
     EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getPceSvn(), DEFAULT_PCESVN);
     EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getStatus(), "UpToDate");
     EXPECT_EQ(tcbInfo.getTcbLevels().begin()->getAdvisoryIDs().size(), 1);

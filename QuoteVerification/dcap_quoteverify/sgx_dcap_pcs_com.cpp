@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,31 +39,15 @@
 #include <stdlib.h>
 #include "se_trace.h"
 
-#ifndef _MSC_VER
-#include <dlfcn.h>
-#else
-#include <tchar.h>
-#include <windows.h>
-#endif
 
-#ifndef _MSC_VER
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
-#define TCHAR char
-#define _T(x) (x)
-#else
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "dcap_quoteprov.dll"
-#endif
+sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
+sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
 
-#define QL_API_GET_QUOTE_VERIFICATION_COLLATERAL "sgx_ql_get_quote_verification_collateral"
-#define QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL "sgx_ql_free_quote_verification_collateral"
+sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity = NULL;
+sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity = NULL;
 
-typedef quote3_error_t(*sgx_get_quote_verification_collateral_func_t)(const char *fmspc,
-    uint16_t fmspc_size,
-    const char *pck_ca,
-    struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
-
-typedef quote3_error_t(*sgx_free_quote_verification_collateral_func_t)(struct _sgx_ql_qve_collateral_t *p_quote_collateral);
+sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl = NULL;
+sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
 
 /**
@@ -72,7 +56,7 @@ typedef quote3_error_t(*sgx_free_quote_verification_collateral_func_t)(struct _s
  * @param fmspc[IN] - Pointer to base 16-encoded representation of FMSPC. (5 bytes).
  * @param pck_ca[IN] - Pointer to Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates. Allowed values {platform, processor}.
  * @param pp_quote_collateral[OUT] - Pointer to a pointer to the PCK quote collateral data needed for quote verification.
- *                                   The provider library will allocate this buffer and it is expected that the Quote Library will free it using the provider library’s sgx_ql_free_quote_verification_collateral() API.
+ *                                   The provider library will allocate this buffer and it is expected that the Quote Library will free it using the provider library sgx_ql_free_quote_verification_collateral() API.
  *
  * @return Status code of the operation, one of:
  *      - SGX_QL_SUCCESS
@@ -84,103 +68,25 @@ quote3_error_t sgx_dcap_retrieve_verification_collateral(
     const char *fmspc,
     uint16_t fmspc_size,
     const char *pck_ca,
-    struct _sgx_ql_qve_collateral_t **pp_quote_collateral) {
-
-    quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
-    sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
-
-#ifndef _MSC_VER
-    void *handle = NULL;
-    char *get_quote_verification_collateral_symbol_err = NULL;
-#else
-    HINSTANCE handle;
-#endif
-
+    struct _sgx_ql_qve_collateral_t **pp_quote_collateral)
+{
 
     if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL || *pp_quote_collateral != NULL) {
-        return ret;
+        return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
-    do {
-#ifndef _MSC_VER
-
-        //try to dynamically load libdcap_quoteprov.so
-        //
-        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-        if (NULL == handle)
-        {
-            ///TODO:
-            // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-            // We shalll remove this when we have a major version change later and drop the backward compatible
-            // support for old lib name.
-            handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
-        }
-        if (handle == NULL) {
-            fputs(dlerror(), stderr);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s or %s\n",
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
-            break;
-        }
-
-        //search for sgx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library
-        //
-        p_sgx_ql_get_quote_verification_collateral = (sgx_get_quote_verification_collateral_func_t)dlsym(handle, QL_API_GET_QUOTE_VERIFICATION_COLLATERAL);
-        get_quote_verification_collateral_symbol_err = dlerror();
-        if (p_sgx_ql_get_quote_verification_collateral == NULL || get_quote_verification_collateral_symbol_err != NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote's dependent library. %s.\n", QL_API_GET_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-#else //_MSC_VER
-
-        //try to dynamically load dcap_quoteprov.dll
-        //
-        handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
-        if (handle == NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-
-        //search for sgx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library
-        //
-        p_sgx_ql_get_quote_verification_collateral = (sgx_get_quote_verification_collateral_func_t)GetProcAddress(handle, QL_API_GET_QUOTE_VERIFICATION_COLLATERAL);
-        if (p_sgx_ql_get_quote_verification_collateral == NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote's dependent library. %s.\n", QL_API_GET_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-#endif //_MSC_VER
-
-        //call p_sgx_ql_get_quote_verification_collateral to retrieve verification collateral
-        //
-        ret = p_sgx_ql_get_quote_verification_collateral(
-            fmspc,
-            fmspc_size,
-            pck_ca,
-            pp_quote_collateral);
-        if (ret != SGX_QL_SUCCESS) {
-            break;
-        }
-        if (*pp_quote_collateral == NULL) {
-            ret = SGX_QL_NO_QUOTE_COLLATERAL_DATA;
-            break;
-        }
-
-        ret = SGX_QL_SUCCESS;
-    } while (0);
-
-    if (handle != NULL) {
-#ifndef _MSC_VER
-        dlclose(handle);
-#else //_MSC_VER
-        FreeLibrary(handle);
-#endif //_MSC_VER
+    if (!sgx_dcap_load_qpl() || !p_sgx_ql_get_quote_verification_collateral) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
 
-    return ret;
+    //call p_sgx_ql_get_quote_verification_collateral to retrieve verification collateral
+    //
+    return p_sgx_ql_get_quote_verification_collateral(
+        fmspc,
+        fmspc_size,
+        pck_ca,
+        pp_quote_collateral);
+
 }
 
 /**
@@ -190,94 +96,127 @@ quote3_error_t sgx_dcap_retrieve_verification_collateral(
  *
  * @return Status code of the operation, one of:
  *      - SGX_QL_SUCCESS
- *      - SGX_QL_ERROR_UNEXPECTED
+ *      - SGX_QL_NO_QUOTE_COLLATERAL_DATA
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_PLATFORM_LIB_UNAVAILABLE
  **/
-quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *p_quote_collateral) {
-
-    quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
-    sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
-
-#ifndef _MSC_VER
-    void *handle = NULL;
-    char *free_quote_verification_collateral_symbol_err = NULL;
-#else
-    HINSTANCE handle;
-#endif
-
-
+quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *p_quote_collateral)
+{
     if (p_quote_collateral == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!sgx_dcap_load_qpl() || !p_sgx_ql_free_quote_verification_collateral) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_sgx_ql_free_quote_verification_collateral to free allocated memory
+    //
+    return p_sgx_ql_free_quote_verification_collateral(p_quote_collateral);
+}
+
+
+
+
+/**
+ * Dynamically load sgx_ql_get_qve_identity & sgx_ql_get_root_ca_crl symbol and call it.
+ *
+ * @param pp_qveid[OUT] - Pointer to pointer of the QvE Identity
+ * @param p_qveid_size[OUT] - Pointer to the QvE Identity size
+ * @param pp_qveid_issue_chain[OUT] - Pointer to pointer of the QvE Identity issue chain
+ * @param p_qveid_issue_chain_size[OUT] - Pointer to the QvE Identity issue chain size
+ * @param pp_root_ca_crl[OUT] - Pointer to pointer of the Intel ROOT CA CRL
+ * @param p_root_ca_crl_size[OUT] - Pointer to the Intel ROOT CA CRL size
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_NO_QUOTE_COLLATERAL_DATA
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_PLATFORM_LIB_UNAVAILABLE
+ **/
+
+quote3_error_t sgx_dcap_retrieve_qve_identity(
+         uint8_t **pp_qveid,
+         uint32_t *p_qveid_size,
+         uint8_t **pp_qveid_issue_chain,
+         uint32_t *p_qveid_issue_chain_size,
+         uint8_t **pp_root_ca_crl,
+         uint16_t *p_root_ca_crl_size)
+{
+    quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
+
+    if (pp_qveid == NULL || p_qveid_size == NULL ||
+            pp_qveid_issue_chain == NULL || p_qveid_issue_chain_size == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!sgx_dcap_load_qpl() || !p_sgx_ql_get_qve_identity) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call sgx_ql_get_qve_identity to retrieve QvE Identity and Signing Chain
+    //
+    ret = p_sgx_ql_get_qve_identity(
+        (char **)pp_qveid,
+        p_qveid_size,
+        (char **)pp_qveid_issue_chain,
+        p_qveid_issue_chain_size);
+
+    if (ret != SGX_QL_SUCCESS)
         return ret;
-    }
 
-    do {
-#ifndef _MSC_VER
-        //try to dynamically load libdcap_quoteprov.so
-        //
-        handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-        if (NULL == handle)
-        {
-            ///TODO:
-            // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
-            // We shalll remove this when we have a major version change later and drop the backward compatible
-            // support for old lib name.
-            handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
-        }
-        if (handle == NULL) {
-            fputs(dlerror(), stderr);
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s or %s\n",
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
-                SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-
-        //search for sgx_ql_free_quote_verification_collateral symbol in dcap_quoteprov library
-        //
-        p_sgx_ql_free_quote_verification_collateral = (sgx_free_quote_verification_collateral_func_t)dlsym(handle, QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL);
-        free_quote_verification_collateral_symbol_err = dlerror();
-        if (p_sgx_ql_free_quote_verification_collateral == NULL || free_quote_verification_collateral_symbol_err != NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote's dependent library. %s.\n", QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-#else // _MSC_VER
-        //try to dynamically load dcap_quoteprov.dll
-        //
-        handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
-        if (handle == NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-
-        //search for sgx_ql_free_quote_verification_collateral symbol in dcap_quoteprov library
-        //
-        p_sgx_ql_free_quote_verification_collateral = (sgx_free_quote_verification_collateral_func_t)GetProcAddress(handle, QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL);
-        if (p_sgx_ql_free_quote_verification_collateral == NULL) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote's dependent library. %s.\n", QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-            ret = SGX_QL_PLATFORM_LIB_UNAVAILABLE;
-            break;
-        }
-#endif // _MSC_VER
-
-        //call p_sgx_ql_free_quote_verification_collateral to free allocated memory
-        //
-        ret = p_sgx_ql_free_quote_verification_collateral(p_quote_collateral);
-        if (ret != SGX_QL_SUCCESS) {
-            break;
-        }
-
-        ret = SGX_QL_SUCCESS;
-    } while (0);
-
-    if (handle != NULL) {
-#ifndef _MSC_VER
-        dlclose(handle);
-#else //_MSC_VER
-        FreeLibrary(handle);
-#endif //_MSC_VER
-    }
+    //call sgx_ql_get_root_ca_crl to retrieve Intel ROOT CA CRL
+    //
+    ret = p_sgx_ql_get_root_ca_crl(
+        pp_root_ca_crl,
+        p_root_ca_crl_size);
 
     return ret;
 }
 
+
+/**
+ * Dynamically load sgx_ql_free_qve_identity & sgx_ql_free_root_ca_crl symbol and call it.
+ *
+ * @param pp_qveid[OUT] - Pointer to pointer of the QvE Identity
+ * @param p_qveid_size[OUT] - Pointer to the QvE Identity size
+ * @param pp_qveid_issue_chain[OUT] - Pointer to pointer of the QvE Identity issue chain
+ * @param p_qveid_issue_chain_size[OUT] - Pointer to the QvE Identity issue chain size
+ * @param pp_root_ca_crl[OUT] - Pointer to pointer of the Intel ROOT CA CRL
+ * @param p_root_ca_crl_size[OUT] - Pointer to the Intel ROOT CA CRL size
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_NO_QUOTE_COLLATERAL_DATA
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_PLATFORM_LIB_UNAVAILABLE
+ **/
+
+quote3_error_t sgx_dcap_free_qve_identity(
+         uint8_t *p_qveid,
+         uint8_t *p_qveid_issue_chain,
+         uint8_t *p_root_ca_crl)
+{
+    quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
+
+    if (p_qveid == NULL || p_qveid_issue_chain == NULL || p_root_ca_crl == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!sgx_dcap_load_qpl() || !p_sgx_ql_free_qve_identity || !p_sgx_ql_free_root_ca_crl) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_sgx_ql_free_qve_identity to free allocated memory
+    //ignore error
+    //
+    ret =  p_sgx_ql_free_qve_identity((char *)p_qveid, (char *)p_qveid_issue_chain);
+
+
+    //call p_sgx_ql_free_root_ca_crl to free allocated memory
+    //ignore error
+    //
+    ret =  p_sgx_ql_free_root_ca_crl(p_root_ca_crl);
+
+    return ret;
+}

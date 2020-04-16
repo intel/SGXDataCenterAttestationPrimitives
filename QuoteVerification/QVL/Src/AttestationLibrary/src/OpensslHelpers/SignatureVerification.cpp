@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,12 @@ namespace intel { namespace sgx { namespace qvl { namespace crypto {
 
 bool verifySignature(const pckparser::CrlStore& crl, const std::vector<uint8_t>& pubKey)
 {
-    const auto evp = crypto::toEvp(*crypto::rawToP256PubKey(pubKey));
+    auto publicKey = crypto::rawToP256PubKey(pubKey);
+    if (publicKey == nullptr)
+    {
+        return false;
+    }
+    const auto evp = crypto::toEvp(*publicKey);
     if(!evp)
     {
         return false;
@@ -119,10 +124,10 @@ bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_
 bool verifySha256EcdsaSignature(const dcap::parser::x509::Signature &signature, const std::vector<uint8_t> &message, const std::vector<uint8_t> &publicKey)
 {
     auto pubKey = rawToP256PubKey(publicKey);
-    if (pubKey == nullptr) {
+    if (pubKey == nullptr)
+    {
         return false;
     }
-
     return verifySha256Signature(signature.getRawDer(), message, *pubKey);
 }
 

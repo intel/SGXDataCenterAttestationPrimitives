@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -35,7 +35,6 @@ set -e
 
 SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../../../"
-BUILD_DIR="${ROOT_DIR}/build/linux"
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer/linux"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 
@@ -44,24 +43,15 @@ INSTALL_PATH=${SCRIPT_DIR}/output
 # Cleanup
 rm -fr ${INSTALL_PATH}
 
-# Get the architecture of the build from generated binary
-get_arch()
-{
-    local a=$(readelf -h $(find ${BUILD_DIR} -name "*.so*" |head -n 1) | sed -n '2p' | awk '/:/{print $6}')
-    test $a = 02 && echo 'x64' || echo 'x86'
-}
-
-ARCH=$(get_arch)
-
 # Get the configuration for this package
-source ${SCRIPT_DIR}/installConfig.${ARCH}
+source ${SCRIPT_DIR}/installConfig
 
 # Fetch the gen_source script
 cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 
 # Copy the files according to the BOM
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-default-qpl_base.txt
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sgx-dcap-default-qpl_${ARCH}.txt --cleanup=false
+python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-default-qpl.txt --installdir=pkgroot/libsgx-dcap-default-qpl
+python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-default-qpl-package.txt  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
@@ -70,3 +60,4 @@ pushd ${INSTALL_PATH} &> /dev/null
 sed -i "s/USR_LIB_VER=.*/USR_LIB_VER=${SGX_VERSION}/" Makefile
 tar -zcvf ${TARBALL_NAME} *
 popd &> /dev/null
+

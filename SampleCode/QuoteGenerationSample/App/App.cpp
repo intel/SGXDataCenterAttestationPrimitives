@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,9 @@
  * Description: Sample application to
  * demonstrate the usage of quote generation.
  */
-
+#if defined(_MSC_VER)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #if defined(_MSC_VER)
@@ -52,12 +54,12 @@
 
 #include "Enclave_u.h"
 
+#define SGX_AESM_ADDR "SGX_AESM_ADDR"
 #if defined(_MSC_VER)
 #define ENCLAVE_PATH _T("enclave.signed.dll")
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
 #endif
-
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -104,24 +106,68 @@ int main(int argc, char* argv[])
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
     uint8_t* p_quote_buffer = NULL;
-    sgx_target_info_t qe_target_info; 
+    sgx_target_info_t qe_target_info;
     sgx_report_t app_report;
     sgx_quote3_t *p_quote;
     sgx_ql_auth_data_t *p_auth_data;
     sgx_ql_ecdsa_sig_data_t *p_sig_data;
     sgx_ql_certification_data_t *p_cert_data;
     FILE *fptr = NULL;
+    bool is_out_of_proc = false;
+    char *out_of_proc = getenv(SGX_AESM_ADDR);
+    if(out_of_proc)
+        is_out_of_proc = true;
 
-    printf("This step is optional: the default enclave load policy is persistent: \n");
-    printf("set the enclave load policy as persistent:");
-    qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
+
+#if !defined(_MSC_VER)
+    // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process. 
+    // the other is out-of-proc mode, the QE3 and PCE are managed by a daemon. If you want to use in-proc
+    // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the 
+    // out-of-proc mode, you need to install libsgx-quote-ex as well. This sample is built to demo both 2
+    // modes, so you need to install libsgx-quote-ex to enable the out-of-proc mode.
+    if(!is_out_of_proc)
+    {
+        // Following functions are valid in Linux in-proc mode only.
+        printf("sgx_qe_set_enclave_load_policy is valid in in-proc mode only and it is optional: the default enclave load policy is persistent: \n");
+        printf("set the enclave load policy as persistent:");
+        qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
         if(SGX_QL_SUCCESS != qe3_ret) {
-                printf("Error in set enclave load policy: 0x%04x\n", qe3_ret);
-        ret = -1;
-        goto CLEANUP;
+            printf("Error in set enclave load policy: 0x%04x\n", qe3_ret);
+            ret = -1;
+            goto CLEANUP;
+        }
+        printf("succeed!\n");
+        #if defined(UBUNTU)
+        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so");
+        #else // This is for RHEL
+        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so");
+        #endif
+        if(SGX_QL_SUCCESS != qe3_ret) {
+            printf("Error in set PCE directory: 0x%04x.\n", qe3_ret);
+            ret = -1;
+            goto CLEANUP;
+        }
+        #if defined(UBUNTU)
+        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so");
+        #else // This for RHEL
+        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so");
+        #endif
+        if(SGX_QL_SUCCESS != qe3_ret) {
+            printf("Error in set QE3 directory: 0x%04x.\n", qe3_ret);
+            ret = -1;
+            goto CLEANUP;
+        }
+        #if defined(UBUNTU)
+        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1");
+        #else // This for RHEL
+        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
+        #endif
+        if(SGX_QL_SUCCESS != qe3_ret) {
+            printf("Info: /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1 not found.\n");
+        }
     }
-    printf("succeed!");
-        
+#endif
+
     printf("\nStep1: Call sgx_qe_get_target_info:");
     qe3_ret = sgx_qe_get_target_info(&qe_target_info);
     if (SGX_QL_SUCCESS != qe3_ret) {
@@ -166,7 +212,7 @@ int main(int argc, char* argv[])
         goto CLEANUP;
     }
     printf("succeed!");
-    
+
     p_quote = (_sgx_quote3_t*)p_quote_buffer;
     p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
     p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
@@ -184,15 +230,20 @@ int main(int argc, char* argv[])
         fwrite(p_quote, quote_size, 1, fptr);
         fclose(fptr);
     }
-    
-    printf("\n Clean up the enclave load policy:");
-    qe3_ret = sgx_qe_cleanup_by_policy();
-    if(SGX_QL_SUCCESS != qe3_ret) {
-        printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
-        ret = -1;
-        goto CLEANUP;
+
+    if( !is_out_of_proc )
+    {
+        printf("sgx_qe_cleanup_by_policy is valid in in-proc mode only.\n");
+        printf("\n Clean up the enclave load policy:");
+        qe3_ret = sgx_qe_cleanup_by_policy();
+        if(SGX_QL_SUCCESS != qe3_ret) {
+            printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
+            ret = -1;
+            goto CLEANUP;
+        }
+        printf("succeed!\n");
     }
-    printf("succeed!\n");
+
 CLEANUP:
     if (NULL != p_quote_buffer) {
         free(p_quote_buffer);

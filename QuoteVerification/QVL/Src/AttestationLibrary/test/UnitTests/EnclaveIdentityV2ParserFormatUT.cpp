@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,7 +74,7 @@ TEST_F(EnclaveIdentityV2ParserFormatUT, positiveQE)
         EXPECT_EQ(jsonObject->getTcbStatus(6), TcbStatus::ConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(5), TcbStatus::OutOfDateConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(4), TcbStatus::Revoked);
-        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::OutOfDate);
+        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::Revoked);
     }
     catch(const ParserException &ex)
     {
@@ -150,7 +150,7 @@ TEST_F(EnclaveIdentityV2ParserFormatUT, positiveQVE)
         EXPECT_EQ(jsonObject->getTcbStatus(6), TcbStatus::ConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(5), TcbStatus::OutOfDateConfigurationNeeded);
         EXPECT_EQ(jsonObject->getTcbStatus(4), TcbStatus::Revoked);
-        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::OutOfDate);
+        EXPECT_EQ(jsonObject->getTcbStatus(3), TcbStatus::Revoked);
     }
     catch(const ParserException &ex)
     {

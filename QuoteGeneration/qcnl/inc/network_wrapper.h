@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,16 @@
 #include "sgx_ql_lib_common.h"
 
 sgx_qcnl_error_t qcnl_https_get(const char* url,
+    char **resp_msg,
+    uint32_t& resp_size,
+    char **resp_header,
+    uint32_t& header_size);
+
+sgx_qcnl_error_t qcnl_https_post(const char* url,
+    const char *req_body, 
+    uint32_t req_body_size, 
+    const uint8_t *user_token,
+    uint16_t user_token_size,
     char **resp_msg,
     uint32_t& resp_size,
     char **resp_header,

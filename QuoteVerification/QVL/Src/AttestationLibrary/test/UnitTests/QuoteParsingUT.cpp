@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,6 +156,12 @@ TEST(quoteParsing, shouldParseQuoteHeader)
     qvl::test::QuoteGenerator::QuoteHeader testHeader;
     testHeader.version = 3;
     testHeader.attestationKeyType = 0xffaa;
+    testHeader.pceSvn = 0;
+    testHeader.qeSvn = 0;
+    testHeader.uuid = {};
+    testHeader.reserved = {};
+    testHeader.userData = {};
+
     qvl::test::QuoteGenerator generator;
 
     generator.withHeader(testHeader);

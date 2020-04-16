@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,6 +82,7 @@ bool Tcb::operator ==(const Tcb& other) const
 
 Tcb::Tcb(const ASN1_TYPE *tcbSeq)
 {
+    _pceSvn = 0;
     crypto::validateOid(oids::TCB, tcbSeq, V_ASN1_SEQUENCE);
 
     const auto stack = crypto::oidToStack(tcbSeq);

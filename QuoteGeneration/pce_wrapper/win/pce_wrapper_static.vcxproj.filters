@@ -26,16 +26,10 @@
     <ClCompile Include="pce_u.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\src\se_map.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\common\src\se_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\common\src\se_trace.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\parser\section.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\pce_wrapper.cpp">

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 namespace intel { namespace sgx { namespace qvl {
 
     EnclaveIdentityV2::EnclaveIdentityV2(const ::rapidjson::Value &p_body)
+        : tcbEvaluationDataNumber(0), id(QE)
     {
         if(!p_body.IsObject())
         {
@@ -45,6 +46,7 @@ namespace intel { namespace sgx { namespace qvl {
             return;
         }
 
+        /// 4.1.2.9.3
         if(!parseVersion(p_body)
            || !parseIssueDate(p_body) || !parseNextUpdate(p_body)
            || !parseMiscselect(p_body) || !parseMiscselectMask(p_body)
@@ -109,7 +111,7 @@ namespace intel { namespace sgx { namespace qvl {
         {
             struct tm tcbDate{};
             std::string tcbStatus;
-            unsigned int isvsvn;
+            unsigned int isvsvn = 0;
 
             std::tie(tcbDate, l_status) = jsonParser.getDateFieldOf(*itr, "tcbDate");
             if (!l_status)

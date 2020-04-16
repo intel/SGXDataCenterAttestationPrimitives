@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -87,7 +87,7 @@ struct VerifyQuoteIT : public Test
     string issueDate = "2018-08-22T10:09:10Z";
     string nextUpdate = "2118-08-23T10:09:10Z";
     string fmspcStr = "04F34445AA00";
-    string pceIdStr = "0000";
+    string pceIdStr = "04F3";
     string status = "UpToDate";
     string miscselect = "";
     string miscselectMask = "";
@@ -443,4 +443,3 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWithNoQeI
     // THEN
     EXPECT_EQ(STATUS_OK, result);
 }
-

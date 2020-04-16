@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <Version/Version.h>
+#include <Utils/SafeMemcpy.h>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -53,7 +54,7 @@ TEST(sgxAttestationGetVersion, checkIfVersionCanBeCopiedWithCAndCPPManner)
     memset(dest.get(), '\0', len + 1);
 
     // WHEN C-like copy
-    memcpy(dest.get(), sgxAttestationGetVersion(), len);
+    safeMemcpy(dest.get(), sgxAttestationGetVersion(), len);
 
     // WHEN CPP-like copy
     const std::string sgxVersion(sgxAttestationGetVersion());

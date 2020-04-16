@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -53,8 +53,17 @@ ifndef QVL_DIR
 	QVL_DIR		:= $(PROJ_ROOT_DIR)/../../QuoteVerification/QVL/Src
 endif
 
+# QG root directory
+# include the se_version.h file from there
+ifndef QG_DIR
+	QG_DIR     := $(PROJ_ROOT_DIR)/../../QuoteGeneration
+endif
+
 # openssl include dir
-OPENSSL_INC 		:= /usr/include/openssl
+OPENSSL_INC 		:= $(PROJ_ROOT_DIR)/../../prebuilt/openssl/inc
+
+# openssl lib dir
+OPENSSL_LIB 		:= $(PROJ_ROOT_DIR)/../../prebuilt/openssl/lib/linux64
 
 # JSON parser include dir
 JSON_INC		:= $(QVL_DIR)/ThirdParty/rapidjson/include
@@ -70,6 +79,7 @@ JSON_DIR		:= $(PARSERS_DIR)/Json
 X509_DIR 		:= $(PARSERS_DIR)/X509
 HELPERS_DIR 		:= $(PARSERS_DIR)/OpensslHelpers
 UTILS_DIR 		:= $(PARSERS_DIR)/Utils
+VER_DIR       := $(QG_DIR)/common/inc/internal
 
 # source files from QVL Attestation Parsers dirs 
 PARSER_CPP_FILES	:= ParserUtils.cpp
@@ -79,7 +89,7 @@ JSON_CPP_FILES		:= JsonParser.cpp TcbInfo.cpp TcbLevel.cpp
 UTILS_CPP_FILES		:= GMTime.cpp TimeUtils.cpp
 
 # source files from local dir
-LOCAL_CPP_FILES		:= pck_sorter.cpp pck_cert_selection.cpp
+LOCAL_CPP_FILES		:= pck_sorter.cpp pck_cert_selection.cpp config_selector.cpp tcb_manager.cpp
 
 # create source files list, add dir prefix to QVL files
 LIB_CPP_FILES		:= \
@@ -100,7 +110,7 @@ LIB_CPP_OBJECTS 	:= \
 	$(UTILS_CPP_FILES:.cpp=.o)
 
 # include paths, local, parser and openssl
-LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include -I$(OPENSSL_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_DIR)
+LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include -I$(OPENSSL_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_DIR) -I$(VER_DIR)
 
 # the library shared object name
 LIB_NAME		:= libPCKCertSelection.so
@@ -119,7 +129,7 @@ RELEASE_FLAGS := -m64 -O2
 C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror $(LIB_INCLUDE_PATHS) 
 
 # link flags, link openssl crypto
-LINK_FLAGS := -shared -lcrypto
+LINK_FLAGS := -shared -L$(OPENSSL_LIB) -lcrypto -lpthread -ldl
 
 # debug/release switch
 # release build is built with debug flags and stripped

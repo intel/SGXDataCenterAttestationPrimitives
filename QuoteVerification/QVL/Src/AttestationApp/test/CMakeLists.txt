@@ -23,7 +23,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.10)
 if (POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
 endif()
@@ -33,7 +33,6 @@ enable_testing()
 
 hunter_add_package(GTest)
 find_package(GTest CONFIG REQUIRED)
-find_package(GMock CONFIG REQUIRED)
 
 file(GLOB SOURCE_FILES *.cpp)
 
@@ -45,8 +44,8 @@ include_directories(
 
 target_link_libraries(${SUBPROJECT_NAME}
     AppCore
-    GTest::main
-    GMock::main
+    GTest::gtest_main
+    GTest::gmock_main
 )
 
 install(TARGETS ${SUBPROJECT_NAME} DESTINATION bin)

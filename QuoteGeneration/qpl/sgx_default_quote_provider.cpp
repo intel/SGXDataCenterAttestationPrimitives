@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "se_memcpy.h"
 #include "sgx_default_quote_provider.h"
 #include "sgx_default_qcnl_wrapper.h"
@@ -70,9 +71,13 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret)
         case SGX_QCNL_NETWORK_INIT_ERROR:
             return SGX_QL_NETWORK_ERROR;
         case SGX_QCNL_MSG_ERROR:
-            return SGX_QL_MESSAGE_ERROR;
-        case SGX_QCNL_ERROR_STATUS_NOT_FOUND:
+            return SGX_QL_ERROR_MESSAGE_PARSING_ERROR;
+        case SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA:
             return SGX_QL_NO_QUOTE_COLLATERAL_DATA;
+        case SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN:
+            return SGX_QL_PLATFORM_UNKNOWN;
+        case SGX_QCNL_ERROR_STATUS_UNEXPECTED:
+            return SGX_QL_UNKNOWN_MESSAGE_RESPONSE;
         default:
             return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -82,7 +87,7 @@ quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_cert_id, sg
 {
     sgx_qcnl_error_t ret = sgx_qcnl_get_pck_cert_chain(p_cert_id, pp_quote_config);
 
-    if (ret == SGX_QCNL_ERROR_STATUS_NOT_FOUND)
+    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA)
         return SGX_QL_NO_PLATFORM_CERT_DATA;
     else
         return qcnl_error_to_ql_error(ret);
@@ -167,7 +172,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         (*pp_quote_collateral)->version = 1;
 
         // Set PCK CRL and certchain
-        qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strlen(pck_ca), &p_pck_crl_chain, &pck_crl_chain_size);
+        qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strnlen(pck_ca, USHRT_MAX), &p_pck_crl_chain, &pck_crl_chain_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
@@ -285,7 +290,7 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
 {
     sgx_qcnl_error_t ret = sgx_qcnl_get_qve_identity(pp_qve_identity, p_qve_identity_size, pp_qve_identity_issuer_chain, p_qve_identity_issuer_chain_size);
 
-    if (ret == SGX_QCNL_ERROR_STATUS_NOT_FOUND)
+    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA)
         return SGX_QL_NO_QVE_IDENTITY_DATA;
     else
         return qcnl_error_to_ql_error(ret);
@@ -294,6 +299,20 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
 quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain)
 {
     sgx_qcnl_free_qve_identity(p_qve_identity, p_qve_identity_issuer_chain);
+
+    return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_ql_get_root_ca_crl (uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_cal_size)
+{
+    sgx_qcnl_error_t ret = sgx_qcnl_get_root_ca_crl(pp_root_ca_crl, p_root_ca_cal_size);
+
+    return qcnl_error_to_ql_error(ret);
+}
+
+quote3_error_t sgx_ql_free_root_ca_crl (uint8_t *p_root_ca_crl)
+{
+    sgx_qcnl_free_root_ca_crl(p_root_ca_crl);
 
     return SGX_QL_SUCCESS;
 }

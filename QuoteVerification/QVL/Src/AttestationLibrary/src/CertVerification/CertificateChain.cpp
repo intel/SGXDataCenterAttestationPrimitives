@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,11 +57,11 @@ Status CertificateChain::parse(const std::string& pemCertChain)
         }
         // any cert in chain has wrong format
         // then whole chain should be considered invalid
-        catch (const dcap::parser::FormatException &ex)
+        catch (const dcap::parser::FormatException&)
         {
             return STATUS_UNSUPPORTED_CERT_FORMAT;
         }
-        catch (const dcap::parser::InvalidExtensionException &ex)
+        catch (const dcap::parser::InvalidExtensionException&)
         {
             // Since cert order in the chain is not deterministic
             // we do not know which cert we failed to parse (subject is also an extension)
@@ -103,11 +103,11 @@ Status CertificateChain::parse(const std::string& pemCertChain)
             {
                 pckCert = std::make_shared<dcap::parser::x509::PckCertificate>(dcap::parser::x509::PckCertificate(*cert));
             }
-            catch (const dcap::parser::FormatException &ex)
+            catch (const dcap::parser::FormatException&)
             {
                 return STATUS_UNSUPPORTED_CERT_FORMAT;
             }
-            catch (const dcap::parser::InvalidExtensionException &ex)
+            catch (const dcap::parser::InvalidExtensionException&)
             {
                 return STATUS_SGX_PCK_INVALID_EXTENSIONS;
             }

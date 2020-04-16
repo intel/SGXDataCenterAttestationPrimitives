@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,13 +53,14 @@ struct AppOptionsParserTests: public Test
     const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
     const std::string qeIdentityDefaultPath = "qeIdentity.json";
 
-    const std::string helpOutput = "Usage: [-h] [--trustedRootCaCert=<string>] [--pckSignChain=<string>] [--pckCert=<string>] [--tcbSignChain=<string>] [--tcbInfo=<string>] [--qeIdentity=<string>] [--rootCaCrl=<string>] [--intermediateCaCrl=<string>] [--quote=<string>] [--expirationDate=<string>]\n\n"
+    const std::string helpOutput = "Usage: [-h] [--trustedRootCaCert=<string>] [--pckSignChain=<string>] [--pckCert=<string>] [--tcbSignChain=<string>] [--tcbInfo=<string>] [--qeIdentity=<string>] [--qveIdentity=<string>] [--rootCaCrl=<string>] [--intermediateCaCrl=<string>] [--quote=<string>] [--expirationDate=<string>]\n\n"
             "--trustedRootCaCert=<string>             Trusted root CA Certificate file path, PEM format [=trustedRootCaCert.pem]\n"
             "--pckSignChain=<string>                  PCK Signing Certificate chain file path, PEM format [=pckSignChain.pem]\n"
             "--pckCert=<string>                       PCK Certificate file path, PEM format [=pckCert.pem]\n"
             "--tcbSignChain=<string>                  TCB Signing Certificate chain file path, PEM format [=tcbSignChain.pem]\n"
             "--tcbInfo=<string>                       TCB Info file path, JSON format [=tcbInfo.json]\n"
             "--qeIdentity=<string>                    QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]\n"
+            "--qveIdentity=<string>                   QveIdentity file path, JSON format. QveIdentity verification is optional, will not run by default [=]\n"
             "--rootCaCrl=<string>                     Root Ca CRL file path, PEM format [=rootCaCrl.pem]\n"
             "--intermediateCaCrl=<string>             Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]\n"
             "--quote=<string>                         Quote file path, binary format [=quote.dat]\n"

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,21 +29,35 @@
 #
 #
 
-include scripts/installConfig
+include installConfig
 
-SOURCE_FOLDER=package
+PACKAGE_ROOT_FOLDER=pkgroot
+PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
-NGA_LIB_PATH=$(SOURCE_FOLDER)/$(LIB_DIR)
-USR_LIB_PATH=$(addsuffix /$(shell dpkg-architecture -qDEB_HOST_MULTIARCH), $(addprefix $(DESTDIR)/usr/, $(notdir $(shell gcc -print-multi-os-directory))))
+USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
+USR_INC_PATH=/usr/$(INC_DIR)
+
 USR_LIB_VER=1.0.0
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 default:
 
-install:
-	install -d $(USR_LIB_PATH)
-	install $(NGA_LIB_PATH)/* $(USR_LIB_PATH)
-	cd $(USR_LIB_PATH) && \
+install: $(PACKAGES)
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libsgx_dcap_ql.so libsgx_dcap_ql.so.$(USR_LIB_VER) && \
-	ln -s libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}') && \
-	mv libdcap_quoteverify.so libdcap_quoteverify.so.$(USR_LIB_VER) && \
-	ln -s libdcap_quoteverify.so.$(USR_LIB_VER) libdcap_quoteverify.so.$(shell echo $(USR_LIB_VER) |awk -F. '{print $$1}')
+	ln -fs libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
+	mv libsgx_dcap_quoteverify.so libsgx_dcap_quoteverify.so.$(USR_LIB_VER) && \
+	ln -fs libsgx_dcap_quoteverify.so.$(USR_LIB_VER) libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
+	ln -fs libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_ql.so && \
+	ln -fs libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_quoteverify.so
+
+$(PACKAGES):
+	install -d $(shell readlink -m $(DESTDIR)/$@)
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$@/$(USR_LIB_PATH))
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/.*), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_INC_PATH)) && \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/* $(DESTDIR)/$@/$(USR_INC_PATH))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
  *
  */
 /**
- * File: ref_pce_wrapper.cpp 
- *  
- * Description: Wrapper functions for the 
+ * File: pce_wrapper.cpp
+ *
+ * Description: Wrapper functions for the
  * reference implementing the PCE
  * function defined in sgx_pce.h. This
  * would be replaced or used to wrap the
@@ -50,16 +50,8 @@
 
 #include "pce_u.h"
 
-#if defined(_MSC_VER)
-#include <tchar.h>
-bool get_pce_path(TCHAR *p_file_path, size_t buf_size);
-bool pce_get_metadata(const TCHAR* enclave_file, metadata_t *metadata);
-#else
-#include <limits.h>
-#define MAX_PATH PATH_MAX
-bool get_pce_path(char *p_file_path, size_t buf_size);
-bool pce_get_metadata(const char* enclave_file, metadata_t *metadata);
-
+#ifndef MAX_PATH
+#define MAX_PATH 260
 #endif
 
 struct PCE_status {
@@ -67,6 +59,7 @@ struct PCE_status {
     sgx_ql_request_policy_t m_pce_enclave_load_policy;
     sgx_enclave_id_t m_pce_eid;
     sgx_misc_attribute_t m_pce_attributes;
+    char pce_path[MAX_PATH];
 
     PCE_status() :
         m_pce_enclave_load_policy(SGX_QL_DEFAULT),
@@ -74,6 +67,7 @@ struct PCE_status {
     {
         se_mutex_init(&m_pce_mutex);
         memset(&m_pce_attributes, 0, sizeof(m_pce_attributes));
+        memset(pce_path, 0, sizeof(pce_path));
     }
     ~PCE_status() {
         if (m_pce_eid != 0) sgx_destroy_enclave(m_pce_eid);
@@ -82,6 +76,64 @@ struct PCE_status {
 };
 
 static PCE_status g_pce_status;
+
+#if defined(_MSC_VER)
+#include <tchar.h>
+#define PATH_SEPARATOR '\\'
+bool get_pce_path(TCHAR *p_file_path, size_t buf_size);
+extern "C" sgx_status_t sgx_get_metadata(const TCHAR* enclave_file, metadata_t *metadata);
+#define PCE_ENCLAVE_NAME _T("pce.signed.dll")
+#else
+#include <limits.h>
+#include <fcntl.h>
+#include <dlfcn.h>
+#define PATH_SEPARATOR '/'
+extern "C" sgx_status_t sgx_get_metadata(const char* enclave_file, metadata_t *metadata);
+#define PCE_ENCLAVE_NAME "libsgx_pce.signed.so"
+bool get_pce_path(
+    char *p_file_path,
+    size_t buf_size)
+{
+    if(NULL == p_file_path || 0 == buf_size)
+    {
+        return false;
+    }
+
+    Dl_info dl_info;
+    if(g_pce_status.pce_path[0])
+    {
+        strncpy(p_file_path, g_pce_status.pce_path, buf_size -1);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
+        return true;
+    }
+    else if(0 != dladdr(__builtin_return_address(0), &dl_info) &&
+        NULL != dl_info.dli_fname)
+    {
+        if(strnlen(dl_info.dli_fname,buf_size)>=buf_size)
+            return false;
+        (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
+    }
+    else //not a dynamic executable
+    {
+        ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
+        if (i == -1)
+            return false;
+        p_file_path[i] = '\0';
+    }
+
+    char* p_last_slash = strrchr(p_file_path, '/' );
+    if ( p_last_slash != NULL )
+    {
+        p_last_slash++;   //increment beyond the last slash
+        *p_last_slash = '\0';  //null terminate the string
+    }
+    else p_file_path[0] = '\0';
+    if(strnlen(p_file_path,buf_size)+strnlen(PCE_ENCLAVE_NAME,buf_size)+sizeof(char)>buf_size)
+        return false;
+    (void)strncat(p_file_path,PCE_ENCLAVE_NAME, strnlen(PCE_ENCLAVE_NAME,buf_size));
+    return true;
+}
+#endif
 
 static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
     sgx_misc_attribute_t *p_pce_attributes,
@@ -92,7 +144,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
     int launch_token_updated = 0;
 #if defined(_MSC_VER)
     TCHAR pce_enclave_path[MAX_PATH] = _T("");
-#else 
+#else
     char pce_enclave_path[MAX_PATH] = "";
 #endif
     memset(p_launch_token, 0, sizeof(*p_launch_token));
@@ -199,7 +251,7 @@ sgx_pce_error_t sgx_pce_get_target(sgx_target_info_t *p_target,
     metadata_t metadata;
 #if defined(_MSC_VER)
     TCHAR pce_enclave_path[MAX_PATH] = _T("");
-#else 
+#else
     char pce_enclave_path[MAX_PATH] = "";
 #endif
     if ((NULL == p_target) ||
@@ -211,7 +263,7 @@ sgx_pce_error_t sgx_pce_get_target(sgx_target_info_t *p_target,
     if (!get_pce_path(pce_enclave_path, MAX_PATH))
         return SGX_PCE_INTERFACE_UNAVAILABLE;
 
-    if (!pce_get_metadata(pce_enclave_path, &metadata))
+    if (SGX_SUCCESS != sgx_get_metadata(pce_enclave_path, &metadata))
     {
         return SGX_PCE_INTERFACE_UNAVAILABLE;
     }
@@ -349,6 +401,80 @@ sgx_pce_error_t sgx_get_pce_info(const sgx_report_t *p_report,
     return pce_status;
 }
 
+sgx_pce_error_t sgx_get_pce_info_without_ppid(sgx_isv_svn_t* p_pce_isvsvn, uint16_t* p_pce_id)
+{
+    sgx_pce_error_t pce_status = SGX_PCE_SUCCESS;
+    sgx_enclave_id_t pce_eid = 0;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_misc_attribute_t pce_attributes;
+    sgx_launch_token_t launch_token = { 0 };
+    uint32_t ae_error;
+    uint32_t enclave_lost_retry_time = 1;
+    pce_info_t pce_info;
+
+    if ((NULL == p_pce_isvsvn) ||
+        (NULL == p_pce_id))
+    {
+        return(SGX_PCE_INVALID_PARAMETER);
+    }
+
+    do {
+        // Load the PCE enclave
+        pce_status = load_pce(&pce_eid,
+            &pce_attributes,
+            &launch_token);
+        if (SGX_PCE_SUCCESS != pce_status)
+        {
+            return pce_status;
+        }
+        int rc = se_mutex_lock(&g_pce_status.m_pce_mutex);
+        if (rc != 1)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex");
+            return SGX_PCE_INTERFACE_UNAVAILABLE;
+        }
+        // Call get_pc_info_without_ppid ecall
+        sgx_status = get_pc_info_without_ppid(pce_eid, &ae_error, &pce_info);
+        rc = se_mutex_unlock(&g_pce_status.m_pce_mutex);
+        if (rc != 1)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            return SGX_PCE_INTERFACE_UNAVAILABLE;
+        }
+        if (SGX_ERROR_ENCLAVE_LOST != sgx_status)
+            break;
+        unload_pce(true);
+    } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
+
+    if (SGX_SUCCESS != sgx_status)
+    {
+        SE_TRACE(SE_TRACE_ERROR, "call to get_pc_info_without_ppid() failed. sgx_status = %04x.\n", sgx_status);
+        // /todo:  May want to retry on SGX_PCE_ENCLAVE_LOST caused by power transition
+        if (SGX_ERROR_OUT_OF_EPC == sgx_status)
+            pce_status = SGX_PCE_OUT_OF_EPC;
+        else
+            pce_status = SGX_PCE_INTERFACE_UNAVAILABLE;
+    }
+    else {
+        switch (ae_error)
+        {
+        case AE_SUCCESS:
+            *p_pce_isvsvn = pce_info.pce_isvn;
+            *p_pce_id = pce_info.pce_id;
+            pce_status = SGX_PCE_SUCCESS;
+            break;
+        case AE_INVALID_PARAMETER:
+            pce_status = SGX_PCE_INVALID_PARAMETER;
+            break;
+        default:
+            pce_status = SGX_PCE_UNEXPECTED;
+        }
+    }
+    unload_pce();
+
+    return pce_status;
+}
+
 sgx_pce_error_t sgx_pce_sign_report(const sgx_isv_svn_t *p_isv_svn,
     const sgx_cpu_svn_t *p_cpu_svn,
     const sgx_report_t *p_report,
@@ -437,7 +563,7 @@ sgx_pce_error_t sgx_pce_sign_report(const sgx_isv_svn_t *p_isv_svn,
         case AE_OUT_OF_MEMORY_ERROR:
             pce_status = SGX_PCE_OUT_OF_EPC;
             break;
-        ///@todo:  When the PCE is fixed to return PCE_INVALID_TCB, change this case to PCE_INVALID_TCB and 
+        ///@todo:  When the PCE is fixed to return PCE_INVALID_TCB, change this case to PCE_INVALID_TCB and
         // allow AE_FAILURE to defalut to SGX_PCE_UNEXPECTED.
         case AE_FAILURE:
             pce_status = SGX_PCE_INVALID_TCB;
@@ -450,3 +576,22 @@ sgx_pce_error_t sgx_pce_sign_report(const sgx_isv_svn_t *p_isv_svn,
 
     return pce_status;
 }
+
+sgx_pce_error_t sgx_set_pce_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_pce_status.pce_path)
+    size_t len = strnlen(p_path, sizeof(g_pce_status.pce_path));
+    // Make sure there is enough space for the '\0',
+    // after this line len <= sizeof(g_pce_status.pce_path) - 1
+    if(len > sizeof(g_pce_status.pce_path) - 1)
+        return SGX_PCE_INVALID_PARAMETER;
+#ifndef _MSC_VER
+    strncpy(g_pce_status.pce_path, p_path, sizeof(g_pce_status.pce_path) - 1);
+#else
+    strncpy_s(g_pce_status.pce_path, sizeof(g_pce_status.pce_path), p_path, sizeof(g_pce_status.pce_path));
+#endif
+    g_pce_status.pce_path[len] = '\0';
+    return SGX_PCE_SUCCESS;
+}
+

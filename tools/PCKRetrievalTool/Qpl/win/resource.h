@@ -1,6 +1,7 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by qcnl_wrapper.rc
+// Used by qpl.rc
+//
 
 // Next default values for new objects
 // 

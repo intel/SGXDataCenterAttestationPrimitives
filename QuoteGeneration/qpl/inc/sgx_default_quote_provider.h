@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,8 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
                                        char **pp_qve_identity_issuer_chain, 
                                        uint32_t *p_qve_identity_issuer_chain_size);
 quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
+quote3_error_t sgx_ql_get_root_ca_crl (uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_cal_size);
+quote3_error_t sgx_ql_free_root_ca_crl (uint8_t *p_root_ca_crl);
 
 #if defined(__cplusplus)
 }

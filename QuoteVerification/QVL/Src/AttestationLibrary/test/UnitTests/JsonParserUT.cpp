@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ TEST_F(JsonParserTests, shouldParseObjectWithUint)
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": 234}})json"));
     const auto& data = *jsonParser.getField("data");
     bool status = false;
-	unsigned int value{};
+	unsigned int value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
     EXPECT_TRUE(status);
     EXPECT_EQ(expectedValue, value);
@@ -102,7 +102,7 @@ TEST_F(JsonParserTests, shouldParseObjectWithInt)
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": -43}})json"));
     const auto& data = *jsonParser.getField("data");
     bool status = false;
-    int value{};
+    int value = 0;
     std::tie(value, status) = jsonParser.getIntFieldOf(data, "v");
     EXPECT_TRUE(status);
     EXPECT_EQ(expectedValue, value);
@@ -166,7 +166,7 @@ TEST_F(JsonParserTests, shouldFailWhenParsingInvalidIntField)
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": "asd"}})json"));
     const auto& data = *jsonParser.getField("data");
     bool status = false;
-    int value{};
+    int value = 0;
     std::tie(value, status) = jsonParser.getIntFieldOf(data, "v");
     EXPECT_FALSE(status);
 }
@@ -176,7 +176,7 @@ TEST_F(JsonParserTests, shouldFailWhenParsingInvalidUintField)
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": -55555}})json"));
     const auto& data = *jsonParser.getField("data");
     bool status = false;
-	unsigned int value{};
+	unsigned int value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
     EXPECT_FALSE(status);
 }

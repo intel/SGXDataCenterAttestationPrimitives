@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #
 
 ######## SGX SDK Settings ########
-DEBUG ?= 0
+SGX_DEBUG ?= 0
 
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
@@ -40,9 +40,10 @@ SGX_COMMON_CFLAGS := -m64
 SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+IS_UBUNTU := $(shell grep "Ubuntu" /etc/os-release 2>/dev/null)
+IS_RHEL := $(shell grep "Red Hat Enterprise" /etc/os-release 2>/dev/null)
 
-
-ifeq ($(DEBUG), 1)
+ifeq ($(SGX_DEBUG), 1)
         SGX_COMMON_CFLAGS += -O0 -g
 else
         SGX_COMMON_CFLAGS += -O2
@@ -52,6 +53,7 @@ endif
 
 DCAP_Library_Name := sgx_dcap_ql
 Urts_Library_Name := sgx_urts
+Uae_Library_Name := sgx_quote_ex
 
 App_Cpp_Files :=  App/App.cpp
 App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/common/inc
@@ -59,17 +61,23 @@ App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 # Two configuration modes - Debug, Release
-#   Debug - Macro DEBUG enabled.
-#   Release - Macro NDEBUG enabled.
-ifeq ($(DEBUG), 1)
+#   Debug - Macro SGX_DEBUG enabled.
+#   Release - Macro SGX_DEBUG disabled.
+ifeq ($(SGX_DEBUG), 1)
         App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
+CHECK_DIST :=
+ifneq ($(IS_UBUNTU),)
+        App_C_Flags += -DUBUNTU
+else ifeq ($(IS_RHEL),)
+        CHECK_DIST := dist_check_failed
+endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread 
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -l$(Uae_Library_Name) -ldl -lpthread 
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
@@ -117,7 +125,7 @@ Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
 Enclave_Config_File := Enclave/Enclave.config.xml
 
-ifeq ($(DEBUG), 1)
+ifeq ($(SGX_DEBUG), 1)
         Build_Mode = HW_DEBUG
 else
         Build_Mode = HW_RELEASE
@@ -126,7 +134,7 @@ endif
 
 .PHONY: all target run
 
-all: .config_$(Build_Mode)_$(SGX_ARCH)
+all: $(CHECK_DIST) .config_$(Build_Mode)_$(SGX_ARCH)
 	$(MAKE) target
 
 target: $(App_Name) $(Signed_Enclave_Name)
@@ -141,6 +149,11 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
+
+dist_check_failed:
+	@echo "ERROR: This sample is designed to run on Ubuntu and RHEL."
+	@echo "Exiting......"
+	@exit -2
 
 
 .config_$(Build_Mode)_$(SGX_ARCH):
@@ -194,6 +207,6 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 
 .PHONY: clean
 clean:
-	@rm -f  $(App_Name)  App/*.o App/Enclave_u.* .config_*  
+	@rm -f  $(App_Name)  App/*.o App/Enclave_u.* .config_*
 	@rm -f  $(Enclave_Name) $(Signed_Enclave_Name) $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 

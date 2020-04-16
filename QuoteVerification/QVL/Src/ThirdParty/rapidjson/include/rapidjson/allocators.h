@@ -16,6 +16,8 @@
 #define RAPIDJSON_ALLOCATORS_H_
 
 #include "rapidjson.h"
+#include "utils/SafeMemcpy.h"
+#include <stdexcept>
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -66,7 +68,7 @@ public:
         if (size) //  behavior of malloc(0) is implementation defined.
             return std::malloc(size);
         else
-            return NULL; // standardize to returning NULL.
+            throw std::runtime_error("Size of allocated memory block must be greater than 0");
     }
     void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
         (void)originalSize;
@@ -214,7 +216,7 @@ public:
         // Realloc process: allocate and copy memory, do not free original buffer.
         if (void* newBuffer = Malloc(newSize)) {
             if (originalSize)
-                std::memcpy(newBuffer, originalPtr, originalSize);
+                safeMemcpy(newBuffer, originalPtr, originalSize);
             return newBuffer;
         }
         else

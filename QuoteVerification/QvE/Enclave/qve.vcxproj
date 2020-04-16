@@ -130,50 +130,50 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|Win32'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|x64'">
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(NoInherit)</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -201,12 +201,16 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -234,12 +238,16 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|Win32'">
     <ClCompile>
@@ -267,12 +275,16 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <ClCompile>
@@ -300,12 +312,16 @@
       </OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Debug</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -335,8 +351,12 @@
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|Win32'">
     <ClCompile>
@@ -363,12 +383,16 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\win32\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "qve.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -395,12 +419,16 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>generate the enclave signing material</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) $(Configuration)</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Prerelease|x64'">
     <ClCompile>
@@ -427,12 +455,16 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\..\\prepare_sgxssl.cmd $(Platform) Release</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="qve.edl">
@@ -475,7 +507,7 @@
     <ClCompile Include="qve_t.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="qve_key.pem" />
+    <None Include="qve_test_key.pem" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="qve.config.xml" />
@@ -483,6 +515,9 @@
   <ItemGroup>
     <ClInclude Include="..\Include\collateral_files.h" />
     <ClInclude Include="..\Include\qve_header.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="win\qve.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

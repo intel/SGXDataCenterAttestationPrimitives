@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Exit on error
+set -e
+
+systemctl daemon-reload
+systemctl enable mpa_registration_tool.service
+systemctl start mpa_registration_tool.service

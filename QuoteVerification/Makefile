@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,14 +34,14 @@ CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 .PHONY: clean
 
 all:
-	$(MAKE) -C dcap_quoteverify/linux
 	$(MAKE) -C QvE
-
-dcap_quoteverify:
 	$(MAKE) -C dcap_quoteverify/linux
 
-QvE: dcap_quoteverify
+QvE:
 	$(MAKE) -C QvE
+
+dcap_quoteverify: QvE
+	$(MAKE) -C dcap_quoteverify/linux
 
 clean:
 	$(MAKE) -C dcap_quoteverify/linux clean
