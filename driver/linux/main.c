@@ -41,7 +41,7 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
         return false;
     }
 
-    if (!cpu_has(c, X86_FEATURE_SGX1)) {
+    if (!cpu_has(c, X86_FEATURE_SGX)) {
         pr_err_once("sgx: SGX1 instruction set is not supported\n");
         return false;
     }
