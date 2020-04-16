@@ -25,6 +25,7 @@ Pre-requisets:
 
 
 Build and run QuoteGenerationSample to generate an ECDSA quote
+*Note that you need to install libsgx-quote-ex-dev package and all its dependencies and recommends in order to build and run this sample. Or you can remove the `-l$(Uae_Library_Name)` in Makefile.
 ```
    Release build:
    $ make
