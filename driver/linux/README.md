@@ -16,6 +16,8 @@ Documentation
 
 Change Log
 ----------
+### V1.33
+- Fix incorrect usage of X86_FEATURE_SGX1 which is not supported by current kernel
 ### V1.32
 - Port the upstream candidate patch version 28.
 - Impact to [installation](#install):
