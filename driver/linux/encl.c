@@ -133,7 +133,7 @@ static struct sgx_encl_page *sgx_encl_load_page(struct sgx_encl *encl,
 
 	return entry;
 }
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
 static void sgx_encl_mm_release_deferred(struct rcu_head *rcu)
 {
 	struct sgx_encl_mm *encl_mm =
@@ -141,7 +141,7 @@ static void sgx_encl_mm_release_deferred(struct rcu_head *rcu)
 
 	kfree(encl_mm);
 }
-
+#endif
 static void sgx_mmu_notifier_release(struct mmu_notifier *mn,
 				     struct mm_struct *mm)
 {
