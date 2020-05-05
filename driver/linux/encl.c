@@ -292,7 +292,15 @@ static void sgx_vma_open(struct vm_area_struct *vma)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,1,0))
 static unsigned int sgx_vma_fault(struct vm_fault *vmf)
 #else
+    #if( defined(RHEL_RELEASE_VERSION) && defined(RHEL_RELEASE_CODE))
+        #if (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8, 1))
+static unsigned int sgx_vma_fault(struct vm_fault *vmf)
+        #else
 static int sgx_vma_fault(struct vm_fault *vmf)
+        #endif
+    #else
+static int sgx_vma_fault(struct vm_fault *vmf)
+    #endif
 #endif
 {
 	unsigned long addr = (unsigned long)vmf->address;
@@ -322,11 +330,24 @@ static int sgx_vma_fault(struct vm_fault *vmf)
 	ret = vmf_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
 	if (ret != VM_FAULT_NOPAGE) {
 #else
+    #if( defined(RHEL_RELEASE_VERSION) && defined(RHEL_RELEASE_CODE))
+        #if (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8, 1))
+            ret = vmf_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
+            if (ret != VM_FAULT_NOPAGE) {
+        #else //8.1 or below
+            ret = vm_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
+            if (!ret){
+                ret = VM_FAULT_NOPAGE;
+            }
+            else{
+        #endif
+    #else
 	ret = vm_insert_pfn(vma, addr, PFN_DOWN(entry->epc_page->desc));
 	if (!ret){
 		ret = VM_FAULT_NOPAGE;
 	}
 	else{
+    #endif
 #endif
 		ret = VM_FAULT_SIGBUS;
 		goto out;
@@ -665,7 +686,13 @@ void sgx_encl_put_backing(struct sgx_backing *backing, bool do_write)
 
 static int sgx_encl_test_and_clear_young_cb(pte_t *ptep,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0))
+    #if( defined(RHEL_RELEASE_VERSION) && defined(RHEL_RELEASE_CODE))
+        #if (RHEL_RELEASE_CODE <= RHEL_RELEASE_VERSION(8, 1))
 				       pgtable_t token,
+        #endif
+    #else
+				       pgtable_t token,
+    #endif
 #endif
 				       unsigned long addr, void *data)
 {
