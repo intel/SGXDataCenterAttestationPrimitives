@@ -16,6 +16,8 @@ Documentation
 
 Change Log
 ----------
+### V1.34
+- Fix build for RHEL 8.2
 ### V1.33
 - Fix incorrect usage of X86_FEATURE_SGX1 which is not supported by current kernel
 ### V1.32
