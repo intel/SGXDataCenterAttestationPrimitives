@@ -53,7 +53,7 @@ static void sgx_encl_shrink(struct sgx_encl *encl, struct sgx_va_page *va_page)
 	encl->page_cnt--;
 
 	if (va_page) {
-		sgx_free_page(va_page->epc_page);
+		sgx_free_epc_page(va_page->epc_page);
 		list_del(&va_page->list);
 		kfree(va_page);
 	}
@@ -186,7 +186,7 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 
 	encl->backing = backing;
 
-	secs_epc = sgx_alloc_page(&encl->secs, true);
+	secs_epc = sgx_alloc_epc_page(&encl->secs, true);
 	if (IS_ERR(secs_epc)) {
 		ret = PTR_ERR(secs_epc);
 		goto err_out_backing;
@@ -200,7 +200,7 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	pginfo.secs = 0;
 	memset(&secinfo, 0, sizeof(secinfo));
 
-	ret = __ecreate((void *)&pginfo, sgx_epc_addr(secs_epc));
+	ret = __ecreate((void *)&pginfo, sgx_get_epc_addr(secs_epc));
 	if (ret) {
 		pr_debug("ECREATE returned %ld\n", ret);
 		goto err_out;
@@ -226,7 +226,7 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	return 0;
 
 err_out:
-	sgx_free_page(encl->secs.epc_page);
+	sgx_free_epc_page(encl->secs.epc_page);
 	encl->secs.epc_page = NULL;
 
 err_out_backing:
@@ -334,12 +334,12 @@ static int __sgx_encl_add_page(struct sgx_encl *encl,
 	if (ret < 1)
 		return ret;
 
-	pginfo.secs = (unsigned long)sgx_epc_addr(encl->secs.epc_page);
+	pginfo.secs = (unsigned long)sgx_get_epc_addr(encl->secs.epc_page);
 	pginfo.addr = SGX_ENCL_PAGE_ADDR(encl_page);
 	pginfo.metadata = (unsigned long)secinfo;
 	pginfo.contents = (unsigned long)kmap_atomic(src_page);
 
-	ret = __eadd(&pginfo, sgx_epc_addr(epc_page));
+	ret = __eadd(&pginfo, sgx_get_epc_addr(epc_page));
 
 	kunmap_atomic((void *)pginfo.contents);
 	put_page(src_page);
@@ -354,8 +354,8 @@ static int __sgx_encl_extend(struct sgx_encl *encl,
 	int i;
 
 	for (i = 0; i < 16; i++) {
-		ret = __eextend(sgx_epc_addr(encl->secs.epc_page),
-				sgx_epc_addr(epc_page) + (i * 0x100));
+		ret = __eextend(sgx_get_epc_addr(encl->secs.epc_page),
+				sgx_get_epc_addr(epc_page) + (i * 0x100));
 		if (ret) {
 			if (encls_failed(ret))
 				ENCLS_WARN(ret, "EEXTEND");
@@ -379,7 +379,7 @@ static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
 	if (IS_ERR(encl_page))
 		return PTR_ERR(encl_page);
 
-	epc_page = sgx_alloc_page(encl_page, true);
+	epc_page = sgx_alloc_epc_page(encl_page, true);
 	if (IS_ERR(epc_page)) {
 		kfree(encl_page);
 		return PTR_ERR(epc_page);
@@ -452,15 +452,18 @@ err_out_unlock:
 	up_read(&current->mm->mmap_sem);
 
 err_out_free:
-	sgx_free_page(epc_page);
+	sgx_free_epc_page(epc_page);
 	kfree(encl_page);
 
 	/*
 	 * Destroy enclave on ENCLS failure as this means that EPC has been
 	 * invalidated.
 	 */
-	if (ret == -EIO)
+	if (ret == -EIO) {
+		mutex_lock(&encl->lock);
 		sgx_encl_destroy(encl);
+		mutex_unlock(&encl->lock);
+	}
 
 	return ret;
 }
@@ -484,14 +487,9 @@ err_out_free:
  *
  * 1. A regular page: PROT_R, PROT_W and PROT_X match the SECINFO permissions.
  * 2. A TCS page: PROT_R | PROT_W.
- * 3. No page: PROT_NONE.
  *
  * mmap() is not allowed to surpass the minimum of the maximum protection bits
  * within the given address range.
- *
- * As stated above, a non-existent page is interpreted as a page with no
- * permissions. In effect, this allows mmap() with PROT_NONE to be used to seek
- * an address range for the enclave that can be then populated into SECS.
  *
  * If ENCLS opcode fails, that effectively means that EPC has been invalidated.
  * When this happens the enclave is destroyed and -EIO is returned to the
@@ -617,10 +615,10 @@ static int sgx_einit(struct sgx_sigstruct *sigstruct, void *token,
 
 	preempt_disable();
 	sgx_update_lepubkeyhash_msrs(lepubkeyhash, false);
-	ret = __einit(sigstruct, token, sgx_epc_addr(secs));
+	ret = __einit(sigstruct, token, sgx_get_epc_addr(secs));
 	if (ret == SGX_INVALID_EINITTOKEN) {
 		sgx_update_lepubkeyhash_msrs(lepubkeyhash, true);
-		ret = __einit(sigstruct, token, sgx_epc_addr(secs));
+		ret = __einit(sigstruct, token, sgx_get_epc_addr(secs));
 	}
 	preempt_enable();
 	return ret;
@@ -717,7 +715,7 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 	struct sgx_sigstruct *sigstruct;
 	struct sgx_enclave_init einit;
 	struct page *initp_page;
-	void* token;
+	void *token;
 	int ret;
 
 	if (!(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
@@ -731,12 +729,25 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 		return -ENOMEM;
 
 	sigstruct = kmap(initp_page);
-        token = (void *)((unsigned long)sigstruct + PAGE_SIZE / 2);
-        memset(token, 0, SGX_LAUNCH_TOKEN_SIZE);
+	token = (void *)((unsigned long)sigstruct + PAGE_SIZE / 2);
+	memset(token, 0, SGX_LAUNCH_TOKEN_SIZE);
 
 	if (copy_from_user(sigstruct, (void __user *)einit.sigstruct,
 			   sizeof(*sigstruct))) {
 		ret = -EFAULT;
+		goto out;
+	}
+
+	/*
+	 * A legacy field used with Intel signed enclaves. These used to mean
+	 * regular and architectural enclaves. The CPU only accepts these values
+	 * but they do not have any other meaning.
+	 *
+	 * Thus, reject any other values.
+	 */
+	if (sigstruct->header.vendor != 0x0000 &&
+	    sigstruct->header.vendor != 0x8086) {
+		ret = -EINVAL;
 		goto out;
 	}
 
@@ -802,8 +813,10 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	if (encl_flags & SGX_ENCL_IOCTL)
 		return -EBUSY;
 
-	if (encl_flags & SGX_ENCL_DEAD)
-		return -EFAULT;
+	if (encl_flags & SGX_ENCL_DEAD) {
+		ret = -EFAULT;
+		goto out;
+	}
 
 	switch (cmd) {
 	case SGX_IOC_ENCLAVE_CREATE:
@@ -823,6 +836,7 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
+out:
 	atomic_andnot(SGX_ENCL_IOCTL, &encl->flags);
 
 	return ret;
