@@ -27,108 +27,9 @@
 struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 static int sgx_nr_epc_sections;
 static struct task_struct *ksgxswapd_tsk;
-DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
-LIST_HEAD(sgx_active_page_list);
-DEFINE_SPINLOCK(sgx_active_page_list_lock);
-
-static void sgx_sanitize_section(struct sgx_epc_section *section)
-{
-	struct sgx_epc_page *page;
-	LIST_HEAD(secs_list);
-	int ret;
-
-	while (!list_empty(&section->unsanitized_page_list)) {
-		if (kthread_should_stop())
-			return;
-
-		spin_lock(&section->lock);
-
-		page = list_first_entry(&section->unsanitized_page_list,
-					struct sgx_epc_page, list);
-
-		ret = __eremove(sgx_get_epc_addr(page));
-		if (!ret)
-			list_move(&page->list, &section->page_list);
-		else
-			list_move_tail(&page->list, &secs_list);
-
-		spin_unlock(&section->lock);
-
-		cond_resched();
-	}
-}
-
-static unsigned long sgx_nr_free_pages(void)
-{
-	unsigned long cnt = 0;
-	int i;
-
-	for (i = 0; i < sgx_nr_epc_sections; i++)
-		cnt += sgx_epc_sections[i].free_cnt;
-
-	return cnt;
-}
-
-static bool sgx_should_reclaim(unsigned long watermark)
-{
-	return sgx_nr_free_pages() < watermark &&
-	       !list_empty(&sgx_active_page_list);
-}
-
-static int ksgxswapd(void *p)
-{
-	int i;
-
-	set_freezable();
-
-	/*
-	 * Reset all pages to uninitialized state. Pages could be in initialized
-	 * on kmemexec.
-	 */
-	for (i = 0; i < sgx_nr_epc_sections; i++)
-		sgx_sanitize_section(&sgx_epc_sections[i]);
-
-	/*
-	 * 2nd round for the SECS pages as they cannot be removed when they
-	 * still hold child pages.
-	 */
-	for (i = 0; i < sgx_nr_epc_sections; i++) {
-		sgx_sanitize_section(&sgx_epc_sections[i]);
-
-		/* Should never happen. */
-		if (!list_empty(&sgx_epc_sections[i].unsanitized_page_list))
-			WARN(1, "EPC section %d has unsanitized pages.\n", i);
-	}
-
-	while (!kthread_should_stop()) {
-		if (try_to_freeze())
-			continue;
-
-		wait_event_freezable(ksgxswapd_waitq,
-				     kthread_should_stop() ||
-				     sgx_should_reclaim(SGX_NR_HIGH_PAGES));
-
-		if (sgx_should_reclaim(SGX_NR_HIGH_PAGES))
-			sgx_reclaim_pages();
-
-		cond_resched();
-	}
-
-	return 0;
-}
-
-static bool __init sgx_page_reclaimer_init(void)
-{
-	struct task_struct *tsk;
-
-	tsk = kthread_run(ksgxswapd, NULL, "ksgxswapd");
-	if (IS_ERR(tsk))
-		return false;
-
-	ksgxswapd_tsk = tsk;
-
-	return true;
-}
+static DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
+static LIST_HEAD(sgx_active_page_list);
+static DEFINE_SPINLOCK(sgx_active_page_list_lock);
 
 /**
  * sgx_mark_page_reclaimable() - Mark a page as reclaimable
@@ -419,15 +320,13 @@ out:
 	mutex_unlock(&encl->lock);
 }
 
-/**
- * sgx_reclaim_pages() - Reclaim EPC pages from the consumers
- *
+/*
  * Take a fixed number of pages from the head of the active page pool and
- * reclaim them to the enclave's private shmem files. Skip the pages, which
- * have been accessed since the last scan. Move those pages to the tail of
- * active page pool so that the pages get scanned in LRU like fashion.
+ * reclaim them to the enclave's private shmem files. Skip the pages, which have
+ * been accessed since the last scan. Move those pages to the tail of active
+ * page pool so that the pages get scanned in LRU like fashion.
  */
-void sgx_reclaim_pages(void)
+static void sgx_reclaim_pages(void)
 {
 	struct sgx_epc_page *chunk[SGX_NR_TO_SCAN];
 	struct sgx_backing backing[SGX_NR_TO_SCAN];
@@ -513,6 +412,105 @@ skip:
 }
 
 
+static void sgx_sanitize_section(struct sgx_epc_section *section)
+{
+	struct sgx_epc_page *page;
+	LIST_HEAD(secs_list);
+	int ret;
+
+	while (!list_empty(&section->unsanitized_page_list)) {
+		if (kthread_should_stop())
+			return;
+
+		spin_lock(&section->lock);
+
+		page = list_first_entry(&section->unsanitized_page_list,
+					struct sgx_epc_page, list);
+
+		ret = __eremove(sgx_get_epc_addr(page));
+		if (!ret)
+			list_move(&page->list, &section->page_list);
+		else
+			list_move_tail(&page->list, &secs_list);
+
+		spin_unlock(&section->lock);
+
+		cond_resched();
+	}
+}
+
+static unsigned long sgx_nr_free_pages(void)
+{
+	unsigned long cnt = 0;
+	int i;
+
+	for (i = 0; i < sgx_nr_epc_sections; i++)
+		cnt += sgx_epc_sections[i].free_cnt;
+
+	return cnt;
+}
+
+static bool sgx_should_reclaim(unsigned long watermark)
+{
+	return sgx_nr_free_pages() < watermark &&
+	       !list_empty(&sgx_active_page_list);
+}
+
+static int ksgxswapd(void *p)
+{
+	int i;
+
+	set_freezable();
+
+	/*
+	 * Reset all pages to uninitialized state. Pages could be in initialized
+	 * on kmemexec.
+	 */
+	for (i = 0; i < sgx_nr_epc_sections; i++)
+		sgx_sanitize_section(&sgx_epc_sections[i]);
+
+	/*
+	 * 2nd round for the SECS pages as they cannot be removed when they
+	 * still hold child pages.
+	 */
+	for (i = 0; i < sgx_nr_epc_sections; i++) {
+		sgx_sanitize_section(&sgx_epc_sections[i]);
+
+		/* Should never happen. */
+		if (!list_empty(&sgx_epc_sections[i].unsanitized_page_list))
+			WARN(1, "EPC section %d has unsanitized pages.\n", i);
+	}
+
+	while (!kthread_should_stop()) {
+		if (try_to_freeze())
+			continue;
+
+		wait_event_freezable(ksgxswapd_waitq,
+				     kthread_should_stop() ||
+				     sgx_should_reclaim(SGX_NR_HIGH_PAGES));
+
+		if (sgx_should_reclaim(SGX_NR_HIGH_PAGES))
+			sgx_reclaim_pages();
+
+		cond_resched();
+	}
+
+	return 0;
+}
+
+static bool __init sgx_page_reclaimer_init(void)
+{
+	struct task_struct *tsk;
+
+	tsk = kthread_run(ksgxswapd, NULL, "ksgxswapd");
+	if (IS_ERR(tsk))
+		return false;
+
+	ksgxswapd_tsk = tsk;
+
+	return true;
+}
+
 // Based on arch/x86/kernel/cpu/intel.c
 static bool detect_sgx(struct cpuinfo_x86 *c)
 {
@@ -541,6 +539,7 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
 
     return true;
 }
+
 static struct sgx_epc_page *__sgx_alloc_epc_page_from_section(struct sgx_epc_section *section)
 {
 	struct sgx_epc_page *page;

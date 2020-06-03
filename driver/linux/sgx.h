@@ -41,12 +41,6 @@ struct sgx_epc_section {
 #define SGX_NR_LOW_PAGES		32
 #define SGX_NR_HIGH_PAGES		64
 
-extern struct list_head sgx_active_page_list;
-
-void sgx_mark_page_reclaimable(struct sgx_epc_page *page);
-int sgx_unmark_page_reclaimable(struct sgx_epc_page *page);
-void sgx_reclaim_pages(void);
-
 extern struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 
 static inline struct sgx_epc_section *sgx_get_epc_section(
@@ -62,6 +56,8 @@ static inline void *sgx_get_epc_addr(struct sgx_epc_page *page)
 	return section->va + (page->desc & PAGE_MASK) - section->pa;
 }
 
+void sgx_mark_page_reclaimable(struct sgx_epc_page *page);
+int sgx_unmark_page_reclaimable(struct sgx_epc_page *page);
 struct sgx_epc_page *__sgx_alloc_epc_page(void);
 struct sgx_epc_page *sgx_alloc_epc_page(void *owner, bool reclaim);
 void sgx_free_epc_page(struct sgx_epc_page *page);
