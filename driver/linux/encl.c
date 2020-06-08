@@ -41,12 +41,12 @@ static int __sgx_encl_eldu(struct sgx_encl_page *encl_page,
 			  b.pcmd_offset;
 
 	if (secs_page)
-		pginfo.secs = (u64)sgx_epc_addr(secs_page);
+		pginfo.secs = (u64)sgx_get_epc_addr(secs_page);
 	else
 		pginfo.secs = 0;
 
-	ret = __eldu(&pginfo, sgx_epc_addr(epc_page),
-		     sgx_epc_addr(encl_page->va_page->epc_page) + va_offset);
+	ret = __eldu(&pginfo, sgx_get_epc_addr(epc_page),
+		     sgx_get_epc_addr(encl_page->va_page->epc_page) + va_offset);
 	if (ret) {
 		if (encls_failed(ret))
 			ENCLS_WARN(ret, "ELDU");
@@ -70,13 +70,13 @@ static struct sgx_epc_page *sgx_encl_eldu(struct sgx_encl_page *encl_page,
 	struct sgx_epc_page *epc_page;
 	int ret;
 
-	epc_page = sgx_alloc_page(encl_page, false);
+	epc_page = sgx_alloc_epc_page(encl_page, false);
 	if (IS_ERR(epc_page))
 		return epc_page;
 
 	ret = __sgx_encl_eldu(encl_page, epc_page, secs_page);
 	if (ret) {
-		sgx_free_page(epc_page);
+		sgx_free_epc_page(epc_page);
 		return ERR_PTR(ret);
 	}
 
@@ -221,11 +221,7 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 	struct sgx_encl_mm *encl_mm;
 	int ret;
 
-	/*
-	 * This flow relies on mmap_sem being held for write to prevent adding
-	 * multiple encl_mm instances for a single mm_struct, i.e. it prevents
-	 * races between checking sgx_encl_find_mm() and adding to mm_list.
-	 */
+	/* mm_list can be accessed only by a single thread at a time. */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
 	lockdep_assert_held_write(&mm->mmap_sem);
 #else
@@ -259,22 +255,11 @@ int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm)
 
 	spin_lock(&encl->mm_lock);
 	list_add_rcu(&encl_mm->list, &encl->mm_list);
-	/*
-	 * Ensure the mm is added to mm_list before updating the generation.
-	 * Pairs with the smp_rmb() in sgx_reclaimer_block().
-	 */
+	/* Pairs with smp_rmb() in sgx_reclaimer_block(). */
 	smp_wmb();
-	encl->mm_list_gen++;
+	encl->mm_list_version++;
 	spin_unlock(&encl->mm_lock);
 
-	/*
-	 * DO NOT call synchronize_srcu()!  When this is called via dup_mmap(),
-	 * mmap_sem is held for write in both the old mm and new mm, and the
-	 * reclaimer may be holding srcu for read while waiting on down_read()
-	 * for the old mm's mmap_sem, i.e. synchronize_srcu() will deadlock.
-	 * Incrementing mm_list_gen ensures readers that must not race with a
-	 * mm being added will see the updated list.
-	 */
 	return 0;
 }
 
@@ -352,6 +337,7 @@ static int sgx_vma_fault(struct vm_fault *vmf)
 		ret = VM_FAULT_SIGBUS;
 		goto out;
 	}
+
 	sgx_encl_test_and_clear_young(vma->vm_mm, entry);
 
 out:
@@ -368,8 +354,7 @@ out:
  *
  * Iterate through the enclave pages contained within [@start, @end) to verify
  * the permissions requested by @vm_prot_bits do not exceed that of any enclave
- * page to be mapped.  Page addresses that do not have an associated enclave
- * page are interpreted to zero permissions.
+ * page to be mapped.
  *
  * Return:
  *   0 on success,
@@ -380,16 +365,13 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 {
 	unsigned long idx, idx_start, idx_end;
 	struct sgx_encl_page *page;
-       /*
-        * Disallow RIE tasks as their VMA permissions might conflict with the
-        * enclave page permissions.
-        */
-       if (!!(current->personality & READ_IMPLIES_EXEC))
-               return -EACCES;
 
-	/* PROT_NONE always succeeds. */
-	if (!vm_prot_bits)
-		return 0;
+	/*
+	 * Disallow RIE tasks as their VMA permissions might conflict with the
+	 * enclave page permissions.
+	 */
+	if (!!(current->personality & READ_IMPLIES_EXEC))
+		return -EACCES;
 
 	idx_start = PFN_DOWN(start);
 	idx_end = PFN_DOWN(end - 1);
@@ -406,7 +388,7 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 	return 0;
 }
 
-/*
+/* ! Note: Not ported from inkernel patches
 static int sgx_vma_mprotect(struct vm_area_struct *vma, unsigned long start,
 			    unsigned long end, unsigned long prot)
 {
@@ -422,7 +404,7 @@ static int sgx_edbgrd(struct sgx_encl *encl, struct sgx_encl_page *page,
 	int ret;
 
 
-	ret = __edbgrd(sgx_epc_addr(page->epc_page) + offset, data);
+	ret = __edbgrd(sgx_get_epc_addr(page->epc_page) + offset, data);
 	if (ret)
 		return -EIO;
 
@@ -435,7 +417,7 @@ static int sgx_edbgwr(struct sgx_encl *encl, struct sgx_encl_page *page,
 	unsigned long offset = addr & ~PAGE_MASK;
 	int ret;
 
-	ret = __edbgwr(sgx_epc_addr(page->epc_page) + offset, data);
+	ret = __edbgwr(sgx_get_epc_addr(page->epc_page) + offset, data);
 	if (ret)
 		return -EIO;
 
@@ -564,7 +546,7 @@ void sgx_encl_destroy(struct sgx_encl *encl)
 			if (sgx_unmark_page_reclaimable(entry->epc_page))
 				continue;
 
-			sgx_free_page(entry->epc_page);
+			sgx_free_epc_page(entry->epc_page);
 			encl->secs_child_cnt--;
 			entry->epc_page = NULL;
 		}
@@ -575,7 +557,7 @@ void sgx_encl_destroy(struct sgx_encl *encl)
 	}
 
 	if (!encl->secs_child_cnt && encl->secs.epc_page) {
-		sgx_free_page(encl->secs.epc_page);
+		sgx_free_epc_page(encl->secs.epc_page);
 		encl->secs.epc_page = NULL;
 	}
 
@@ -588,7 +570,7 @@ void sgx_encl_destroy(struct sgx_encl *encl)
 		va_page = list_first_entry(&encl->va_pages, struct sgx_va_page,
 					   list);
 		list_del(&va_page->list);
-		sgx_free_page(va_page->epc_page);
+		sgx_free_epc_page(va_page->epc_page);
 		kfree(va_page);
 	}
 }
@@ -608,6 +590,8 @@ void sgx_encl_release(struct kref *ref)
 
 	if (encl->backing)
 		fput(encl->backing);
+
+	cleanup_srcu_struct(&encl->srcu);
 
 	WARN_ON_ONCE(!list_empty(&encl->mm_list));
 
@@ -775,12 +759,12 @@ struct sgx_encl_page *sgx_encl_reserve_page(struct sgx_encl *encl,
 }
 
 /**
- * sgx_alloc_page - allocate a VA page
+ * sgx_alloc_va_page() - Allocate a Version Array (VA) page
  *
- * Allocates an &sgx_epc_page instance and converts it to a VA page.
+ * Allocate a free EPC page and convert it to a Version Array (VA) page.
  *
  * Return:
- *   a &struct sgx_va_page instance,
+ *   a VA page,
  *   -errno otherwise
  */
 struct sgx_epc_page *sgx_alloc_va_page(void)
@@ -788,14 +772,14 @@ struct sgx_epc_page *sgx_alloc_va_page(void)
 	struct sgx_epc_page *epc_page;
 	int ret;
 
-	epc_page = sgx_alloc_page(NULL, true);
+	epc_page = sgx_alloc_epc_page(NULL, true);
 	if (IS_ERR(epc_page))
 		return ERR_CAST(epc_page);
 
-	ret = __epa(sgx_epc_addr(epc_page));
+	ret = __epa(sgx_get_epc_addr(epc_page));
 	if (ret) {
 		WARN_ONCE(1, "EPA returned %d (0x%x)", ret, ret);
-		sgx_free_page(epc_page);
+		sgx_free_epc_page(epc_page);
 		return ERR_PTR(-EFAULT);
 	}
 

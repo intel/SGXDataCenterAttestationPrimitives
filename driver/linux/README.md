@@ -16,6 +16,8 @@ Documentation
 
 Change Log
 ----------
+### V1.35
+- Sync with upstream patch v32, mostly stability fixes, documentation improvement, code re-org.
 ### V1.34
 - Fix build for RHEL 8.2
 ### V1.33

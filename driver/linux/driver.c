@@ -210,7 +210,6 @@ int __init sgx_drv_init(void)
 		return ret;
 	}
 
-
 	return 0;
 }
 

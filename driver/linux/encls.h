@@ -52,7 +52,7 @@ enum sgx_encls_leaf {
 #define ENCLS_WARN(r, name) {						  \
 	do {								  \
 		int _r = (r);						  \
-		WARN(_r, "%s returned %d (0x%x)\n", (name), _r, _r); \
+		WARN_ONCE(_r, "%s returned %d (0x%x)\n", (name), _r, _r); \
 	} while (0);							  \
 }
 
@@ -66,17 +66,17 @@ enum sgx_encls_leaf {
  */
 static inline bool encls_failed(int ret)
 {
-        int epcm_trapnr;
+	int epcm_trapnr;
 
-        if (boot_cpu_has(X86_FEATURE_SGX2))
-                epcm_trapnr = X86_TRAP_PF;
-        else
-                epcm_trapnr = X86_TRAP_GP;
+	if (boot_cpu_has(X86_FEATURE_SGX2))
+		epcm_trapnr = X86_TRAP_PF;
+	else
+		epcm_trapnr = X86_TRAP_GP;
 
-        if (ret & ENCLS_FAULT_FLAG)
-                return ENCLS_TRAPNR(ret) != epcm_trapnr;
+	if (ret & ENCLS_FAULT_FLAG)
+		return ENCLS_TRAPNR(ret) != epcm_trapnr;
 
-        return !!ret;
+	return !!ret;
 }
 
 /**
@@ -187,7 +187,7 @@ static inline int __eadd(struct sgx_pageinfo *pginfo, void *addr)
 	return __encls_2(EADD, pginfo, addr);
 }
 
-static inline int __einit(void *sigstruct, void* token, void *secs)
+static inline int __einit(void *sigstruct, void *token, void *secs)
 {
 	return __encls_ret_3(EINIT, sigstruct, secs, token);
 }

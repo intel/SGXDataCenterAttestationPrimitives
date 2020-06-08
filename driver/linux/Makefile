@@ -4,7 +4,7 @@
 ifneq ($(KERNELRELEASE),)
 
 obj-m += intel_sgx.o
-intel_sgx-y := encl.o main.o reclaim.o driver.o ioctl.o
+intel_sgx-y := encl.o main.o driver.o ioctl.o
 
 else
 
