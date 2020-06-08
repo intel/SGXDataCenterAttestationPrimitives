@@ -1,9 +1,9 @@
 Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Verification SampleCode
 ================================================
 
-## Prebuit binaries
+## Prebuilt binaries
 
-* QVL - Build from [Quote Verification Library source](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QVL), you can refer to [QvE project](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QvE) about how to build 'trusted' version QVL libs for enlcave use
+* QVL - Build from [Quote Verification Library source](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QVL), you can refer to [QvE project](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QvE) about how to build 'trusted' version QVL libs for enclave use
 * SgxSSL - Build from [SgxSSL source](https://github.com/intel/intel-sgx-ssl)
 
 
@@ -20,7 +20,7 @@ Requirements:
 * g++
 * bash shell
 
-Pre-requisets:
+Pre-requisites:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
@@ -30,7 +30,7 @@ Pre-requisets:
 *Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*
 
 
-1. Generate an ECDSA quote with cetification data of type 5 using QuoteGenerationSample
+1. Generate an ECDSA quote with certification data of type 5 using QuoteGenerationSample
 ```
    $ cd SampleCode/QuoteGenerationSample/
    $ make
@@ -40,7 +40,7 @@ Pre-requisets:
 2. Build and run QuoteVerificationSample to verify a given quote
 ```
    Release build:
-   $ make  `#You need to sign ISV enlcave with your own key in this mode`
+   $ make  `#You need to sign ISV enclave with your own key in this mode`
    Or Debug build:
    $ make SGX_DEBUG=1
    $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
@@ -55,7 +55,7 @@ Supported operating systems:
 Requirements:
 * Microsoft Visual Studio 2017 or newer.
 
-Pre-requisets:
+Pre-requisites:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
@@ -65,7 +65,7 @@ Pre-requisets:
 *Please refer to [SGX DCAP Windows installation guide](https://software.intel.com/en-us/sgx/sdk) to install above dependencies*<br/>
 *Note that you need to sign in IDZ first, then download & extract product "Intel(R) Software Guard Extensions Data Center Attestation Primitives"*
 
-1. Generate an ECDSA quote with cetification data of type 5 using QuoteGenerationSample
+1. Generate an ECDSA quote with certification data of type 5 using QuoteGenerationSample
    You need to follow QuoteGenerationSample to setup env and run sample
 ```
    a. Open VS solution QuoteGenerationSample.sln, build with Debug/Release | x64 configuration
