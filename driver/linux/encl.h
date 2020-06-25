@@ -13,7 +13,11 @@
 #include <linux/mmu_notifier.h>
 #include <linux/mutex.h>
 #include <linux/notifier.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+#include <linux/xarray.h>
+#else
 #include <linux/radix-tree.h>
+#endif
 #include <linux/srcu.h>
 #include <linux/workqueue.h>
 #include "sgx.h"
@@ -85,8 +89,12 @@ struct sgx_encl {
 	unsigned long base;
 	unsigned long size;
 	unsigned long ssaframesize;
-	struct list_head va_pages;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	struct xarray page_array;
+#else
 	struct radix_tree_root page_tree;
+#endif
+	struct list_head va_pages;
 	struct sgx_encl_page secs;
 	cpumask_t cpumask;
 };
@@ -107,7 +115,7 @@ void sgx_encl_destroy(struct sgx_encl *encl);
 void sgx_encl_release(struct kref *ref);
 int sgx_encl_mm_add(struct sgx_encl *encl, struct mm_struct *mm);
 int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
-		     unsigned long end, unsigned long vm_prot_bits);
+		     unsigned long end, unsigned long vm_flags);
 
 struct sgx_backing {
 	pgoff_t page_index;

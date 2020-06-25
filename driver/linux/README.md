@@ -16,6 +16,8 @@ Documentation
 
 Change Log
 ----------
+### V1.36
+- Sync with upstream patch v36, rebased for kernel release 5.8.
 ### V1.35
 - Sync with upstream patch v32, mostly stability fixes, documentation improvement, code re-org.
 ### V1.34

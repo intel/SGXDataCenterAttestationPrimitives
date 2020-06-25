@@ -59,7 +59,7 @@ static void sgx_encl_shrink(struct sgx_encl *encl, struct sgx_va_page *va_page)
 	}
 }
 
-static u32 sgx_calc_ssaframesize(u32 miscselect, u64 xfrm)
+static u32 sgx_calc_ssa_frame_size(u32 miscselect, u64 xfrm)
 {
 	u32 size_max = PAGE_SIZE;
 	u32 size;
@@ -70,6 +70,7 @@ static u32 sgx_calc_ssaframesize(u32 miscselect, u64 xfrm)
 			continue;
 
 		size = SGX_SSA_GPRS_SIZE + sgx_xsave_size_tbl[i];
+
 		if (miscselect & SGX_MISC_EXINFO)
 			size += SGX_SSA_MISC_EXINFO_SIZE;
 
@@ -80,9 +81,11 @@ static u32 sgx_calc_ssaframesize(u32 miscselect, u64 xfrm)
 	return PFN_UP(size_max);
 }
 
-static int sgx_validate_secs(const struct sgx_secs *secs,
-			     unsigned long ssaframesize)
+static int sgx_validate_secs(const struct sgx_secs *secs)
 {
+	u64 max_size = (secs->attributes & SGX_ATTR_MODE64BIT) ?
+		       sgx_encl_size_max_64 : sgx_encl_size_max_32;
+
 	if (secs->size < (2 * PAGE_SIZE) || !is_power_of_2(secs->size))
 		return -EINVAL;
 
@@ -94,10 +97,7 @@ static int sgx_validate_secs(const struct sgx_secs *secs,
 	    secs->xfrm & sgx_xfrm_reserved_mask)
 		return -EINVAL;
 
-	if (secs->attributes & SGX_ATTR_MODE64BIT) {
-		if (secs->size > sgx_encl_size_max_64)
-			return -EINVAL;
-	} else if (secs->size > sgx_encl_size_max_32)
+	if (secs->size >= max_size)
 		return -EINVAL;
 
 	if (!(secs->xfrm & XFEATURE_MASK_FP) ||
@@ -106,7 +106,11 @@ static int sgx_validate_secs(const struct sgx_secs *secs,
 	     ((secs->xfrm >> XFEATURE_BNDCSR) & 1)))
 		return -EINVAL;
 
-	if (!secs->ssa_frame_size || ssaframesize > secs->ssa_frame_size)
+	if (!secs->ssa_frame_size)
+		return -EINVAL;
+
+	if (sgx_calc_ssa_frame_size(secs->miscselect, secs->xfrm) >
+	    secs->ssa_frame_size)
 		return -EINVAL;
 
 	if (memchr_inv(secs->reserved1, 0, sizeof(secs->reserved1)) ||
@@ -118,51 +122,15 @@ static int sgx_validate_secs(const struct sgx_secs *secs,
 	return 0;
 }
 
-static struct sgx_encl_page *sgx_encl_page_alloc(struct sgx_encl *encl,
-						 unsigned long offset,
-						 u64 secinfo_flags)
-{
-	struct sgx_encl_page *encl_page;
-	unsigned long prot;
-
-	encl_page = kzalloc(sizeof(*encl_page), GFP_KERNEL);
-	if (!encl_page)
-		return ERR_PTR(-ENOMEM);
-
-	encl_page->desc = encl->base + offset;
-	encl_page->encl = encl;
-
-	prot = _calc_vm_trans(secinfo_flags, SGX_SECINFO_R, PROT_READ)  |
-	       _calc_vm_trans(secinfo_flags, SGX_SECINFO_W, PROT_WRITE) |
-	       _calc_vm_trans(secinfo_flags, SGX_SECINFO_X, PROT_EXEC);
-
-	/*
-	 * TCS pages must always RW set for CPU access while the SECINFO
-	 * permissions are *always* zero - the CPU ignores the user provided
-	 * values and silently overwrites them with zero permissions.
-	 */
-	if ((secinfo_flags & SGX_SECINFO_PAGE_TYPE_MASK) == SGX_SECINFO_TCS)
-		prot |= PROT_READ | PROT_WRITE;
-
-	/* Calculate maximum of the VM flags for the page. */
-	encl_page->vm_max_prot_bits = calc_vm_prot_bits(prot, 0);
-
-	return encl_page;
-}
-
 static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 {
 	unsigned long encl_size = secs->size + PAGE_SIZE;
 	struct sgx_epc_page *secs_epc;
 	struct sgx_va_page *va_page;
-	unsigned long ssaframesize;
 	struct sgx_pageinfo pginfo;
 	struct sgx_secinfo secinfo;
 	struct file *backing;
 	long ret;
-
-	if (atomic_read(&encl->flags) & SGX_ENCL_CREATED)
-		return -EINVAL;
 
 	va_page = sgx_encl_grow(encl);
 	if (IS_ERR(va_page))
@@ -170,8 +138,7 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	else if (va_page)
 		list_add(&va_page->list, &encl->va_pages);
 
-	ssaframesize = sgx_calc_ssaframesize(secs->miscselect, secs->xfrm);
-	if (sgx_validate_secs(secs, ssaframesize)) {
+	if (sgx_validate_secs(secs)) {
 		pr_debug("invalid SECS\n");
 		ret = -EINVAL;
 		goto err_out_shrink;
@@ -262,6 +229,9 @@ static long sgx_ioc_enclave_create(struct sgx_encl *encl, void __user *arg)
 	struct sgx_secs *secs;
 	int ret;
 
+	if (atomic_read(&encl->flags) & SGX_ENCL_CREATED)
+		return -EINVAL;
+
 	if (copy_from_user(&ecreate, arg, sizeof(ecreate)))
 		return -EFAULT;
 
@@ -281,6 +251,38 @@ out:
 	kunmap(secs_page);
 	__free_page(secs_page);
 	return ret;
+}
+
+static struct sgx_encl_page *sgx_encl_page_alloc(struct sgx_encl *encl,
+						 unsigned long offset,
+						 u64 secinfo_flags)
+{
+	struct sgx_encl_page *encl_page;
+	unsigned long prot;
+
+	encl_page = kzalloc(sizeof(*encl_page), GFP_KERNEL);
+	if (!encl_page)
+		return ERR_PTR(-ENOMEM);
+
+	encl_page->desc = encl->base + offset;
+	encl_page->encl = encl;
+
+	prot = _calc_vm_trans(secinfo_flags, SGX_SECINFO_R, PROT_READ)  |
+	       _calc_vm_trans(secinfo_flags, SGX_SECINFO_W, PROT_WRITE) |
+	       _calc_vm_trans(secinfo_flags, SGX_SECINFO_X, PROT_EXEC);
+
+	/*
+	 * TCS pages must always RW set for CPU access while the SECINFO
+	 * permissions are *always* zero - the CPU ignores the user provided
+	 * values and silently overwrites them with zero permissions.
+	 */
+	if ((secinfo_flags & SGX_SECINFO_PAGE_TYPE_MASK) == SGX_SECINFO_TCS)
+		prot |= PROT_READ | PROT_WRITE;
+
+	/* Calculate maximum of the VM flags for the page. */
+	encl_page->vm_max_prot_bits = calc_vm_prot_bits(prot, 0);
+
+	return encl_page;
 }
 
 static int sgx_validate_secinfo(struct sgx_secinfo *secinfo)
@@ -347,6 +349,11 @@ static int __sgx_encl_add_page(struct sgx_encl *encl,
 	return ret ? -EIO : 0;
 }
 
+/*
+ * If the caller requires measurement of the page as a proof for the content,
+ * use EEXTEND to add a measurement for 256 bytes of the page. Repeat this
+ * operation until the entire page is measured."
+ */
 static int __sgx_encl_extend(struct sgx_encl *encl,
 			     struct sgx_epc_page *epc_page)
 {
@@ -385,19 +392,16 @@ static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
 		return PTR_ERR(epc_page);
 	}
 
-	if (atomic_read(&encl->flags) &
-	    (SGX_ENCL_INITIALIZED | SGX_ENCL_DEAD)) {
-		ret = -EFAULT;
-		goto err_out_free;
-	}
-
 	va_page = sgx_encl_grow(encl);
 	if (IS_ERR(va_page)) {
 		ret = PTR_ERR(va_page);
 		goto err_out_free;
 	}
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+	mmap_read_lock(current->mm);
+#else
 	down_read(&current->mm->mmap_sem);
+#endif
 	mutex_lock(&encl->lock);
 
 	/*
@@ -412,8 +416,13 @@ static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
 	 * can't be gracefully unwound, while failure on EADD/EXTEND is limited
 	 * to userspace errors (or kernel/hardware bugs).
 	 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+	ret = xa_insert(&encl->page_array, PFN_DOWN(encl_page->desc),
+			encl_page, GFP_KERNEL);
+#else
 	ret = radix_tree_insert(&encl->page_tree, PFN_DOWN(encl_page->desc),
 				encl_page);
+#endif
 	if (ret)
 		goto err_out_unlock;
 
@@ -439,17 +448,29 @@ static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
 
 	sgx_mark_page_reclaimable(encl_page->epc_page);
 	mutex_unlock(&encl->lock);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+	mmap_read_unlock(current->mm);
+#else
 	up_read(&current->mm->mmap_sem);
+#endif
 	return ret;
 
 err_out:
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+	xa_erase(&encl->page_array, PFN_DOWN(encl_page->desc));
+#else
 	radix_tree_delete(&encl_page->encl->page_tree,
 			  PFN_DOWN(encl_page->desc));
+#endif
 
 err_out_unlock:
 	sgx_encl_shrink(encl, va_page);
 	mutex_unlock(&encl->lock);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+	mmap_read_unlock(current->mm);
+#else
 	up_read(&current->mm->mmap_sem);
+#endif
 
 err_out_free:
 	sgx_free_epc_page(epc_page);
@@ -474,8 +495,8 @@ err_out_free:
  * @arg:	a user pointer to a struct sgx_enclave_add_pages instance
  *
  * Add one or more pages to an uninitialized enclave, and optionally extend the
- * measurement with the contents of the page. The address range of pages must
- * be contiguous. The SECINFO and measurement mask are applied to all pages.
+ * measurement with the contents of the page. The SECINFO and measurement mask
+ * are applied to all pages.
  *
  * A SECINFO for a TCS is required to always contain zero permissions because
  * CPU silently zeros them. Allowing anything else would cause a mismatch in
@@ -508,7 +529,8 @@ static long sgx_ioc_enclave_add_pages(struct sgx_encl *encl, void __user *arg)
 	unsigned long c;
 	int ret;
 
-	if (!(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
+	if ((atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) ||
+	    !(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
 		return -EINVAL;
 
 	if (copy_from_user(&addp, arg, sizeof(addp)))
@@ -651,11 +673,10 @@ static int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 
 	mutex_lock(&encl->lock);
 
-	if (atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) {
-		ret = -EFAULT;
-		goto err_out;
-	}
-
+	/*
+	 * Periodically, EINIT polls for certain asynchronous events. If such an
+	 * event is detected, it completes with SGX_UNMSKED_EVENT.
+	 */
 	for (i = 0; i < SGX_EINIT_SLEEP_COUNT; i++) {
 		for (j = 0; j < SGX_EINIT_SPIN_COUNT; j++) {
 			ret = sgx_einit(sigstruct, token, encl->secs.epc_page,
@@ -718,7 +739,8 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 	void *token;
 	int ret;
 
-	if (!(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
+	if ((atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) ||
+	    !(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
 		return -EINVAL;
 
 	if (copy_from_user(&einit, arg, sizeof(einit)))
@@ -767,7 +789,7 @@ out:
  * Mark the enclave as being allowed to access a restricted attribute bit.
  * The requested attribute is specified via the attribute_fd field in the
  * provided struct sgx_enclave_set_attribute.  The attribute_fd must be a
- * handle to an SGX attribute file, e.g. “/dev/sgx/provision".
+ * handle to an SGX attribute file, e.g. "/dev/sgx/provision".
  *
  * Failure to explicitly request access to a restricted attribute will cause
  * sgx_ioc_enclave_init() to fail.  Currently, the only restricted attribute
@@ -838,6 +860,5 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 out:
 	atomic_andnot(SGX_ENCL_IOCTL, &encl->flags);
-
 	return ret;
 }
