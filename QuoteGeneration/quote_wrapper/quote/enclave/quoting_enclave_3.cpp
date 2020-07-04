@@ -828,10 +828,10 @@ uint32_t get_pce_encrypt_key(const sgx_target_info_t* p_pce_target_info,
         g_rsa_key.e[0] = 0x10001;
         p_rsa_pub_key = (pce_rsaoaep_3072_encrypt_pub_key_t*)p_public_key;
         //todo: Currenlty, the private key is stored temporarily in enclave global memory long enough
-        // to last between get_pce_encrypt_key() and store_cert_data().  These calls suround the the call to the PCE
-        // get_pce_info() API.  There is a risk that if the enclave is unloaded directly or inditrectly (by power state
+        // to last between get_pce_encrypt_key() and store_cert_data().  These calls surround the the call to the PCE
+        // get_pce_info() API.  There is a risk that if the enclave is unloaded directly or indirectly (by power state
         // change) the private key will be lost.  There should be more documentation about this situation w/r/t
-        // detection and recovery.  Or, if that is not sufficiaent, then provide a way to store the key in the ECDSA
+        // detection and recovery.  Or, if that is not sufficient, then provide a way to store the key in the ECDSA
         // blob.  Since PPID_CLEARTEXT cert_key_type is not supported at this time, we can push the solution for later.
         sgx_status_t ret_code = sgx_create_rsa_key_pair(REF_RSA_OAEP_3072_MOD_SIZE,
             REF_RSA_OAEP_3072_EXP_SIZE,
