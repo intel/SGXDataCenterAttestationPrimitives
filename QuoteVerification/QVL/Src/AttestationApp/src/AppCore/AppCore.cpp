@@ -29,16 +29,12 @@
  *
  */
 
-#include <fstream>
-#include <sstream>
 #include "AppCore.h"
 #include "AppOptions.h"
 #include "IAttestationLibraryAdapter.h"
 #include "StatusPrinter.h"
-#include <ctime>
-#include <chrono>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
 void outputResult(const std::string& step, Status status, std::ostream& logger)

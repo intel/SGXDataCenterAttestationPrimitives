@@ -38,7 +38,9 @@
 
 #include <OpensslHelpers/OpensslTypes.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+using namespace intel::sgx::dcap;
+
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 class CrlStore
 {
@@ -76,6 +78,6 @@ private:
     long _crlNum;
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif // SGX_INTEL_QVL_CRLSTORE_H_

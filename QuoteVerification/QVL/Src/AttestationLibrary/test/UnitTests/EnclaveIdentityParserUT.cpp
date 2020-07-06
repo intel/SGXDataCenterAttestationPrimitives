@@ -42,7 +42,7 @@
 #include <EnclaveIdentityGenerator.h>
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 using namespace std;
 
 struct EnclaveIdentityParserUT : public Test

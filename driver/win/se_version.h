@@ -35,5 +35,5 @@
 #define STRPRODUCTVER  "1.0.0.0\0"
 #define COMPANYNAME    "Intel Corporation"
 #define COPYRIGHT      "Copyright (C) 2019 Intel Corporation"
-#define PRODUCTNAME    "Intel® Software Guard Extensions"
+#define PRODUCTNAME    "IntelÂ® Software Guard Extensions"
 

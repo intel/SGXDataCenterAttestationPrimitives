@@ -38,7 +38,7 @@
 #include <vector>
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class EnclaveReportVerifier {
 
@@ -51,6 +51,6 @@ private:
     uint32_t vectorToUint32(const std::vector<uint8_t>& input) const;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_ENCLAVEREPORTVERIFIER_H

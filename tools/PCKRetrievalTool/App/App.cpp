@@ -58,17 +58,18 @@
 
 void PrintHelp() {
     printf("Usage: %s [OPTION] \n", VER_PRODUCTNAME_STR);
-    printf("Example: %s -f pck_retrieval_result.csv -url https://localhost:8081 -user_token 123456 -use_secure_cert true\n", VER_PRODUCTNAME_STR);
+    printf("Example: %s -f pck_retrieval_result.csv -url https://localhost:8081 -user_token 123456 -use_secure_cert true -platform_id\n", VER_PRODUCTNAME_STR);
     printf( "\nOptions:\n");
-    printf( " -f filename                       - output the retrieval result to the \"filename\"\n");
-    printf( " -url cache_server_address         - cache server's address \n");
-    printf( " -user_token token_string          - user token to access the cache server \n");
-    printf( " -proxy_type proxy_type            - proxy setting when access the cache server \n");
-    printf( " -proxy_url  proxy_server_address  - proxy server's address \n");
-    printf( " -use_secure_cert [true | false]   - accept secure/insecure https cert, default value is true \n");
-    printf( " -?                - show command help\n");
-    printf( " -h                - show command help\n");
-    printf( " -help             - show command help\n");
+    printf( " -f filename                          - output the retrieval result to the \"filename\"\n");
+    printf( " -url cache_server_address            - cache server's address \n");
+    printf( " -user_token token_string             - user token to access the cache server \n");
+    printf( " -proxy_type proxy_type               - proxy setting when access the cache server \n");
+    printf( " -proxy_url  proxy_server_address     - proxy server's address \n");
+    printf( " -use_secure_cert [true | false]      - accept secure/insecure https cert, default value is true \n");
+    printf( " -platform_id \"platform_id_string\"  - in this mode, enclave is not needed to load, but platform id need to input\n");
+    printf( " -?                                   - show command help\n");
+    printf( " -h                                   - show command help\n");
+    printf( " -help                                - show command help\n");
     printf( "If option is not specified, it will write the retrieved data to file: pckid_retrieval.csv\n\n");
 }
 
@@ -76,17 +77,30 @@ void PrintHelp() {
 // Some utility MACRO to output some of the data structures.
 #define PRINT_BYTE_ARRAY(stream,mem, len)                     \
 {                                                             \
-    if (!(mem) || !(len)) {                                       \
+    if (!(mem) || !(len)) {                                   \
         fprintf(stream,"\n( null )\n");                       \
     } else {                                                  \
-        uint8_t *array = (uint8_t *)(mem);                      \
+        uint8_t *array = (uint8_t *)(mem);                    \
         uint32_t i = 0;                                       \
-        for (i = 0; i < (len) - 1; i++) {                       \
+        for (i = 0; i < (len) - 1; i++) {                     \
             fprintf(stream,"%02x", array[i]);                 \
             if (i % 32 == 31 && stream == stdout)             \
                fprintf(stream,"\n");                          \
         }                                                     \
         fprintf(stream,"%02x", array[i]);                     \
+    }                                                         \
+}
+
+
+#define PRINT_ZERO(stream,len)                                \
+{                                                             \
+    if (!(len)) {                                             \
+        fprintf(stream,"\n( null )\n");                       \
+    } else {                                                  \
+        uint32_t i = 0;                                       \
+        for (i = 0; i < (len); i++) {                         \
+            fprintf(stream,"%02x", 0);                        \
+        }                                                     \
     }                                                         \
 }
 
@@ -110,18 +124,18 @@ std::string proxy_url_string = "";
 std::string user_token_string = "";
 std::string use_secure_cert_string = "";
 std::string output_filename = "";
+std::string platform_id_string = "";
+bool non_enclave_mode = false;
+
 int parse_arg(int argc, const char *argv[])
 {
-    if (argc == 2) {
-        return -1;
-    }
-    else if(argc == 1) {
+    if(argc == 1) {
         output_filename = "pckid_retrieval.csv";
     }
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-f") == 0) {
-            if (i == argc - 1) {
+        if (strncmp(argv[i], "-f", 2) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "No file name is provided for -f\n");
                 return -1;
             }
@@ -131,8 +145,8 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-url") == 0) {
-            if (i == argc - 1) {
+        else if (strncmp(argv[i], "-url", 4) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "No url provided for -url\n");
                 return -1;
             }
@@ -142,12 +156,12 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-defaulturl") == 0) {
+        else if (strncmp(argv[i], "-defaulturl", 11) == 0) {
             server_url_string = "https://localhost:8081";
             continue;
         }
-        else if (strcmp(argv[i], "-proxy_type") == 0) {
-            if (i == argc - 1) {
+        else if (strncmp(argv[i], "-proxy_type",11) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "No proxy type provided for -proxy_type\n");
                 return -1;
             }
@@ -162,8 +176,8 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-proxy_url") == 0) {
-            if (i == argc - 1) {
+        else if (strncmp(argv[i], "-proxy_url", 10) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "No proxy url provided for -proxy_url\n");
                 return -1;
             }
@@ -173,8 +187,8 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-user_token") == 0) {
-            if (i == argc - 1) {
+        else if (strncmp(argv[i], "-user_token", 11) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "No user token is provided for -user_token\n");
                 return -1;
             }
@@ -184,8 +198,8 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
-        else if (strcmp(argv[i], "-use_secure_cert") == 0) {
-            if (i == argc - 1) {
+        else if (strncmp(argv[i], "-use_secure_cert", 16) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
                 fprintf(stderr, "Option is not provided for -use_secure_cert\n");
                 return -1;
             }
@@ -200,6 +214,33 @@ int parse_arg(int argc, const char *argv[])
                 continue;
             }
         }
+        else if (strncmp(argv[i], "-platform_id", 12) == 0) {
+            non_enclave_mode = true;
+            if (i == argc - 1 || argv[i + 1][0] == '-') {
+                fprintf(stdout, "Please input the platform ID, and the platform ID's length should not more than 260 bytes: \n");
+                char platform_id[MAX_PATH] = {0};
+                if (NULL == fgets(platform_id, MAX_PATH, stdin)) {
+                    fprintf(stderr, "No platform id is provided for -platform_id\n");
+                    return -1;
+                }
+                platform_id_string = platform_id;
+                if (platform_id_string.length() > MAX_PATH) {
+                    fprintf(stderr, "Error: the platform ID's length should not more than 260 bytes.\n");
+                    return -1;
+                }
+                i++;
+                continue;
+            }
+            else {
+                platform_id_string = argv[i+1];
+                if (platform_id_string.length() > MAX_PATH) {
+                    fprintf(stderr, "Error: the platform ID's length should not more than 260 bytes.\n");
+                    return -1;
+                }
+                i++;
+                continue;
+            }
+        }
         else {
             fprintf(stderr, "unknown option %s\n", argv[i]);
             return -1;
@@ -208,78 +249,29 @@ int parse_arg(int argc, const char *argv[])
     return 0;
 }
 
-
-int main(int argc, const char* argv[])
+int send_collected_data_to_file(FILE* pFile, uint8_t* p_quote_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
 {
-    int ret = -1;
-    network_post_error_t ret_status = POST_SUCCESS;
-    uint32_t quote_size = 0;
-    uint8_t* p_quote_buffer = NULL;
-    FILE* pFile = NULL;
-    uint8_t *buffer = NULL;
-    uint16_t out_buffer_size = UINT16_MAX;
-    uint8_t *raw_data = NULL;
-    bool is_server_url_provided = false;
-    cache_server_delivery_status_t delivery_status = DELIVERY_ERROR_MAX;
-#ifdef MPA
-    int ret_mpa = -1;
-#endif
+     if (p_quote_buffer == NULL) {//,PCE_ID,,,PLATFORM_ID[,PLATFORM MANIFEST]
+        WRITE_COMMA;
 
-    printf("\n%s Version ", VER_FILE_DESCRIPTION_STR);
-    printf("%s\n\n", STRPRODUCTVER);
+        // write pceid to file
+        PRINT_ZERO(pFile, PCE_ID_LENGTH);
+        WRITE_COMMA;
 
-    // parse the command options
-    ret = parse_arg(argc, argv);
-    if (ret != 0) {
-        PrintHelp();
-        return ret;
-    }
-             
-    //get quote data
-    ret = generate_quote(&p_quote_buffer, quote_size);
-    if(ret != 0) {
-        if(NULL != p_quote_buffer ) {
-            free(p_quote_buffer);
-            p_quote_buffer = NULL;
-        }
-        return ret;
-    }
+        WRITE_COMMA;
 
-    // for multi-package platform: get platfrom manifest
-#ifdef MPA
-    ret_mpa = get_platform_manifest(&buffer, out_buffer_size);
-    if (ret_mpa == -1) {
-        free(p_quote_buffer);
-        p_quote_buffer = NULL;
-        if(NULL != buffer) {
-            free(buffer);
-            buffer = NULL;
-        }
-        return ret;
+        WRITE_COMMA;
+
+        //write platform id to file
+        PRINT_BYTE_ARRAY(pFile, platform_id.c_str(), platform_id.length());
     }
-#else
-    buffer = NULL;
-    out_buffer_size = 0;
-#endif
-    do {
+    else {
         // Output PCK Cert Retrieval Data
-        sgx_quote3_t* p_quote = (sgx_quote3_t*) (p_quote_buffer);
+        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_quote_buffer);
         sgx_ql_ecdsa_sig_data_t* p_sig_data = (sgx_ql_ecdsa_sig_data_t*)p_quote->signature_data;
         sgx_ql_auth_data_t* p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
         sgx_ql_certification_data_t* p_temp_cert_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
         sgx_ql_ppid_rsa3072_encrypted_cert_info_t* p_cert_info = (sgx_ql_ppid_rsa3072_encrypted_cert_info_t*)(p_temp_cert_data->certification_data);
- 
-        if(output_filename.empty() == false) {
-#ifdef _MSC_VER
-            if (0 != fopen_s(&pFile, output_filename.c_str(), "w")) {
-#else
-            if (NULL == (pFile = fopen(output_filename.c_str(), "w"))) {
-#endif
-                printf("\nError opening %s output file.\n", output_filename.c_str());
-                break;
-            }
-	}
- 
         uint64_t data_index = 0;
 #ifdef DEBUG
         PRINT_MESSAGE("EncPPID:\n");
@@ -293,134 +285,264 @@ int main(int argc, const char* argv[])
         PRINT_MESSAGE("\n TCBr - PCE_ISVSVN:\n");
         data_index = data_index + sizeof(p_cert_info->cpu_svn);
         PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
-        PRINT_MESSAGE("\n QE_ID:\n");
-        PRINT_BYTE_ARRAY(stdout, &p_quote->header.user_data[0], 16);
+        PRINT_MESSAGE("\n PLATFORM_ID:\n");
+        PRINT_BYTE_ARRAY(stdout, &p_quote->header.user_data[0], DEFAULT_PLATFORM_ID_LENGTH);
 #endif
-        if (pFile != NULL) {
-            data_index = 0;
-            //write encrypted PPID to file
-            PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
-            WRITE_COMMA;
+        data_index = 0;
+        //write encrypted PPID to file
+        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
+        WRITE_COMMA;
 
-            data_index = data_index + sizeof(p_cert_info->enc_ppid);
-            // write pceid to file
-            PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
-            WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->enc_ppid);
+        // write pceid to file
+        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
+        WRITE_COMMA;
 
-            data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
-            //write cpusvn to file
-            PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
-            WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
+        //write cpusvn to file
+        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
+        WRITE_COMMA;
 
-            data_index = data_index + sizeof(p_cert_info->cpu_svn);
-            //write pce isv_svn to file
-            PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
-            WRITE_COMMA;
+        data_index = data_index + sizeof(p_cert_info->cpu_svn);
+        //write pce isv_svn to file
+        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
+        WRITE_COMMA;
 
-            //write qe_id to file
-            PRINT_BYTE_ARRAY(pFile, &p_quote->header.user_data[0], 16);
+        //write qe_id to file
+        PRINT_BYTE_ARRAY(pFile, &p_quote->header.user_data[0], DEFAULT_PLATFORM_ID_LENGTH);
+    }
+    //write platform manifest.
+    if (platform_manifest_buffer_size > 0 ) {
+        WRITE_COMMA;
+        PRINT_BYTE_ARRAY(pFile, p_platform_manifest_buffer, static_cast<uint32_t>(platform_manifest_buffer_size));
+        PRINT_MESSAGE("\n");
+    }  
+    return 0;
+}
 
-            //write platform manifest.
-            if (out_buffer_size > 0) {
-                WRITE_COMMA;
-                PRINT_BYTE_ARRAY(pFile, buffer, static_cast<uint32_t>(out_buffer_size));
-                PRINT_MESSAGE("\n");
-            }
-#ifdef MPA
-            if(ret_mpa == 0) {
-                if(0 == set_registration_status()) {
-                    printf("Registration status has been set to completed status.\n");
-                }
-            }
+cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
+{
+    network_post_error_t ret_status = POST_SUCCESS;
+    uint8_t* raw_data = NULL;
+    uint16_t platform_id_length = DEFAULT_PLATFORM_ID_LENGTH;
+    cache_server_delivery_status_t delivery_status = DELIVERY_ERROR_MAX;
+
+
+    // raw_data include: enclave mode(need load enclave) 
+    // 1. enc_ppid, pce_svn, pce_id, cpu_svn, the size is sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)
+    // 2. qe_id: its size is 16
+    // 3. platform_manifest: its size is platform_manifest_buffer_size if it is multi-package platform, otherwise it is 0
+
+    // raw_data include: non-enclave mode(don't need load enclave) 
+    // 1. pce_id, the size is PCE_ID_LENGTH 
+    // 2. platform_id: its size depends on user's input, but the size should not more than 260 bytes.
+    // 3. platform_manifest: its size is platform_manifest_buffer_size when platform manifest UEFI variable is available,
+
+    uint32_t raw_data_size = 0;
+    if (true == non_enclave_mode) {
+        platform_id_length = static_cast<uint16_t>(platform_id.length());
+        raw_data_size = platform_manifest_buffer_size + platform_id_length + PCE_ID_LENGTH;
+        raw_data = new (std::nothrow) uint8_t[raw_data_size];
+        if (raw_data == NULL) {
+            fprintf(stderr,"Error: Memory has been used up.\n");
+            return DELIVERY_FAIL;
+        }
+        memset(raw_data, 0x00, raw_data_size);//now pce id is zero
+        memcpy(raw_data + PCE_ID_LENGTH, platform_id.c_str(), platform_id_length);
+        memcpy(raw_data + PCE_ID_LENGTH + platform_id_length, p_platform_manifest_buffer, platform_manifest_buffer_size);
+    }
+    else {
+        // Output PCK Cert Retrieval Data
+        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_quote_buffer);
+        sgx_ql_ecdsa_sig_data_t* p_sig_data = (sgx_ql_ecdsa_sig_data_t*)p_quote->signature_data;
+        sgx_ql_auth_data_t* p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
+        sgx_ql_certification_data_t* p_temp_cert_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
+        raw_data_size = platform_manifest_buffer_size + static_cast < uint32_t>(sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)) + DEFAULT_PLATFORM_ID_LENGTH;
+        raw_data = new (std::nothrow) uint8_t[raw_data_size];
+        if (raw_data == NULL) {
+            fprintf(stderr,"Error: Memory has been used up.\n");
+            return DELIVERY_FAIL;
+        }
+        memset(raw_data, 0x00, raw_data_size);
+        memcpy(raw_data, p_temp_cert_data->certification_data, sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + DEFAULT_PLATFORM_ID_LENGTH);
+        if (platform_manifest_buffer_size > 0) { //for multi-package scenario
+            memcpy(raw_data + sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + DEFAULT_PLATFORM_ID_LENGTH, p_platform_manifest_buffer, platform_manifest_buffer_size);
+        }
+    }
+
+    ret_status = network_https_post(raw_data, raw_data_size, platform_id_length, non_enclave_mode);
+    if (POST_SUCCESS == ret_status) {
+        delivery_status = DELIVERY_SUCCESS;
+    }
+    else if (POST_AUTHENTICATION_ERROR == ret_status) {
+        fprintf(stderr, "Error: the input password is not correct.\n");
+        delivery_status = DELIVERY_FAIL;
+    }
+    else if (POST_NETWORK_ERROR == ret_status) {
+        fprintf(stderr, "Error: network error, please check the network setting or whether the cache server is down.\n");
+        delivery_status = DELIVERY_FAIL;
+    }
+    else {
+        fprintf(stderr, "Error: unexpected error happend during sending data to cache server.\n");
+        delivery_status = DELIVERY_FAIL;
+    }
+
+    delete[] raw_data;
+    raw_data = NULL;
+    return delivery_status;
+}
+
+
+int main(int argc, const char* argv[])
+{
+    int ret = -1;
+    uint32_t quote_size = 0;
+    uint8_t* p_quote_buffer = NULL;
+    FILE* pFile = NULL;
+    uint8_t *p_platform_manifest_buffer = NULL;
+    uint16_t platform_manifest_out_buffer_size = UINT16_MAX;
+    bool is_server_url_provided = false;
+    cache_server_delivery_status_t delivery_status = DELIVERY_ERROR_MAX;
+    uefi_status_t ret_mpa = UEFI_OPERATION_UNEXPECTED_ERROR;
+
+    printf("\n%s Version ", VER_FILE_DESCRIPTION_STR);
+    printf("%s\n\n", STRPRODUCTVER);
+
+    // parse the command options
+    if (parse_arg(argc, argv) != 0) {
+        PrintHelp();
+        return ret;
+    }
+
+    //check whether it is needed to save the collected data to a file
+    if (output_filename.empty() == false) {
+#ifdef _MSC_VER
+        if (0 != fopen_s(&pFile, output_filename.c_str(), "w")) {
+#else
+        if (NULL == (pFile = fopen(output_filename.c_str(), "w"))) {
 #endif
+            fprintf(stderr, "\nError opening %s output file.\n", output_filename.c_str());
+            return ret;
+        }
+    }
+
+    //check whether it is needed to upload the collected data to the cache server
+    if (server_url_string.empty() == false) {
+        is_server_url_provided = true;
+    }
+    else {
+        is_server_url_provided = is_server_url_available();
+    }
+
+    // for multi-package platform: get platform manifest  
+    ret_mpa = get_platform_manifest(&p_platform_manifest_buffer, platform_manifest_out_buffer_size);
+    if (non_enclave_mode) {
+        if (ret_mpa == UEFI_OPERATION_VARIABLE_NOT_AVAILABLE) {
+            fprintf(stderr, "Warning: PLATFORM MANIFEST UEFI variable is not avaialbe.\n");
+            // in this mode, it is possible platform manifest is not avaialbe,
+            // if it happens, since there is no valid data, 
+	    // will not write data to file or send data to cache server, just return
+            if (NULL != p_platform_manifest_buffer) {
+                free(p_platform_manifest_buffer);
+                p_platform_manifest_buffer = NULL;
+            }
+            if (pFile) {
+               fclose(pFile);
+            }
+	    ret = 0;
+	    return ret;
+        }
+        else if(ret_mpa != UEFI_OPERATION_SUCCESS) {
+            if (NULL != p_platform_manifest_buffer) {
+                free(p_platform_manifest_buffer);
+                p_platform_manifest_buffer = NULL;
+            }
+            fprintf(stderr,"Error: Can NOT retrieve the platform manifest.\n");
+            if (pFile) {
+               fclose(pFile);
+            }
+            return ret;
+        }
+    }
+    else {
+        // in enclave mode: collecting the platform manifest is not MUST, so just give a warning 
+        if (ret_mpa != UEFI_OPERATION_SUCCESS) {
+            fprintf(stderr, "Warning: Couldn't collect platform manifest. If you are using single-package platform, you can ignore this warning.\n");
+            // in this mode, if platform manifest is not availabe, just ignore it. 
+            platform_manifest_out_buffer_size = 0;
         }
 
-        if (server_url_string.empty() == false) {
-            is_server_url_provided = true;
+        ret = generate_quote(&p_quote_buffer, quote_size);
+        if (ret != 0) {
+            if (NULL != p_quote_buffer) {
+                free(p_quote_buffer);
+                p_quote_buffer = NULL;
+            }
+            if (NULL != p_platform_manifest_buffer) {
+                free(p_platform_manifest_buffer);
+                p_platform_manifest_buffer = NULL;
+            }
+            if (pFile) {
+               fclose(pFile);
+            }
+            return ret;
+        }
+    }
+
+    ret = 0;
+    if (pFile != NULL) {
+        send_collected_data_to_file(pFile, p_quote_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
+    }
+
+    if (is_server_url_provided) {
+        delivery_status = send_collected_data_to_server(p_quote_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
+    }
+
+    if (ret_mpa == UEFI_OPERATION_SUCCESS && (pFile != NULL || delivery_status == DELIVERY_SUCCESS)) {
+        if (UEFI_OPERATION_SUCCESS == set_registration_status()) {
+            fprintf(stdout,"Registration status has been set to completed status.\n");
         }
         else {
-            is_server_url_provided = is_server_url_avaiable();
+            fprintf(stdout, "Warning: could NOT set the Registration Status to completed status.\n");
         }
-        if (is_server_url_provided) {
-            // raw_data include: 
-            // 1. enc_ppid, pce_svn, pce_id, cpu_svn, the size is sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)
-            // 2. qe_id: its size is 16
-            // 3. platform_manifest: its size is out_buffer_size if it is multi-package platform, otherwise it is 0
-            raw_data = new uint8_t[out_buffer_size + sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + 16];
-            if (raw_data == NULL) {
-                printf("Error: Memory has been used up.\n");
-                break;
-            }
-            memcpy(raw_data, p_temp_cert_data->certification_data, sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + 16);
-            if (out_buffer_size > 0) { //for multi-package scenario
-                memcpy(raw_data + sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + 16, buffer, out_buffer_size);
-            }
-            uint32_t raw_data_size = static_cast<uint32_t>(sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)) + 16 + out_buffer_size;
-            ret_status = network_https_post(raw_data, raw_data_size);
-            if (POST_SUCCESS == ret_status) {
-                delivery_status = DELIVERY_SUCCESS;
-#ifdef MPA
-                if(ret_mpa == 0) {
-                    if(0 == set_registration_status()) {
-                        printf("Registration status has been set to completed status.\n");
-                    }
-                }
-#endif
-            }
-            else if (POST_AUTHENTICATION_ERROR == ret_status) {
-                printf("Error: the input password is not correct.\n");
-                delivery_status = DELIVERY_FAIL;
-            }
-            else if (POST_NETWORK_ERROR == ret_status) {
-                printf("Error: network error, please check the network setting or whether the cache server is down.\n");
-                delivery_status = DELIVERY_FAIL;
-            }
-            else {
-                printf("Error: unexpected error happend during sending data to cache server.\n");
-                delivery_status = DELIVERY_FAIL;
-            }
-        }
-    }while (0);
-    
+    }
+
     if (NULL != p_quote_buffer) {
         free(p_quote_buffer);
         p_quote_buffer = NULL;
     }
-    if(NULL != buffer) {
-        free(buffer);
-        buffer = NULL;
+    if(NULL != p_platform_manifest_buffer) {
+        free(p_platform_manifest_buffer);
+        p_platform_manifest_buffer = NULL;
     }
-    if(NULL != raw_data) {
-        free(raw_data);
-        raw_data = NULL;
-    }
+    
     if (pFile) {
         fclose(pFile);
     }
+
     if(delivery_status == DELIVERY_SUCCESS) {
         if(pFile != NULL) {
-            printf("the data has been sent to cache server successfuly and %s has been generated successfully!\n",output_filename.c_str());
-	}
+            fprintf(stdout, "the data has been sent to cache server successfuly and %s has been generated successfully!\n",output_filename.c_str());
+        }
         else {
-            printf("the data has been sent to cache server successfuly!\n");
+            fprintf(stdout, "the data has been sent to cache server successfuly!\n");
         }	
     }
     else if(delivery_status == DELIVERY_FAIL) {
         if(pFile != NULL) {
-            printf("%s has been generated successfuly, however the data couldn't be sent to cache server!\n",output_filename.c_str());
-	}
+            fprintf(stdout, "%s has been generated successfuly, however the data couldn't be sent to cache server!\n",output_filename.c_str());
+        }
         else {
-            printf("Error: the data couldn't be sent to cache server!\n");
+            fprintf(stderr, "Error: the data couldn't be sent to cache server!\n");
         }	
     } 
     else {
         if(pFile != NULL) {
-            printf("%s has been generated successfuly!\n",output_filename.c_str());
-	}
+            fprintf(stdout, "%s has been generated successfuly!\n",output_filename.c_str());
+        }
         else {
-            printf("Error: the retrieved data doesn't save to file, and it doesn't upload to cache server.\n");
+            fprintf(stderr, "Error: the retrieved data doesn't save to file, and it doesn't upload to cache server.\n");
         }	
     }
-
     return ret;
 }

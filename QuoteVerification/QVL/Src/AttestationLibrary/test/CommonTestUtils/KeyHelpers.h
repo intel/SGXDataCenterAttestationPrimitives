@@ -37,7 +37,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl { namespace test { 
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
 const std::string PEM_PRV = R"prv(
 -----BEGIN EC PRIVATE KEY-----
@@ -54,20 +54,20 @@ hrxYu3ssRADj5pHfONfVB5uTU4bF72+tHNCCy39Xk+iAJy0tU0VUH5TuDw==
 -----END PUBLIC KEY-----
 )pub";
 
-inline qvl::crypto::EC_KEY_uptr priv(const std::string& pem)
+inline dcap::crypto::EC_KEY_uptr priv(const std::string& pem)
 {
-    auto bio = qvl::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
-    auto ret = qvl::crypto::make_unique(EC_KEY_new());
+    auto bio = dcap::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
+    auto ret = dcap::crypto::make_unique(EC_KEY_new());
     auto* retRaw = ret.release();
     PEM_read_bio_ECPrivateKey(bio.get(), &retRaw, nullptr, nullptr);
     ret.reset(retRaw);
     return ret;
 }
 
-inline qvl::crypto::EC_KEY_uptr pub(const std::string& pem)
+inline dcap::crypto::EC_KEY_uptr pub(const std::string& pem)
 {
-    auto bio = qvl::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
-    auto ret = qvl::crypto::make_unique(EC_KEY_new());
+    auto bio = dcap::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
+    auto ret = dcap::crypto::make_unique(EC_KEY_new());
     auto* retRaw = ret.release();
     PEM_read_bio_EC_PUBKEY(bio.get(), &retRaw, nullptr, nullptr);
     ret.reset(retRaw);
@@ -103,7 +103,7 @@ inline std::vector<uint8_t> getVectorPub(const EC_KEY& ecPubKey)
 
     // internal pointer
     const EC_POINT *ecPoint = EC_KEY_get0_public_key(&ecPubKey);
-    const auto bn = qvl::crypto::make_unique(EC_POINT_point2bn(EC_KEY_get0_group(&ecPubKey), ecPoint, convForm, BN_new(), nullptr));
+    const auto bn = dcap::crypto::make_unique(EC_POINT_point2bn(EC_KEY_get0_group(&ecPubKey), ecPoint, convForm, BN_new(), nullptr));
     const int bnLen = BN_num_bytes(bn.get());
     if(bnLen != 65) // 64 bytes of key plus one header byte
     {
@@ -123,6 +123,6 @@ inline std::array<uint8_t,64> getRawPub(const EC_KEY& ecPubKey)
     return ret;
 }
 
-}}}} //namespace intel { namespace sgx { namespace qvl { namespace test { 
+}}}} //namespace intel { namespace sgx { namespace dcap { namespace test {
 
 #endif

@@ -29,147 +29,73 @@
 #
 #
 
-######## SGX Settings ########
+include ../buildenv.mk
 
-SGX_SDK ?= /opt/intel/sgxsdk
-SGX_ARCH ?= x64
-MODE ?= HW
-DEBUG ?= 0
-QVL_SRC_PATH ?= ../QVL/Src
-SGXSSL_PACKAGE_PATH ?= ../sgxssl/Linux/package
-DCAP_DIR  ?= ../..
-DCAP_QG_DIR  ?= $(DCAP_DIR)/QuoteGeneration
-include $(DCAP_QG_DIR)/buildenv.mk
-###################################
-
-SGX_COMMON_FLAGS := -m64
-SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
-SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 
 ifeq ($(DEBUG), 1)
-ifeq ($(PRERELEASE), 1)
-$(error Cannot set DEBUG and PRERELEASE at the same time!!)
-endif
-endif
-
-ifeq ($(DEBUG), 1)
-        QVL_LIB_NAME := QuoteVerificationd
-        QVL_PARSER_NAME := AttestationParserd
         SGXSSL_TLIB = sgx_tsgxssld
         SGXSSL_TCRYPTO = sgx_tsgxssl_cryptod
-        SGX_COMMON_FLAGS += -O0 -g3  -ggdb -DDEBUG_MODE=1
 else
-        QVL_LIB_NAME := QuoteVerification
-        QVL_PARSER_NAME := AttestationParser
         SGXSSL_TLIB = sgx_tsgxssl
         SGXSSL_TCRYPTO = sgx_tsgxssl_crypto
-        SGX_COMMON_FLAGS += -O2 -fno-delete-null-pointer-checks
 endif
 
-SGX_COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
-                    -Waddress -Wsequence-point -Wformat-security \
-                    -Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
-                    -Wcast-align -Wcast-qual -Wconversion -Wredundant-decls
-SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
-SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++14
+
+QVL_LIB_OBJS := $(QVL_LIB_FILES:.cpp=.o)
+QVL_PARSER_OBJS := $(QVL_PARSER_FILES:.cpp=.o)
 
 ######## Enclave Settings ########
 
-ifneq ($(MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
+ifeq ($(MODE), SIM)
+	TRTS_NAME := sgx_trts_sim
+	SERVICE_NAME := sgx_tservice_sim
 else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
+	TRTS_NAME := sgx_trts
+	SERVICE_NAME := sgx_tservice
 endif
-Crypto_Library_Name := sgx_tcrypto
+CRYPTO_LIB_NAME := sgx_tcrypto
 
 
-QVL_Lib_Static_Name := lib$(QVL_LIB_NAME).a
-QVL_Parser_Static_Name := lib$(QVL_PARSER_NAME).a
+QVE_FILES := Enclave/qve.cpp
+QVE_OBJS := $(QVE_FILES:.cpp=.o)
 
-TAttestation_Lib_DIR := $(QVL_SRC_PATH)/AttestationLibrary
-TAttestation_Parsers_DIR := $(QVL_SRC_PATH)/AttestationParsers
-
-COMMON_INCLUDE := -IInclude -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I$(SGXSSL_PACKAGE_PATH)/include -I../QVL/Src/ThirdParty/rapidjson/include
-TAttestation_Lib_Include_Paths := $(COMMON_INCLUDE) -I$(TAttestation_Lib_DIR)/include -I$(TAttestation_Lib_DIR)/src -I$(TAttestation_Parsers_DIR)/include
-TAttestation_Parsers_Include_Paths := $(COMMON_INCLUDE) -I$(TAttestation_Parsers_DIR)/include -I$(TAttestation_Parsers_DIR)/src -I$(TAttestation_Lib_DIR)/include
-
-TAttestation_Lib_Cpp_Files := $(wildcard $(TAttestation_Lib_DIR)/src/*.cpp) $(wildcard $(TAttestation_Lib_DIR)/src/*/*.cpp)
-TAttestation_Parsers_Cpp_Files0 := $(wildcard $(TAttestation_Parsers_DIR)/src/*.cpp) $(wildcard $(TAttestation_Parsers_DIR)/src/*/*.cpp)
-GMTIM = ../QVL/Src/AttestationParsers/src/Utils/GMTime.cpp
-TAttestation_Parsers_Cpp_Files := $(filter-out $(GMTIM),$(TAttestation_Parsers_Cpp_Files0))
-
-TAttestation_Lib_Obj_Files := $(TAttestation_Lib_Cpp_Files:.cpp=.o)
-TAttestation_Parsers_Obj_Files := $(TAttestation_Parsers_Cpp_Files:.cpp=.o)
+QVE_NAME := qve.so
+SIGNED_QVE_NAME := libsgx_qve.signed.so
+QVE_CONFIG_FILE := Enclave/linux/config.xml
 
 
-Enclave_Cpp_Files := Enclave/qve.cpp
+ENCLAVE_INC_PATH := $(COMMON_INCLUDE) -IInclude -IEnclave -I$(DCAP_QG_DIR)/quote_wrapper/common/inc -I$(DCAP_QG_DIR)/pce_wrapper/inc
 
-Enclave_Include_Paths := $(COMMON_INCLUDE) -I$(QVL_SRC_PATH) -I$(DCAP_QG_DIR)/quote_wrapper/common/inc -I$(DCAP_QG_DIR)/pce_wrapper/inc
-
-Enclave_C_Flags := $(Enclave_Include_Paths) -nostdinc -fvisibility=hidden -fpie -fpic -D_FORTIFY_SOURCE=2
+ENCLAVE_CFLAGS += $(ENCLAVE_INC_PATH) -fpie -fpic -D_FORTIFY_SOURCE=2
 ifneq ($(DEBUG), 1)
-    Enclave_C_Flags += -ffunction-sections -fdata-sections
+    ENCLAVE_CFLAGS += -ffunction-sections -fdata-sections
 endif
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)
-	Enclave_C_Flags += -fstack-protector
+	ENCLAVE_CFLAGS += -fstack-protector
 else
-	Enclave_C_Flags += -fstack-protector-strong
+	ENCLAVE_CFLAGS += -fstack-protector-strong
 endif
 
-Enclave_Cpp_Flags := $(Enclave_C_Flags) -nostdinc++ -DSGX_TRUSTED
-
-# Enable the security flags
-Enclave_Security_Link_Flags := -Wl,-z,relro,-z,now,-z,noexecstack
-
-# To generate a proper enclave, it is recommended to follow below guideline to link the trusted libraries:
-#    1. Link sgx_trts with the `--whole-archive' and `--no-whole-archive' options,
-#       so that the whole content of trts is included in the enclave.
-#    2. For other libraries, you just need to pull the required symbols.
-#       Use `--start-group' and `--end-group' to link these libraries.
-# Do NOT move the libraries linked with `--start-group' and `--end-group' within `--whole-archive' and `--no-whole-archive' options.
-# Otherwise, you may get some undesirable errors.
-Enclave_Link_Flags := $(Enclave_Security_Link_Flags) -fPIC \
-    -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L. -Llib -L$(SGXSSL_PACKAGE_PATH)/lib64 -L$(SGX_LIBRARY_PATH) \
-	-Wl,--whole-archive -l$(QVL_LIB_NAME) -l$(QVL_PARSER_NAME) -l$(Trts_Library_Name) -l$(SGXSSL_TLIB) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(SGXSSL_TCRYPTO) -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
-	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,--gc-sections \
-	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,-Map,out.map \
-	-Wl,--defsym,__ImageBase=0  \
-	-Wl,--version-script=Enclave/linux/qve.lds
-
-Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
-
-Enclave_Name := qve.so
-Signed_Enclave_Name := libsgx_qve.signed.so
-Enclave_Config_File := Enclave/linux/config.xml
-
-ifeq ($(MODE), HW)
-ifeq ($(DEBUG), 1)
-	Build_Mode = HW_DEBUG
-else ifeq ($(PRERELEASE), 1)
-	Build_Mode = HW_PRERELEASE
-else
-	Build_Mode = HW_RELEASE
-endif
-else
-ifeq ($(DEBUG), 1)
-	Build_Mode = SIM_DEBUG
-else ifeq ($(PRERELEASE), 1)
-	Build_Mode = SIM_PRERELEASE
-else
-	Build_Mode = SIM_RELEASE
-endif
-endif
+ENCLAVE_CXXFLAGS += $(ENCLAVE_CFLAGS) -std=c++14 -DSGX_TRUSTED
 
 
-.PHONY: all target run PREPARE_SGX_SSL
+ENCLAVE_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack -fPIC \
+				   -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
+				   -L$(SGX_LIBRARY_PATH) -L$(SGXSSL_PACKAGE_PATH)/lib64 \
+				   -Wl,--whole-archive -l$(TRTS_NAME) -l$(SGXSSL_TLIB) -Wl,--no-whole-archive \
+				   -Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(SGXSSL_TCRYPTO) -l$(CRYPTO_LIB_NAME) \
+				   -l$(SERVICE_NAME) -Wl,--end-group \
+				   -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,--gc-sections \
+				   -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,-Map,qve.map \
+				   -Wl,--defsym,__ImageBase=0  \
+				   -Wl,--build-id		\
+				   -Wl,--version-script=Enclave/linux/qve.lds
 
-all: .config_$(Build_Mode)_$(SGX_ARCH) install_lib PREPARE_SGX_SSL
-	@$(MAKE) target
+
+.PHONY: all PREPARE_SGX_SSL
+
+all: install_lib $(SIGNED_QVE_NAME) PREPARE_SGX_SSL
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
@@ -177,45 +103,24 @@ $(BUILD_DIR):
 PREPARE_SGXSSL := ../prepare_sgxssl.sh
 SGXSSL_HEADER_CHECK := $(SGXSSL_PACKAGE_PATH)/include/openssl/opensslconf.h
 PREPARE_SGX_SSL:
-	chmod 755 $(PREPARE_SGXSSL)
-	test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a && test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a && test -f $(SGXSSL_HEADER_CHECK) || $(PREPARE_SGXSSL)
+	@chmod 755 $(PREPARE_SGXSSL)
+	@test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a && test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a && test -f $(SGXSSL_HEADER_CHECK) || $(PREPARE_SGXSSL)
 
+$(SGXSSL_HEADER_CHECK): PREPARE_SGX_SSL
 
-
-install_lib: $(Signed_Enclave_Name) | $(BUILD_DIR)
-	@$(CP) $(Signed_Enclave_Name) $|
-
-ifeq ($(Build_Mode), HW_RELEASE)
-target: $(Enclave_Name)
-	@echo "The QvE has been built in release hardware mode."
-	@echo "Please sign the $(Enclave_Name) first with your signing key."
-	@echo "To sign the enclave use the command:"
-	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <your key> -enclave $(Enclave_Name) -out <$(Signed_Enclave_Name)> -config $(Enclave_Config_File)"
-	@echo "You can also sign the enclave using an external signing tool."
-	@echo "To build the project in simulation mode set MODE=SIM. To build the project in prerelease mode set PRERELEASE=1 and MODE=HW."
-
-
-else
-target: $(Signed_Enclave_Name)
-ifeq ($(Build_Mode), HW_DEBUG)
-	@echo "The project has been built in debug hardware mode."
-else ifeq ($(Build_Mode), SIM_DEBUG)
-	@echo "The project has been built in debug simulation mode."
-else ifeq ($(Build_Mode), HW_PRERELEASE)
-	@echo "The project has been built in pre-release hardware mode."
-else ifeq ($(Build_Mode), SIM_PRERELEASE)
-	@echo "The project has been built in pre-release simulation mode."
-else
-	@echo "The project has been built in release simulation mode."
-endif
-
-endif
-
-.config_$(Build_Mode)_$(SGX_ARCH):
-	@rm -f $(Enclave_Name) $(Signed_Enclave_Name) $(Enclave_Cpp_Objects) Enclave/qve_t.*
-	@touch .config_$(Build_Mode)_$(SGX_ARCH)
+install_lib: $(SIGNED_QVE_NAME) | $(BUILD_DIR)
+	 @$(CP) $(SIGNED_QVE_NAME) $(BUILD_DIR)
 
 ######## Enclave Objects ########
+
+
+$(QVL_LIB_OBJS): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
+	@$(CXX) $(ENCLAVE_CXXFLAGS) $(QVL_LIB_INC) -c $< -o $@
+	@echo "CXX  <=  $<"
+
+$(QVL_PARSER_OBJS): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
+	@$(CXX) $(ENCLAVE_CXXFLAGS) $(QVL_PARSER_INC) -c $< -o $@
+	@echo "CXX  <=  $<"
 
 Enclave/qve_t.h: $(SGX_EDGER8R) Enclave/qve.edl
 	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/qve.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
@@ -224,38 +129,19 @@ Enclave/qve_t.h: $(SGX_EDGER8R) Enclave/qve.edl
 Enclave/qve_t.c: Enclave/qve_t.h
 
 Enclave/qve_t.o: Enclave/qve_t.c
-	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
+	@$(CC) $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a: PREPARE_SGX_SSL
-$(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a: PREPARE_SGX_SSL
-$(SGXSSL_HEADER_CHECK): PREPARE_SGX_SSL
-
-$(TAttestation_Lib_Obj_Files): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) $(TAttestation_Lib_Include_Paths) -c $< -o $@
+Enclave/%.o: Enclave/%.cpp Enclave/qve_t.h $(SGXSSL_HEADER_CHECK)
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(ENCLAVE_CXXFLAGS) $(QVL_LIB_INC) -I$(QVL_SRC_PATH) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(TAttestation_Parsers_Obj_Files): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) $(TAttestation_Parsers_Include_Paths) -c $< -o $@
-	@echo "CXX  <=  $<"
-
-# Generate QVL static lib for trusted QvE use
-$(QVL_Lib_Static_Name): $(TAttestation_Lib_Obj_Files)
-	@$(AR) rsD $(QVL_Lib_Static_Name) $(TAttestation_Lib_Obj_Files)
-
-$(QVL_Parser_Static_Name): $(TAttestation_Parsers_Obj_Files)
-	@$(AR) rsD $(QVL_Parser_Static_Name) $(TAttestation_Parsers_Obj_Files)
-
-Enclave/%.o: Enclave/%.cpp Enclave/qve_t.h $(QVL_Lib_Static_Name) $(QVL_Parser_Static_Name) $(SGXSSL_HEADER_CHECK)
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -I$(TAttestation_Lib_DIR)/include -I$(TAttestation_Lib_DIR)/src -I$(TAttestation_Parsers_DIR)/include -I$(TAttestation_Parsers_DIR)/src -c $< -o $@
-	@echo "CXX  <=  $<"
-
-$(Enclave_Name): $(Enclave_Cpp_Objects) Enclave/qve_t.o
-	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+$(QVE_NAME): $(QVE_OBJS) Enclave/qve_t.o $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
+	@$(CXX) $^ -o $@ $(ENCLAVE_LDFLAGS)
 	@echo "LINK =>  $@"
 
-$(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+$(SIGNED_QVE_NAME): $(QVE_NAME)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $(QVE_NAME) -out $@ -config $(QVE_CONFIG_FILE)
 	@echo "SIGN =>  $@"
 
 print-%  : ; @echo $* = $($*)
@@ -264,7 +150,9 @@ print-%  : ; @echo $* = $($*)
 
 clean:
 	@echo "Cleaning objects"
-	@rm -f .config_* $(Enclave_Name) $(Signed_Enclave_Name) Enclave/str_to_time.o Enclave/bionic_localtime.o $(Enclave_Cpp_Objects) $(QVL_Lib_Static_Name) $(QVL_Parser_Static_Name) $(TAttestation_Lib_Obj_Files) $(TAttestation_Parsers_Obj_Files) Enclave/qve_t.* Enclave/*.d
+	@rm -rf $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
+	@rm -f .config_* $(QVE_NAME) $(SIGNED_QVE_NAME) Enclave/str_to_time.o Enclave/bionic_localtime.o $(QVE_OBJS)  Enclave/qve_t.* Enclave/*.d
+	@rm -f *.map
 
 SGXSSL_clean:
 	@echo "Cleaning sgxssl"

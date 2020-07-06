@@ -58,6 +58,12 @@ const std::vector<parser::x509::Extension::Type> PCK_REQUIRED_SGX_EXTENSIONS
     parser::x509::Extension::Type::TCB,
 };
 
+const std::vector<parser::x509::Extension::Type> PLATFORM_PCK_REQUIRED_SGX_EXTENSIONS
+{
+        parser::x509::Extension::Type::PLATFORM_INSTANCE_ID,
+        parser::x509::Extension::Type::CONFIGURATION,
+};
+
 const std::vector<parser::x509::Extension::Type> TCB_REQUIRED_SGX_EXTENSIONS
 {
     parser::x509::Extension::Type::CPUSVN,
@@ -80,6 +86,13 @@ const std::vector<parser::x509::Extension::Type> TCB_REQUIRED_SGX_EXTENSIONS
     parser::x509::Extension::Type::SGX_TCB_COMP16_SVN
 };
 
+const std::vector<parser::x509::Extension::Type> CONFIGURATION_REQUIRED_SGX_EXTENSIONS
+{
+        parser::x509::Extension::Type::DYNAMIC_PLATFORM,
+        parser::x509::Extension::Type::CACHED_KEYS,
+        parser::x509::Extension::Type::SMT_ENABLED
+};
+
 const size_t PPID_BYTE_LEN = 16;
 const size_t CPUSVN_BYTE_LEN = 16;
 const size_t SGX_TCB_SVN_COMP_BYTE_LEN = 1;
@@ -87,6 +100,7 @@ const size_t PCEID_BYTE_LEN = 2;
 const size_t PCESVN_BYTE_LEN = 2;
 const size_t FMSPC_BYTE_LEN = 6;
 const size_t DYNAMIC_PLATFORM_BYTE_LEN = 1;
+const size_t PLATFORM_INSTANCE_ID_LEN = 16;
 const size_t SGX_TYPE_BYTE_LEN = 1;
 const size_t TCB_SEQUENCE_LEN = 18;
 const size_t MISCSELECT_BYTE_LEN = 4;

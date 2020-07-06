@@ -39,7 +39,7 @@
 
 namespace intel{
 namespace sgx{
-namespace qvl{
+namespace dcap{
 
 namespace DigestUtils
 {

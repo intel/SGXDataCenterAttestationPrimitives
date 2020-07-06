@@ -32,7 +32,7 @@
 #include "AppOptionsParser.h"
 #include <chrono>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
     static const std::string quoteDefaultPath = "quote.dat";

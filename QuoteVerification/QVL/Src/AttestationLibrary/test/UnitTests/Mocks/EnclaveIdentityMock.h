@@ -35,9 +35,9 @@
 #include <gmock/gmock.h>
 #include <Verifiers/EnclaveIdentityV1.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class EnclaveIdentityV1Mock: public qvl::EnclaveIdentityV1
+class EnclaveIdentityV1Mock: public dcap::EnclaveIdentityV1
 {
 public:
     MOCK_CONST_METHOD0(getStatus, Status());

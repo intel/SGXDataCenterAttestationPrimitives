@@ -73,9 +73,6 @@ else
     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
 endif
 
-ifdef MPA
-    COMMON_FLAGS += -DMPA
-endif
 
 COMMON_FLAGS += -ffunction-sections -fdata-sections
 
@@ -101,13 +98,13 @@ App_Cpp_Files := $(wildcard App/linux/*.cpp App/*.cpp)
 App_Include_Paths := -I$(SGX_SDK)/include -I./App -I ./App/inc
 App_Include_Paths += -I ../../QuoteGeneration/common/inc/internal -I ../../QuoteGeneration/quote_wrapper/ql/inc 
 App_Include_Paths += -I ../../QuoteGeneration/pce_wrapper/inc -I ../../QuoteGeneration/quote_wrapper/common/inc
+App_Include_Paths += -I ../SGXPlatformRegistration/include
 
 App_C_Flags := $(COMMON_FLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack
-App_Link_Flags +=  -L../../QuoteGeneration/build/linux -Wl,-rpath=../../QuoteGeneration/build/linux -lsgx_dcap_ql
-App_Link_Flags +=  -L $(SGX_SDK)/lib64 -lsgx_urts -lcurl -ldl -lpthread -Wl,-rpath=.
+App_Link_Flags +=  -lcurl -ldl -lpthread -Wl,-rpath=.
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
@@ -151,8 +148,8 @@ Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
 ENCLAVE_LIBRARY_PATH := Enclave/
 
 
-Enclave_Name := enclave.so
-Signed_Enclave_Name := enclave.signed.so
+Enclave_Name := pck_retrieve_tool_enclave.so
+Signed_Enclave_Name := pck_retrieve_tool_enclave.signed.so
 Enclave_Config_File := Enclave/config.xml
 
 ifeq ($(DEBUG), 1)
@@ -226,7 +223,7 @@ $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
 	echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/test_enclave_signing_key.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@rm -f $(Enclave_Name)
 	@echo "SIGN =>  $@"
 

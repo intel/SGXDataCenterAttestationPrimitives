@@ -30,11 +30,9 @@
  */
 
 #include "X509CrlGenerator.h"
-#include "X509CertGenerator.h"
 #include <algorithm>
-#include <CertVerification/X509Constants.h>
 
-namespace intel{ namespace sgx{ namespace qvl{ namespace test{
+namespace intel{ namespace sgx{ namespace dcap{ namespace test{
 
 crypto::X509_CRL_uptr X509CrlGenerator::generateCRL(CRLVersion version, long lastUpdateOffset, long nextUpdateOffset,
                                                     const crypto::X509_uptr &issuerCert, const std::vector<Bytes> &revokedSerials) const {

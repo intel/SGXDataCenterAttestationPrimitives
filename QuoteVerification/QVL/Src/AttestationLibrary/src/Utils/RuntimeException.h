@@ -33,7 +33,7 @@
 #define SGXECDSAATTESTATION_RUNTIMEEXCEPTION_H
 
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class RuntimeException : public std::exception
 {
@@ -45,6 +45,6 @@ protected:
 
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_RUNTIMEEXCEPTION_H

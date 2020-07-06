@@ -33,8 +33,10 @@
 #define INTEL_SGX_QVL_QUOTE_CONSTANTS_H_
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 
-namespace intel { namespace sgx { namespace qvl { namespace constants {
+namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 const uint16_t QUOTE_VERSION = 3;
 
@@ -55,6 +57,6 @@ const std::array<uint16_t, 5> SUPPORTED_PCK_IDS = {{ PCK_ID_PLAIN_PPID, PCK_ID_E
 const std::array<uint16_t, 1> ALLOWED_ATTESTATION_KEY_TYPES = {{ ECDSA_256_WITH_P256_CURVE }};
 const std::array<uint8_t, 16> INTEL_QE_VENDOR_ID = {{ 0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F, 0x06, 0x07 }};
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace constants {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 #endif

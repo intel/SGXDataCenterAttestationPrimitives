@@ -35,19 +35,19 @@
 #include <Verifiers/TCBSigningChain.h>
 #include <gmock/gmock.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class TcbSigningChainMock : public qvl::TCBSigningChain
+class TcbSigningChainMock : public dcap::TCBSigningChain
 {
 public:
     MOCK_CONST_METHOD3(verify, Status(
-            const qvl::CertificateChain&,
+            const dcap::CertificateChain&,
             const pckparser::CrlStore&,
             const dcap::parser::x509::Certificate&));
 
 };
 
-}}}}// namespace intel { namespace sgx { namespace qvl { namespace test {
+}}}}// namespace intel { namespace sgx { namespace dcap { namespace test {
 
 
 #endif //SGXECDSAATTESTATION_TCBSIGNINGCHAINMOCK_H

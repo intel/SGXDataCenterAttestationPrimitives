@@ -49,7 +49,6 @@ extern "C"
     MpResult mp_management_get_registration_status(MpTaskStatus *status);
 
     MpResult mp_management_get_sgx_status(MpSgxStatus *status);
-    MpResult mp_management_enable_sgx(MpSgxStatus *status);
 
     MpResult mp_management_set_registration_server_info(uint16_t flags, string url, const uint8_t *serverId, uint16_t serverIdSize);
     

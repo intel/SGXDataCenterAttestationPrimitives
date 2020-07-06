@@ -24,53 +24,20 @@ extern "C" {
  * OpenSSL was configured with the following options:
  */
 
-#ifndef OPENSSL_NO_BF
-# define OPENSSL_NO_BF
-#endif
-#ifndef OPENSSL_NO_CAMELLIA
-# define OPENSSL_NO_CAMELLIA
-#endif
-#ifndef OPENSSL_NO_CAST
-# define OPENSSL_NO_CAST
-#endif
-#ifndef OPENSSL_NO_IDEA
-# define OPENSSL_NO_IDEA
-#endif
 #ifndef OPENSSL_NO_MD2
 # define OPENSSL_NO_MD2
-#endif
-#ifndef OPENSSL_NO_MD4
-# define OPENSSL_NO_MD4
-#endif
-#ifndef OPENSSL_NO_MDC2
-# define OPENSSL_NO_MDC2
-#endif
-#ifndef OPENSSL_NO_RC4
-# define OPENSSL_NO_RC4
 #endif
 #ifndef OPENSSL_NO_RC5
 # define OPENSSL_NO_RC5
 #endif
-#ifndef OPENSSL_NO_SRP
-# define OPENSSL_NO_SRP
-#endif
 #ifndef OPENSSL_THREADS
 # define OPENSSL_THREADS
 #endif
-#ifndef OPENSSL_RAND_SEED_NONE
-# define OPENSSL_RAND_SEED_NONE
-#endif
-#ifndef OPENSSL_NO_AFALGENG
-# define OPENSSL_NO_AFALGENG
-#endif
-#ifndef OPENSSL_NO_APPS
-# define OPENSSL_NO_APPS
+#ifndef OPENSSL_RAND_SEED_OS
+# define OPENSSL_RAND_SEED_OS
 #endif
 #ifndef OPENSSL_NO_ASAN
 # define OPENSSL_NO_ASAN
-#endif
-#ifndef OPENSSL_NO_CAPIENG
-# define OPENSSL_NO_CAPIENG
 #endif
 #ifndef OPENSSL_NO_CRYPTO_MDEBUG
 # define OPENSSL_NO_CRYPTO_MDEBUG
@@ -80,9 +47,6 @@ extern "C" {
 #endif
 #ifndef OPENSSL_NO_DEVCRYPTOENG
 # define OPENSSL_NO_DEVCRYPTOENG
-#endif
-#ifndef OPENSSL_NO_EC2M
-# define OPENSSL_NO_EC2M
 #endif
 #ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
 # define OPENSSL_NO_EC_NISTP_64_GCC_128
@@ -102,9 +66,6 @@ extern "C" {
 #ifndef OPENSSL_NO_HEARTBEATS
 # define OPENSSL_NO_HEARTBEATS
 #endif
-#ifndef OPENSSL_NO_HW
-# define OPENSSL_NO_HW
-#endif
 #ifndef OPENSSL_NO_MSAN
 # define OPENSSL_NO_MSAN
 #endif
@@ -120,17 +81,8 @@ extern "C" {
 #ifndef OPENSSL_NO_SSL3_METHOD
 # define OPENSSL_NO_SSL3_METHOD
 #endif
-#ifndef OPENSSL_NO_STDIO
-# define OPENSSL_NO_STDIO
-#endif
-#ifndef OPENSSL_NO_TESTS
-# define OPENSSL_NO_TESTS
-#endif
 #ifndef OPENSSL_NO_UBSAN
 # define OPENSSL_NO_UBSAN
-#endif
-#ifndef OPENSSL_NO_UI_CONSOLE
-# define OPENSSL_NO_UI_CONSOLE
 #endif
 #ifndef OPENSSL_NO_UNIT_TEST
 # define OPENSSL_NO_UNIT_TEST
@@ -138,11 +90,8 @@ extern "C" {
 #ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
 # define OPENSSL_NO_WEAK_SSL_CIPHERS
 #endif
-#ifndef OPENSSL_NO_DYNAMIC_ENGINE
-# define OPENSSL_NO_DYNAMIC_ENGINE
-#endif
-#ifndef OPENSSL_NO_AFALGENG
-# define OPENSSL_NO_AFALGENG
+#ifndef OPENSSL_NO_STATIC_ENGINE
+# define OPENSSL_NO_STATIC_ENGINE
 #endif
 
 

@@ -43,7 +43,8 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 
 PckCertificate::PckCertificate(const Certificate& certificate): Certificate(certificate)
 {
-    setMembers();
+    auto sgxExtensions = crypto::make_unique(getSgxExtensions());
+    setMembers(sgxExtensions.get());
 }
 
 const std::vector<uint8_t>& PckCertificate::getPpid() const
@@ -90,13 +91,14 @@ PckCertificate PckCertificate::parse(const std::string& pem)
 
 PckCertificate::PckCertificate(const std::string& pem): Certificate(pem)
 {
-    setMembers();
+    auto sgxExtensions = crypto::make_unique(getSgxExtensions());
+    setMembers(sgxExtensions.get());
 }
 
-void PckCertificate::setMembers()
+stack_st_ASN1_TYPE* PckCertificate::getSgxExtensions()
 {
     const auto sgxExtension = std::find_if(_extensions.begin(), _extensions.end(),
-            [](const Extension &ext) { return ext.getNid() == NID_undef && ext.getName() == oids::SGX_EXTENSION; });
+                                           [](const Extension &ext) { return ext.getNid() == NID_undef && ext.getName() == oids::SGX_EXTENSION; });
 
     if(sgxExtension == _extensions.end())
     {
@@ -116,13 +118,17 @@ void PckCertificate::setMembers()
 
     crypto::validateOid(oids::SGX_EXTENSION, topSequence.get(), V_ASN1_SEQUENCE);
 
-    const auto stack = crypto::oidToStack(topSequence.get());
-    const auto stackEntries = sk_ASN1_TYPE_num(stack.get());
+    return crypto::oidToStack(topSequence.get()).release();
+}
+
+void PckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
+{
+    const auto stackEntries = sk_ASN1_TYPE_num(sgxExtensions);
     if(stackEntries != PROCESSOR_CA_EXTENSION_COUNT && stackEntries != PLATFORM_CA_EXTENSION_COUNT)
     {
         std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [" +
-                          std::to_string(PROCESSOR_CA_EXTENSION_COUNT) + "] or [" + std::to_string(PLATFORM_CA_EXTENSION_COUNT) +
-                          "] elements when given [" + std::to_string(stackEntries) + "]";
+                std::to_string(PROCESSOR_CA_EXTENSION_COUNT) + "] or [" + std::to_string(PLATFORM_CA_EXTENSION_COUNT) +
+                "] elements when given [" + std::to_string(stackEntries) + "]";
         throw InvalidExtensionException(err);
     }
 
@@ -131,7 +137,7 @@ void PckCertificate::setMembers()
     // Iterate through SGX Extensions stored as sequence(tuple) of OIDName and OIDValue
     for (int i=0; i < stackEntries; i++)
     {
-        const auto oidTupleWrapper = sk_ASN1_TYPE_value(stack.get(), i);
+        const auto oidTupleWrapper = sk_ASN1_TYPE_value(sgxExtensions, i);
         crypto::validateOid(oids::SGX_EXTENSION, oidTupleWrapper, V_ASN1_SEQUENCE);
 
         const auto oidTuple = crypto::oidToStack(oidTupleWrapper);

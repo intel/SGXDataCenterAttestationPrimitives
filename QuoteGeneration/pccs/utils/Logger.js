@@ -52,7 +52,7 @@ const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf } = format;
 var logger = winston.createLogger({
   format: combine(
-    timestamp(),
+      timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       printf(info=>{
           return `${info.timestamp} [${info.level}]: ${info.message}`;
       })

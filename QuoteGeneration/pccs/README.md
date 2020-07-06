@@ -5,8 +5,8 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **Prerequisites**
 
     Install node.js (Version 10.13.0 LTS or later)
-    + For Linux, you can use the following command:<br/>
-         curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash - sudo apt-get install -y nodejs
+    + For Debian and Ubuntu based distributions, you can use the following command:<br/>
+         curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - sudo apt-get install -y nodejs
     + To download and install, goto https://nodejs.org/en/download/
 
 - **Install via Linux Debian package installer**
@@ -17,6 +17,12 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
     *NOTE : If you have installed old libsgx-dcap-pccs releases with root privilege before, some folders may remain even after you uninstall it. 
     You can delete them manually with root privilege, for example, ~/.pm2/, ~/.npm/, etc.*
+
+- **Install via RPM package installer**
+
+    rpm -ivh sgx-dcap-pccs_${version}_${arch}.rpm
+
+    After the RPM package was installed, you can run install.sh from the root directory of the PCCS to configure it.
 
 - **Linux manual installation**
 
@@ -77,6 +83,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **CachingFillMode** - The method used to fill the cache DB. Can be one of the following: REQ/LAZY/OFFLINE. For more details see section "Caching Fill Mode".
 - **LogLevel** - Log level. Use the same levels as npm: error, warn, info, http, verbose, debug, silly. Default is info.
 - **DB_CONFIG** - You can choose sqlite or mysql and many other DBMSes. For sqlite, you don't need to change anything. For other DBMSes, you need to set database connection options correctly. Normally you need to change database, username, password, host and dialect to connect to your DBMS.
+<br/>**NOTE: It's recommended to delete old database first if you have installed a different version of PCCS before because the database may be not compatible.**
 
 ## Caching Fill Mode
 When a new server platform is introduced to the data center or the cloud service provider that will require SGX remote attestation, the caching service will need to import the platform’s SGX attestation collateral retrieved from Intel.  This collateral will be used for both generating and verifying ECDSA quotes. Currently PCCS supports three caching fill methods.

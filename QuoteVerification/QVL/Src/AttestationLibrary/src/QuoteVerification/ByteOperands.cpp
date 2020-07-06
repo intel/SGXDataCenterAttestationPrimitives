@@ -32,7 +32,7 @@
 
 #include "ByteOperands.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 uint16_t swapBytes(uint16_t val)
 {
@@ -85,4 +85,4 @@ std::array<uint8_t,4> toArray(uint32_t val)
     }};
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

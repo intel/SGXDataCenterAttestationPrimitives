@@ -33,10 +33,7 @@
 #include <string>
 #include <memory>
 #include <algorithm>
-#include <iostream>
-#include <iomanip>
 
-#include "OpensslHelpers/OpensslInit.h"
 #include "PckParser/CrlStore.h"
 #include "CertVerification/CertificateChain.h"
 #include "QuoteVerification/Quote.h"
@@ -61,27 +58,6 @@ static constexpr size_t EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN = 2;
 
 using namespace intel::sgx;
 
-class OpensslGuard
-{
-public:
-    OpensslGuard()
-    {
-        qvl::crypto::init();
-    }
-
-    ~OpensslGuard()
-    {
-        qvl::crypto::clear();
-    }
-
-    OpensslGuard(const OpensslGuard&) = delete;
-    OpensslGuard(OpensslGuard&&) = delete;
-    OpensslGuard& operator=(const OpensslGuard&) = delete;
-    OpensslGuard& operator=(OpensslGuard&&) = delete;
-};
-
-static const OpensslGuard opensslGuard;
-
 const char* sgxAttestationGetVersion()
 {
     return VERSION;
@@ -103,7 +79,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -119,7 +95,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
 
     if(status != STATUS_OK)
@@ -132,7 +108,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl, intermediateCrl;
+    dcap::pckparser::CrlStore rootCaCrl, intermediateCrl;
     if(!rootCaCrl.parse(crls[0]) || !intermediateCrl.parse(crls[1]))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
@@ -141,7 +117,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     try
     {
         auto rootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
+        return dcap::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -157,13 +133,13 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
-    qvl::pckparser::CrlStore x509Crl;
+    dcap::pckparser::CrlStore x509Crl;
     if(!x509Crl.parse(crl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCACertChain);
     if (status != STATUS_OK)
     {
@@ -173,7 +149,7 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
     try
     {
         auto trustedRootCACert = dcap::parser::x509::Certificate::parse(pemTrustedRootCaCert);
-        return qvl::PckCrlVerifier{}.verify(x509Crl, chain, trustedRootCACert);
+        return dcap::PckCrlVerifier{}.verify(x509Crl, chain, trustedRootCACert);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -191,7 +167,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -220,7 +196,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         return STATUS_SGX_TCB_INFO_INVALID;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
     if (status != STATUS_OK)
     {
@@ -232,7 +208,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl;
+    dcap::pckparser::CrlStore rootCaCrl;
     if(!rootCaCrl.parse(pemRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
@@ -241,7 +217,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     try
     {
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
+        return dcap::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -260,7 +236,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -275,18 +251,18 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentity;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentity;
     try
     {
         enclaveIdentity = parser.parse(enclaveIdentityString);
     }
-    catch (const qvl::ParserException &e)
+    catch (const dcap::ParserException &e)
     {
         return e.getStatus();
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
     if(status != STATUS_OK)
     {
@@ -298,7 +274,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl;
+    dcap::pckparser::CrlStore rootCaCrl;
     if(!rootCaCrl.parse(pemRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
@@ -307,7 +283,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     try
     {
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
+        return dcap::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -336,14 +312,14 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     /// 4.1.2.4.2
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
     /// 4.1.2.4.5
-    qvl::pckparser::CrlStore pckCrlStore;
+    dcap::pckparser::CrlStore pckCrlStore;
     if(!pckCrlStore.parse(pckCrl))
     {
         return STATUS_UNSUPPORTED_PCK_RL_FORMAT;
@@ -364,14 +340,14 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
 
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentity;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentity;
     if (qeIdentityJson != nullptr)
     {
         try {
             enclaveIdentity = parser.parse(qeIdentityJson);
         }
-        catch (const qvl::ParserException&)
+        catch (const dcap::ParserException&)
         {
             return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
         }
@@ -380,7 +356,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     try
     {
         auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate); /// 4.1.2.4.3
-        return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), qvl::EnclaveReportVerifier());
+        return dcap::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), dcap::EnclaveReportVerifier());
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -400,26 +376,26 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
     }
 
     /// 4.1.2.9.1
-    const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + qvl::constants::ENCLAVE_REPORT_BYTE_LEN);
-    qvl::Quote quote;
+    const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + dcap::constants::ENCLAVE_REPORT_BYTE_LEN);
+    dcap::Quote quote;
     if(!quote.parseEnclaveReport(vecEnclaveReport))
     {
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
     /// 4.1.2.9.2
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentityParsed;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentityParsed;
     try
     {
         enclaveIdentityParsed = parser.parse(enclaveIdentity);
     }
-    catch(const qvl::ParserException &e)
+    catch(const dcap::ParserException &e)
     {
         return e.getStatus();
     }
 
-    return qvl::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getBody());
+    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getBody());
 }
 
 Status sgxAttestationGetQECertificationDataSize(
@@ -437,8 +413,8 @@ Status sgxAttestationGetQECertificationDataSize(
     // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
@@ -466,8 +442,8 @@ Status sgxAttestationGetQECertificationData(
     // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }

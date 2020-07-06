@@ -34,6 +34,8 @@
 #include "X509Constants.h"
 #include "ParserUtils.h"
 
+#include <OpensslHelpers/OpensslTypes.h>
+
 #include <algorithm>
 #include <iterator>
 
@@ -108,7 +110,7 @@ const std::vector<uint8_t>& Certificate::getPubKey() const
     return _pubKey;
 }
 
-const std::string Certificate::getPem() const
+const std::string& Certificate::getPem() const
 {
     return _pem;
 }

@@ -35,7 +35,7 @@
 
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 
 Status CertificateChain::parse(const std::string& pemCertChain)

@@ -38,7 +38,7 @@
 #include "Mocks/FileReaderMock.h"
 
 using namespace ::testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 struct AppCoreTests: public Test
 {

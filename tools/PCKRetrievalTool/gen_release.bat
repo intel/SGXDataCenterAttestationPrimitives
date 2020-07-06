@@ -30,7 +30,7 @@
 @echo off 
 
 set svn_ver=%1%
-set rel_dir_base=PCKIDRetrievalTool_v1.6.100.2
+set rel_dir_base=PCKIDRetrievalTool_v1.7.100.2
 set rel_dir_name=%rel_dir_base%%svn_ver%
 
 
@@ -38,7 +38,7 @@ del /Q %rel_dir_name%\*
 rd %rel_dir_name% 
 
 mkdir %rel_dir_name%
-copy x64\release\enclave.signed.dll %rel_dir_name%
+copy x64\release\pck_retrieve_tool_enclave.signed.dll %rel_dir_name%
 copy x64\release\dcap_quoteprov.dll %rel_dir_name%
 copy x64\release\PCKIDRetrievalTool.exe %rel_dir_name%
 copy network_setting.conf %rel_dir_name%

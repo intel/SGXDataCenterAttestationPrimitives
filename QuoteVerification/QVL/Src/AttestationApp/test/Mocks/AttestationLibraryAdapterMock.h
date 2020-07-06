@@ -35,9 +35,9 @@
 #include <AppCore/IAttestationLibraryAdapter.h>
 #include <gmock/gmock.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class AttestationLibraryAdapterMock : public qvl::IAttestationLibraryAdapter
+class AttestationLibraryAdapterMock : public dcap::IAttestationLibraryAdapter
 {
 public:
     MOCK_CONST_METHOD0(getVersion, std::string());

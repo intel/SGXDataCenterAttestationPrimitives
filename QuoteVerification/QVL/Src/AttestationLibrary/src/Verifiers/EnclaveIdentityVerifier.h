@@ -39,7 +39,7 @@
 #include <CertVerification/CertificateChain.h>
 #include <PckParser/CrlStore.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class EnclaveIdentityVerifier
 {
@@ -76,6 +76,6 @@ private:
     std::unique_ptr<TCBSigningChain> _tcbSigningChain;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_ENCLAVEIDENTITYVERIFIER_H

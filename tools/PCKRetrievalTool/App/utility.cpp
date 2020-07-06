@@ -41,37 +41,76 @@
 #include <tchar.h>
 #else
 #include <dlfcn.h>
+#include <unistd.h>
 #endif
 #include "sgx_urts.h"     
 #include "sgx_dcap_ql_wrapper.h"
 #include "Enclave_u.h"
+#include "utility.h"
+
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
 
 
 #ifdef DEBUG
 #define PRINT_MESSAGE(message) printf(message);
+#define PRINT_MESSAGE2(message1,message2) printf(message1, message2);
 #else
 #define PRINT_MESSAGE(message) ;
+#define PRINT_MESSAGE2(message1,message2) ;
 #endif
 
 #ifdef  _MSC_VER                
-#define ENCLAVE_PATH _T("enclave.signed.dll")
+#define TOOL_ENCLAVE_NAME _T("pck_retrieve_tool_enclave.signed.dll")
+#define SGX_URTS_LIBRARY _T("sgx_urts.dll")
+#define SGX_DCAP_QUOTE_GENERATION_LIBRARY _T("sgx_dcap_ql.dll")
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME _T("dcap_quoteprov.dll")
 #define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY _T("mp_uefi.dll")
 #define FINDFUNCTIONSYM   GetProcAddress
 #define CLOSELIBRARYHANDLE  FreeLibrary
-#define EFIVARS_FILE_SYSTEM_IN_OS ""//for Windows OS, don't need this path 
+#define EFIVARS_FILE_SYSTEM_IN_OS ""//for Windows OS, don't need this path
+
+HINSTANCE sgx_urts_handle = NULL;
+#ifdef UNICODE
+typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCWSTR file_name, const int debug, sgx_launch_token_t* launch_token, int* launch_token_updated, sgx_enclave_id_t* enclave_id, sgx_misc_attribute_t* misc_attr);
+#else 
+typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name, const int debug, sgx_launch_token_t* launch_token, int* launch_token_updated, sgx_enclave_id_t* enclave_id, sgx_misc_attribute_t* misc_attr);
+#endif
+
 #else
-#define ENCLAVE_PATH "enclave.signed.so"
+#define TOOL_ENCLAVE_NAME "pck_retrieve_tool_enclave.signed.so"
+#define SGX_URTS_LIBRARY "libsgx_urts.so.1"             
+#define SGX_DCAP_QUOTE_GENERATION_LIBRARY "libsgx_dcap_ql.so.1"
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
-#define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY "libmpa_uefi.so"
+#define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY "libmpa_uefi.so.1"
 #define FINDFUNCTIONSYM   dlsym
 #define CLOSELIBRARYHANDLE  dlclose
 #define EFIVARS_FILE_SYSTEM_IN_OS "/sys/firmware/efi/efivars/"
+typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const char* file_name,
+    const int debug,
+    sgx_launch_token_t* launch_token,
+    int* launch_token_updated,
+    sgx_enclave_id_t* enclave_id,
+    sgx_misc_attribute_t* misc_attr);
+
+
+typedef quote3_error_t(*sgx_ql_set_path_func_t)(sgx_ql_path_type_t path_type, const char* p_path);
+
+
+void* sgx_urts_handle = NULL;
 #endif 
 
-#ifdef MPA     
+
+typedef sgx_status_t(SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid,
+    const int index,
+    const void* ocall_table,
+    void* ms);
+
+typedef sgx_status_t (SGXAPI* sgx_destroy_enclave_func_t)(const sgx_enclave_id_t enclave_id);
 #ifdef _MSC_VER
-#pragma warning(disable: 4201)
+#pragma warning(disable: 4201)    // used to eliminate `unused variable' warning
+#define UNUSED(val) (void)(val)
 #endif 
 #include "MPUefi.h"
 typedef MpResult(*mp_uefi_init_func_t)(const char* path, const LogLevel logLevel);
@@ -80,6 +119,68 @@ typedef MpResult(*mp_uefi_get_request_func_t)(uint8_t *request, uint16_t *reques
 typedef MpResult(*mp_uefi_get_registration_status_func_t)(MpRegistrationStatus* status);
 typedef MpResult(*mp_uefi_set_registration_status_func_t)(const MpRegistrationStatus* status);
 typedef MpResult(*mp_uefi_terminate_func_t)();
+
+
+typedef quote3_error_t (*sgx_qe_get_target_info_func_t)(sgx_target_info_t* p_qe_target_info);
+typedef quote3_error_t (*sgx_qe_get_quote_size_func_t)(uint32_t* p_quote_size);
+typedef quote3_error_t (*sgx_qe_get_quote_func_t)(const sgx_report_t* p_app_report,uint32_t quote_size, uint8_t* p_quote);
+
+
+//redefine this function to avoid sgx_urts library compile dependency
+sgx_status_t  SGXAPI sgx_ecall(const sgx_enclave_id_t eid,
+                              const int index,
+                              const void* ocall_table,
+                              void* ms)
+{
+    // sgx_urts library has been tried to loaded before this function call, and this function is be called during sgx_create_enclave call
+#if defined(_MSC_VER)
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
+        return SGX_SUCCESS;
+    }
+    sgx_ecall_func_t p_sgx_ecall = (sgx_ecall_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_ecall");
+    return p_sgx_ecall(eid, index, ocall_table, ms);
+#else
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.so library, please make sure you have installed sgx_urts installer package. \n");
+        return SGX_SUCCESS;
+    }
+    sgx_ecall_func_t p_sgx_ecall = (sgx_ecall_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_ecall");
+    return p_sgx_ecall(eid, index, ocall_table, ms);
+#endif
+
+}
+
+
+#ifdef _MSC_VER
+bool get_program_path(TCHAR *p_file_path, size_t buf_size)
+{
+    UNUSED(p_file_path);
+    UNUSED(buf_size);
+    return true;
+}
+#else
+bool get_program_path(char *p_file_path, size_t buf_size)
+{
+    if(NULL == p_file_path || 0 == buf_size){
+        return false;
+    }
+
+    ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
+    if (i == -1)
+        return false;
+    p_file_path[i] = '\0';
+
+    char* p_last_slash = strrchr(p_file_path, '/' );
+    if ( p_last_slash != NULL ) {
+        p_last_slash++;   //increment beyond the last slash
+        *p_last_slash = '\0';  //null terminate the string
+    }
+    else {
+        p_file_path[0] = '\0';
+    }
+    return true;
+}
 #endif
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
@@ -90,10 +191,55 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
     sgx_enclave_id_t eid = 0;
     int launch_token_updated = 0;
     sgx_launch_token_t launch_token = { 0 };
-
-    // Get the app enclave report targeting the QE3
     memset(&launch_token, 0, sizeof(sgx_launch_token_t));
-    sgx_status = sgx_create_enclave(ENCLAVE_PATH,
+
+#if defined(_MSC_VER)
+    TCHAR enclave_path[MAX_PATH] = _T("");
+#else
+    char enclave_path[MAX_PATH] = "";
+#endif
+
+    if (!get_program_path(enclave_path, MAX_PATH))
+        return false;
+#if defined(_MSC_VER)    
+    if (_tcsnlen(enclave_path, MAX_PATH) + _tcsnlen(TOOL_ENCLAVE_NAME, MAX_PATH) + sizeof(char) > MAX_PATH)
+        return false;
+    (void)_tcscat_s(enclave_path, MAX_PATH, TOOL_ENCLAVE_NAME);
+
+    // try to sgx_urts library to create enclave.
+    sgx_urts_handle = LoadLibrary(SGX_URTS_LIBRARY);
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
+        return false;
+    }
+#ifdef UNICODE
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavew");
+#else
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavea");
+#endif
+#else
+    if (strnlen(enclave_path, MAX_PATH) + strnlen(TOOL_ENCLAVE_NAME, MAX_PATH) + sizeof(char) > MAX_PATH)
+        return false;
+    (void)strncat(enclave_path, TOOL_ENCLAVE_NAME, strnlen(TOOL_ENCLAVE_NAME, MAX_PATH));
+
+    // try to sgx_urts library to create enclave.
+    sgx_urts_handle = dlopen(SGX_URTS_LIBRARY, RTLD_LAZY);
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.so library, please make sure you have installed sgx_urts installer package. \n");
+        return false;
+    }
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclave");
+#endif
+
+
+    sgx_destroy_enclave_func_t p_sgx_destroy_enclave = (sgx_destroy_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_destroy_enclave");
+    if (p_sgx_create_enclave == NULL || p_sgx_destroy_enclave == NULL) {
+        printf("ERROR: Can't find the function sgx_create_enclave or sgx_destory_enclave in sgx_urts library.\n");
+        CLOSELIBRARYHANDLE(sgx_urts_handle);
+        return false;
+    }
+    // Get the app enclave report targeting the QE3
+    sgx_status = p_sgx_create_enclave(enclave_path,//TOOL_ENCLAVE_NAME,
         0,
         &launch_token,
         &launch_token_updated,
@@ -116,19 +262,24 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
     }
 
 CLEANUP:
-    sgx_destroy_enclave(eid);
+    p_sgx_destroy_enclave(eid);
+    if(sgx_urts_handle) {
+        CLOSELIBRARYHANDLE(sgx_urts_handle);
+    }
     return ret;
 }
 
-#ifdef MPA
-// for multi-package platfrom, get the platform manifet
+
+// for multi-package platform, get the platform manifet
 // return value:
-//  1: it means that the uefi shared library doesn't exist, maybe the registration agent package is not installed
-//  0: successfully get the platform manifest
-// -1: error happens.
-int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
+//  UEFI_OPERATION_SUCCESS: successfully get the platform manifest.
+//  UEFI_OPERATION_VARIABLE_NOT_AVAILABLE: it means platform manifest is not avaible: it is not multi-package platform or platform manifest has been consumed.
+//  UEFI_OPERATION_LIB_NOT_AVAILABLE: it means that the uefi shared library doesn't exist
+//  UEFI_OPERATION_FAIL:  it is one add package request, now we don't support it. 
+//  UEFI_OPERATION_UNEXPECTED_ERROR: error happens.
+uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
 {
-    int ret = -1;
+    uefi_status_t ret = UEFI_OPERATION_UNEXPECTED_ERROR;
 #ifdef _MSC_VER
     HINSTANCE uefi_lib_handle = LoadLibrary(SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY);
     if (uefi_lib_handle != NULL) {
@@ -137,9 +288,9 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
     else {
         out_buffer_size = 0;
         buffer = NULL;
-        printf("Warning: If this is a multi-package platfrom, please install registration agent package.\n");
+        printf("Warning: If this is a multi-package platform, please install registration agent package.\n");
         printf("         otherwise, the platform manifest information will NOT be retrieved.\n");
-        return 1;
+        return UEFI_OPERATION_LIB_NOT_AVAILABLE;
     }
 #else
     void *uefi_lib_handle = dlopen(SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY, RTLD_LAZY);
@@ -149,9 +300,9 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
     else {
         out_buffer_size = 0;
         buffer = NULL;
-        printf("Warning: If this is a multi-package platfrom, please install registration agent package.\n");
+        printf("Warning: If this is a multi-package platform, please install registration agent package.\n");
         printf("         otherwise, the platform manifest information will NOT be retrieved.\n");
-        return 1;
+        return UEFI_OPERATION_LIB_NOT_AVAILABLE;
     }
 #endif
     mp_uefi_init_func_t p_mp_uefi_init = (mp_uefi_init_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_init");
@@ -162,7 +313,8 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
         p_mp_uefi_get_request_type == NULL ||
         p_mp_uefi_get_request == NULL ||
         p_mp_uefi_terminate == NULL) {
-        printf("Error: cound't find uefi function interface(s) in the multi-package agent shared library.\n");
+        printf("Error: cound't find uefi function interface(s) in the UEFI shared library.\n");
+        CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
 
@@ -170,14 +322,14 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
     MpRequestType type = MP_REQ_NONE;
     mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_ERROR);
     if (mpResult != MP_SUCCESS) {
-        printf("Error: couldn't init uefi shared library.\n");
+        printf("Error: couldn't init UEFI shared library.\n");
         return ret;
     }
     do {
         mpResult = p_mp_uefi_get_request_type(&type);
         if (mpResult == MP_SUCCESS) {
             if (type == MP_REQ_REGISTRATION) {
-                *buffer = new unsigned char[UINT16_MAX];
+                *buffer = new (std::nothrow) unsigned char[UINT16_MAX];
                 mpResult = p_mp_uefi_get_request(*buffer, &out_buffer_size);
                 if (mpResult != MP_SUCCESS) {
                     printf("Error: Couldn't get the platform manifest information.\n");
@@ -186,10 +338,12 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
             }
             else if (type == MP_REQ_ADD_PACKAGE) {
                 printf("Error: Add Package type is not supported.\n");
+                ret = UEFI_OPERATION_FAIL;
                 break;
             }
             else {
-                printf("Error: platform manifest is not avaiable.\n");
+                printf("Warning: platform manifest is not available or current platform is not multi-package platform.\n");
+                ret = UEFI_OPERATION_VARIABLE_NOT_AVAILABLE;
                 break;
             }
         }
@@ -197,7 +351,7 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
             printf("Error: get UEFI request type error, and the error code is: %d.\n", mpResult);
             break;
         }
-        ret = 0;
+        ret = UEFI_OPERATION_SUCCESS;
     } while (0);
     p_mp_uefi_terminate();
 
@@ -208,23 +362,23 @@ int get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size)
 }
 
 
-// for multi-package platfrom, set registration status 
+// for multi-package platform, set registration status 
 // return value:
-//  1: it means that the uefi shared library doesn't exist, maybe the registration agent package is not installed
-//  0: successfully set the platform's registration status.
-// -1: error happens.
-int set_registration_status()
+//  UEFI_OPERATION_SUCCESS: successfully set the platform's registration status.
+//  UEFI_OPERATION_LIB_NOT_AVAILABLE: it means that the uefi shared library doesn't exist, maybe the registration agent package is not installed
+//  UEFI_OPERATION_UNEXPECTED_ERROR: error happens.
+uefi_status_t set_registration_status()
 {
-    int ret = -1;
+    uefi_status_t ret = UEFI_OPERATION_UNEXPECTED_ERROR;
 #ifdef _MSC_VER
     HINSTANCE uefi_lib_handle = LoadLibrary(SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY);
     if (uefi_lib_handle != NULL) {
         PRINT_MESSAGE("Found the UEFI library. \n");
     }
     else {
-        printf("Warning: If this is a multi-package platfrom, please install registration agent package.\n");
+        printf("Warning: If this is a multi-package platform, please install registration agent package.\n");
         printf("         otherwise, the platform manifest information will NOT be retrieved.\n");
-        return 1;
+        return UEFI_OPERATION_LIB_NOT_AVAILABLE;
     }
 #else
     void *uefi_lib_handle = dlopen(SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY, RTLD_LAZY);
@@ -232,9 +386,9 @@ int set_registration_status()
         PRINT_MESSAGE("Found the UEFI library. \n");
     }
     else {
-        printf("Warning: If this is a multi-package platfrom, please install registration agent package.\n");
+        printf("Warning: If this is a multi-package platform, please install registration agent package.\n");
         printf("         otherwise, the platform manifest information will NOT be retrieved.\n");
-        return 1;
+        return UEFI_OPERATION_LIB_NOT_AVAILABLE;
     }
 #endif
     mp_uefi_init_func_t p_mp_uefi_init = (mp_uefi_init_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_init");
@@ -244,6 +398,7 @@ int set_registration_status()
         p_mp_uefi_set_registration_status == NULL ||
         p_mp_uefi_terminate == NULL) {
         printf("Error: cound't find uefi function interface(s) in the multi-package agent shared library.\n");
+        CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
 
@@ -252,6 +407,7 @@ int set_registration_status()
     mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_ERROR);
     if (mpResult != MP_SUCCESS) {
         printf("Error: couldn't init uefi shared library.\n");
+        CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
 
@@ -262,7 +418,7 @@ int set_registration_status()
         printf("Warning: error happens when set registration status, the error code is: %d \n", mpResult);
     }
     else {
-        ret = 0;
+        ret = UEFI_OPERATION_SUCCESS;
     }
     
     p_mp_uefi_terminate();
@@ -272,7 +428,7 @@ int set_registration_status()
     }
     return ret;
 }
-#endif
+
 
 
 // generate ecdsa quote
@@ -285,27 +441,88 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     sgx_target_info_t qe_target_info;
     sgx_report_t app_report;
+
     // try to load quote provide library.
 #ifdef _MSC_VER
-    HINSTANCE handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-    if (handle != NULL) {
+    HINSTANCE quote_provider_library_handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+    if (quote_provider_library_handle != NULL) {
         PRINT_MESSAGE("Found the Quote provider library. \n");
     }
     else {
         printf("Warning: didn't find the quote provider library. \n");
+    }  
+    
+    // try to sgx dcap quote generation library to generate quote.
+    HINSTANCE sgx_dcap_ql_handle = LoadLibrary(SGX_DCAP_QUOTE_GENERATION_LIBRARY);
+    if (sgx_dcap_ql_handle == NULL) {
+        printf("ERROR: didn't find the sgx_dcap_ql.dll library, please make sure you have installed DCAP INF installer package. \n");
+        CLOSELIBRARYHANDLE(quote_provider_library_handle);
+        return ret;
     }
 #else
-    void *handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-    if (handle != NULL) {
+    char quote_provider_library_path[MAX_PATH] = "";
+    if (!get_program_path(quote_provider_library_path, MAX_PATH)){
+        printf("ERROR: Can't not the quote provider library path.\n");
+        return ret;
+    }
+    else {
+        PRINT_MESSAGE2("\n Quote provider library path is: %s \n", quote_provider_library_path);
+    }
+
+
+    if(strnlen(quote_provider_library_path ,MAX_PATH)+strnlen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,MAX_PATH)+sizeof(char)>MAX_PATH) {
+        return ret;
+    }
+    (void)strncat(quote_provider_library_path,SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, strnlen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,MAX_PATH));
+
+    // try to load sgx dcap quote generation library to generate quote.
+    void* sgx_dcap_ql_handle = dlopen(SGX_DCAP_QUOTE_GENERATION_LIBRARY, RTLD_LAZY);
+    if (sgx_dcap_ql_handle == NULL) {
+        printf("ERROR: didn't find the libsgx_dcap_ql.so library, please make sure you have installed DCAP quote generation installer package.\n");
+        return ret;
+    }
+
+    sgx_ql_set_path_func_t p_sgx_ql_set_path =(sgx_ql_set_path_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_ql_set_path");
+    if (p_sgx_ql_set_path == NULL) {
+        printf("ERROR: didn't find the funcion: sgx_ql_set_path in the sgx dcap quote generation shared library.\n");
+        return ret;
+    }
+
+    void *quote_provider_library_handle = dlopen(quote_provider_library_path, RTLD_LAZY);
+    if (quote_provider_library_handle != NULL) {
         PRINT_MESSAGE("Found the Quote provider library. \n");
     }
     else {
         printf("Warning: didn't find the quote provider library. \n");
     }
-#endif
+
+    qe3_ret = p_sgx_ql_set_path(SGX_QL_QPL_PATH, quote_provider_library_path);
+    if (SGX_QL_SUCCESS != qe3_ret) {
+        printf("Error in sgx_ql_set_path. 0x%04x\n", qe3_ret);
+        CLOSELIBRARYHANDLE(quote_provider_library_handle);
+        return ret;
+    }
+    else {
+        PRINT_MESSAGE2("Set Quote provider library path to:%s . \n", quote_provider_library_path);
+    }
+
+#endif   
+    sgx_qe_get_target_info_func_t p_sgx_qe_get_target_info = (sgx_qe_get_target_info_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_target_info");
+    sgx_qe_get_quote_size_func_t p_sgx_qe_get_quote_size = (sgx_qe_get_quote_size_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote_size");
+    sgx_qe_get_quote_func_t p_sgx_qe_get_quote = (sgx_qe_get_quote_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote");
+    if (p_sgx_qe_get_target_info == NULL || p_sgx_qe_get_quote_size == NULL || p_sgx_qe_get_quote == NULL) {
+        printf("ERROR: Can't find the quote generation functions in sgx dcap quote generation shared library.\n");
+        if (quote_provider_library_handle != NULL) {
+            CLOSELIBRARYHANDLE(quote_provider_library_handle);
+        }
+        if (sgx_dcap_ql_handle != NULL) {
+            CLOSELIBRARYHANDLE(sgx_dcap_ql_handle);
+        }
+        return ret;
+    }
     do {
         PRINT_MESSAGE("\nStep1: Call sgx_qe_get_target_info:");
-        qe3_ret = sgx_qe_get_target_info(&qe_target_info);
+        qe3_ret = p_sgx_qe_get_target_info(&qe_target_info);
         if (SGX_QL_SUCCESS != qe3_ret) {
             printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
             break;
@@ -318,7 +535,7 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
         }
 
         PRINT_MESSAGE("succeed! \nStep3: Call sgx_qe_get_quote_size:");
-        qe3_ret = sgx_qe_get_quote_size(&quote_size);
+        qe3_ret = p_sgx_qe_get_quote_size(&quote_size);
         if (SGX_QL_SUCCESS != qe3_ret) {
             printf("Error in sgx_qe_get_quote_size. 0x%04x\n", qe3_ret);
             break;
@@ -334,7 +551,7 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
 
         // Get the Quote
         PRINT_MESSAGE("\nStep4: Call sgx_qe_get_quote:");
-        qe3_ret = sgx_qe_get_quote(&app_report, quote_size, *quote_buffer);
+        qe3_ret = p_sgx_qe_get_quote(&app_report, quote_size, *quote_buffer);
         if (SGX_QL_SUCCESS != qe3_ret) {
             printf("Error in sgx_qe_get_quote. 0x%04x\n", qe3_ret);
             break;
@@ -343,8 +560,11 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
         ret = 0;
     } while (0);
 
-    if (handle != NULL) {
-        CLOSELIBRARYHANDLE(handle);
+    if (quote_provider_library_handle != NULL) {
+        CLOSELIBRARYHANDLE(quote_provider_library_handle);
+    }
+    if (sgx_dcap_ql_handle != NULL) {
+        CLOSELIBRARYHANDLE(sgx_dcap_ql_handle);
     }
     return ret;
 }

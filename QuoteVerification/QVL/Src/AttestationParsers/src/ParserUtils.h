@@ -78,32 +78,42 @@ const std::string CPUSVN = TCB + ".18";
 const std::string PCEID = SGX_EXTENSION + ".3";
 const std::string FMSPC = SGX_EXTENSION + ".4";
 const std::string SGX_TYPE = SGX_EXTENSION + ".5"; // ASN1 Enumerated
+const std::string PLATFORM_INSTANCE_ID = SGX_EXTENSION + ".6";
+const std::string CONFIGURATION = SGX_EXTENSION + ".7";
+const std::string DYNAMIC_PLATFORM = CONFIGURATION + ".1";
+const std::string CACHED_KEYS = CONFIGURATION + ".2";
+const std::string SMT_ENABLED = CONFIGURATION + ".3";
 
 static const std::map<x509::Extension::Type, std::string> oidEnumToDescription = {
-        {x509::Extension::Type::NONE,               "NONE"},
-        {x509::Extension::Type::PPID,               "PPID"},
-        {x509::Extension::Type::CPUSVN,             "CPUSVN"},
-        {x509::Extension::Type::PCESVN,             "PCESVN"},
-        {x509::Extension::Type::PCEID,              "PCEID"},
-        {x509::Extension::Type::FMSPC,              "FMSPC"},
-        {x509::Extension::Type::SGX_TYPE,           "SGX_TYPE"},
-        {x509::Extension::Type::TCB,                "TCB"},
-        {x509::Extension::Type::SGX_TCB_COMP01_SVN, "SGX_TCB_COMP01_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP02_SVN, "SGX_TCB_COMP02_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP03_SVN, "SGX_TCB_COMP03_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP04_SVN, "SGX_TCB_COMP04_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP05_SVN, "SGX_TCB_COMP05_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP06_SVN, "SGX_TCB_COMP06_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP07_SVN, "SGX_TCB_COMP07_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP08_SVN, "SGX_TCB_COMP08_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP09_SVN, "SGX_TCB_COMP09_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP10_SVN, "SGX_TCB_COMP10_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP11_SVN, "SGX_TCB_COMP11_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP12_SVN, "SGX_TCB_COMP12_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP13_SVN, "SGX_TCB_COMP13_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP14_SVN, "SGX_TCB_COMP14_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP15_SVN, "SGX_TCB_COMP15_SVN"},
-        {x509::Extension::Type::SGX_TCB_COMP16_SVN, "SGX_TCB_COMP16_SVN"}
+        {x509::Extension::Type::NONE,                 "NONE"},
+        {x509::Extension::Type::PPID,                 "PPID"},
+        {x509::Extension::Type::CPUSVN,               "CPUSVN"},
+        {x509::Extension::Type::PCESVN,               "PCESVN"},
+        {x509::Extension::Type::PCEID,                "PCEID"},
+        {x509::Extension::Type::FMSPC,                "FMSPC"},
+        {x509::Extension::Type::SGX_TYPE,             "SGX_TYPE"},
+        {x509::Extension::Type::TCB,                  "TCB"},
+        {x509::Extension::Type::SGX_TCB_COMP01_SVN,   "SGX_TCB_COMP01_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP02_SVN,   "SGX_TCB_COMP02_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP03_SVN,   "SGX_TCB_COMP03_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP04_SVN,   "SGX_TCB_COMP04_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP05_SVN,   "SGX_TCB_COMP05_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP06_SVN,   "SGX_TCB_COMP06_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP07_SVN,   "SGX_TCB_COMP07_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP08_SVN,   "SGX_TCB_COMP08_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP09_SVN,   "SGX_TCB_COMP09_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP10_SVN,   "SGX_TCB_COMP10_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP11_SVN,   "SGX_TCB_COMP11_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP12_SVN,   "SGX_TCB_COMP12_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP13_SVN,   "SGX_TCB_COMP13_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP14_SVN,   "SGX_TCB_COMP14_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP15_SVN,   "SGX_TCB_COMP15_SVN"},
+        {x509::Extension::Type::SGX_TCB_COMP16_SVN,   "SGX_TCB_COMP16_SVN"},
+        {x509::Extension::Type::PLATFORM_INSTANCE_ID, "PLATFORM_INSTANCE_ID"},
+        {x509::Extension::Type::CONFIGURATION,        "CONFIGURATION"},
+        {x509::Extension::Type::DYNAMIC_PLATFORM,     "DYNAMIC_PLATFORM"},
+        {x509::Extension::Type::CACHED_KEYS,          "CACHED_KEYS"},
+        {x509::Extension::Type::SMT_ENABLED,          "SMT_ENABLED"}
 };
 
 static const std::map<int, std::string> extensionToDescription = {
@@ -126,6 +136,6 @@ inline std::string extension2Description(int extension)
 
 }; //namespace oids
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif //SGX_DCAP_PARSERS_PARSER_UTILS_H

@@ -175,7 +175,7 @@ typedef enum _status
  * @param pemPckCertificate - Null terminated Intel SGX PCK certificate in PEM format.
  * @param intermediateCrl - Null terminated, PEM formatted x.509 Intel SGX PCK Processor/Platform CRL
  * @param tcbInfoJson - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
- * @param qeIdenityJson - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param qeIdentityJson - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
  * @return Status code of the operation, one of:
  *      - STATUS_OK
  *      - STATUS_MISSING_PARAMETERS

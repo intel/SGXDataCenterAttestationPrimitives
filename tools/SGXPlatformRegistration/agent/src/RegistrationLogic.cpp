@@ -39,6 +39,7 @@
 #include "RegistrationService.h"
 #include "AgentConfiguration.h"
 #include "agent_logger.h"
+#include "ra_version.h"
 
 #ifdef _WIN32
 extern bool SvcUninstall();
@@ -53,7 +54,7 @@ void RegistrationLogic::registerPlatform() {
 
     // Create RegistrationService instance with the required configurations
     RegistrationService registrationService(conf);
-    agent_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX Registration Agent version: %s\n", MPA_STRVER);
+    agent_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX Registration Agent version: %s\n", STRPRODUCTVER);
 
 #ifdef _WIN32
     if (!registrationService.isMultiPackageCapable()) {

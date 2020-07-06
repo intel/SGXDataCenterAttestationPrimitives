@@ -37,7 +37,7 @@
 #include <ctime>
 
 using namespace ::testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 struct AppOptionsParserTests: public Test
 {

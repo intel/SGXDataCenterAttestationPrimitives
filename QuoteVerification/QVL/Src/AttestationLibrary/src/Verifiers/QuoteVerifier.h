@@ -41,7 +41,7 @@
 #include "BaseVerifier.h"
 #include "EnclaveIdentity.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class QuoteVerifier
 {
@@ -58,6 +58,6 @@ private:
     BaseVerifier _baseVerififer;
 };
 
-}}}// namespace intel { namespace sgx { namespace qvl {
+}}}// namespace intel { namespace sgx { namespace dcap {
 
 #endif

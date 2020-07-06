@@ -72,8 +72,8 @@ struct _sgx_ql_qve_collateral_t
 
 
 
-	include "qve_header.h"
-	include "time.h"
+	include "sgx_qve_header.h"
+	include "sgx_qve_def.h"
 
     from "sgx_tstdc.edl" import *;
     /* Import ECALL/OCALL from sub-directory EDLs.

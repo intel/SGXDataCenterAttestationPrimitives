@@ -37,7 +37,7 @@
 
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 bool CommonVerifier::checkStandardExtensions(const std::vector<pckparser::Extension> &presentExtensions,
                                              const std::vector<int> &opensslExtensionNids) const
@@ -115,5 +115,5 @@ bool CommonVerifier::checkSha256EcdsaSignature(const Bytes &signature, const std
     return crypto::verifySha256EcdsaSignature(signature, message, *pubKey);
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 

@@ -25,9 +25,7 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.10)
-if (POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
-endif()
+
 project(AttestationParsers CXX)
 
 set(VERSION "1.0.0")
@@ -58,7 +56,6 @@ file(GLOB SOURCE_FILES src/*.cpp
         src/Json/*.cpp
         src/X509/*.cpp
         src/OpensslHelpers/*.cpp
-        src/Utils/*.cpp
         )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -71,15 +68,18 @@ include_directories(
         $<INSTALL_INTERFACE:include>
         ${DCAP_API_INCLUDE}
         ${PROJECT_SOURCE_DIR}/src
+        ${ATTESTATION_COMMONS_API_INCLUDE}
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+        AttestationCommonsStatic
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson
         )
 
 target_link_libraries(${PROJECT_NAME}Static PUBLIC
+        AttestationCommonsStatic
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson
@@ -92,6 +92,7 @@ if (BUILD_ENCLAVE)
     add_library(${PROJECT_NAME}StaticEnclave STATIC ${SOURCE_FILES})
 
     target_link_libraries(${PROJECT_NAME}StaticEnclave PRIVATE
+            AttestationCommonsStaticEnclave
             "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L${SGX_OPENSSL}/lib64 -L${SGX_SDK}/lib64"
             "-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tcrypto -lsgx_tsgxssl_crypto -Wl,--end-group"
             "-Wl,-Bstatic -Wl,-Bsymbolic"

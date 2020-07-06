@@ -43,15 +43,15 @@ using namespace intel::sgx;
 TEST(PckVerifier, shouldReturnRootCaMissingWhenNoRootCaFound)
 {
     // GIVEN
-    auto chainRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto trustedRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    qvl::test::CertificateChainMock chain;
+    auto chainRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto trustedRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    dcap::test::CertificateChainMock chain;
 
-    EXPECT_CALL(chain, get(qvl::test::constants::ROOT_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::ROOT_CA_SUBJECT))
             .WillRepeatedly(testing::Return(nullptr));
 
     // WHEN
-    const auto actual = qvl::PckCertVerifier{}.verify(chain, *trustedRoot);
+    const auto actual = dcap::PckCertVerifier{}.verify(chain, *trustedRoot);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_ROOT_CA_MISSING, actual);
@@ -60,23 +60,23 @@ TEST(PckVerifier, shouldReturnRootCaMissingWhenNoRootCaFound)
 TEST(PckVerifier, shouldReturnIntermediateMissingWhenPlatformOrProcessorCaNotFound)
 {
     // GIVEN
-    const auto chainRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto intermediate = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto pck = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto trustedRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    qvl::test::CertificateChainMock chain;
+    const auto chainRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto intermediate = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto pck = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto trustedRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    dcap::test::CertificateChainMock chain;
 
-    EXPECT_CALL(chain, get(qvl::test::constants::ROOT_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::ROOT_CA_SUBJECT))
             .WillRepeatedly(testing::Return(chainRoot));
 
-    EXPECT_CALL(chain, get(qvl::test::constants::PLATFORM_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::PLATFORM_CA_SUBJECT))
             .WillRepeatedly(testing::Return(nullptr));
 
-    EXPECT_CALL(chain, get(qvl::test::constants::PROCESSOR_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::PROCESSOR_CA_SUBJECT))
             .WillRepeatedly(testing::Return(nullptr));
 
     // WHEN
-    const auto actual = qvl::PckCertVerifier{}.verify(chain, *trustedRoot);
+    const auto actual = dcap::PckCertVerifier{}.verify(chain, *trustedRoot);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_INTERMEDIATE_CA_MISSING, actual);
@@ -85,26 +85,26 @@ TEST(PckVerifier, shouldReturnIntermediateMissingWhenPlatformOrProcessorCaNotFou
 TEST(PckVerifier, shouldReturnPckMissingWhenPckCertNotFound)
 {
     // GIVEN
-    const auto chainRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto intermediate = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto pck = std::make_shared<const qvl::test::PckCertificateMock>();
-    const auto trustedRoot = std::make_shared<const qvl::test::PckCertificateMock>();
-    qvl::test::CertificateChainMock chain;
+    const auto chainRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto intermediate = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto pck = std::make_shared<const dcap::test::PckCertificateMock>();
+    const auto trustedRoot = std::make_shared<const dcap::test::PckCertificateMock>();
+    dcap::test::CertificateChainMock chain;
 
-    EXPECT_CALL(chain, get(qvl::test::constants::ROOT_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::ROOT_CA_SUBJECT))
             .WillRepeatedly(testing::Return(chainRoot));
 
-    EXPECT_CALL(chain, get(qvl::test::constants::PLATFORM_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::PLATFORM_CA_SUBJECT))
             .WillRepeatedly(testing::Return(intermediate));
 
-    EXPECT_CALL(chain, get(qvl::test::constants::PROCESSOR_CA_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::PROCESSOR_CA_SUBJECT))
             .WillRepeatedly(testing::Return(nullptr));
 
-    EXPECT_CALL(chain, get(qvl::test::constants::PCK_SUBJECT))
+    EXPECT_CALL(chain, get(dcap::test::constants::PCK_SUBJECT))
             .WillRepeatedly(testing::Return(nullptr));
 
     // WHEN
-    const auto actual = qvl::PckCertVerifier{}.verify(chain, *trustedRoot);
+    const auto actual = dcap::PckCertVerifier{}.verify(chain, *trustedRoot);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_PCK_MISSING, actual);

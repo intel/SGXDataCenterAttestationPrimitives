@@ -36,7 +36,7 @@
 
 #include <PckParser/CrlStore.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class PckCrlVerifier
 {
@@ -74,7 +74,7 @@ private:
     BaseVerifier _baseVerifier;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 
 #endif

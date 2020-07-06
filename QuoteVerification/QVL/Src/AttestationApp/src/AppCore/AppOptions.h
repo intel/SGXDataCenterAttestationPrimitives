@@ -35,7 +35,7 @@
 #include <string>
 #include <ctime>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 struct AppOptions
 {
     std::string pckCertificateFile;

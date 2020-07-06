@@ -61,19 +61,13 @@ CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 
 CNL_Lib_Name_Dynamic  := libsgx_default_qcnl_wrapper.so
-ifndef DEBUG
-CNL_Lib_Name_Dynamic_Debug := libsgx_default_qcnl_wrapper.so.debug
-endif
 
 .PHONY: all run
 
 all: $(CNL_Lib_Name) install_lib
 
-install_lib: $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic_Debug) | $(BUILD_DIR)
+install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(CNL_Lib_Name_Dynamic) $|
-ifndef DEBUG
-	@$(CP) $(CNL_Lib_Name_Dynamic_Debug) $|
-endif
 
 run: all
 
@@ -87,18 +81,6 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 
 $(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects)
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
-
-$(CNL_Lib_Name_Dynamic_Debug): $(CNL_Lib_Name_Dynamic)
-	((test -f $(CNL_Lib_Name_Dynamic_Debug)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig
-	$(OBJCOPY) --only-keep-debug $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic_Debug)
-	$(STRIP) -g $(CNL_Lib_Name_Dynamic)
-	$(OBJCOPY) --add-gnu-debuglink=$(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Dynamic)
-endif
 
 force_look:
 	true

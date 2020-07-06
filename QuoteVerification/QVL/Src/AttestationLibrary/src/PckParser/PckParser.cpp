@@ -42,7 +42,7 @@
 #include "FormatException.h"
 #include "PckParserUtils.h"
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 bool Extension::operator==(const Extension& other) const
 {
@@ -631,4 +631,4 @@ long getCrlNum(X509_CRL& crl)
     return ASN1_INTEGER_get(crlNum.get());
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {

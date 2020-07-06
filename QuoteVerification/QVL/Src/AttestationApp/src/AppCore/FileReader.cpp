@@ -34,7 +34,7 @@
 #include "FileReader.h"
 
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 
 std::string FileReader::readContent(const std::string& filePath) const

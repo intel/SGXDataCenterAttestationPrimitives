@@ -224,25 +224,6 @@ MpResult MPManagement::getSgxStatus(MpSgxStatus &status) {
     return res;
 }
 
-MpResult MPManagement::enableSgx(MpSgxStatus &status) {
-    MpResult res = MP_UNEXPECTED_ERROR;
-    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-    sgx_device_status_t sgxStatus;
-
-    do {
-        ret = sgx_cap_enable_device(&sgxStatus);
-        if (SGX_SUCCESS != ret) {
-            management_log_message(MP_REG_LOG_LEVEL_ERROR, "enableSgx: sgx_cap_enable_device failed, error: %d\n", res);
-            break;
-        }
-
-        status = (MpSgxStatus)sgxStatus;
-        res = MP_SUCCESS;
-    } while (0);
-
-    return res;
-}
-
 MpResult MPManagement::setRegistrationServerInfo(const uint16_t &flags, const string &url, const uint8_t *serverId, const uint16_t &serverIdSize) {
     MpResult res = MP_UNEXPECTED_ERROR;
 

@@ -37,7 +37,7 @@
 
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 CrlStore::CrlStore()
     : _crl{crypto::make_unique(X509_CRL_new())},
@@ -134,4 +134,4 @@ bool CrlStore::isRevoked(const dcap::parser::x509::Certificate& cert) const
             }) != getRevoked().cend();
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {

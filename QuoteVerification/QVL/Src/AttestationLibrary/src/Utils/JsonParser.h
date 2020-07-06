@@ -39,7 +39,7 @@
 #include <vector>
 #include <ctime>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class JsonParser
 {
@@ -59,7 +59,7 @@ private:
     rapidjson::Document jsonDocument;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 
 #endif //SGXECDSAATTESTATION_JSONPARSER_H

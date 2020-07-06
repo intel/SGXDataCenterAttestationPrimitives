@@ -35,7 +35,7 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/KeyUtils.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 PckCertVerifier::PckCertVerifier() : _commonVerifier(new CommonVerifier()),
                                      _crlVerifier(new PckCrlVerifier())
@@ -165,4 +165,4 @@ Status PckCertVerifier::verifyPCKCert(const dcap::parser::x509::PckCertificate &
     return STATUS_OK;
 }
 
-}}} //namespace intel { namespace sgx { namespace qvl
+}}} //namespace intel { namespace sgx { namespace dcap

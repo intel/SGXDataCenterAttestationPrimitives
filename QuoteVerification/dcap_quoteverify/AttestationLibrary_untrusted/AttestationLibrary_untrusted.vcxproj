@@ -19,31 +19,31 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
     <ProjectGuid>{D860F500-9B86-43AC-AAF3-51173AC75B25}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
@@ -76,7 +76,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -85,7 +85,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>SGX_TRUSTED;_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -107,7 +107,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
@@ -129,7 +129,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\QvE\Enclave;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\QvE\Include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -172,13 +172,14 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\GMTime.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\QuoteVerification.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\QuoteVerification\Quote.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\QuoteVerification\ByteOperands.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\KeyUtils.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\SignatureVerification.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\DigestUtils.cpp" />
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\OpensslInit.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\EnclaveIdentity.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\TCBSigningChain.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\PckCertVerifier.cpp" />
@@ -194,13 +195,6 @@
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\EnclaveIdentityVerifier.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\CertVerification\X509Constants.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\CertVerification\CertificateChain.cpp" />
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\TimeUtils.cpp">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">_WINDOWS;_ATTESTATIONLIBRARY_EXPORTS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\GMTime.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\JsonParser.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\PckParser\CrlStore.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\PckParser\PckParser.cpp" />

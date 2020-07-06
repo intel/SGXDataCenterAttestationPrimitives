@@ -42,7 +42,7 @@ define("PLATF_REG_DELETED", 9);
 define("HTTP_SUCCESS", 200);
 
 //
-define("QEID_SIZE", 32);
+define("QEID_MAX_SIZE", 260);
 define("CPUSVN_SIZE", 32);
 define("PCESVN_SIZE", 4);
 define("PCEID_SIZE", 4);

@@ -43,7 +43,7 @@ INCLUDE += -I$(ROOT_DIR)/ae/common \
 CXXFLAGS += -fPIC -Werror -g
 
 CFLAGS += -fPIC -Werror -g
-Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl
+Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
 
 vpath %.cpp ..
 vpath %.c   $(COMMON_DIR)/src

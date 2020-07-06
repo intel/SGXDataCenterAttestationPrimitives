@@ -52,7 +52,7 @@ Quote_Include_Paths := -I$(SGX_SDK)/include -I../inc -I../../common/inc -I./ -I.
 Quote_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(Quote_Include_Paths)
 
 Quote_Cpp_Flags := $(Quote_C_Flags) -std=c++11
-Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl 
+Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
 
 ifndef DEBUG
 Quote_Cpp_Flags += -DDISABLE_TRACE
@@ -103,7 +103,7 @@ force_look:
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(Quote_Name) $(Quote_Cpp_Objects) qe3_u.*
+	@rm -f .config_* $(Quote_Name)  $(Quote_C_Objects) $(Quote_Cpp_Objects) qe3_u.*
 	@make -C $(PCE_Library_Dir) clean
 	@make -C $(QE3_Dir) clean
 

@@ -109,6 +109,7 @@ LDFLAGS += -shared
 INCLUDE += -I$(INCLUDE_DIR)
 INCLUDE += -I$(INCLUDE_DIR)/c_wrapper
 INCLUDE += -I$(LOCAL_COMMON_DIR)/inc
+INCLUDE += -I$(LOCAL_COMMON_DIR)/inc/internal
 INCLUDE += -Iinc
 
 CPP_OBJS := $(CPP_SRCS:%.cpp=%.o)

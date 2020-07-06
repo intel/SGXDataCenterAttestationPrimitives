@@ -34,7 +34,7 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 PckCrlVerifier::PckCrlVerifier() : _commonVerifier(new CommonVerifier())
 {
@@ -60,7 +60,7 @@ Status PckCrlVerifier::verify(const pckparser::CrlStore &crl, const dcap::parser
         return STATUS_SGX_CRL_UNKNOWN_ISSUER;
     }
 
-    if(!_commonVerifier->checkStandardExtensions(crl.getExtensions(), qvl::constants::CRL_REQUIRED_EXTENSIONS))
+    if(!_commonVerifier->checkStandardExtensions(crl.getExtensions(), dcap::constants::CRL_REQUIRED_EXTENSIONS))
     {
         return STATUS_SGX_CRL_INVALID_EXTENSIONS;
     }
@@ -179,4 +179,4 @@ bool PckCrlVerifier::checkIssuer(const pckparser::CrlStore &crl)
     return _baseVerifier.commonNameContains(crl.getIssuer(), constants::SGX_INTERMEDIATE_CN_PHRASE);
 }
 
-}}}// namespace intel { namespace sgx { namespace qvl {
+}}}// namespace intel { namespace sgx { namespace dcap {

@@ -81,9 +81,9 @@ public:
     uint8_t isvsvn;
 
     // V2 only
-    intel::sgx::qvl::EnclaveID id;
+    intel::sgx::dcap::EnclaveID id;
     unsigned int tcbEvaluationDataNumber;
-    std::vector<intel::sgx::qvl::TCBLevel> tcbLevels;
+    std::vector<intel::sgx::dcap::TCBLevel> tcbLevels;
 
     EnclaveIdentityVectorModel() {
         version = 1;
@@ -101,7 +101,7 @@ public:
     }
 
     std::string toJSON();
-    void applyTo(intel::sgx::qvl::test::QuoteGenerator::EnclaveReport& enclaveReport);
+    void applyTo(intel::sgx::dcap::test::QuoteGenerator::EnclaveReport& enclaveReport);
 };
 
 class EnclaveIdentityStringModel

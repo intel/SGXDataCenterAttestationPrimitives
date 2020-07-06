@@ -38,7 +38,8 @@
 #ifndef _SGX_DCAP_QV_INTERNAL_H_
 #define _SGX_DCAP_QV_INTERNAL_H_
 
-#include "qve_header.h"
+#include "sgx_qve_header.h"
+#include "sgx_qve_def.h"
 
 #if defined(__cplusplus)
 extern "C" {

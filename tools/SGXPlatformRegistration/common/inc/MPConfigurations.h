@@ -45,8 +45,6 @@
 #define MAX_DATA_SIZE       1024*30
 #define SUBSCRIPTION_KEY_SIZE   32
 
-#define MPA_STRVER    "1.6.90.1"
-
 typedef struct _MPConfigurations{
     ProxyConf proxy;
     LogLevel log_level;

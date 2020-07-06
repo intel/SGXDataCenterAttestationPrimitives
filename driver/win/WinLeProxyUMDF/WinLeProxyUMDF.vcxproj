@@ -81,13 +81,13 @@
     <EnableInf2cat>false</EnableInf2cat>
     <IncludePath>$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <TargetName>sgx_launch</TargetName>
+    <TargetName>sgx_lc</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
     <IncludePath>$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <TargetName>sgx_launch</TargetName>
+    <TargetName>sgx_lc</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

@@ -51,11 +51,15 @@ export BIN_DIR
 PROJECTS := 		PCKCertSelectionLib \
 			PCKSelectionSample
 
+ZIPFILE := PCKCertSelectionLinux.zip
+
 # targets
 
 .PHONY: all clean $(PROJECTS)
 
-all: $(PROJECTS)
+.NOTPARALLEL: $(PROJECTS) $(ZIPFILE)
+
+all: $(PROJECTS) $(ZIPFILE)
 	$(VERBOSE)echo projects all: done
 
 debug:
@@ -65,6 +69,7 @@ release:
 	$(VERBOSE)$(MAKE) all
 
 clean: $(PROJECTS)
+	$(VERBOSE)rm -rf out/$(ZIPFILE)
 	$(VERBOSE)echo projects clean: done
 
 PCKSelectionSample : PCKCertSelectionLib
@@ -76,4 +81,9 @@ $(PROJECTS): $(BIN_DIR)
 
 $(BIN_DIR):
 	$(VERBOSE)mkdir -p $@
+
+$(ZIPFILE):
+	bash pack.sh
+	$(VERBOSE)echo "$@ : done"
+	$(VERBOSE)echo
 

@@ -37,11 +37,11 @@
 
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
     class EnclaveIdentityParser
     {
     public:
-        std::unique_ptr<qvl::EnclaveIdentity> parse(const std::string &input);
+        std::unique_ptr<dcap::EnclaveIdentity> parse(const std::string &input);
     protected:
         JsonParser jsonParser;
     };

@@ -34,7 +34,7 @@
 #include "DigestUtils.h"
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 
 struct DigestUtilsTests : public Test
 {

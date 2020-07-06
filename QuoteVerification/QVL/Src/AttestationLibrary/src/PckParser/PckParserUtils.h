@@ -37,11 +37,11 @@
 #include <openssl/ossl_typ.h>
 #include <map>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 std::string obj2Str(const ASN1_OBJECT* obj);
 std::string getLastError();
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif //SGXECDSAATTESTATION_PCKPARSERUTILS_H

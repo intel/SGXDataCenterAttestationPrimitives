@@ -32,10 +32,11 @@
 #ifndef SGX_DCAP_PARSERS_OID_UTILS_H
 #define SGX_DCAP_PARSERS_OID_UTILS_H
 
-#include "OpensslTypes.h"
+#include "OpensslHelpers/OpensslTypes.h"
 
 #include <openssl/asn1.h>
 
+#include <string>
 #include <vector>
 
 namespace intel { namespace sgx { namespace dcap { namespace crypto {

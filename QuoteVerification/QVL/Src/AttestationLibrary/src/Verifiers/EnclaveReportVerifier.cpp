@@ -41,7 +41,7 @@
 #include <memory>
 
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, const Quote::EnclaveReport& enclaveReport) const
 {
@@ -113,4 +113,4 @@ uint32_t EnclaveReportVerifier::vectorToUint32(const std::vector<uint8_t>& input
     return swapBytes(toUint32(*position, *(std::next(position)), *(std::next(position, 2)), *(std::next(position, 3))));
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

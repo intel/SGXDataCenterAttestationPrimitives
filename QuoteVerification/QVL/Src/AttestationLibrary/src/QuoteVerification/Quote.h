@@ -36,7 +36,7 @@
 #include <array>
 #include <vector>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 
 class Quote
@@ -70,7 +70,7 @@ public:
         uint16_t isvSvn;
         std::array<uint8_t, 60> reserved4;
         std::array<uint8_t, 64> reportData;
-        
+
         bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
         std::array<uint8_t,384> rawBlob() const;
     };
@@ -137,7 +137,7 @@ protected:
     Ecdsa256BitQuoteAuthData authData{};
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl { namespace test {
+}}} // namespace intel { namespace sgx { namespace dcap { namespace test {
 
 
 #endif //SGXECDSAATTESTATION_QUOTEGENERATOR_H

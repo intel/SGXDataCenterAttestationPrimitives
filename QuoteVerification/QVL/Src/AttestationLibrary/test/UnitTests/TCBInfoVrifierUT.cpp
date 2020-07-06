@@ -35,24 +35,22 @@
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 #include <Verifiers/TCBInfoVerifier.h>
-#include <Verifiers/TCBSigningChain.h>
 #include <Mocks/CertCrlStoresMocks.h>
 #include <Mocks/TcbSigningChainMock.h>
 #include <Mocks/CommonVerifierMock.h>
 #include <Mocks/PckCrlVerifierMock.h>
 #include <TcbInfoGenerator.h>
-#include <CertVerification/X509Constants.h>
 #include <PckParser/PckParser.h>
 #include "KeyHelpers.h"
 
 using namespace testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 struct TCBInfoVerifierUT : public Test
 {
     std::vector<pckparser::Extension> extensions;
     pckparser::Signature signature;
-    intel::sgx::dcap::parser::json::TcbInfo tcbInfo = intel::sgx::dcap::parser::json::TcbInfo::parse(generateTcbInfo());
+    intel::sgx::dcap::parser::json::TcbInfo tcbInfo = intel::sgx::dcap::parser::json::TcbInfo::parse(TcbInfoGenerator::generateTcbInfo());
     std::vector<uint8_t> pubKey = {};
     const time_t currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 };

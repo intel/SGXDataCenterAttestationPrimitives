@@ -32,7 +32,7 @@
 #include "JsonParser.h"
 
 #include "OpensslHelpers/Bytes.h"
-#include "TimeUtils.h"
+#include "Utils/TimeUtils.h"
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -40,7 +40,7 @@
 #include <tuple>
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 bool JsonParser::parse(const std::string& json)
 {
@@ -155,7 +155,7 @@ std::pair<std::string, bool> JsonParser::getStringFieldOf(const ::rapidjson::Val
 bool JsonParser::isValidHexstring(const std::string& hexString) const
 {
     return std::find_if(hexString.cbegin(), hexString.cend(),
-        [](const char c){return !::isxdigit(c);}) == hexString.cend();
+        [](const char c){return !::isxdigit(static_cast<unsigned char>(c));}) == hexString.cend();
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

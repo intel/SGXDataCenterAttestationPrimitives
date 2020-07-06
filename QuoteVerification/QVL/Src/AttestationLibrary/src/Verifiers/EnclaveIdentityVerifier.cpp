@@ -36,7 +36,7 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 EnclaveIdentityVerifier::EnclaveIdentityVerifier()
         : _commonVerifier(new CommonVerifier()),
@@ -94,4 +94,4 @@ Status EnclaveIdentityVerifier::verify(
     return STATUS_OK;
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

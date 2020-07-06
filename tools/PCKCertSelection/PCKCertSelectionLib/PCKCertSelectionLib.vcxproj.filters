@@ -65,9 +65,6 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\OpensslHelpers\OidUtils.cpp">
       <Filter>OpensslHelpers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\OpensslHelpers\OpensslInit.cpp">
-      <Filter>OpensslHelpers</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\X509\Certificate.cpp">
       <Filter>X509</Filter>
     </ClCompile>
@@ -89,16 +86,19 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\X509\Validity.cpp">
       <Filter>X509</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Utils\TimeUtils.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Utils\GMTime.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="tcb_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="config_selector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\X509/ProcessorPckCertificate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationCommons\src\Utils\GMTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -241,13 +241,13 @@
     <ClInclude Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\OpensslHelpers\OpensslTypes.h">
       <Filter>OpensslHelpers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Utils\TimeUtils.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="tcb_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config_selector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QuoteVerification\QVL\Src\AttestationCommons\include\Utils\TimeUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

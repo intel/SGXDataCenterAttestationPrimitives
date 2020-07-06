@@ -28,10 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#define STRFILEVER    "1.6.90.2"
+#define STRFILEVER    "1.7.90.1"
 #define COPYRIGHT      "Copyright (C) 2020 Intel Corporation"
-#define FILEVER        1,6,90,2
-#define PRODUCTVER     1,6,90,2
-#define STRPRODUCTVER  "1.6.90.2"
+#define FILEVER        1,7,90,1
+#define PRODUCTVER     1,7,90,1
+#define STRPRODUCTVER  "1.7.90.1"
 #define COMPANYNAME    "Intel Corporation"
-#define PRODUCTNAME    "Intel® Software Guard Extensions Multi-Package Registration Agent"
+#define PRODUCTNAME    "IntelÂ® Software Guard Extensions Multi-Package Registration Agent"

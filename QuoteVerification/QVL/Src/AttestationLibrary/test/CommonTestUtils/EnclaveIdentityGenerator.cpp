@@ -70,7 +70,7 @@ std::string EnclaveIdentityVectorModel::toJSON()
     );
 }
 
-void EnclaveIdentityVectorModel::applyTo(intel::sgx::qvl::test::QuoteGenerator::EnclaveReport& enclaveReport)
+void EnclaveIdentityVectorModel::applyTo(intel::sgx::dcap::test::QuoteGenerator::EnclaveReport& enclaveReport)
 {
     std::copy_n(attributes.begin(), enclaveReport.attributes.size(), enclaveReport.attributes.begin());
     std::copy_n(mrsigner.begin(), enclaveReport.mrSigner.size(), enclaveReport.mrSigner.begin());
@@ -123,7 +123,7 @@ std::string toHexString(const std::vector<uint8_t> &vector)
 uint32_t vectorToUint32(const std::vector<uint8_t> &input)
 {
     auto position = input.cbegin();
-    return intel::sgx::qvl::swapBytes(intel::sgx::qvl::toUint32(*position, *(std::next(position)),
+    return intel::sgx::dcap::swapBytes(intel::sgx::dcap::toUint32(*position, *(std::next(position)),
                                                                 *(std::next(position, 2)), *(std::next(position, 3))));
 }
 

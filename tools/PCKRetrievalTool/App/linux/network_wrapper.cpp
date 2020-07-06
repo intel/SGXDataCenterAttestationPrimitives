@@ -44,25 +44,21 @@
 #include <algorithm>
 #include "sgx_ql_lib_common.h"
 #include "network_wrapper.h"
+#include "utility.h"
 
 using namespace std;
 
 typedef struct _network_malloc_info_t{
     char *base;
-    uint32_t size;
+    size_t size;
 }network_malloc_info_t;
 
 #define MAX_URL_LENGTH  2083
-#define LOCAL_NETWORK_SETTING "./network_setting.conf"
-#define GLOBAL_NETWORK_SETTING "/etc/sgx_default_qcnl.conf" 
+#define LOCAL_NETWORK_SETTING "network_setting.conf"
 
-//static char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v2/platforms";
-static const uint32_t QEID_SIZE = 16;
-static const uint32_t CPUSVN_SIZE = 16;
-static const uint32_t PCESVN_SIZE = 2;
-static const uint32_t PCEID_SIZE = 2;
-static const uint32_t ENC_PPID_SIZE = 384;
-
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
 
 extern string server_url_string;
 extern string proxy_type_string;
@@ -153,13 +149,13 @@ network_post_error_t append_body_context(string& url, const uint8_t* request, co
 static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 {
     network_malloc_info_t* s=reinterpret_cast<network_malloc_info_t *>(stream);
-    uint32_t start=0;
+    size_t start=0;
     if(s->base==NULL){
         s->base = reinterpret_cast<char *>(malloc(size*nmemb));
         s->size = static_cast<uint32_t>(size*nmemb);
         if(s->base==NULL)return 0;
     }else{
-        uint32_t newsize = s->size+static_cast<uint32_t>(size*nmemb);
+        size_t newsize = s->size + size*nmemb;
         char *p=reinterpret_cast<char *>(realloc(s->base, newsize));
         if(p == NULL){
             return 0;
@@ -261,60 +257,93 @@ static bool process_configuration_setting(const char *config_file_name, string& 
 static void network_configuration(string &url, string &proxy_type, string &proxy_url, string& user_token)
 {
     //firstly read local configuration File
-    bool ret = process_configuration_setting(LOCAL_NETWORK_SETTING,url, proxy_type, proxy_url, user_token);
-    if(ret == false) {
-        process_configuration_setting(GLOBAL_NETWORK_SETTING,url, proxy_type, proxy_url, user_token);
+    char local_configuration_file_path[MAX_PATH] = "";
+    bool ret = get_program_path(local_configuration_file_path, MAX_PATH);
+    if (ret) {
+        if(strnlen(local_configuration_file_path ,MAX_PATH)+strnlen(LOCAL_NETWORK_SETTING,MAX_PATH)+sizeof(char) > MAX_PATH) {
+            ret = false;
+        }
+        else {
+            (void)strncat(local_configuration_file_path,LOCAL_NETWORK_SETTING, strnlen(LOCAL_NETWORK_SETTING,MAX_PATH));
+        }
+    }
+    if (ret){
+        process_configuration_setting(local_configuration_file_path,url, proxy_type, proxy_url, user_token);
     }
 }
 
 
-static network_post_error_t generate_json_message_body(const uint8_t *raw_data, const uint32_t raw_data_size, string &jsonString)
+static network_post_error_t generate_json_message_body(const uint8_t *raw_data, 
+                                                       const uint32_t raw_data_size,
+                                                       const uint16_t platform_id_length,
+                                                       const bool non_enclave_mode, 
+                                                       string &jsonString)
 {
     network_post_error_t ret = POST_SUCCESS;
     const uint8_t *position = raw_data;
-    uint32_t left_size = raw_data_size - QEID_SIZE - CPUSVN_SIZE - PCESVN_SIZE - PCEID_SIZE - ENC_PPID_SIZE;
 
     jsonString = "{";
 
-    jsonString += "\"enc_ppid\": \"";
-    if ((ret = append_body_context(jsonString, position, ENC_PPID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"pce_id\": \"";
-    position = position + ENC_PPID_SIZE;
-    if ((ret = append_body_context(jsonString, position, PCEID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-    jsonString += "\" ,\"cpu_svn\": \"";
-    position = position + PCEID_SIZE;
-    if ((ret = append_body_context(jsonString, position, CPUSVN_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"pce_svn\": \"";
-    position = position + CPUSVN_SIZE;
-    if ((ret = append_body_context(jsonString, position, PCESVN_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"qe_id\": \"";
-    position = position + PCESVN_SIZE;
-    if ((ret = append_body_context(jsonString, position, QEID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"platform_manifest\": \"";
-    if (left_size != 0) {
-        position = position + QEID_SIZE;
-        if ((ret = append_body_context(jsonString, position, left_size)) != POST_SUCCESS) {
+    if(true == non_enclave_mode){
+        jsonString += "\"pce_id\": \"";
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
             return ret;
+        }
+
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        position = position + platform_id_length;
+        if ((ret = append_body_context(jsonString, position, raw_data_size - PCE_ID_LENGTH - platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+    }
+    else {
+        uint32_t left_size = raw_data_size - platform_id_length - CPU_SVN_LENGTH - ISV_SVN_LENGTH - PCE_ID_LENGTH - ENCRYPTED_PPID_LENGTH;
+        jsonString += "\"enc_ppid\": \"";
+        if ((ret = append_body_context(jsonString, position, ENCRYPTED_PPID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_id\": \"";
+        position = position + ENCRYPTED_PPID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+        jsonString += "\" ,\"cpu_svn\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, CPU_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_svn\": \"";
+        position = position + CPU_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, ISV_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + ISV_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        if (left_size != 0) {
+            position = position + platform_id_length;
+            if ((ret = append_body_context(jsonString, position, left_size)) != POST_SUCCESS) {
+                return ret;
+            }
         }
     }
     jsonString += "\" }";
     return ret;
 }
-
+   
 
 /**
 * This method calls curl library to perform https post requet:
@@ -327,15 +356,15 @@ static network_post_error_t generate_json_message_body(const uint8_t *raw_data, 
 */
 
 
-network_post_error_t network_https_post(const uint8_t* buffer, const uint32_t buffer_size) 
+network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size, const uint16_t platform_id_length, const bool non_enclave_mode)
 {
-    if(buffer_size < QEID_SIZE + CPUSVN_SIZE + PCESVN_SIZE + PCEID_SIZE + ENC_PPID_SIZE) {
+    if (raw_data_size < platform_id_length + static_cast<uint32_t>(PCE_ID_LENGTH)) {
         return POST_INVALID_PARAMETER_ERROR;
     }
 
-    network_post_error_t ret = POST_UNEXPECTED_ERROR;
+    network_post_error_t ret = POST_UNEXPECTED_ERROR;  
     string strJson("");
-    ret = generate_json_message_body(buffer, buffer_size, strJson);
+    ret = generate_json_message_body(raw_data, raw_data_size, platform_id_length, non_enclave_mode, strJson);
     if (ret != POST_SUCCESS) {
         printf("Error: unexpected error happens during generate json message body.\n");
         return ret;
@@ -441,30 +470,22 @@ network_post_error_t network_https_post(const uint8_t* buffer, const uint32_t bu
     return ret;
 }
 
-bool is_server_url_avaiable() {
-    ifstream ifs_local(LOCAL_NETWORK_SETTING);
+bool is_server_url_available() {
+    char local_configuration_file_path[MAX_PATH] = "";
+    bool ret = get_program_path(local_configuration_file_path, MAX_PATH);
+    if (ret) {
+        if(strnlen(local_configuration_file_path ,MAX_PATH)+strnlen(LOCAL_NETWORK_SETTING,MAX_PATH)+sizeof(char) > MAX_PATH) {
+            ret = false;
+        }
+        else {
+            (void)strncat(local_configuration_file_path,LOCAL_NETWORK_SETTING, strnlen(LOCAL_NETWORK_SETTING,MAX_PATH));
+        }
+    }
+    ifstream ifs_local(local_configuration_file_path);
     string line;
     if (ifs_local.is_open()) {
         auto f = [](unsigned char const c) { return std::isspace(c); };
         while (getline(ifs_local, line)) {
-            line.erase(std::remove_if(line.begin(), line.end(), f), line.end());
-            if (line[0] == '#' || line.empty())
-                continue;
-            size_t pos = line.find("=");
-            string name = line.substr(0, pos);
-            std::transform(name.begin(), name.end(), name.begin(), ::toupper);
-            string value = line.substr(pos + 1);
-            if (name.compare("PCCS_URL") == 0) {
-                if (value.empty() == false) {
-                    return true;
-                }
-            }
-        }
-    }
-    ifstream ifs_global(GLOBAL_NETWORK_SETTING);
-    if (ifs_global.is_open()) {
-        auto f = [](unsigned char const c) { return std::isspace(c); };
-        while (getline(ifs_global, line)) {
             line.erase(std::remove_if(line.begin(), line.end(), f), line.end());
             if (line[0] == '#' || line.empty())
                 continue;

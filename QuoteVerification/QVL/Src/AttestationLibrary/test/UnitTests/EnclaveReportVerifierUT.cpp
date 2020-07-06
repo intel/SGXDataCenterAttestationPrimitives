@@ -36,21 +36,17 @@
 #include <QuoteVerification/Quote.h>
 #include <Verifiers/EnclaveReportVerifier.h>
 #include <Verifiers/EnclaveIdentityParser.h>
-#include <EnclaveIdentityGenerator.h>
 #include "EcdsaSignatureGenerator.h"
 #include "X509CertGenerator.h"
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
-#include <chrono>
 #include <array>
-#include <numeric>
-#include <iostream>
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
-using namespace ::intel::sgx::qvl::test;
+using namespace ::intel::sgx::dcap;
+using namespace ::intel::sgx::dcap::test;
+using namespace ::intel::sgx::dcap::parser::test;
 using namespace std;
 
 struct EnclaveReportVerifierUT : public Test
@@ -59,7 +55,6 @@ struct EnclaveReportVerifierUT : public Test
     test::QuoteGenerator quoteGenerator;
     test::QuoteGenerator::EnclaveReport enclaveReport;
     EnclaveIdentityParser parser;
-    const time_t currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
     X509CertGenerator certGenerator = X509CertGenerator{};
     crypto::EVP_PKEY_uptr tcbSigningKey;

@@ -37,7 +37,7 @@
 #include "QuoteGenerator.h"
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 
 struct QuoteGeneratorTests : public Test
 {
@@ -254,7 +254,7 @@ TEST_F(QuoteGeneratorTests, withArbitraryPckDataShouldBeParsable)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
     const auto generatedQuote = generator.buildQuote();
 
-    intel::sgx::qvl::Quote quote;
+    intel::sgx::dcap::Quote quote;
 
     // WHEN/THEN
     ASSERT_TRUE(quote.parse(generatedQuote));

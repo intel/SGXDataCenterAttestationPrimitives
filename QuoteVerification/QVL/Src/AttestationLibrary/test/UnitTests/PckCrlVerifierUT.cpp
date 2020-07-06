@@ -41,7 +41,7 @@
 #include <PckParser/PckParser.h>
 
 using namespace testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace intel::sgx;
 
 

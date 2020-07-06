@@ -38,7 +38,7 @@
 #include "IFileReader.h"
 #include "IAttestationLibraryAdapter.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 struct IAttestationLibraryAdapter;
 struct AppOptions;

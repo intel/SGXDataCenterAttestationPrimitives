@@ -37,7 +37,7 @@ using namespace intel::sgx;
 
 struct JsonParserTests : public Test
 {
-    qvl::JsonParser jsonParser{};
+    dcap::JsonParser jsonParser{};
 };
 
 TEST_F(JsonParserTests, shouldParseEmptyJson)

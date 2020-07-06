@@ -39,7 +39,7 @@
 
 #include "PckParser/CrlStore.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class CommonVerifier
 {
@@ -79,6 +79,6 @@ public:
     virtual bool checkSha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const std::vector<uint8_t> &publicKey) const;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif

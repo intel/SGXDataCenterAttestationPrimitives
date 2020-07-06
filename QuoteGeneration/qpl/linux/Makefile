@@ -57,19 +57,13 @@ QPL_Lib_Cpp_Objects := $(QPL_Lib_Cpp_Files:.cpp=.o)
 QPL_Lib_Cpp_Deps := $(QPL_Lib_Cpp_Objects:%.o=%.d)
 
 QPL_Lib_Name_Dynamic  := libdcap_quoteprov.so
-ifndef DEBUG
-QPL_Lib_Name_Dynamic_Debug := libdcap_quoteprov.so.debug
-endif
 
 .PHONY: all run
 
 all: $(QPL_Lib_Name) install_lib
 
-install_lib: $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic_Debug) | $(BUILD_DIR)
+install_lib: $(QPL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(QPL_Lib_Name_Dynamic) $|
-ifndef DEBUG
-	@$(CP) $(QPL_Lib_Name_Dynamic_Debug) $|
-endif
 
 run: all
 
@@ -83,18 +77,6 @@ $(QPL_Lib_Cpp_Objects): %.o: %.cpp
 
 $(QPL_Lib_Name_Dynamic): $(QPL_Lib_Cpp_Objects)
 	$(CXX) $(CXXFLAGS) $(QPL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QPL_Lib_Link_Flags) -o $@
-
-$(QPL_Lib_Name_Dynamic_Debug): $(QPL_Lib_Name_Dynamic)
-	((test -f $(QPL_Lib_Name_Dynamic_Debug)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic).orig
-	$(OBJCOPY) --only-keep-debug $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic_Debug)
-	$(STRIP) -g $(QPL_Lib_Name_Dynamic)
-	$(OBJCOPY) --add-gnu-debuglink=$(QPL_Lib_Name_Dynamic_Debug) $(QPL_Lib_Name_Dynamic)
-endif
 
 force_look:
 	true

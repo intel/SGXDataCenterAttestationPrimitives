@@ -62,12 +62,13 @@
 #include "QuoteVerification/Quote.h"
 #include "PckParser/CrlStore.h"
 #include "CertVerification/CertificateChain.h"
-#include "AttestationParsers/src/Utils/TimeUtils.h"
+#include "Utils/TimeUtils.h"
 #include "SgxEcdsaAttestation/AttestationParsers.h"
-#include "qve_header.h"
+#include "sgx_qve_header.h"
+#include "sgx_qve_def.h"
 
 
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::parser;
 
 /**
@@ -92,16 +93,7 @@ static bool is_nonterminal_error(Status status_err) {
     case STATUS_SGX_CRL_EXPIRED:
     case STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED:
     case STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED:
-    case STATUS_SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE:
-    case STATUS_SGX_QE_IDENTITY_INVALID_SIGNATURE:
-    case STATUS_INVALID_QUOTE_SIGNATURE:
-    case STATUS_INVALID_QE_REPORT_SIGNATURE:
     case STATUS_TCB_CONFIGURATION_NEEDED:
-    case STATUS_TCB_REVOKED:
-    case STATUS_SGX_CRL_INVALID_SIGNATURE:
-    case STATUS_TCB_INFO_INVALID_SIGNATURE:
-    case STATUS_SGX_PCK_CERT_CHAIN_UNTRUSTED:
-    case STATUS_SGX_ROOT_CA_UNTRUSTED:
     case STATUS_TCB_SW_HARDENING_NEEDED:
     case STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED:
         return true;
@@ -159,6 +151,8 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
     case STATUS_UNSUPPORTED_CERT_FORMAT:
         return SGX_QL_PCK_CERT_UNSUPPORTED_FORMAT;
     case STATUS_INVALID_PCK_CERT:
+    case STATUS_SGX_PCK_CERT_CHAIN_UNTRUSTED:
+    case STATUS_SGX_ROOT_CA_UNTRUSTED:
         return SGX_QL_PCK_CERT_CHAIN_ERROR;
     case STATUS_UNSUPPORTED_TCB_INFO_FORMAT:
     case STATUS_TCB_NOT_SUPPORTED:
@@ -208,9 +202,14 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
     case STATUS_UNSUPPORTED_QE_CERTIFICATION:
     case STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE:
         return SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED;
+    case STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT:
+    case STATUS_SGX_ENCLAVE_IDENTITY_INVALID:
+    case STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION:
+    case STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT:
     case STATUS_SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE:
         return SGX_QL_QEIDENTITY_CHAIN_ERROR;
     case STATUS_TCB_INFO_INVALID_SIGNATURE:
+    case STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED:
         return SGX_QL_TCBINFO_CHAIN_ERROR;
     case STATUS_TCB_SW_HARDENING_NEEDED:
         return SGX_QL_TCB_SW_HARDENING_NEEDED;
@@ -745,6 +744,13 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
     quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
     int version = 0;
     sgx_ql_qv_supplemental_t* supplemental_data = (sgx_ql_qv_supplemental_t*)p_supplemental_data;
+
+    //Set default values
+    memset_s(supplemental_data, sizeof(*supplemental_data), 0, sizeof(*supplemental_data));
+    supplemental_data->dynamic_platform = PCK_FLAG_FALSE;
+    supplemental_data->cached_keys = PCK_FLAG_FALSE;
+    supplemental_data->smt_enabled = PCK_FLAG_UNDEFINED;
+
     time_t qe_identity_date = 0;
     //Start collecting supplemental data
     //
@@ -823,14 +829,14 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
 
         //make sure QE identity has at least one TCBLevel
         //
-        if (qe_identity_tcb_levels.empty() == 1) {
+        if (qe_identity_tcb_levels.empty()) {
             ret = SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
             break;
         }
         for (const auto & tcbLevel : qe_identity_tcb_levels) {
             if (tcbLevel.getIsvsvn() <= qe_report_isvsvn) {
                 tm matching_qe_identity_tcb_date = tcbLevel.getTcbDate();
-                qe_identity_date = intel::sgx::dcap::parser::mktime(&matching_qe_identity_tcb_date);
+                qe_identity_date = intel::sgx::dcap::mktime(&matching_qe_identity_tcb_date);
                 break;
             }
         }
@@ -879,7 +885,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
         else {
             supplemental_data->tcb_eval_ref_num = tcb_info_obj->getTcbEvaluationDataNumber();
         }
-        // generates SHA-384 hash of CERT chain root CA’s public key
+        // generates SHA-384 hash of CERT chain root CA's public key
         //
         const uint8_t* root_pub_key = chain_root_ca_cert->getPubKey().data();
         size_t root_pub_key_size = chain_root_ca_cert->getPubKey().size();
@@ -937,11 +943,59 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
         supplemental_data->tcb_pce_isvsvn = (sgx_isv_svn_t)pck_cert_tcb.getPceSvn();
         supplemental_data->pce_id = *(chain_pck_cert->getPceId().data());
 
+
+        supplemental_data->sgx_type = (uint8_t)chain_pck_cert->getSgxType();
+
+
+        //try to get flags for multi-package platforms
+        //
+        if (supplemental_data->sgx_type == x509::Scalable) {
+            try {
+                auto pck_cert = chain->getTopmostCert();
+                auto platform_cert = x509::PlatformPckCertificate(*pck_cert);
+
+
+                //get platform instance ID from PCK Cert
+                //
+                auto platform_instance_id = platform_cert.getPlatformInstanceId();
+
+                //copy platform instance ID value into supplemental data buffer
+                //
+                if (memcpy_s(supplemental_data->platform_instance_id, 16,
+                    platform_instance_id.data(), platform_instance_id.size()) != 0) {
+                    ret = SGX_QL_ERROR_UNEXPECTED;
+                    break;
+                }
+
+                //get configuration data from PCK Cert
+                //
+                auto sgx_configuration = platform_cert.getConfiguration();
+
+                if (sgx_configuration.isDynamicPlatform())
+                    supplemental_data->dynamic_platform = PCK_FLAG_TRUE;
+
+                if (sgx_configuration.isCachedKeys())
+                    supplemental_data->cached_keys = PCK_FLAG_TRUE;
+
+                if (sgx_configuration.isSmtEnabled())
+                    supplemental_data->smt_enabled = PCK_FLAG_TRUE;
+                else
+                    supplemental_data->smt_enabled = PCK_FLAG_FALSE;
+            }
+            catch (...) {
+                ret = SGX_QL_PCK_CERT_UNSUPPORTED_FORMAT;
+                break;
+            }
+        }
+
         ret = SGX_QL_SUCCESS;
     } while (0);
 
     if (ret != SGX_QL_SUCCESS) {
         memset_s(supplemental_data, sizeof(*supplemental_data), 0, sizeof(*supplemental_data));
+        supplemental_data->dynamic_platform = PCK_FLAG_UNDEFINED;
+        supplemental_data->cached_keys = PCK_FLAG_UNDEFINED;
+        supplemental_data->smt_enabled = PCK_FLAG_UNDEFINED;
     }
 
     return ret;
@@ -989,7 +1043,7 @@ quote3_error_t sgx_qve_get_quote_supplemental_data_version(
 #ifdef SGX_TRUSTED
 /**
  * Generate enclave report with:
- * SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00’s)
+ * SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00s)
  *
  * @param p_quote[IN] - Pointer to an SGX Quote.
  * @param quote_size[IN] - Size of the buffer pointed to by p_quote (in bytes).
@@ -1037,7 +1091,7 @@ static quote3_error_t sgx_qve_generate_report(
     do {
         //Create QvE report
         //
-        //report_data = SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00’s)
+        //report_data = SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00s)
         //
         sgx_status = sgx_sha256_init(&sha_handle);
         SGX_ERR_BREAK(sgx_status);
@@ -1219,7 +1273,7 @@ quote3_error_t sgx_qve_verify_quote(
     do {
         //setup expiration check date to verify against (trusted time)
         //
-        set_time = intel::sgx::dcap::parser::getCurrentTime(&expiration_check_date);
+        set_time = intel::sgx::dcap::getCurrentTime(&expiration_check_date);
 
         // defense-in-depth to make sure current time is set as expected.
         //

@@ -42,7 +42,7 @@ rel_dir_name=$rel_dir_base$1
 rm -rf $rel_dir_base*
 
 mkdir $rel_dir_name
-cp enclave.signed.so $rel_dir_name
+cp pck_retrieve_tool_enclave.signed.so $rel_dir_name
 cp libdcap_quoteprov.so.1 $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name
 cp network_setting.conf $rel_dir_name

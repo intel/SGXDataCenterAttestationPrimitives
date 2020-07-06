@@ -40,7 +40,7 @@
 #include <OpensslHelpers/OpensslTypes.h>
 #include <OpensslHelpers/Bytes.h>
 
-namespace intel{ namespace sgx{ namespace qvl{ namespace test{
+namespace intel{ namespace sgx{ namespace dcap{ namespace test{
 
 enum CRLVersion {
     CRL_VERSION_1 = 0,

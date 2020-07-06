@@ -45,9 +45,6 @@
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\OpensslHelpers\OidUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\OpensslHelpers\OpensslInit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TcbLevel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -57,7 +54,16 @@
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\JsonParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Utils\TimeUtils.cpp">
+    <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\Configuration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\PlatformPckCertificate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\ProcessorPckCertificate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

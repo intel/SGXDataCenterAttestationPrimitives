@@ -34,7 +34,7 @@
 
 #include <string>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 enum class TcbStatus {
     UpToDate,
@@ -72,6 +72,6 @@ inline TcbStatus parseStringToTcbStatus(const std::string& status)
     }
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_TCBSTATUS_H

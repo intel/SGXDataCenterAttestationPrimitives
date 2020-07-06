@@ -85,12 +85,6 @@ MpResult mp_management_get_sgx_status(MpSgxStatus *status) {
     return g_mpManagement->getSgxStatus(*status);
 }
 
-MpResult mp_management_enable_sgx(MpSgxStatus *status) {
-    if (!status) {
-        return MP_INVALID_PARAMETER;
-    }
-    return g_mpManagement->enableSgx(*status);
-}
 
 MpResult mp_management_set_registration_server_info(uint16_t flags, string url, const uint8_t *serverId, uint16_t serverIdSize) {
     if (!serverId) {

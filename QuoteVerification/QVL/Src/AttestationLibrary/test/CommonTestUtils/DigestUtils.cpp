@@ -42,7 +42,7 @@
 
 namespace intel{
 namespace sgx{
-namespace qvl{
+namespace dcap{
 namespace DigestUtils{
 
 
@@ -135,7 +135,7 @@ Bytes signMessageSha256(const Bytes& message, EVP_PKEY& privateKey)
 
 bool verifySig(const Bytes& signature, const Bytes& message, EC_KEY& pubKey)
 {
-    const auto digest = qvl::DigestUtils::sha256Digest(message);
+    const auto digest = dcap::DigestUtils::sha256Digest(message);
     return 1 == ECDSA_verify(0, digest.data(), static_cast<int>(digest.size()), signature.data(), static_cast<int>(signature.size()), &pubKey);
 }
 

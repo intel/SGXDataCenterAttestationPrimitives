@@ -77,7 +77,7 @@ struct CertificateUT: public testing::Test {
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                              constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                             ppid, cpusvn, pcesvn, pceId, fmspc);
+                                             ppid, cpusvn, pcesvn, pceId, fmspc, 0);
 
         pemPckCert = certGenerator.x509ToString(cert.get());
         pemIntCert = certGenerator.x509ToString(intCert.get());

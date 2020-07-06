@@ -38,7 +38,7 @@
 
 #include <tuple>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     EnclaveIdentityV1::EnclaveIdentityV1(const ::rapidjson::Value &p_body) : isvSvn(0)
     {

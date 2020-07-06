@@ -45,7 +45,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     class EnclaveIdentityV1: virtual public EnclaveIdentity
     {

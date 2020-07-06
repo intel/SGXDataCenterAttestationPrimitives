@@ -1,12 +1,6 @@
 Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP) Quote Verification SampleCode
 ================================================
 
-## Prebuilt binaries
-
-* QVL - Build from [Quote Verification Library source](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QVL), you can refer to [QvE project](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/QuoteVerification/QvE) about how to build 'trusted' version QVL libs for enclave use
-* SgxSSL - Build from [SgxSSL source](https://github.com/intel/intel-sgx-ssl)
-
-
 ## Linux
 Supported operating systems:
 * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
@@ -53,7 +47,7 @@ Supported operating systems:
    * Windows* Server 2019 (Long-Term Servicing Channel)
 
 Requirements:
-* Microsoft Visual Studio 2017 or newer.
+* Microsoft Visual Studio 2019 or newer.
 
 Pre-requisites:
 * Intel(R) SGX DCAP Driver
@@ -75,7 +69,7 @@ Pre-requisites:
 2. Build and run QuoteVerificationSample to verify a given quote
 ```
    a. Open VS solution QuoteVerificationSample.sln, butil with Debug/Release | x64 configuration
-      Note that Release mode need to sign ISV enlcave with your own key
+      Note that Release mode need to sign ISV enclave with your own key
    b. Run App.exe
       > App.exe -quote </path/to/quote.dat [default=..\..\..\QuoteGenerationSample\x64\Debug\quote.dat]>
 ```

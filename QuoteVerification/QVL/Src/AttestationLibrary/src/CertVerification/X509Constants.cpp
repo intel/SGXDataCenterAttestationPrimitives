@@ -31,7 +31,7 @@
 
 #include "X509Constants.h"
 
-namespace intel { namespace sgx { namespace qvl { namespace constants {
+namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 const dcap::parser::x509::DistinguishedName ROOT_CA_SUBJECT
 {
@@ -133,4 +133,4 @@ const std::vector<int> CRL_REQUIRED_EXTENSIONS
         NID_crl_number,
         NID_authority_key_identifier
 };
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace constants {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {

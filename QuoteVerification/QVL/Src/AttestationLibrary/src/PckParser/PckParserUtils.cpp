@@ -34,7 +34,7 @@
 #include "PckParserUtils.h"
 
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 std::string obj2Str(const ASN1_OBJECT* obj)
 {
@@ -64,5 +64,5 @@ std::string getLastError()
     return std::string(buff);
 }
 
-}}}} //namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} //namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 

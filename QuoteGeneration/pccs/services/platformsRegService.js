@@ -62,14 +62,14 @@ checkPCKCertCacheStatus=async function(platformInfoJson)
             // * treat the absence of the PLATFORMMANIFEST in the API while 
             // there is a PLATFORM_MANIFEST in the cache as a 'match' *
             platformInfoJson.platform_manifest = platform.platform_manifest;
+            let pckcert = await pckcertDao.getCert(platformInfoJson.qe_id, 
+                platformInfoJson.cpu_svn, platformInfoJson.pce_svn, platformInfoJson.pce_id);
+            if (pckcert == null) {
+                break;
+            }
         }
         else if (platform.platform_manifest != platformInfoJson.platform_manifest) {
             // cached status is false
-            break;
-        }
-        let pckcert = await pckcertDao.getCert(platformInfoJson.qe_id, 
-            platformInfoJson.cpu_svn, platformInfoJson.pce_svn, platformInfoJson.pce_id);
-        if (pckcert == null) {
             break;
         }
         isCached = true;
@@ -118,12 +118,21 @@ exports.registerPlatforms=async function(regDataJson) {
     // normalize the registration data
     regDataJson.qe_id = regDataJson.qe_id.toUpperCase();
     regDataJson.pce_id = regDataJson.pce_id.toUpperCase();
-    regDataJson.cpu_svn = regDataJson.cpu_svn.toUpperCase();
-    regDataJson.pce_svn = regDataJson.pce_svn.toUpperCase();
-    regDataJson.enc_ppid = regDataJson.enc_ppid.toUpperCase();
-    if (regDataJson.platform_manifest)
+    if (regDataJson.platform_manifest) {
         regDataJson.platform_manifest = regDataJson.platform_manifest.toUpperCase();
-    else regDataJson.platform_manifest = '';
+        // other parameters are useless
+        regDataJson.cpu_svn = "";
+        regDataJson.pce_svn = "";
+        regDataJson.enc_ppid = "";
+    }
+    else {
+        regDataJson.platform_manifest = '';
+        if (!regDataJson.cpu_svn || !regDataJson.pce_svn || !regDataJson.enc_ppid)
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
+        regDataJson.cpu_svn = regDataJson.cpu_svn.toUpperCase();
+        regDataJson.pce_svn = regDataJson.pce_svn.toUpperCase();
+        regDataJson.enc_ppid = regDataJson.enc_ppid.toUpperCase();
+    }
 
     // Get cache status
     let isCached = await checkPCKCertCacheStatus(regDataJson);

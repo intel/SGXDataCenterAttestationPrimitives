@@ -34,7 +34,7 @@
 
 #include <openssl/sha.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 Bytes sha256Digest(const Bytes& data)
 {

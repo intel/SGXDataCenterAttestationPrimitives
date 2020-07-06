@@ -29,13 +29,13 @@
  *
  */
 
-#ifndef SGX_DCAP_PARSERS_TEST_X509_CERT_GENERATOR_H
-#define SGX_DCAP_PARSERS_TEST_X509_CERT_GENERATOR_H
+#ifndef SGX_DCAP_COMMONS_TEST_X509_CERT_GENERATOR_H
+#define SGX_DCAP_COMMONS_TEST_X509_CERT_GENERATOR_H
 
-#include "SgxEcdsaAttestation/AttestationParsers.h"
+#include <SgxEcdsaAttestation/AttestationParsers.h>
 
 #include "X509CertTypes.h"
-#include "Bytes.h"
+#include "OpensslHelpers/Bytes.h"
 #include "OpensslHelpers/OpensslTypes.h"
 
 #include <openssl/pem.h>
@@ -64,7 +64,9 @@ public:
                                    const dcap::parser::x509::DistinguishedName &issuer,
                                    const Bytes& ppid, const Bytes& cpusvn, const Bytes& pcesvn,
                                    const Bytes& pceId, const Bytes& fmspc,
-                                   bool unexpectedExtension = false) const;
+                                   const int sgxType, const Bytes& platformInstanceId = {},
+                                   const bool dynamicPlatform = false, const bool cachedKeys = false,
+                                   const bool smtEnabled = false, bool unexpectedExtension = false) const;
 
     crypto::EVP_PKEY_uptr generateEcKeypair() const;
 
@@ -79,7 +81,9 @@ private:
     void addStandardCaExtensions(const crypto::X509_uptr& cert) const;
     void addStandardNonCaExtensions(const crypto::X509_uptr& cert) const;
     void addSGXPckExtensions(const crypto::X509_uptr &cert, const Bytes &ppid, const Bytes &cpusvn, const Bytes &pcesvn,
-                             const Bytes &pceId, const Bytes &fmspc, bool unexpectedExtension) const;
+                             const Bytes &pceId, const Bytes &fmspc, const int sgxType, const Bytes &platformInstanceId,
+                             const bool dynamicPlatform, const bool cachedKeys, const bool smtEnabled,
+                             const bool unexpectedExtension) const;
 
     void add_ext(X509 *cert, int nid, char *value) const;
     void createTcbComp(const std::string &parentOid, int index, unsigned char value, crypto::SGX_INT* dest) const;
@@ -89,4 +93,4 @@ private:
 
 }}}}}
 
-#endif //SGX_DCAP_PARSERS_TEST_X509_CERT_GENERATOR_H
+#endif //SGX_DCAP_COMMONS_TEST_X509_CERT_GENERATOR_H

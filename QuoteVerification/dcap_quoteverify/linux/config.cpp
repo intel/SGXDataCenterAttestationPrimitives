@@ -36,7 +36,7 @@
  */
 
 #include <dlfcn.h>
-#include "qve_header.h"
+#include "sgx_qve_header.h"
 #include "sgx_dcap_pcs_com.h"
 #include "se_trace.h"
 #include "se_thread.h"

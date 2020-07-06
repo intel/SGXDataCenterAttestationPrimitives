@@ -41,31 +41,31 @@ using namespace intel::sgx;
 TEST(keyUtilsTest, rawTo256EcdsaKeyShouldReturnCorrectKey)
 {
     // GIVEN
-    auto prv = qvl::test::priv(qvl::test::PEM_PRV);
-    auto evp = qvl::crypto::make_unique(EVP_PKEY_new());
+    auto prv = dcap::test::priv(dcap::test::PEM_PRV);
+    auto evp = dcap::crypto::make_unique(EVP_PKEY_new());
     ASSERT_TRUE(1 == EVP_PKEY_set1_EC_KEY(evp.get(), prv.get()));
-    auto pb = qvl::test::pub(qvl::test::PEM_PUB);
+    auto pb = dcap::test::pub(dcap::test::PEM_PUB);
     ASSERT_TRUE(1 == EC_KEY_check_key(pb.get()));
     
     const std::vector<uint8_t> data(150, 0xff);
-    const auto sig = qvl::DigestUtils::signMessageSha256(data, *evp);
+    const auto sig = dcap::DigestUtils::signMessageSha256(data, *evp);
     ASSERT_FALSE(sig.empty());
-    ASSERT_TRUE(qvl::DigestUtils::verifySig(sig, data, *pb));
+    ASSERT_TRUE(dcap::DigestUtils::verifySig(sig, data, *pb));
 
     // at this point we have valid priv and pub key
     // now when we convert pub key to bytes and covert
     // these bytes back to openssl struct we should be able
     // to successfully verify sig
     
-    const auto rawUncompressedPubKeyWithoutHeader = qvl::test::getRawPub(*pb);
+    const auto rawUncompressedPubKeyWithoutHeader = dcap::test::getRawPub(*pb);
     ASSERT_TRUE(64 == rawUncompressedPubKeyWithoutHeader.size());
     std::array<uint8_t, 64> arr;
     std::copy_n(rawUncompressedPubKeyWithoutHeader.begin(), 64, arr.begin());
     
     // WHEN
-    const auto newPbKey = qvl::crypto::rawToP256PubKey(arr);
+    const auto newPbKey = dcap::crypto::rawToP256PubKey(arr);
     ASSERT_TRUE(nullptr != newPbKey);
 
     // THEN
-    EXPECT_TRUE(qvl::DigestUtils::verifySig(sig, data, *newPbKey));
+    EXPECT_TRUE(dcap::DigestUtils::verifySig(sig, data, *newPbKey));
 } 

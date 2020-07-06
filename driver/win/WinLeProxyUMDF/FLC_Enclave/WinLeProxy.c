@@ -98,7 +98,7 @@ void *start_launch_enclave(void)
         }
     }
 
-    memcpy(&initInfo, sgx_le_ss, sgx_le_ss_length);
+    memcpy_s(&initInfo, sizeof(initInfo), sgx_le_ss, sgx_le_ss_length);
     bSuccess = InitializeEnclave(hProcess, lpBase, &initInfo, sizeof(initInfo), &encalveError);
     if (!bSuccess)
     {

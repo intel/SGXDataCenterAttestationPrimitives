@@ -34,13 +34,13 @@
 
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 
-#include "Bytes.h"
-#include "OpensslTypes.h"
+#include "OpensslHelpers/Bytes.h"
+#include "OpensslHelpers/OpensslTypes.h"
 
 #include <PckParser/CrlStore.h>
 #include <QuoteVerification/QuoteConstants.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 std::vector<uint8_t> rawEcdsaSignatureToDER(const std::array<uint8_t,constants::ECDSA_P256_SIGNATURE_BYTE_LEN>& sig);
 
@@ -70,7 +70,7 @@ bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_
 
 bool verifySha256EcdsaSignature(const dcap::parser::x509::Signature &signature, const std::vector<uint8_t> &message, const std::vector<uint8_t> &publicKey);
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 
 #endif //SGXECDSAATTESTATION_SIGNATUREVERIFICATION_H_

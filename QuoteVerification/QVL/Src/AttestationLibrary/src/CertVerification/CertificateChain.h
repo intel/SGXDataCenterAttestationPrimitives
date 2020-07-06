@@ -40,7 +40,7 @@
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class CertificateChain
 {
@@ -123,6 +123,6 @@ private:
     std::shared_ptr<const dcap::parser::x509::PckCertificate> pckCert{};
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGX_ECDSA_CERTIFICATECHAIN_H_

@@ -38,9 +38,9 @@
 #include <tuple>
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
-    std::unique_ptr<qvl::EnclaveIdentity> EnclaveIdentityParser::parse(const std::string &input)
+    std::unique_ptr<dcap::EnclaveIdentity> EnclaveIdentityParser::parse(const std::string &input)
     {
         if (!jsonParser.parse(input))
         {
@@ -94,7 +94,7 @@ namespace intel { namespace sgx { namespace qvl {
         {
             case EnclaveIdentity::V1:
             {
-                std::unique_ptr<qvl::EnclaveIdentity> identity = std::unique_ptr<qvl::EnclaveIdentityV1>(new EnclaveIdentityV1(*identityField)); // TODO make std::make_unique work in SGX enclave
+                std::unique_ptr<dcap::EnclaveIdentity> identity = std::unique_ptr<dcap::EnclaveIdentityV1>(new EnclaveIdentityV1(*identityField)); // TODO make std::make_unique work in SGX enclave
                 if (identity->getStatus() != STATUS_OK)
                 {
                     throw ParserException(identity->getStatus());
@@ -105,7 +105,7 @@ namespace intel { namespace sgx { namespace qvl {
             }
             case EnclaveIdentity::V2:
             {
-                std::unique_ptr<qvl::EnclaveIdentity> identity = std::unique_ptr<qvl::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
+                std::unique_ptr<dcap::EnclaveIdentity> identity = std::unique_ptr<dcap::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
                 if (identity->getStatus() != STATUS_OK)
                 {
                     throw ParserException(identity->getStatus());

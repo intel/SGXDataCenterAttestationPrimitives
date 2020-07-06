@@ -44,7 +44,7 @@ TEST(byteOperands, swapBytesShouldSuccessUint16)
 
     for(size_t i=0; i<in.size(); ++i)
     {
-        EXPECT_EQ(expected[i], qvl::swapBytes(in[i]));
+        EXPECT_EQ(expected[i], dcap::swapBytes(in[i]));
     }
 }
 
@@ -55,7 +55,7 @@ TEST(byteOperands, swapBytesShouldSuccessUint32)
 
     for(size_t i=0; i<in.size(); ++i)
     {
-        EXPECT_EQ(expected[i], qvl::swapBytes(in[i]));
+        EXPECT_EQ(expected[i], dcap::swapBytes(in[i]));
     }
 }
 
@@ -68,7 +68,7 @@ TEST(byteOperands, toUint16ShouldSuccess)
 
     for(size_t i=0; i<in.size(); ++i)
     {
-        EXPECT_EQ(expected[i], qvl::toUint16(in[i].first, in[i].second));
+        EXPECT_EQ(expected[i], dcap::toUint16(in[i].first, in[i].second));
     }
 }
 
@@ -81,7 +81,7 @@ TEST(byteOperands, toUint32TwoArgShouldSuccess)
 
     for(size_t i=0; i<in.size(); ++i)
     {
-        EXPECT_EQ(expected[i], qvl::toUint32(in[i].first, in[i].second));
+        EXPECT_EQ(expected[i], dcap::toUint32(in[i].first, in[i].second));
     }
 }
 
@@ -94,7 +94,7 @@ TEST(byteOperands, toUint32FourArgShouldSuccess)
 
     for(size_t i=0; i<in.size(); ++i)
     {
-        EXPECT_EQ(expected[i], qvl::toUint32(std::get<0>(in[i]), std::get<1>(in[i]), std::get<2>(in[i]), std::get<3>(in[i])));
+        EXPECT_EQ(expected[i], dcap::toUint32(std::get<0>(in[i]), std::get<1>(in[i]), std::get<2>(in[i]), std::get<3>(in[i])));
     }
 }
 
@@ -108,7 +108,7 @@ TEST(byteOperands, toArrayUint16)
     
     for(size_t i=0; i<in.size(); ++i)
     {
-        const auto actual = qvl::toArray(in[i]);
+        const auto actual = dcap::toArray(in[i]);
         const auto exp = expected[i];
         EXPECT_TRUE(std::equal(actual.begin(), actual.end(), exp.begin()));
     }
@@ -124,7 +124,7 @@ TEST(byteOperands, toArrayUint32)
     
     for(size_t i=0; i<in.size(); ++i)
     {
-        const auto actual = qvl::toArray(in[i]);
+        const auto actual = dcap::toArray(in[i]);
         const auto exp = expected[i];
         EXPECT_TRUE(std::equal(actual.begin(), actual.end(), exp.begin()));
     }

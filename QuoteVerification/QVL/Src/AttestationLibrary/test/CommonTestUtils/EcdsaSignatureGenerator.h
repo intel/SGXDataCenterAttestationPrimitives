@@ -35,7 +35,7 @@
 #include <OpensslHelpers/Bytes.h>
 #include <OpensslHelpers/OpensslTypes.h>
 
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 class EcdsaSignatureGenerator
 {

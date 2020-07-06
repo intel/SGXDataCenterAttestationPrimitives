@@ -43,7 +43,7 @@
 #include <OpensslHelpers/SignatureVerification.h>
 #include <Verifiers/PckCertVerifier.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
 
@@ -306,4 +306,4 @@ Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) cons
     return STATUS_OK;
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

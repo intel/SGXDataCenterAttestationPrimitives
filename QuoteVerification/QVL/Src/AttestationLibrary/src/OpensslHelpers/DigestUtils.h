@@ -34,10 +34,10 @@
 
 #include <OpensslHelpers/Bytes.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 Bytes sha256Digest(const Bytes& data);
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 #endif // INTEL_SGX_QVL_DIGEST_UTILS_H_

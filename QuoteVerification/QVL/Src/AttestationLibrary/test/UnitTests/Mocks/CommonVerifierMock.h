@@ -35,9 +35,9 @@
 #include <gmock/gmock.h>
 #include <Verifiers/CommonVerifier.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class CommonVerifierMock : public qvl::CommonVerifier
+class CommonVerifierMock : public dcap::CommonVerifier
 {
 public:
     MOCK_CONST_METHOD1(verifyRootCACert, Status(const dcap::parser::x509::Certificate &));
@@ -66,6 +66,6 @@ public:
 
 };
 
-}}}}// namespace intel { namespace sgx { namespace qvl { namespace test {
+}}}}// namespace intel { namespace sgx { namespace dcap { namespace test {
 
 #endif

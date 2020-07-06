@@ -1,6 +1,6 @@
 
 Rem
-Rem Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+Rem Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 Rem
 Rem Redistribution and use in source and binary forms, with or without
 Rem modification, are permitted provided that the following conditions
@@ -37,15 +37,15 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1d
+set openssl_ver_name=openssl-1.1.1g
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.4_1.1.1d
-set sgxssl_ver=win_2.4_1.1.1d
+set sgxssl_ver_name=win_2.8_1.1.1g
+set sgxssl_ver=win_2.8_1.1.1g
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 set server_url_path=https://www.openssl.org/source/
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=ABADC61C92C0488027DCB0A3681C6BE0316C931461E887A728F64D3178149098
-set openssl_chksum=1E3A91BC1F9DFCE01AF26026F856E064EAB4C8EE0A8F457B5AE30B40B8B711F2
+set sgxssl_chksum=09813f1d31fa0a7a6412925f4c1c88f8f530e05d5bf6bd23fd90b102958135cf
+set openssl_chksum=ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -65,10 +65,11 @@ if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
-	call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean || exit /b 1
+	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 
 	cd ..\
 )
 
+cd %top_dir%
 exit /b 0

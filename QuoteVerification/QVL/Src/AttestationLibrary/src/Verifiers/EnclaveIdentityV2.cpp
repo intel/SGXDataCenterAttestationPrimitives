@@ -35,7 +35,7 @@
 
 #include <tuple>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     EnclaveIdentityV2::EnclaveIdentityV2(const ::rapidjson::Value &p_body)
         : tcbEvaluationDataNumber(0), id(QE)

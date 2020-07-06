@@ -38,7 +38,7 @@
 #include <ctime>
 #include <stdexcept>
 #include <rapidjson/fwd.h>
-#include "OpensslHelpers/OpensslTypes.h"
+#include <openssl/x509.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace parser
 {
@@ -427,7 +427,10 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
                 SGX_TCB_COMP13_SVN,
                 SGX_TCB_COMP14_SVN,
                 SGX_TCB_COMP15_SVN,
-                SGX_TCB_COMP16_SVN
+                SGX_TCB_COMP16_SVN,
+                PLATFORM_INSTANCE_ID,
+                CONFIGURATION,
+                SMT_ENABLED
             };
 
             Extension();
@@ -460,11 +463,13 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @return nid
              */
             virtual int getNid() const;
+
             /**
              * Get name
              * @return name
              */
             virtual const std::string& getName() const;
+
             /**
              * Get value
              * @return vector of bytes representing extension's value
@@ -597,7 +602,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * Get raw PEM data of X509 certificate
              * @return string - PEM format
              */
-            virtual const std::string getPem() const;
+            virtual const std::string& getPem() const;
 
             /**
              * Get Certificate info (TBS) binary value that should be verifiable
@@ -656,7 +661,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         enum SgxType
         {
             Standard,
-            SGX_TEM
+            Scalable
         };
 
         class PckCertificate;
@@ -723,6 +728,62 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         };
 
         /**
+         * Optional sequence of additional configuration settings.
+         * This data is only relevant to PCK Certificates issued by PCK Platform CA
+         */
+        class Configuration {
+        public:
+            Configuration() = default;
+            /**
+             * Creates instance of Configuration class.
+             * @param dynamicPlatform Optional flag describing whether platform can be extended with additional packages
+             * @param cachedKeys Optional flag describing whether platform root keys are cached by SGX Registration Backend
+             * @param smtEnabled Optional flag describing whether platform has SMT
+             */
+            Configuration(
+                    bool dynamicPlatform,
+                    bool cachedKeys,
+                    bool smtEnabled);
+            virtual ~Configuration() = default;
+
+            /**
+             * Check if Configuration objects are equal
+             * @param other Configuration
+             * @return true if equal
+             */
+            virtual bool operator==(const Configuration& other) const;
+
+            /**
+             * Optional flag describing whether platform can be extended with additional packages
+             * @return true if platform can be extended with additional packages
+             */
+            virtual bool isDynamicPlatform() const;
+
+            /**
+             * Optional flag describing whether platform root keys are cached by SGX Registration Backend
+             * @return true if platform root keys are cached by SGX Registration Backend
+             */
+            virtual bool isCachedKeys() const;
+
+            /**
+             * Optional flag describing whether platform has SMT
+             * @return true if platform has SMT
+             */
+            virtual bool isSmtEnabled() const;
+
+        private:
+            bool _dynamicPlatform = true;
+            bool _cachedKeys = true;
+            bool _smtEnabled = true;
+
+            explicit Configuration(const ASN1_TYPE *configurationSeq);
+
+            friend class PckCertificate;
+            friend class ProcessorPckCertificate;
+            friend class PlatformPckCertificate;
+        };
+
+        /**
          * Class that represents Provisioning Certification Key Certificate
          */
         class PckCertificate : public Certificate
@@ -745,7 +806,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             PckCertificate& operator=(PckCertificate &&) = default;
 
             /**
-             * Chekc if PCK certificates are equal
+             * Check if PCK certificates are equal
              * @param other PCK certificate
              * @return true if equal
              */
@@ -762,8 +823,23 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @return vector of bytes representing PCE ID (2 bytes)
              */
             virtual const std::vector<uint8_t>& getPceId() const;
+
+            /**
+             * Get FMSPC
+             * @return vector of bytes representing FMSPC (6 bytes)
+             */
             virtual const std::vector<uint8_t>& getFmspc() const;
+
+            /**
+             * Get SGX Type
+             * @return Enum representing SGX Type
+             */
             virtual SgxType getSgxType() const;
+
+            /**
+             * Get sequence of TCB components.
+             * @return Structure of TCB components
+             */
             virtual const Tcb& getTcb() const;
 
             /**
@@ -785,9 +861,100 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             uint8_t PROCESSOR_CA_EXTENSION_COUNT = 5;
             uint8_t PLATFORM_CA_EXTENSION_COUNT = 7;
 
-            void setMembers();
+            stack_st_ASN1_TYPE* getSgxExtensions();
+            void setMembers(stack_st_ASN1_TYPE *sgxExtensions);
 
             explicit PckCertificate(const std::string& pem);
+
+            friend class ProcessorPckCertificate;
+            friend class PlatformPckCertificate;
+        };
+
+        /**
+         * Class that represents Processor Provisioning Certification Key Certificate
+         */
+        class ProcessorPckCertificate : public PckCertificate
+        {
+            using PckCertificate::PckCertificate;
+        public:
+            /**
+             * Upcast Certificate to ProcessorPckCertificate PCK certificate
+             * @param certificate
+             *
+             * @throws intel::sgx::dcap::parser::FormatException in case of upcasting error
+             */
+            explicit ProcessorPckCertificate(const Certificate& certificate);
+
+            /**
+             * Parse PEM encoded X.509 PCK certificate
+             * @param pem PEM encoded X.509 certificate
+             * @return PCK certificate instance
+             *
+             * @throws intel::sgx::dcap::parser::FormatException in case of parsing error
+             */
+            static ProcessorPckCertificate parse(const std::string& pem);
+        private:
+            explicit ProcessorPckCertificate(const std::string& pem);
+
+            void setMembers(stack_st_ASN1_TYPE *sgxExtensions);
+        };
+
+        /**
+         * Class that represents Platform Certification Key Certificate
+         */
+        class PlatformPckCertificate : public PckCertificate {
+        public:
+
+            PlatformPckCertificate() = default;
+            PlatformPckCertificate(const PlatformPckCertificate &) = delete;
+            PlatformPckCertificate(PlatformPckCertificate &&) = default;
+            virtual ~PlatformPckCertificate() = default;
+
+            /**
+             * Upcast Certificate to PlatformPckCertificate PCK certificate
+             * @param certificate
+             *
+             * @throws intel::sgx::dcap::parser::FormatException in case of upcasting error
+             */
+            explicit PlatformPckCertificate(const Certificate& certificate);
+
+            PlatformPckCertificate& operator=(const PlatformPckCertificate &) = delete;
+            PlatformPckCertificate& operator=(PlatformPckCertificate &&) = default;
+
+            /**
+             * Check if Platform PCK certificates are equal
+             * @param other PCK certificate
+             * @return true if equal
+             */
+            virtual bool operator==(const PlatformPckCertificate& other) const;
+
+            /**
+             * Get value of Platform Instance ID.
+             * @return vector of bytes representing Platform Instance ID (16 bytes)
+             */
+            virtual const std::vector<uint8_t>& getPlatformInstanceId() const;
+
+            /**
+             * Get sequence of additional configuration settings.
+             * @return Configuration instance
+             */
+            virtual const Configuration& getConfiguration() const;
+
+            /**
+             * Parse PEM encoded X.509 PCK certificate
+             * @param pem PEM encoded X.509 certificate
+             * @return PCK certificate instance
+             *
+             * @throws intel::sgx::dcap::parser::FormatException in case of parsing error
+             */
+            static PlatformPckCertificate parse(const std::string& pem);
+        private:
+            explicit PlatformPckCertificate(const std::string& pem);
+
+            void setMembers(stack_st_ASN1_TYPE *sgxExtensions);
+
+            std::vector<uint8_t> _platformInstanceId;
+            Configuration _configuration;
         };
     }
 

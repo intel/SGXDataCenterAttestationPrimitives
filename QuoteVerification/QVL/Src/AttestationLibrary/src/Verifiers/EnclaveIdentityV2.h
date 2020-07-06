@@ -36,7 +36,7 @@
 #include "EnclaveIdentity.h"
 #include "TcbStatus.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     enum EnclaveID
     {

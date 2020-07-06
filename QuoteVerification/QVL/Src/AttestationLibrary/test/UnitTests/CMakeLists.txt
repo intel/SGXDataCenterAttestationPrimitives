@@ -28,9 +28,7 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.10)
-if (POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
-endif()
+
 set(SUBPROJECT_NAME ${PROJECT_NAME}_UT)
 
 hunter_add_package(OpenSSL)
@@ -43,11 +41,12 @@ enable_testing()
 
 set(QVL_SRC_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/src)
 set(QVL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/include)
-set(COMMON_TEST_UTILS_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/test/CommonTestUtils)
+set(QVL_COMMON_TEST_UTILS_DIR ${CMAKE_SOURCE_DIR}/AttestationLibrary/test/CommonTestUtils)
+set(PARSERS_COMMON_TEST_UTILS_DIR ${CMAKE_SOURCE_DIR}/AttestationParsers/test/CommonTestUtils)
 
 file(GLOB SOURCE_FILES *.cpp
-    TestUtils/*.cpp
-    ${COMMON_TEST_UTILS_DIR}/*.cpp
+    ${QVL_COMMON_TEST_UTILS_DIR}/*.cpp
+    ${PARSERS_COMMON_TEST_UTILS_DIR}/*.cpp
 )
 
 add_executable(${SUBPROJECT_NAME} ${SOURCE_FILES})
@@ -56,11 +55,13 @@ include_directories(
     ${QVL_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${QVL_SRC_DIR}
-    ${COMMON_TEST_UTILS_DIR}
+    ${QVL_COMMON_TEST_UTILS_DIR}
+    ${PARSERS_COMMON_TEST_UTILS_DIR}
 )
 
 target_link_libraries(${SUBPROJECT_NAME}
     AttestationLibraryStatic
+    AttestationParsersStatic
     rapidjson
     OpenSSL::Crypto
     GTest::gtest_main

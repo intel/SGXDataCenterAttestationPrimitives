@@ -40,8 +40,9 @@
 #include "TcbInfoJsonGenerator.h"
 
 using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyTCBInfoIT : public Test
 {

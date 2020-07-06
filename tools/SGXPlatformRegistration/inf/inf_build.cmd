@@ -42,9 +42,10 @@ CALL :COPY_FILE %SRC_DIR%\license.txt %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\events.dll %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\mp_uefi.dll %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\mp_network.dll %DST_DIR%\
-CALL :COPY_FILE %BIN_DIR%\mpa.exe %DST_DIR%\
+
 CALL :COPY_FILE %BIN_DIR%\mpa_manage.exe %DST_DIR%\
 CALL :COPY_FILE %SDK_DIR%\bin\x64\Release\sgx_capable.dll %DST_DIR%\
+CALL :COPY_FILE %BIN_DIR%\mpa.exe %DST_DIR%\
 
 echo ========== Stamping INF file ================
 %STAMPINF% -f "%DST_DIR%\sgx_mpa.inf" -k "1.9" -d "*" -a "amd64" -v "%VERSION%"

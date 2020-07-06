@@ -54,7 +54,7 @@ LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--version-script=dcap_ql_wrapper.lds -Wl,--gc-sections -Wl,-rpath=.
 
 QL_Lib_Cpp_Flags := $(QL_Lib_C_Flags) -std=c++11
-QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(Quote_Library_Dir) -lsgx_qe3_logic -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
+QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(Quote_Library_Dir) -lsgx_qe3_logic -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl
 
 QL_Lib_Cpp_Flags += -DDISABLE_TRACE
 QL_Lib_Link_Flags += -DDISABLE_TRACE

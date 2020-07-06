@@ -35,7 +35,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace ::testing;
 
 

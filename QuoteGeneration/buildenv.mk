@@ -66,7 +66,9 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 
+ifneq ($(MAKECMDGOALS),clean)
 include $(SGX_SDK)/buildenv.mk
+endif
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86

@@ -99,7 +99,7 @@ hvhNAQ0BBQoBADAKBggqhkjOPQQDAgNIADBFAiEAmj9y/KmgcvH/0CsUUO/BnAyk
 SruGvu3DJ+zdTvm/0EgCIChm9INugpWJOqwLz/qFnK6nBKl3joq2VKFrj71kUguQ
 )cert";
 
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace intel::sgx;
 using namespace testing;
 

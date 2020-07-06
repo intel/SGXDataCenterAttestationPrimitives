@@ -55,11 +55,14 @@ exports.getPcsVersion = function()
     return parseInt(ver);
 }
 
-// Get PCK cert from PCS for platform {qeid, cpusvn, pcesvn, pce_id, enc_ppid} and update cache DB
+// Get PCK cert from Intel PCS for platform {qeid, cpusvn, pcesvn, pce_id, enc_ppid} and update cache DB
+// It's possible that only platform_manifest is provided and cpusvn, pcesvn, enc_ppid are null,
+// which means the function was called by platform registration service, and we only need to cache
+// PCK certs and don't need to run PCK cert selection tool
 exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform_manifest)
 {
     let result = {};
-    if (enc_ppid == null && platform_manifest == null) {
+    if (!enc_ppid && !platform_manifest) {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
     }
 
@@ -97,6 +100,10 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
     else {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
     }
+    // The latest PCS service may return 'Not available' in the certs array, need to filter them out
+    pckcerts = pckcerts.filter((pckcert)=>{
+        return(pckcert.cert != 'Not available');
+    });
     if (pckcerts.length == 0) {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
@@ -117,22 +124,13 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
     if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
     }
-
     const tcbinfo = JSON.parse(pck_server_res.body);
     const tcbinfo_str = JSON.stringify(tcbinfo);
 
-    // get the best cert with PCKCertSelectionTool for this raw TCB
-    var pem_certs = pckcerts.map(o => unescape(o.cert));
-    let cert_index = PckLib.pck_cert_select(cpusvn, pcesvn, pceid, tcbinfo_str, pem_certs, pem_certs.length);
-    if (cert_index == -1) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+    // Before we flush the caching database, get current raw TCBs that are already cached
+    // We need to re-run PCK cert selection tool for existing raw TCB levels due to certs change
+    let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(qeid, pceid);
 
-    result[Constants.SGX_TCBM] = pckcerts[cert_index].tcbm;
-    result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] = pck_certchain;
-    result["cert"] = pem_certs[cert_index];
-
-    // update or insert collaterals including fmspc_tcbs, platforsm, pck_cert and platform_tcbs
     await sequelize.transaction(async (t)=>{
         // Update the platform entry in the cache
         await platformsDao.upsertPlatform(qeid, 
@@ -143,7 +141,7 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
             x509.ca
         );
 
-        // flush and add PCK certs
+        // flush pck_cert 
         await pckcertDao.deleteCerts(qeid, pceid);
         for (const pckcert of pckcerts) {
             await pckcertDao.upsertPckCert(qeid, 
@@ -152,31 +150,8 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
                 unescape(pckcert.cert));
         } 
 
-        // Before we update or insert the new raw TCB, get current raw TCBs that are already cached
-        // We need to re-run PCK cert selection tool for existing raw TCB levels due to certs change
-        let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(qeid, pceid);
-
-        // create an entry for the new TCB level
-        await platformTcbsDao.upsertPlatformTcbs(qeid, 
-            pceid, 
-            cpusvn, 
-            pcesvn, 
-            pckcerts[cert_index].tcbm 
-        );
-        
-        // For all cached TCB levels, re-run PCK cert selection tool
-        for (const platform_tcb of cached_platform_tcbs) {
-            cert_index = PckLib.pck_cert_select(platform_tcb.cpu_svn, 
-                platform_tcb.pce_svn, platform_tcb.pce_id, tcbinfo_str, pem_certs, pem_certs.length);
-            if (cert_index == -1) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-            }
-            await platformTcbsDao.upsertPlatformTcbs(platform_tcb.qe_id, 
-                platform_tcb.pce_id, 
-                platform_tcb.cpu_svn, 
-                platform_tcb.pce_svn, 
-                pckcerts[cert_index].tcbm);
-        }
+        // delete old TCB mappings
+        await platformTcbsDao.deletePlatformTcbsById(qeid, pceid);
 
         // Update or insert fmspc_tcbs 
         await fmspcTcbDao.upsertFmspcTcb({
@@ -188,6 +163,42 @@ exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid
         // Update or insert PCS certificates 
         await pcsCertificatesDao.upsertPckCertificateIssuerChain(x509.ca, pck_certchain);
     });
+
+    // For all cached TCB levels, re-run PCK cert selection tool
+    var pem_certs = pckcerts.map(o => unescape(o.cert));
+    for (const platform_tcb of cached_platform_tcbs) {
+        let cert_index = PckLib.pck_cert_select(platform_tcb.cpu_svn, 
+            platform_tcb.pce_svn, platform_tcb.pce_id, tcbinfo_str, pem_certs, pem_certs.length);
+        if (cert_index == -1) {
+            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+        }
+        await platformTcbsDao.upsertPlatformTcbs(platform_tcb.qe_id, 
+            platform_tcb.pce_id, 
+            platform_tcb.cpu_svn, 
+            platform_tcb.pce_svn, 
+            pckcerts[cert_index].tcbm);
+    }
+
+    if (!cpusvn || !pcesvn)
+        return {}; // end here if raw TCB not provided
+
+    // get the best cert with PCKCertSelectionTool for this raw TCB
+    let cert_index = PckLib.pck_cert_select(cpusvn, pcesvn, pceid, tcbinfo_str, pem_certs, pem_certs.length);
+    if (cert_index == -1) {
+        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
+    }
+
+    // create an entry for the new TCB level
+    await platformTcbsDao.upsertPlatformTcbs(qeid, 
+        pceid, 
+        cpusvn, 
+        pcesvn, 
+        pckcerts[cert_index].tcbm 
+    );
+
+    result[Constants.SGX_TCBM] = pckcerts[cert_index].tcbm;
+    result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] = pck_certchain;
+    result["cert"] = pem_certs[cert_index];
 
     return result;
 }
@@ -204,7 +215,6 @@ exports.pckCertSelection = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid,
     for (i = 0; i < pck_certs.length; i++) {
         pem_certs.push(pck_certs[i].pck_cert);
     }
-
 
     let tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
     if (tcbinfo == null || tcbinfo.tcbinfo == null)
@@ -246,17 +256,18 @@ exports.getPckCert=async function(qeid, cpusvn, pcesvn, pceid, enc_ppid) {
 
     let result = {};
     if (pckcert == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            // for LAZY mode, if no record found in local database, then request the cert from Intel PCS service
-            result = await this.getPckCertFromPCS(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform ? platform.platform_manifest : '');
-        }
-        else {
-            if (platform == null) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_PLATFORM_UNKNOWN);    
+        if (platform == null) {
+            if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
+                // for LAZY mode, if no record found in local database, then request the cert from Intel PCS service
+                result = await this.getPckCertFromPCS(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform ? platform.platform_manifest : '');
             }
             else {
-                result = await this.pckCertSelection(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform.fmspc, platform.ca);
+                    throw new PccsError(PCCS_STATUS.PCCS_STATUS_PLATFORM_UNKNOWN);    
             }
+        }
+        else {
+            // Always treat presence of platform record as platform collateral is cached
+            result = await this.pckCertSelection(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform.fmspc, platform.ca);
         }
     }
     else {

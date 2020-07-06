@@ -25,9 +25,7 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.10)
-if (POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
-endif()
+
 project(AttestationLibrary CXX)
 
 set(VERSION "1.0.0")
@@ -71,12 +69,14 @@ set(ATTESTATION_LIBRARY_API_INCLUDE ${PROJECT_SOURCE_DIR}/include CACHE INTERNAL
 include_directories(
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+        ${ATTESTATION_COMMONS_API_INCLUDE}
         ${ATTESTATION_PARSERS_API_INCLUDE}
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+        AttestationCommonsStatic
         AttestationParsersStatic
         rapidjson
         OpenSSL::SSL
@@ -84,6 +84,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         )
 
 target_link_libraries(${PROJECT_NAME}Static PRIVATE
+        AttestationCommonsStatic
         AttestationParsersStatic
         rapidjson
         OpenSSL::SSL
@@ -131,7 +132,6 @@ if (BUILD_ENCLAVE)
 
     add_library(${PROJECT_NAME}Enclave SHARED ${SOURCE_FILES}
             ${CMAKE_CURRENT_SOURCE_DIR}/src/Enclave/Enclave_t.c
-            src/Utils/GMTime.cpp
             )
 
     set_target_properties(${PROJECT_NAME}Enclave PROPERTIES DEBUG_POSTFIX "")
@@ -163,6 +163,7 @@ if (BUILD_ENCLAVE)
 
     target_link_libraries(${PROJECT_NAME}Enclave PRIVATE
             rapidjson
+            AttestationCommonsStaticEnclave
             AttestationParsersStaticEnclave
             "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L${SGX_OPENSSL}/lib64 -L${SGX_SDK}/lib64"
             "-Wl,--whole-archive -l${TRTS_LIBRARY_NAME} -lsgx_tsgxssl -Wl,--no-whole-archive"

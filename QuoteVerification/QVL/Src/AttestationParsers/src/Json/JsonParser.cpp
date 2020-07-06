@@ -35,7 +35,6 @@
 #include "Utils/TimeUtils.h"
 
 #include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 #include <tuple>
 #include <algorithm>
@@ -158,7 +157,7 @@ std::pair<int, bool> JsonParser::getIntFieldOf(const ::rapidjson::Value& parent,
 bool JsonParser::isValidHexstring(const std::string& hexString) const
 {
     return std::find_if(hexString.cbegin(), hexString.cend(),
-        [](const char c){return !::isxdigit(c);}) == hexString.cend();
+        [](const char c){return !::isxdigit(static_cast<unsigned char>(c));}) == hexString.cend();
 }
 
 }}}}} // namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {

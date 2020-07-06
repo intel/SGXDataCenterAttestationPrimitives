@@ -24,9 +24,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 cmake_minimum_required(VERSION 3.10)
-if (POLICY CMP0074)
-	cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
-endif()
 
 set(ATTESTATION_PARSERS_ROOT_DIR "") # Optional path to Attestation Parsers library
 set(ATTESTATION_LIBRARY_ROOT_DIR "") # Optional path to Attestation library
@@ -292,14 +289,16 @@ else()
 	message(FATAL_ERROR "Unsupported compiler '${CMAKE_CXX_COMPILER_ID}'. Clang 5.0, GCC and MSVC are supported")
 endif()
 
-# Settings for coverage support in CLion (version 2019.3 and up)
-if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang"
-		OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
-	message("Building with llvm Code Coverage Tools")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-	message("Building with lcov Code Coverage Tools")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+if(NOT BUILD_ENCLAVE)
+	# Settings for coverage support in CLion (version 2019.3 and up)
+	if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang"
+			OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
+		message("Building with llvm Code Coverage Tools")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+	elseif(CMAKE_COMPILER_IS_GNUCXX)
+		message("Building with lcov Code Coverage Tools")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+	endif()
 endif()
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/lib)
@@ -308,6 +307,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/bin)
 
 # Order matters!
 add_subdirectory(ThirdParty)
+add_subdirectory(AttestationCommons)
 if("${ATTESTATION_PARSERS_ROOT_DIR}" STREQUAL "")
 	add_subdirectory(AttestationParsers)
 endif()
@@ -326,7 +326,9 @@ add_custom_target(install_${PROJECT_NAME}
 if (BUILD_TESTS)
 	if(UNIX)
 		add_custom_target(runTests
-				COMMAND cd ${QVL_DIST_DIR}/bin && LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
+				COMMAND cd ${QVL_DIST_DIR}/bin &&
+				LD_LIBRARY_PATH=../lib ./AttestationCommons_UT --gtest_output="xml:../results/AttestationCommons_UTResults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationParsers_IT --gtest_output="xml:../results/AttestationParsers_ITResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTesults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationLibrary_IT --gtest_output="xml:../results/AttestationLibrary_ITResults.xml" &&

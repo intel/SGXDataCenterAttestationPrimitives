@@ -33,7 +33,7 @@
 #include <type_traits>
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
 namespace {
 

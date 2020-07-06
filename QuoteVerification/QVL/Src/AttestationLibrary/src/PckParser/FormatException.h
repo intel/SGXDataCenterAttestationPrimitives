@@ -33,7 +33,7 @@
 #define SGXECDSAATTESTATION_FORMATEXCEPTION_H
 
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 class FormatException : public std::logic_error
 {
@@ -41,6 +41,6 @@ public:
     using std::logic_error::logic_error;
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif //SGXECDSAATTESTATION_FORMATEXCEPTION_H

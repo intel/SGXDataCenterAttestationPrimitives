@@ -30,7 +30,6 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <CertVerification/X509Constants.h>
@@ -40,8 +39,9 @@
 #include "X509CrlGenerator.h"
 
 using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyEnclaveIdentityIT : public Test
 {

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pce_wrapper", "QuoteGeneration\pce_wrapper\win\pce_wrapper.vcxproj", "{7A7054A9-BBEC-45A8-A1E5-0F0998CB3A9C}"
 	ProjectSection(ProjectDependencies) = postProject

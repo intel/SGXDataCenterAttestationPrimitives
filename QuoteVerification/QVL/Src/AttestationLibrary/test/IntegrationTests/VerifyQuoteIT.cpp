@@ -30,12 +30,9 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <iostream>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <SgxEcdsaAttestation/AttestationParsers.h>
-#include <PckParser/PckParser.h>
 #include <CertVerification/X509Constants.h>
 #include <QuoteGenerator.h>
 #include <EnclaveIdentityGenerator.h>
@@ -47,10 +44,11 @@
 #include <DigestUtils.h>
 #include <KeyHelpers.h>
 
-using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
 using namespace std;
+using namespace testing;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyQuoteIT : public Test
 {
@@ -106,7 +104,7 @@ struct VerifyQuoteIT : public Test
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                              constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                             ppid, cpusvn, pcesvn, pceId, fmspc);
+                                             ppid, cpusvn, pcesvn, pceId, fmspc, 0);
 
         intel::sgx::dcap::parser::x509::DistinguishedName subject =
                 {"", "Intel SGX PCK Platform CA", "US", "Intel Corporation", "Santa Clara", "CA"};

@@ -30,19 +30,17 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include <PckParser/PckParser.h>
 #include <CertVerification/X509Constants.h>
 #include <X509CertGenerator.h>
 #include <X509CrlGenerator.h>
-#include <iostream>
 #include <array>
 
 using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
+using namespace ::intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyPCKCertificateIT : public Test
 {
@@ -78,7 +76,7 @@ struct VerifyPCKCertificateIT : public Test
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                                   constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                                  ppid, cpusvn, pcesvn, pceId, fmspc);
+                                                  ppid, cpusvn, pcesvn, pceId, fmspc, 0);
     }
 
     std::string getValidCrl(const crypto::X509_uptr &ucert)

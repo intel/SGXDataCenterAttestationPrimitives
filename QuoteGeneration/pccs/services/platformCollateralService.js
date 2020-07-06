@@ -90,6 +90,7 @@ exports.addPlatformCollateral=async function(collateralJson) {
             // make a full list based on the cache data and the input data
             let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(platform_certs.qe_id, platform_certs.pce_id);
             let new_platforms = platforms.filter(o => (o.pce_id == platform_certs.pce_id && o.qe_id == platform_certs.qe_id));
+	    let new_raw_tcbs = new_platforms.filter(o => (Boolean(o.cpu_svn) && Boolean(o.pce_svn)));
             var platforms_all = [];
             for (const cached_platform of cached_platform_tcbs) {
                 platforms_all.push({
@@ -99,12 +100,12 @@ exports.addPlatformCollateral=async function(collateralJson) {
                     "pce_svn": cached_platform.pce_svn
                 });
             }
-            for (const new_platform of new_platforms) {
+            for (const raw_tcb of new_raw_tcbs) {
                 platforms_all.push({
-                    "qe_id": new_platform.qe_id,
-                    "pce_id": new_platform.pce_id,
-                    "cpu_svn": new_platform.cpu_svn,
-                    "pce_svn": new_platform.pce_svn
+                    "qe_id": raw_tcb.qe_id,
+                    "pce_id": raw_tcb.pce_id,
+                    "cpu_svn": raw_tcb.cpu_svn,
+                    "pce_svn": raw_tcb.pce_svn
                 });
             }
             // Remove duplicates, can be optimized (TODO)

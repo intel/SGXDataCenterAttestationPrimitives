@@ -30,7 +30,6 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include "EcdsaSignatureGenerator.h"
 #include "X509CertGenerator.h"
@@ -42,10 +41,11 @@
 #include <string>
 #include <chrono>
 
-using namespace testing;
-using namespace intel::sgx::qvl;
 using namespace std;
-using namespace intel::sgx::qvl::test;
+using namespace testing;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyEnclaveReportIT : public Test
 {

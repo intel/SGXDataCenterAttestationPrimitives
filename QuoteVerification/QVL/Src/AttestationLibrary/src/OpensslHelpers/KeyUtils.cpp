@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <array>
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey)
 {
@@ -92,4 +92,4 @@ crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey)
     return rawToP256PubKey(raw);
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {

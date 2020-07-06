@@ -37,7 +37,7 @@
 #include <vector>
 #include <stdexcept>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 struct IFileReader
 {

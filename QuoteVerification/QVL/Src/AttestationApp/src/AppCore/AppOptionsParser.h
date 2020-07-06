@@ -37,7 +37,7 @@
 #include "AppOptions.h"
 #include <argtable3.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class AppOptionsParser {
 public:

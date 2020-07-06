@@ -39,7 +39,7 @@
 
 #include <tuple>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     void EnclaveIdentity::setSignature(std::vector<uint8_t> &p_signature)
     {
@@ -113,7 +113,7 @@ namespace intel { namespace sgx { namespace qvl {
         bool l_status = false;
         struct tm issueDateTm{};
         std::tie(issueDateTm, l_status) = jsonParser.getDateFieldOf(input, "issueDate");
-        issueDate = qvl::mktime(&issueDateTm);
+        issueDate = dcap::mktime(&issueDateTm);
         return l_status;
     }
 
@@ -122,7 +122,7 @@ namespace intel { namespace sgx { namespace qvl {
         bool l_status = false;
         struct tm nextUpdateTm{};
         std::tie(nextUpdateTm, l_status) = jsonParser.getDateFieldOf(input, "nextUpdate");
-        nextUpdate = qvl::mktime(&nextUpdateTm);
+        nextUpdate = dcap::mktime(&nextUpdateTm);
         return l_status;
     }
 

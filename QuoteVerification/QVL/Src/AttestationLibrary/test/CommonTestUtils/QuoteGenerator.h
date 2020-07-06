@@ -37,7 +37,7 @@
 #include <vector>
 #include <OpensslHelpers/Bytes.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
 static constexpr size_t QUOTE_HEADER_SIZE = 48;
 static constexpr size_t ENCLAVE_REPORT_SIGNATURE_SIZE = 64;
@@ -188,7 +188,7 @@ private:
     QuoteAuthData quoteAuthData;
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace test {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace test {
 
 
 #endif //SGXECDSAATTESTATION_QUOTEGENERATOR_H

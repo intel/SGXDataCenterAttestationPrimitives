@@ -37,6 +37,7 @@
 #include "sgx_dcap_quoteverify.h"
 #include "sgx_dcap_pcs_com.h"
 #include "sgx_dcap_qv_internal.h"
+#include "sgx_qve_def.h"
 #ifndef _MSC_VER
 #include "linux/qve_u.h"
 #else //_MSC_VER

@@ -36,7 +36,8 @@ exports.PLATFORM_REG_SCHEMA={
     "properties": {
         "qe_id": {
             "type": "string",
-            "pattern": "^[a-fA-F0-9]{32}$"
+            "minLength": 1,
+            "maxLength": 260
         },
         "pce_id": {
             "type": "string",
@@ -58,7 +59,7 @@ exports.PLATFORM_REG_SCHEMA={
             "type": "string"
         }
     },
-    "required": [ "qe_id", "pce_id", "cpu_svn", "pce_svn", "enc_ppid" ]
+    "required": [ "qe_id", "pce_id" ]
 };
 
 exports.PLATFORM_COLLATERAL_SCHEMA={
@@ -73,7 +74,8 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                 "properties": {
                     "qe_id": {
                         "type": "string",
-                        "pattern": "^[a-fA-F0-9]{32}$"
+                        "minLength": 1,
+                        "maxLength": 260
                     },
                     "pce_id": {
                         "type": "string",
@@ -81,21 +83,21 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                     },
                     "cpu_svn": {
                         "type": "string",
-                        "pattern": "^[a-fA-F0-9]{32}$"
+                        "pattern": "^[a-fA-F0-9]{32}$|^$"
                     },
                     "pce_svn": {
                         "type": "string",
-                        "pattern": "^[a-fA-F0-9]{4}$"
+                        "pattern": "^[a-fA-F0-9]{4}$|^$"
                     },
                     "enc_ppid": {
                         "type": "string",
-                        "pattern": "^[a-fA-F0-9]{768}$"
+                        "pattern": "^[a-fA-F0-9]{768}$|^$"
                     },
                     "platform_manifest": {
                         "type": "string"
                     }
                 },
-                "required": [ "qe_id", "pce_id", "cpu_svn", "pce_svn", "enc_ppid" ]
+                "required": [ "qe_id", "pce_id" ]
             }
         },
         "collaterals": {
@@ -108,7 +110,8 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                         "properties" :{
                             "qe_id": {
                                 "type": "string",
-                                "pattern": "^[a-fA-F0-9]{32}$"
+                                "minLength": 1,
+                                "maxLength": 260
                             },
                             "pce_id": {
                                 "type": "string",
@@ -116,7 +119,7 @@ exports.PLATFORM_COLLATERAL_SCHEMA={
                             },
                             "enc_ppid": {
                                 "type": "string",
-                                "pattern": "^[a-fA-F0-9]{768}$"
+                                "pattern": "^[a-fA-F0-9]{768}$|^$"
                             },
                             "platform_manifest": {
                                 "type": "string"

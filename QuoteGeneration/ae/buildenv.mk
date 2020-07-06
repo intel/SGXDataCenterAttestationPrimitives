@@ -51,7 +51,7 @@ CXXFLAGS  += $(ENCLAVE_CXXFLAGS)
 CFLAGS    += $(ENCLAVE_CFLAGS)
 
 LDTFLAGS  = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \
-            -Wl,--start-group $(EXTERNAL_LIB) -Wl,--end-group                    \
+            -Wl,--start-group $(EXTERNAL_LIB) -Wl,--end-group -Wl,--build-id            \
             -Wl,--version-script=$(WORK_DIR)/enclave.lds $(ENCLAVE_LDFLAGS)
 
 LDTFLAGS_NO_CRYPTO = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \

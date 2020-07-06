@@ -44,7 +44,7 @@
 // Gmock will try to print these out and fail, as the implementation is within OpenSSL internal headers.
 static void PrintTo(const X509_crl_st &x, ::std::ostream *os)  { *os << "X509_crl_st at [" << std::hex << &x << std::dec << "]"; }
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
 class PckCertificateMock: public virtual dcap::parser::x509::PckCertificate
 {
@@ -67,21 +67,21 @@ public:
     MOCK_CONST_METHOD0(getInfo, const std::vector<uint8_t>&());
 };
 
-class CrlStoreMock: public qvl::pckparser::CrlStore
+class CrlStoreMock: public dcap::pckparser::CrlStore
 {
 public:
     MOCK_METHOD1(parse, bool(const std::string&));
 
     MOCK_CONST_METHOD1(expired, bool(const time_t&));
-    MOCK_CONST_METHOD0(getIssuer, const qvl::pckparser::Issuer&());
-    MOCK_CONST_METHOD0(getSignature, const qvl::pckparser::Signature&());
-    MOCK_CONST_METHOD0(getExtensions, const std::vector<qvl::pckparser::Extension>&());
-    MOCK_CONST_METHOD0(getRevoked, const std::vector<qvl::pckparser::Revoked>&());
+    MOCK_CONST_METHOD0(getIssuer, const dcap::pckparser::Issuer&());
+    MOCK_CONST_METHOD0(getSignature, const dcap::pckparser::Signature&());
+    MOCK_CONST_METHOD0(getExtensions, const std::vector<dcap::pckparser::Extension>&());
+    MOCK_CONST_METHOD0(getRevoked, const std::vector<dcap::pckparser::Revoked>&());
     MOCK_CONST_METHOD1(isRevoked, bool(const dcap::parser::x509::Certificate&));
     MOCK_CONST_METHOD0(getCrl, X509_CRL&());
 };
 
-class CertificateChainMock: public qvl::CertificateChain
+class CertificateChainMock: public dcap::CertificateChain
 {
 public:
     MOCK_METHOD1(parse, Status(const std::string&));
@@ -113,6 +113,6 @@ public:
     MOCK_CONST_METHOD1(getSgxTcbComponentSvn, unsigned int(unsigned int));
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace test {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace test {
 
 #endif //INTEL_SGX_QVL_TEST_CERTCRLMOCKS_H_

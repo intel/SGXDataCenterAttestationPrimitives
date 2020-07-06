@@ -38,7 +38,7 @@
 #include <numeric>
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 
 struct GetQECertificationDataTests : public Test
 {

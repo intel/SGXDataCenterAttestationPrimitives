@@ -44,7 +44,9 @@
 #include <OpensslHelpers/Bytes.h>
 #include <iostream>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+using namespace intel::sgx::dcap;
+
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 struct Subject;
 struct Issuer
@@ -146,6 +148,6 @@ int getRevokedCount(X509_CRL& crl);
 std::vector<Revoked> getRevoked(X509_CRL& crl);
 long getCrlNum(X509_CRL& crl);
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif // SGX_INTEL_PCKLIB_PCKPARSER_H_

@@ -33,7 +33,7 @@
 
 #include <array>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 std::string AttestationLibraryAdapter::getVersion() const
 {
 #ifdef SGX_TRUSTED

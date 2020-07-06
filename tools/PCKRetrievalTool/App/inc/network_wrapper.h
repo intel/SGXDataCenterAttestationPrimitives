@@ -33,8 +33,16 @@
  * Description: Definitions of network access interfaces
  *
  */
+
 #ifndef _NETWORK_WRAPPER_H_
 #define _NETWORK_WRAPPER_H_
+
+#define ENCRYPTED_PPID_LENGTH             384
+#define CPU_SVN_LENGTH                    16
+#define ISV_SVN_LENGTH                    2
+#define PCE_ID_LENGTH                     2
+#define DEFAULT_PLATFORM_ID_LENGTH        16
+#define PLATFORM_MANIFEST_LENGTH          28221
 
 typedef enum  _cache_server_delivery_status_t {
     DELIVERY_SUCCESS = 0,
@@ -51,9 +59,9 @@ typedef enum  _network_post_error_t {
     POST_NETWORK_ERROR
 } network_post_error_t;
 
-network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size);
+network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size, const uint16_t platform_id_length, const bool non_enclave_mode);
 
-bool is_server_url_avaiable();
+bool is_server_url_available();
 
 #endif /* !_NETWORK_WRAPPER_H_ */
 

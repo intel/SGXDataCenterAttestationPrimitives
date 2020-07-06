@@ -38,7 +38,7 @@
 #include <Verifiers/EnclaveIdentityV1.h>
 
 using namespace testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 struct EnclaveIdentityV1ParserFormatUT : public Test
 {

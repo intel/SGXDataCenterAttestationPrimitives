@@ -172,8 +172,8 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
 #endif
 
 #if MP_VERIFY_INTERNAL_DATA_STRUCT_READ == 1
-        if (0 == memcmp(requestUefi->header.guid, PlatformManifest_GUID, GUID_SIZE)) {
-            // structure version check
+        if (0 == memcmp(requestUefi->header.guid, PlatformManifest_GUID, GUID_SIZE)) {    
+  	    // structure version check
             if (MP_STRUCTURE_VERSION != requestUefi->header.version) {
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PlatformManifest structure version check failed. version number: %d\n", requestUefi->header.version);
                 res = MP_INVALID_PARAMETER;
@@ -189,17 +189,6 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                     break;
                 }
                 pmCount = 1;
-            }
-
-            if (MP_BIOS_UEFI_VARIABLE_VERSION_2 == requestUefi->version) {
-                // check expected request size
-                if ((sizeof(PlatformManifest)*2) != requestUefi->size) {
-                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PlatformManifest structure size is not as expected.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual: %d expected: %d\n", requestUefi->size, sizeof(PlatformManifest)*2);
-                    res = MP_NO_PENDING_DATA;
-                    break;
-                }
-                pmCount = 2;
             }
 
             for(i=0; i<pmCount; i++) {

@@ -35,9 +35,9 @@
 #include<Verifiers/PckCrlVerifier.h>
 #include <gmock/gmock.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class PckCrlVerifierMock : public qvl::PckCrlVerifier
+class PckCrlVerifierMock : public dcap::PckCrlVerifier
 {
 public:
     MOCK_CONST_METHOD2(verify, Status(
@@ -45,7 +45,7 @@ public:
             const dcap::parser::x509::Certificate&));
 };
 
-}}}}// namespace intel { namespace sgx { namespace qvl { namespace test {
+}}}}// namespace intel { namespace sgx { namespace dcap { namespace test {
 
 
 #endif //SGXECDSAATTESTATION_PCKCRLVERIFIERMOCK_H

@@ -76,11 +76,6 @@ class MPManagement {
         // If failed returns an appropriate error.
         virtual MpResult getSgxStatus(MpSgxStatus &status);
         
-        // Sets SGX status
-        // If the platform supports SGX, sets SGX status. A reboot could be required.
-        // Returns SGX status after enablement. 
-        // If failed returns an appropriate error.
-        virtual MpResult enableSgx(MpSgxStatus &status);
 
         // Sets registration server info.
         // If registration is completed successfully, error_code will be set to 0.

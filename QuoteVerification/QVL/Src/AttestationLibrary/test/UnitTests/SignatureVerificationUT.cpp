@@ -41,17 +41,17 @@ using namespace intel::sgx;
 TEST(signatureVerification, shouldVerifyRawEcdsaSignature)
 {
     // GIVEN
-    auto prv = qvl::test::priv(qvl::test::PEM_PRV);
-    auto evp = qvl::crypto::make_unique(EVP_PKEY_new());
+    auto prv = dcap::test::priv(dcap::test::PEM_PRV);
+    auto evp = dcap::crypto::make_unique(EVP_PKEY_new());
     ASSERT_TRUE(1 == EVP_PKEY_set1_EC_KEY(evp.get(), prv.get()));
-    auto pb = qvl::test::pub(qvl::test::PEM_PUB);
+    auto pb = dcap::test::pub(dcap::test::PEM_PUB);
     ASSERT_TRUE(1 == EC_KEY_check_key(pb.get()));
     
     std::vector<uint8_t> data(150);
     std::fill(data.begin(), data.end(), 0xff);
-    const auto sig = qvl::DigestUtils::signMessageSha256(data, *evp);
+    const auto sig = dcap::DigestUtils::signMessageSha256(data, *evp);
     ASSERT_TRUE(!sig.empty());
-    ASSERT_TRUE(qvl::DigestUtils::verifySig(sig, data, *pb));
+    ASSERT_TRUE(dcap::DigestUtils::verifySig(sig, data, *pb));
 
     // At this point we have valid keys and signature
     // Now we convert signature to raw bytes, convert bytes
@@ -60,8 +60,8 @@ TEST(signatureVerification, shouldVerifyRawEcdsaSignature)
     const auto rawSig = EcdsaSignatureGenerator::convertECDSASignatureToRawArray(const_cast<Bytes&>(sig));
 
     // WHEN
-    const auto convertedBackSignature = qvl::crypto::rawEcdsaSignatureToDER(rawSig);
+    const auto convertedBackSignature = dcap::crypto::rawEcdsaSignatureToDER(rawSig);
 
     // THEN
-    EXPECT_TRUE(qvl::DigestUtils::verifySig(convertedBackSignature, data, *pb));
+    EXPECT_TRUE(dcap::DigestUtils::verifySig(convertedBackSignature, data, *pb));
 }

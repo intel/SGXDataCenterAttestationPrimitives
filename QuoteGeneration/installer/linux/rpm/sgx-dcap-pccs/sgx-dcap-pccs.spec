@@ -30,6 +30,7 @@
 #
 
 %define _install_path @install_path@
+%define _license_file COPYING
 
 Name:           sgx-dcap-pccs
 Version:        @version@
@@ -49,7 +50,10 @@ Intel(R) Software Guard Extensions PCK Caching Service
 
 %install
 make DESTDIR=%{?buildroot} install
+install -d %{?buildroot}%{_docdir}/%{name}
+find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
 echo "%{_install_path}" > %{_specdir}/listfiles
+echo %{_docdir}/%{name}/%{_license_file} >> %{_specdir}/listfiles
 echo "%config %{_install_path}/config/production-0.json" >> %{_specdir}/listfiles
 
 %files -f %{_specdir}/listfiles
@@ -61,9 +65,6 @@ if which pm2 > /dev/null; then
 else
     npm install -g pm2
 fi
-/bin/su -c "%{_install_path}/install.sh postinst" $(logname)
-pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" $(logname)` || true
-eval $pm2cfg 
 
 %postun
 if which pm2 > /dev/null; then

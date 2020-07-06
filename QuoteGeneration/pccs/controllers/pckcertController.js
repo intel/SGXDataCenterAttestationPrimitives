@@ -43,10 +43,10 @@ exports.getPckCert = async function(req,res,next) {
         let enc_ppid = req.query.encrypted_ppid;
 
         // validate request parameters
-        if (qeid == null || cpusvn == null || pcesvn == null || pceid == null) {
+        if (!qeid || !cpusvn || !pcesvn || !pceid) {
             throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
         }
-        if (qeid.length != Constants.QEID_SIZE || cpusvn.length != Constants.CPUSVN_SIZE 
+        if (qeid.length > Constants.QEID_MAX_SIZE || cpusvn.length != Constants.CPUSVN_SIZE 
             || pcesvn.length != Constants.PCESVN_SIZE || pceid.length != Constants.PCEID_SIZE){
             throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
         }

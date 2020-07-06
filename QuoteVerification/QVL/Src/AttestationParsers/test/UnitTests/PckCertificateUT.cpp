@@ -53,6 +53,8 @@ struct PckCertificateUT: public testing::Test {
     Bytes pcesvn = {0x03, 0xf2};
     Bytes pceId = {0x04, 0xf3};
     Bytes fmspc = {0x05, 0xf4, 0x44, 0x45, 0xaa, 0x00};
+    Bytes platformInstanceId = {0x0A, 0xBB, 0xFF, 0x05, 0xf4, 0x44, 0xB0, 0x01,
+                                0x4B, 0x71, 0xB1, 0x99, 0xE9, 0xE9, 0x73, 0x96};
     test::X509CertGenerator certGenerator;
 
     crypto::EVP_PKEY_uptr keyRoot = crypto::make_unique<EVP_PKEY>(nullptr);
@@ -60,9 +62,10 @@ struct PckCertificateUT: public testing::Test {
     crypto::EVP_PKEY_uptr key = crypto::make_unique<EVP_PKEY>(nullptr);
     crypto::X509_uptr rootCert = crypto::make_unique<X509>(nullptr);
     crypto::X509_uptr intCert = crypto::make_unique<X509>(nullptr);
-    crypto::X509_uptr cert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_uptr processorCert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_uptr platformCert = crypto::make_unique<X509>(nullptr);
 
-    std::string pemPckCert, pemIntCert, pemRootCert;
+    std::string pemProcessorPckCert, pemPlatformPckCert, pemIntCert, pemRootCert;
 
     PckCertificateUT()
     {
@@ -75,11 +78,16 @@ struct PckCertificateUT: public testing::Test {
         intCert = certGenerator.generateCaCert(2, sn, timeNow, timeOneHour, keyInt.get(), keyRoot.get(),
                                                constants::PLATFORM_CA_SUBJECT, constants::ROOT_CA_SUBJECT);
 
-        cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
-                                             constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                             ppid, cpusvn, pcesvn, pceId, fmspc);
+        processorCert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
+                                                      constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
+                                                      ppid, cpusvn, pcesvn, pceId, fmspc, 0);
+        platformCert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
+                                                      constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
+                                                      ppid, cpusvn, pcesvn, pceId, fmspc, 1, platformInstanceId,
+                                                      true, true, true);
 
-        pemPckCert = certGenerator.x509ToString(cert.get());
+        pemProcessorPckCert = certGenerator.x509ToString(processorCert.get());
+        pemPlatformPckCert = certGenerator.x509ToString(platformCert.get());
         pemIntCert = certGenerator.x509ToString(intCert.get());
         pemRootCert = certGenerator.x509ToString(rootCert.get());
     }
@@ -87,7 +95,8 @@ struct PckCertificateUT: public testing::Test {
 
 TEST_F(PckCertificateUT, pckCertificateParse)
 {
-    ASSERT_NO_THROW(x509::PckCertificate::parse(pemPckCert));
+    ASSERT_NO_THROW(x509::PckCertificate::parse(pemProcessorPckCert));
+    ASSERT_NO_THROW(x509::PckCertificate::parse(pemPlatformPckCert));
     // Exception thrown because of missing SGX TCB extensions
     ASSERT_THROW(x509::PckCertificate::parse(pemIntCert), InvalidExtensionException);
     // Exception thrown because of missing SGX TCB extensions
@@ -96,9 +105,9 @@ TEST_F(PckCertificateUT, pckCertificateParse)
 
 TEST_F(PckCertificateUT, pckCertificateConstructors)
 {
-    const auto& certificate = x509::Certificate::parse(pemPckCert);
+    const auto& certificate = x509::Certificate::parse(pemProcessorPckCert);
     const auto& pckCertificateFromCert = x509::PckCertificate(certificate);
-    const auto& pckCertificate = x509::PckCertificate::parse(pemPckCert);
+    const auto& pckCertificate = x509::PckCertificate::parse(pemProcessorPckCert);
 
     ASSERT_EQ(pckCertificateFromCert.getVersion(), pckCertificate.getVersion());
     ASSERT_EQ(pckCertificateFromCert.getSerialNumber(), pckCertificate.getSerialNumber());
@@ -115,9 +124,9 @@ TEST_F(PckCertificateUT, pckCertificateConstructors)
     ASSERT_EQ(pckCertificateFromCert.getSgxType(), pckCertificate.getSgxType());
 }
 
-TEST_F(PckCertificateUT, pckCertificateGetters)
+TEST_F(PckCertificateUT, processorPckCertificateGetters)
 {
-    const auto& pckCertificate = x509::PckCertificate::parse(pemPckCert);
+    const auto& pckCertificate = x509::PckCertificate::parse(pemProcessorPckCert);
 
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
@@ -142,16 +151,58 @@ TEST_F(PckCertificateUT, pckCertificateGetters)
     ASSERT_THAT(pckCertificate.getFmspc(), ElementsAreArray(fmspc));
     ASSERT_EQ(pckCertificate.getSgxType(), x509::SgxType::Standard);
 
+    const auto &tcb = x509::Tcb(cpusvn, cpusvn, 1010);
+    ASSERT_THAT(pckCertificate.getTcb().getCpuSvn(), ElementsAreArray(tcb.getCpuSvn()));
+    ASSERT_THAT(pckCertificate.getTcb().getSgxTcbComponents(), ElementsAreArray(tcb.getSgxTcbComponents()));
+    ASSERT_EQ(pckCertificate.getTcb().getPceSvn(), tcb.getPceSvn());
+    ASSERT_EQ(pckCertificate.getTcb(), tcb);
+
+    free(pubKey);
+}
+
+TEST_F(PckCertificateUT, platformPckCertificateGetters)
+{
+    const auto& pckCertificate = x509::PckCertificate::parse(pemPlatformPckCert);
+
+    ASSERT_EQ(pckCertificate.getVersion(), 3);
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
+
+    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
+    uint8_t *pubKey = nullptr;
+    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
+
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
+    ASSERT_EQ(pckCertificate.getIssuer(), constants::PLATFORM_CA_SUBJECT);
+    ASSERT_EQ(pckCertificate.getSubject(), constants::PCK_SUBJECT);
+    ASSERT_NE(pckCertificate.getIssuer(), pckCertificate.getSubject()); // PCK certificate should not be self-signed
+
+    ASSERT_LT(pckCertificate.getValidity().getNotBeforeTime(), pckCertificate.getValidity().getNotAfterTime());
+
+    const std::vector<x509::Extension> expectedExtensions = constants::PCK_X509_EXTENSIONS;
+    ASSERT_THAT(pckCertificate.getExtensions().size(), expectedExtensions.size());
+
+    ASSERT_THAT(pckCertificate.getPpid(), ElementsAreArray(ppid));
+    ASSERT_THAT(pckCertificate.getPceId(), ElementsAreArray(pceId));
+    ASSERT_THAT(pckCertificate.getFmspc(), ElementsAreArray(fmspc));
+    ASSERT_EQ(pckCertificate.getSgxType(), x509::SgxType::Scalable);
+
+    const auto &tcb = x509::Tcb(cpusvn, cpusvn, 1010);
+    ASSERT_THAT(pckCertificate.getTcb().getCpuSvn(), ElementsAreArray(tcb.getCpuSvn()));
+    ASSERT_THAT(pckCertificate.getTcb().getSgxTcbComponents(), ElementsAreArray(tcb.getSgxTcbComponents()));
+    ASSERT_EQ(pckCertificate.getTcb().getPceSvn(), tcb.getPceSvn());
+    ASSERT_EQ(pckCertificate.getTcb(), tcb);
+
     free(pubKey);
 }
 
 TEST_F(PckCertificateUT, certificateOperators)
 {
-    const auto& certificate1 = x509::PckCertificate::parse(pemPckCert);
-    const auto& certificate2 = x509::PckCertificate::parse(pemPckCert);
+    const auto& certificate1 = x509::PckCertificate::parse(pemProcessorPckCert);
+    const auto& certificate2 = x509::PckCertificate::parse(pemProcessorPckCert);
     const auto ucert = certGenerator.generatePCKCert(3, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                                      constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                                     ppid, cpusvn, pcesvn, pceId, fmspc);
+                                                     ppid, cpusvn, pcesvn, pceId, fmspc, 0);
     const auto pemCert = certGenerator.x509ToString(ucert.get());
     const auto& certificate3 = x509::PckCertificate::parse(pemCert);
 
@@ -164,8 +215,8 @@ TEST_F(PckCertificateUT, pckCertificateParseWithWrongAmountOfExtensions)
 {
     const auto& brokenCert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                   constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                  ppid, cpusvn, pcesvn, pceId, fmspc, true);
-    pemPckCert = certGenerator.x509ToString(brokenCert.get());
+                                  ppid, cpusvn, pcesvn, pceId, fmspc, 0, {}, false, false, false, true);
+    pemProcessorPckCert = certGenerator.x509ToString(brokenCert.get());
     // Exception thrown because of SGX TCB extension is not equal 5 or 7
-    ASSERT_THROW(x509::PckCertificate::parse(pemPckCert), InvalidExtensionException);
+    ASSERT_THROW(x509::PckCertificate::parse(pemProcessorPckCert), InvalidExtensionException);
 }

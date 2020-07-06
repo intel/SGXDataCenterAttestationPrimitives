@@ -54,11 +54,6 @@ using namespace std;
 #define LOCAL_NETWORK_SETTING "./network_setting.conf"
 
 static bool g_use_secure_cert = true;
-static const uint32_t QEID_SIZE = 16;
-static const uint32_t CPUSVN_SIZE = 16;
-static const uint32_t PCESVN_SIZE = 2;
-static const uint32_t PCEID_SIZE = 2;
-static const uint32_t ENC_PPID_SIZE = 384;
 typedef enum _ProxyType
 {
     PROXY_TYPE_DEFAULT_PROXY   = 0,
@@ -282,62 +277,85 @@ static network_post_error_t append_body_context(string& url, const uint8_t* requ
 	return POST_SUCCESS;
 }
 
-static network_post_error_t generate_json_message_body(const uint8_t *raw_data, const uint32_t raw_data_size, string &jsonString)
+static network_post_error_t generate_json_message_body(const uint8_t *raw_data, 
+                                                       const uint32_t raw_data_size,
+                                                       const uint16_t platform_id_length,
+                                                       const bool non_enclave_mode, 
+                                                       string &jsonString)
 {
     network_post_error_t ret = POST_SUCCESS;
     const uint8_t *position = raw_data;
-    uint32_t left_size = raw_data_size - QEID_SIZE - CPUSVN_SIZE - PCESVN_SIZE - PCEID_SIZE - ENC_PPID_SIZE;
 
     jsonString = "{";
-
-    jsonString += "\"enc_ppid\": \"";
-    if ((ret = append_body_context(jsonString, position, ENC_PPID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"pce_id\": \"";
-    position = position + ENC_PPID_SIZE;
-    if ((ret = append_body_context(jsonString, position, PCEID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-    jsonString += "\" ,\"cpu_svn\": \"";
-    position = position + PCEID_SIZE;
-    if ((ret = append_body_context(jsonString, position, CPUSVN_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"pce_svn\": \"";
-    position = position + CPUSVN_SIZE;
-    if ((ret = append_body_context(jsonString, position, PCESVN_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"qe_id\": \"";
-    position = position + PCESVN_SIZE;
-    if ((ret = append_body_context(jsonString, position, QEID_SIZE)) != POST_SUCCESS) {
-        return ret;
-    }
-
-    jsonString += "\" ,\"platform_manifest\": \"";
-    if (left_size != 0) {
-        position = position + QEID_SIZE;
-        if ((ret = append_body_context(jsonString, position, left_size)) != POST_SUCCESS) {
+    if (true == non_enclave_mode) {
+        jsonString += "\"pce_id\": \"";
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
             return ret;
         }
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        position = position + platform_id_length;
+        if ((ret = append_body_context(jsonString, position, raw_data_size - PCE_ID_LENGTH - platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+    }
+    else {
+        uint32_t left_size = raw_data_size - platform_id_length - CPU_SVN_LENGTH - ISV_SVN_LENGTH - PCE_ID_LENGTH - ENCRYPTED_PPID_LENGTH;
+        jsonString += "\"enc_ppid\": \"";
+        if ((ret = append_body_context(jsonString, position, ENCRYPTED_PPID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_id\": \"";
+        position = position + ENCRYPTED_PPID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+        jsonString += "\" ,\"cpu_svn\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, CPU_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_svn\": \"";
+        position = position + CPU_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, ISV_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + ISV_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        if (left_size != 0) {
+            position = position + platform_id_length;
+            if ((ret = append_body_context(jsonString, position, left_size)) != POST_SUCCESS) {
+                return ret;
+            }
+        }
+
     }
     jsonString += "\" }";
     return ret;
 }
 
-network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size)
+network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size, const uint16_t platform_id_length, const bool non_enclave_mode)
 {
-    if (raw_data_size < QEID_SIZE + CPUSVN_SIZE + PCESVN_SIZE + PCEID_SIZE + ENC_PPID_SIZE) {
+    if (raw_data_size < platform_id_length + static_cast<uint32_t>(PCE_ID_LENGTH )) {
         return POST_INVALID_PARAMETER_ERROR;
     }
 
 	network_post_error_t ret = POST_UNEXPECTED_ERROR;  
     string strJson("");
-    ret = generate_json_message_body(raw_data, raw_data_size, strJson);
+    ret = generate_json_message_body(raw_data, raw_data_size, platform_id_length, non_enclave_mode, strJson);
     if (ret != POST_SUCCESS) {
         printf("Error: unexpected error happens during generate json message body.\n");
         return ret;
@@ -548,7 +566,7 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
 }
 
 
-bool is_server_url_avaiable() {
+bool is_server_url_available() {
     ifstream ifs_local(LOCAL_NETWORK_SETTING);
     string line;
     if (ifs_local.is_open()) {

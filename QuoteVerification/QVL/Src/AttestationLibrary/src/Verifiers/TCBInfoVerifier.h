@@ -40,7 +40,7 @@
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 #include <PckParser/CrlStore.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class TCBInfoVerifier
 {
@@ -77,6 +77,6 @@ private:
     std::unique_ptr<TCBSigningChain> _tcbSigningChain;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif // INTEL_SGX_QVL_TCB_INFO_VERIFIER_H_

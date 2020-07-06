@@ -42,52 +42,51 @@ struct ParseX509CertificateIT: public testing::Test {};
 
 // Parsing certificate issued by Processor CA
 
-TEST_F(ParseX509CertificateIT, parsePemEncodedProcessorCAPckCert)
-{
-    // GIVEN
-    std::string PEM("-----BEGIN CERTIFICATE-----\n"
-                       "MIIEjDCCBDKgAwIBAgIVALonBDd14S/1zfdU+ZtfOsI+ngLVMAoGCCqGSM49BAMC\n"
-                       "MHExIzAhBgNVBAMMGkludGVsIFNHWCBQQ0sgUHJvY2Vzc29yIENBMRowGAYDVQQK\n"
-                       "DBFJbnRlbCBDb3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNV\n"
-                       "BAgMAkNBMQswCQYDVQQGEwJVUzAeFw0xOTA5MDUwNzQ3MDZaFw0yNjA5MDUwNzQ3\n"
-                       "MDZaMHAxIjAgBgNVBAMMGUludGVsIFNHWCBQQ0sgQ2VydGlmaWNhdGUxGjAYBgNV\n"
-                       "BAoMEUludGVsIENvcnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkG\n"
-                       "A1UECAwCQ0ExCzAJBgNVBAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\n"
-                       "ZbnHpHbJ8kqQgySEX0M+qzcWpLAj6RcLi7vYKWqtityqaCWciAXHxlJvCJ1Kr35Y\n"
-                       "mWlpekwiEjo+XlEmg+NQVKOCAqYwggKiMB8GA1UdIwQYMBaAFJ8Gl+9TIUTU+kx+\n"
-                       "6LqNs9Ml5JKQMGsGA1UdHwRkMGIwYKBeoFyGWmh0dHBzOi8vZmFrZS1jcmwtZGlz\n"
-                       "dHJpYnV0aW9uLXBvaW50LXVybC5pbnRlbC5jb20vc2d4L2NlcnRpZmljYXRpb24v\n"
-                       "djIvcGNrY3JsP2NhPXByb2Nlc3NvcjAdBgNVHQ4EFgQUEULjJXxk96LC2FJd13qm\n"
-                       "5pKzckEwDgYDVR0PAQH/BAQDAgbAMAwGA1UdEwEB/wQCMAAwggHTBgkqhkiG+E0B\n"
-                       "DQEEggHEMIIBwDAeBgoqhkiG+E0BDQEBBBCEYYY7t+zjH2TI6bd/0xytMIIBYwYK\n"
-                       "KoZIhvhNAQ0BAjCCAVMwEAYLKoZIhvhNAQ0BAgECAQAwEAYLKoZIhvhNAQ0BAgIC\n"
-                       "AQMwEAYLKoZIhvhNAQ0BAgMCAQAwEAYLKoZIhvhNAQ0BAgQCAQAwEAYLKoZIhvhN\n"
-                       "AQ0BAgUCAQAwEAYLKoZIhvhNAQ0BAgYCAQEwEAYLKoZIhvhNAQ0BAgcCAQEwEAYL\n"
-                       "KoZIhvhNAQ0BAggCAQAwEAYLKoZIhvhNAQ0BAgkCAQAwEAYLKoZIhvhNAQ0BAgoC\n"
-                       "AQAwEAYLKoZIhvhNAQ0BAgsCAQAwEAYLKoZIhvhNAQ0BAgwCAQAwEAYLKoZIhvhN\n"
-                       "AQ0BAg0CAQAwEAYLKoZIhvhNAQ0BAg4CAQAwEAYLKoZIhvhNAQ0BAg8CAQAwEAYL\n"
-                       "KoZIhvhNAQ0BAhACAQAwEAYLKoZIhvhNAQ0BAhECAQMwHwYLKoZIhvhNAQ0BAhIE\n"
-                       "EAADAAAAAQEAAAAAAAAAAAAwEAYKKoZIhvhNAQ0BAwQCAAAwFAYKKoZIhvhNAQ0B\n"
-                       "BAQGAHB/AAAAMA8GCiqGSIb4TQENAQUKAQAwCgYIKoZIzj0EAwIDSAAwRQIhANmr\n"
-                       "mwJgah3SFMDCv7/JvCW8GsB0fIuhbHQtXRO0KN0WAiAsAY5USoy5uk0B7/sVEvng\n"
-                       "ILOJfSqEZlN7hTCJpjcEgw==\n"
-                       "-----END CERTIFICATE-----");
+std::string ProcessorPEM = "-----BEGIN CERTIFICATE-----\n"
+                "MIIEjDCCBDKgAwIBAgIVALonBDd14S/1zfdU+ZtfOsI+ngLVMAoGCCqGSM49BAMC\n"
+                "MHExIzAhBgNVBAMMGkludGVsIFNHWCBQQ0sgUHJvY2Vzc29yIENBMRowGAYDVQQK\n"
+                "DBFJbnRlbCBDb3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNV\n"
+                "BAgMAkNBMQswCQYDVQQGEwJVUzAeFw0xOTA5MDUwNzQ3MDZaFw0yNjA5MDUwNzQ3\n"
+                "MDZaMHAxIjAgBgNVBAMMGUludGVsIFNHWCBQQ0sgQ2VydGlmaWNhdGUxGjAYBgNV\n"
+                "BAoMEUludGVsIENvcnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkG\n"
+                "A1UECAwCQ0ExCzAJBgNVBAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\n"
+                "ZbnHpHbJ8kqQgySEX0M+qzcWpLAj6RcLi7vYKWqtityqaCWciAXHxlJvCJ1Kr35Y\n"
+                "mWlpekwiEjo+XlEmg+NQVKOCAqYwggKiMB8GA1UdIwQYMBaAFJ8Gl+9TIUTU+kx+\n"
+                "6LqNs9Ml5JKQMGsGA1UdHwRkMGIwYKBeoFyGWmh0dHBzOi8vZmFrZS1jcmwtZGlz\n"
+                "dHJpYnV0aW9uLXBvaW50LXVybC5pbnRlbC5jb20vc2d4L2NlcnRpZmljYXRpb24v\n"
+                "djIvcGNrY3JsP2NhPXByb2Nlc3NvcjAdBgNVHQ4EFgQUEULjJXxk96LC2FJd13qm\n"
+                "5pKzckEwDgYDVR0PAQH/BAQDAgbAMAwGA1UdEwEB/wQCMAAwggHTBgkqhkiG+E0B\n"
+                "DQEEggHEMIIBwDAeBgoqhkiG+E0BDQEBBBCEYYY7t+zjH2TI6bd/0xytMIIBYwYK\n"
+                "KoZIhvhNAQ0BAjCCAVMwEAYLKoZIhvhNAQ0BAgECAQAwEAYLKoZIhvhNAQ0BAgIC\n"
+                "AQMwEAYLKoZIhvhNAQ0BAgMCAQAwEAYLKoZIhvhNAQ0BAgQCAQAwEAYLKoZIhvhN\n"
+                "AQ0BAgUCAQAwEAYLKoZIhvhNAQ0BAgYCAQEwEAYLKoZIhvhNAQ0BAgcCAQEwEAYL\n"
+                "KoZIhvhNAQ0BAggCAQAwEAYLKoZIhvhNAQ0BAgkCAQAwEAYLKoZIhvhNAQ0BAgoC\n"
+                "AQAwEAYLKoZIhvhNAQ0BAgsCAQAwEAYLKoZIhvhNAQ0BAgwCAQAwEAYLKoZIhvhN\n"
+                "AQ0BAg0CAQAwEAYLKoZIhvhNAQ0BAg4CAQAwEAYLKoZIhvhNAQ0BAg8CAQAwEAYL\n"
+                "KoZIhvhNAQ0BAhACAQAwEAYLKoZIhvhNAQ0BAhECAQMwHwYLKoZIhvhNAQ0BAhIE\n"
+                "EAADAAAAAQEAAAAAAAAAAAAwEAYKKoZIhvhNAQ0BAwQCAAAwFAYKKoZIhvhNAQ0B\n"
+                "BAQGAHB/AAAAMA8GCiqGSIb4TQENAQUKAQAwCgYIKoZIzj0EAwIDSAAwRQIhANmr\n"
+                "mwJgah3SFMDCv7/JvCW8GsB0fIuhbHQtXRO0KN0WAiAsAY5USoy5uk0B7/sVEvng\n"
+                "ILOJfSqEZlN7hTCJpjcEgw==\n"
+                "-----END CERTIFICATE-----";
 
+struct ExpectedProcessorPckCertData
+{
     /// Example values for subject
-    const std::string RAW_SUBJECT("C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate");
-    const std::string COMMON_NAME_ISSUER("Intel SGX PCK Certificate");
-    const std::string COUNTRY_NAME_ISSUER("US");
-    const std::string ORGANIZATION_NAME_ISSUER("Intel Corporation");
-    const std::string LOCATION_NAME_ISSUER("Santa Clara");
-    const std::string STATE_NAME_ISSUER("CA");
+    const std::string RAW_SUBJECT = "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate";
+    const std::string COMMON_NAME_ISSUER ="Intel SGX PCK Certificate";
+    const std::string COUNTRY_NAME_ISSUER = "US";
+    const std::string ORGANIZATION_NAME_ISSUER = "Intel Corporation";
+    const std::string LOCATION_NAME_ISSUER = "Santa Clara";
+    const std::string STATE_NAME_ISSUER = "CA";
 
     /// Example values for issuer
-    const std::string RAW_ISSUER("C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Processor CA");
-    const std::string COMMON_NAME_SUBJECT("Intel SGX PCK Processor CA");
-    const std::string COUNTRY_NAME_SUBJECT("US");
-    const std::string ORGANIZATION_NAME_SUBJECT("Intel Corporation");
-    const std::string LOCATION_NAME_SUBJECT("Santa Clara");
-    const std::string STATE_NAME_SUBJECT("CA");
+    const std::string RAW_ISSUER = "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Processor CA";
+    const std::string COMMON_NAME_SUBJECT = "Intel SGX PCK Processor CA";
+    const std::string COUNTRY_NAME_SUBJECT = "US";
+    const std::string ORGANIZATION_NAME_SUBJECT = "Intel Corporation";
+    const std::string LOCATION_NAME_SUBJECT = "Santa Clara";
+    const std::string STATE_NAME_SUBJECT = "CA";
 
     const std::vector<uint8_t> RAW_DER = { 0x30, 0x45, 0x02, 0x21, 0x00, // header
                                            0xD9, 0xAB, 0x9B, 0x02, 0x60, 0x6A, 0x1D, 0xD2, // R
@@ -124,109 +123,185 @@ TEST_F(ParseX509CertificateIT, parsePemEncodedProcessorCAPckCert)
                                             0x99, 0x69, 0x69, 0x7A, 0x4C, 0x22, 0x12, 0x3A,
                                             0x3E, 0x5E, 0x51, 0x26, 0x83, 0xE3, 0x50, 0x54 };
 
-    const std::vector<uint8_t> PPID({ 0x84, 0x61, 0x86, 0x3B, 0xB7, 0xEC, 0xE3, 0x1F,
-                                         0x64, 0xC8, 0xE9, 0xB7, 0x7F, 0xD3, 0x1C, 0xAD });
+    const std::vector<uint8_t> CPUSVN { 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-    const std::vector<uint8_t> PCE_ID({ 0x00, 0x00 });
+    const unsigned int PCESVN = 3;
 
-    const std::vector<uint8_t> FMSPC({ 0x00, 0x70, 0x7F, 0x00, 0x00, 0x00 });
+    const std::vector<uint8_t> PPID { 0x84, 0x61, 0x86, 0x3B, 0xB7, 0xEC, 0xE3, 0x1F,
+                                      0x64, 0xC8, 0xE9, 0xB7, 0x7F, 0xD3, 0x1C, 0xAD };
+
+    const std::vector<uint8_t> PCE_ID { 0x00, 0x00 };
+
+    const std::vector<uint8_t> FMSPC { 0x00, 0x70, 0x7F, 0x00, 0x00, 0x00 };
 
     const x509::SgxType SGX_TYPE = x509::SgxType::Standard;
+};
+
+TEST_F(ParseX509CertificateIT, parsePemEncodedProcessorCAPckCert)
+{
+    // GIVEN
+    const auto expected = ExpectedProcessorPckCertData();
 
     // WHEN
-    const auto& pckCertificate = x509::PckCertificate::parse(PEM);
+    const auto& pckCertificate = x509::PckCertificate::parse(ProcessorPEM);
 
     // THEN
     ASSERT_EQ(pckCertificate.getVersion(), 3);
-    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(SERIAL_NUMBER));
-    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(PUBLIC_KEY));
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(expected.SERIAL_NUMBER));
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expected.PUBLIC_KEY));
 
     const auto& subject = pckCertificate.getSubject();
-    ASSERT_EQ(subject.getRaw(), RAW_SUBJECT);
-    ASSERT_EQ(subject.getCommonName(), COMMON_NAME_ISSUER);
-    ASSERT_EQ(subject.getCountryName(), COUNTRY_NAME_ISSUER);
-    ASSERT_EQ(subject.getOrganizationName(), ORGANIZATION_NAME_ISSUER);
-    ASSERT_EQ(subject.getLocationName(), LOCATION_NAME_ISSUER);
-    ASSERT_EQ(subject.getStateName(), STATE_NAME_ISSUER);
+    ASSERT_EQ(subject.getRaw(), expected.RAW_SUBJECT);
+    ASSERT_EQ(subject.getCommonName(), expected.COMMON_NAME_ISSUER);
+    ASSERT_EQ(subject.getCountryName(), expected.COUNTRY_NAME_ISSUER);
+    ASSERT_EQ(subject.getOrganizationName(), expected.ORGANIZATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getLocationName(), expected.LOCATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getStateName(), expected.STATE_NAME_ISSUER);
 
     const auto& issuer = pckCertificate.getIssuer();
-    ASSERT_EQ(issuer.getRaw(), RAW_ISSUER);
-    ASSERT_EQ(issuer.getCommonName(), COMMON_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getCountryName(), COUNTRY_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getOrganizationName(), ORGANIZATION_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getLocationName(), LOCATION_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getStateName(), STATE_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getRaw(), expected.RAW_ISSUER);
+    ASSERT_EQ(issuer.getCommonName(), expected.COMMON_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getCountryName(), expected.COUNTRY_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getOrganizationName(), expected.ORGANIZATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getLocationName(), expected.LOCATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getStateName(), expected.STATE_NAME_SUBJECT);
 
     ASSERT_NE(issuer, subject); // they may be equal if certificate is self-signed
 
     const auto& validity = pckCertificate.getValidity();
-    ASSERT_EQ(validity.getNotBeforeTime(), NOT_BEFORE_TIME);
-    ASSERT_EQ(validity.getNotAfterTime(), NOT_AFTER_TIME);
+    ASSERT_EQ(validity.getNotBeforeTime(), expected.NOT_BEFORE_TIME);
+    ASSERT_EQ(validity.getNotAfterTime(), expected.NOT_AFTER_TIME);
 
     const auto& signature = pckCertificate.getSignature();
-    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(RAW_DER));
-    ASSERT_THAT(signature.getR(), ElementsAreArray(R));
-    ASSERT_THAT(signature.getS(), ElementsAreArray(S));
+    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(expected.RAW_DER));
+    ASSERT_THAT(signature.getR(), ElementsAreArray(expected.R));
+    ASSERT_THAT(signature.getS(), ElementsAreArray(expected.S));
 
     const auto& ppid = pckCertificate.getPpid();
-    ASSERT_THAT(ppid, ElementsAreArray(PPID));
+    ASSERT_THAT(ppid, ElementsAreArray(expected.PPID));
+
+    const auto& tcb = pckCertificate.getTcb();
+    ASSERT_THAT(tcb.getCpuSvn(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_THAT(tcb.getSgxTcbComponents(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_EQ(tcb.getPceSvn(), expected.PCESVN);
+    ASSERT_EQ(tcb, x509::Tcb(expected.CPUSVN, expected.CPUSVN, expected.PCESVN));
 
     const auto& pceId = pckCertificate.getPceId();
-    ASSERT_THAT(pceId, ElementsAreArray(PCE_ID));
+    ASSERT_THAT(pceId, ElementsAreArray(expected.PCE_ID));
 
     const auto& fmspc = pckCertificate.getFmspc();
-    ASSERT_THAT(fmspc, ElementsAreArray(FMSPC));
+    ASSERT_THAT(fmspc, ElementsAreArray(expected.FMSPC));
 
     const auto& sgxType = pckCertificate.getSgxType();
-    ASSERT_EQ(sgxType, SGX_TYPE);
+    ASSERT_EQ(sgxType, expected.SGX_TYPE);
+}
+
+TEST_F(ParseX509CertificateIT, parsePemEncodedProcessorCAPckCertAsProcessorPckCertificateClass)
+{
+    // GIVEN
+    const auto expected = ExpectedProcessorPckCertData();
+
+    // WHEN
+    const auto& pckCertificate = x509::ProcessorPckCertificate::parse(ProcessorPEM);
+
+    // THEN
+    ASSERT_EQ(pckCertificate.getVersion(), 3);
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(expected.SERIAL_NUMBER));
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expected.PUBLIC_KEY));
+
+    const auto& subject = pckCertificate.getSubject();
+    ASSERT_EQ(subject.getRaw(), expected.RAW_SUBJECT);
+    ASSERT_EQ(subject.getCommonName(), expected.COMMON_NAME_ISSUER);
+    ASSERT_EQ(subject.getCountryName(), expected.COUNTRY_NAME_ISSUER);
+    ASSERT_EQ(subject.getOrganizationName(), expected.ORGANIZATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getLocationName(), expected.LOCATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getStateName(), expected.STATE_NAME_ISSUER);
+
+    const auto& issuer = pckCertificate.getIssuer();
+    ASSERT_EQ(issuer.getRaw(), expected.RAW_ISSUER);
+    ASSERT_EQ(issuer.getCommonName(), expected.COMMON_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getCountryName(), expected.COUNTRY_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getOrganizationName(), expected.ORGANIZATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getLocationName(), expected.LOCATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getStateName(), expected.STATE_NAME_SUBJECT);
+
+    ASSERT_NE(issuer, subject); // they may be equal if certificate is self-signed
+
+    const auto& validity = pckCertificate.getValidity();
+    ASSERT_EQ(validity.getNotBeforeTime(), expected.NOT_BEFORE_TIME);
+    ASSERT_EQ(validity.getNotAfterTime(), expected.NOT_AFTER_TIME);
+
+    const auto& signature = pckCertificate.getSignature();
+    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(expected.RAW_DER));
+    ASSERT_THAT(signature.getR(), ElementsAreArray(expected.R));
+    ASSERT_THAT(signature.getS(), ElementsAreArray(expected.S));
+
+    const auto& ppid = pckCertificate.getPpid();
+    ASSERT_THAT(ppid, ElementsAreArray(expected.PPID));
+
+    const auto& tcb = pckCertificate.getTcb();
+    ASSERT_THAT(tcb.getCpuSvn(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_THAT(tcb.getSgxTcbComponents(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_EQ(tcb.getPceSvn(), expected.PCESVN);
+    ASSERT_EQ(tcb, x509::Tcb(expected.CPUSVN, expected.CPUSVN, expected.PCESVN));
+
+    const auto& pceId = pckCertificate.getPceId();
+    ASSERT_THAT(pceId, ElementsAreArray(expected.PCE_ID));
+
+    const auto& fmspc = pckCertificate.getFmspc();
+    ASSERT_THAT(fmspc, ElementsAreArray(expected.FMSPC));
+
+    const auto& sgxType = pckCertificate.getSgxType();
+    ASSERT_EQ(sgxType, expected.SGX_TYPE);
 }
 
 // Parsing certificate issued by Platform CA
 
-TEST_F(ParseX509CertificateIT, parsePemEncodedPlatformCAPckCert)
-{
-    // GIVEN
-    std::string PEM("-----BEGIN CERTIFICATE-----\n"
-                       "MIIE8jCCBJigAwIBAgIVAL2ntN6oDXniW91PanIORAaYoA12MAoGCCqGSM49BAMCMHAxIjAgBgNV\n"
-                       "BAMMGUludGVsIFNHWCBQQ0sgUGxhdGZvcm0gQ0ExGjAYBgNVBAoMEUludGVsIENvcnBvcmF0aW9u\n"
-                       "MRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNVBAYTAlVTMB4XDTIwMDMx\n"
-                       "ODA5MzA0OVoXDTI3MDMxODA5MzA0OVowcDEiMCAGA1UEAwwZSW50ZWwgU0dYIFBDSyBDZXJ0aWZp\n"
-                       "Y2F0ZTEaMBgGA1UECgwRSW50ZWwgQ29ycG9yYXRpb24xFDASBgNVBAcMC1NhbnRhIENsYXJhMQsw\n"
-                       "CQYDVQQIDAJDQTELMAkGA1UEBhMCVVMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASF0WfF3Bu6\n"
-                       "Ds3AAqfzKp4te+4FWvddvTVr5uHdszbvloIOTOgq6HIob0D/QZtyeeUBOKOM1Dq3mi1DWgAbVdkL\n"
-                       "o4IDDTCCAwkwHwYDVR0jBBgwFoAU7bmCA3TzblbsRZSTub7BGnDEPbQwYgYDVR0fBFswWTBXoFWg\n"
-                       "U4ZRaHR0cHM6Ly9wcmUxMy1ncmVlbi1wY3Muc2d4bnAuYWRzZGNzcC5jb20vc2d4L2NlcnRpZmlj\n"
-                       "YXRpb24vdjEvcGNrY3JsP2NhPXBsYXRmb3JtMB0GA1UdDgQWBBR3DHSU0wR85z1ekrDGwC8ckFB3\n"
-                       "WjAOBgNVHQ8BAf8EBAMCBsAwDAYDVR0TAQH/BAIwADCCAkMGCSqGSIb4TQENAQSCAjQwggIwMB4G\n"
-                       "CiqGSIb4TQENAQEEEDcDl5X+CwarSOOPiYq5LO8wggFtBgoqhkiG+E0BDQECMIIBXTAQBgsqhkiG\n"
-                       "+E0BDQECAQIBADAQBgsqhkiG+E0BDQECAgIBQzARBgsqhkiG+E0BDQECAwICAMcwEAYLKoZIhvhN\n"
-                       "AQ0BAgQCAVwwEQYLKoZIhvhNAQ0BAgUCAgDXMBEGCyqGSIb4TQENAQIGAgIAtDAQBgsqhkiG+E0B\n"
-                       "DQECBwIBOzARBgsqhkiG+E0BDQECCAICAK0wEAYLKoZIhvhNAQ0BAgkCAU4wEQYLKoZIhvhNAQ0B\n"
-                       "AgoCAgC/MBEGCyqGSIb4TQENAQILAgIAvjAQBgsqhkiG+E0BDQECDAIBQzARBgsqhkiG+E0BDQEC\n"
-                       "DQICANUwEAYLKoZIhvhNAQ0BAg4CAV8wEAYLKoZIhvhNAQ0BAg8CATQwEQYLKoZIhvhNAQ0BAhAC\n"
-                       "AgClMBIGCyqGSIb4TQENAQIRAgMA2GQwHwYLKoZIhvhNAQ0BAhIEEABDx1zXtDutTr++Q9VfNKUw\n"
-                       "EAYKKoZIhvhNAQ0BAwQCAAAwFAYKKoZIhvhNAQ0BBAQGEEdcDQAAMA8GCiqGSIb4TQENAQUKAQEw\n"
-                       "HgYKKoZIhvhNAQ0BBgQQ80TO9xJaqXgYpFUT9hf90jBEBgoqhkiG+E0BDQEHMDYwEAYLKoZIhvhN\n"
-                       "AQ0BBwEBAf8wEAYLKoZIhvhNAQ0BBwIBAf8wEAYLKoZIhvhNAQ0BBwMBAQAwCgYIKoZIzj0EAwID\n"
-                       "SAAwRQIgIwVrUZy1o//8kKk3NWmz5VhH9ppS+tzIbRdckz8psoMCIQD+pl4qgmoUsoz83e8HfRSR\n"
-                       "t1Uz20ThyeYg0+3EEXn5OA==\n"
-                       "-----END CERTIFICATE-----");
+std::string PlatformPEM =
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIE8jCCBJigAwIBAgIVAL2ntN6oDXniW91PanIORAaYoA12MAoGCCqGSM49BAMCMHAxIjAgBgNV\n"
+        "BAMMGUludGVsIFNHWCBQQ0sgUGxhdGZvcm0gQ0ExGjAYBgNVBAoMEUludGVsIENvcnBvcmF0aW9u\n"
+        "MRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNVBAYTAlVTMB4XDTIwMDMx\n"
+        "ODA5MzA0OVoXDTI3MDMxODA5MzA0OVowcDEiMCAGA1UEAwwZSW50ZWwgU0dYIFBDSyBDZXJ0aWZp\n"
+        "Y2F0ZTEaMBgGA1UECgwRSW50ZWwgQ29ycG9yYXRpb24xFDASBgNVBAcMC1NhbnRhIENsYXJhMQsw\n"
+        "CQYDVQQIDAJDQTELMAkGA1UEBhMCVVMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASF0WfF3Bu6\n"
+        "Ds3AAqfzKp4te+4FWvddvTVr5uHdszbvloIOTOgq6HIob0D/QZtyeeUBOKOM1Dq3mi1DWgAbVdkL\n"
+        "o4IDDTCCAwkwHwYDVR0jBBgwFoAU7bmCA3TzblbsRZSTub7BGnDEPbQwYgYDVR0fBFswWTBXoFWg\n"
+        "U4ZRaHR0cHM6Ly9wcmUxMy1ncmVlbi1wY3Muc2d4bnAuYWRzZGNzcC5jb20vc2d4L2NlcnRpZmlj\n"
+        "YXRpb24vdjEvcGNrY3JsP2NhPXBsYXRmb3JtMB0GA1UdDgQWBBR3DHSU0wR85z1ekrDGwC8ckFB3\n"
+        "WjAOBgNVHQ8BAf8EBAMCBsAwDAYDVR0TAQH/BAIwADCCAkMGCSqGSIb4TQENAQSCAjQwggIwMB4G\n"
+        "CiqGSIb4TQENAQEEEDcDl5X+CwarSOOPiYq5LO8wggFtBgoqhkiG+E0BDQECMIIBXTAQBgsqhkiG\n"
+        "+E0BDQECAQIBADAQBgsqhkiG+E0BDQECAgIBQzARBgsqhkiG+E0BDQECAwICAMcwEAYLKoZIhvhN\n"
+        "AQ0BAgQCAVwwEQYLKoZIhvhNAQ0BAgUCAgDXMBEGCyqGSIb4TQENAQIGAgIAtDAQBgsqhkiG+E0B\n"
+        "DQECBwIBOzARBgsqhkiG+E0BDQECCAICAK0wEAYLKoZIhvhNAQ0BAgkCAU4wEQYLKoZIhvhNAQ0B\n"
+        "AgoCAgC/MBEGCyqGSIb4TQENAQILAgIAvjAQBgsqhkiG+E0BDQECDAIBQzARBgsqhkiG+E0BDQEC\n"
+        "DQICANUwEAYLKoZIhvhNAQ0BAg4CAV8wEAYLKoZIhvhNAQ0BAg8CATQwEQYLKoZIhvhNAQ0BAhAC\n"
+        "AgClMBIGCyqGSIb4TQENAQIRAgMA2GQwHwYLKoZIhvhNAQ0BAhIEEABDx1zXtDutTr++Q9VfNKUw\n"
+        "EAYKKoZIhvhNAQ0BAwQCAAAwFAYKKoZIhvhNAQ0BBAQGEEdcDQAAMA8GCiqGSIb4TQENAQUKAQEw\n"
+        "HgYKKoZIhvhNAQ0BBgQQ80TO9xJaqXgYpFUT9hf90jBEBgoqhkiG+E0BDQEHMDYwEAYLKoZIhvhN\n"
+        "AQ0BBwEBAf8wEAYLKoZIhvhNAQ0BBwIBAf8wEAYLKoZIhvhNAQ0BBwMBAQAwCgYIKoZIzj0EAwID\n"
+        "SAAwRQIgIwVrUZy1o//8kKk3NWmz5VhH9ppS+tzIbRdckz8psoMCIQD+pl4qgmoUsoz83e8HfRSR\n"
+        "t1Uz20ThyeYg0+3EEXn5OA==\n"
+        "-----END CERTIFICATE-----";
 
+struct ExpectedPlatformPckCertData
+{
     /// Example values for subject
-    const std::string RAW_SUBJECT("C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate");
-    const std::string COMMON_NAME_ISSUER("Intel SGX PCK Certificate");
-    const std::string COUNTRY_NAME_ISSUER("US");
-    const std::string ORGANIZATION_NAME_ISSUER("Intel Corporation");
-    const std::string LOCATION_NAME_ISSUER("Santa Clara");
-    const std::string STATE_NAME_ISSUER("CA");
+    const std::string RAW_SUBJECT = "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate";
+    const std::string COMMON_NAME_ISSUER = "Intel SGX PCK Certificate";
+    const std::string COUNTRY_NAME_ISSUER = "US";
+    const std::string ORGANIZATION_NAME_ISSUER = "Intel Corporation";
+    const std::string LOCATION_NAME_ISSUER = "Santa Clara";
+    const std::string STATE_NAME_ISSUER = "CA";
 
     /// Example values for issuer
-    const std::string RAW_ISSUER("C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Platform CA");
-    const std::string COMMON_NAME_SUBJECT("Intel SGX PCK Platform CA");
-    const std::string COUNTRY_NAME_SUBJECT("US");
-    const std::string ORGANIZATION_NAME_SUBJECT("Intel Corporation");
-    const std::string LOCATION_NAME_SUBJECT("Santa Clara");
-    const std::string STATE_NAME_SUBJECT("CA");
+    const std::string RAW_ISSUER = "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Platform CA";
+    const std::string COMMON_NAME_SUBJECT = "Intel SGX PCK Platform CA";
+    const std::string COUNTRY_NAME_SUBJECT = "US";
+    const std::string ORGANIZATION_NAME_SUBJECT = "Intel Corporation";
+    const std::string LOCATION_NAME_SUBJECT = "Santa Clara";
+    const std::string STATE_NAME_SUBJECT = "CA";
 
     const std::vector<uint8_t> RAW_DER = { 0x30, 0x45, 0x02, 0x20, // header
                                            0x23, 0x05, 0x6B, 0x51, 0x9C, 0xB5, 0xA3, 0xFF, // R
@@ -263,60 +338,148 @@ TEST_F(ParseX509CertificateIT, parsePemEncodedPlatformCAPckCert)
                                             0x01, 0x38, 0xA3, 0x8C, 0xD4, 0x3A, 0xB7, 0x9A,
                                             0x2D, 0x43, 0x5A, 0x00, 0x1B, 0x55, 0xD9, 0x0B };
 
-    const std::vector<uint8_t> PPID({ 0x37, 0x03, 0x97, 0x95, 0xFE, 0x0B, 0x06, 0xAB,
-                                         0x48, 0xE3, 0x8F, 0x89, 0x8A, 0xB9, 0x2C, 0xEF });
+    const std::vector<uint8_t> PPID { 0x37, 0x03, 0x97, 0x95, 0xFE, 0x0B, 0x06, 0xAB,
+                                      0x48, 0xE3, 0x8F, 0x89, 0x8A, 0xB9, 0x2C, 0xEF };
 
-    const std::vector<uint8_t> PCE_ID({ 0x00, 0x00 });
+    const std::vector<uint8_t> CPUSVN { 0x00, 0x43, 0xC7, 0x5C, 0xD7, 0xB4, 0x3B, 0xAD,
+                                        0x4E, 0xBF, 0xBE, 0x43, 0xD5, 0x5F, 0x34, 0xA5 };
 
-    const std::vector<uint8_t> FMSPC({ 0x10, 0x47, 0x5C, 0x0D, 0x00, 0x00 });
+    const unsigned int PCESVN = 55396;
 
-    const x509::SgxType SGX_TYPE = x509::SgxType::SGX_TEM;
+    const std::vector<uint8_t> PCE_ID { 0x00, 0x00 };
+
+    const std::vector<uint8_t> FMSPC { 0x10, 0x47, 0x5C, 0x0D, 0x00, 0x00 };
+
+    const x509::SgxType SGX_TYPE = x509::SgxType::Scalable;
+
+    const std::vector<uint8_t> PLATFORM_INSTANCE_ID { 0xF3, 0x44, 0xCE, 0xF7, 0x12, 0x5A, 0xA9, 0x78,
+                                                      0x18, 0xA4, 0x55, 0x13, 0xF6, 0x17, 0xFD, 0xD2 };
+};
+
+TEST_F(ParseX509CertificateIT, parsePemEncodedPlatformCAPckCert)
+{
+    // GIVEN
+    const auto expected = ExpectedPlatformPckCertData();
 
     // WHEN
-    const auto& pckCertificate = x509::PckCertificate::parse(PEM);
+    const auto& pckCertificate = x509::PckCertificate::parse(PlatformPEM);
 
     // THEN
     ASSERT_EQ(pckCertificate.getVersion(), 3);
 
-    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(SERIAL_NUMBER));
-    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(PUBLIC_KEY));
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(expected.SERIAL_NUMBER));
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expected.PUBLIC_KEY));
 
     const auto& subject = pckCertificate.getSubject();
-    ASSERT_EQ(subject.getRaw(), RAW_SUBJECT);
-    ASSERT_EQ(subject.getCommonName(), COMMON_NAME_ISSUER);
-    ASSERT_EQ(subject.getCountryName(), COUNTRY_NAME_ISSUER);
-    ASSERT_EQ(subject.getOrganizationName(), ORGANIZATION_NAME_ISSUER);
-    ASSERT_EQ(subject.getLocationName(), LOCATION_NAME_ISSUER);
-    ASSERT_EQ(subject.getStateName(), STATE_NAME_ISSUER);
+    ASSERT_EQ(subject.getRaw(), expected.RAW_SUBJECT);
+    ASSERT_EQ(subject.getCommonName(), expected.COMMON_NAME_ISSUER);
+    ASSERT_EQ(subject.getCountryName(), expected.COUNTRY_NAME_ISSUER);
+    ASSERT_EQ(subject.getOrganizationName(), expected.ORGANIZATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getLocationName(), expected.LOCATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getStateName(), expected.STATE_NAME_ISSUER);
 
     const auto& issuer = pckCertificate.getIssuer();
-    ASSERT_EQ(issuer.getRaw(), RAW_ISSUER);
-    ASSERT_EQ(issuer.getCommonName(), COMMON_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getCountryName(), COUNTRY_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getOrganizationName(), ORGANIZATION_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getLocationName(), LOCATION_NAME_SUBJECT);
-    ASSERT_EQ(issuer.getStateName(), STATE_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getRaw(), expected.RAW_ISSUER);
+    ASSERT_EQ(issuer.getCommonName(), expected.COMMON_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getCountryName(), expected.COUNTRY_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getOrganizationName(), expected.ORGANIZATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getLocationName(), expected.LOCATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getStateName(), expected.STATE_NAME_SUBJECT);
 
     ASSERT_NE(issuer, subject); // they may be equal if certificate is self-signed
 
     const auto& validity = pckCertificate.getValidity();
-    ASSERT_EQ(validity.getNotBeforeTime(), NOT_BEFORE_TIME);
-    ASSERT_EQ(validity.getNotAfterTime(), NOT_AFTER_TIME);
+    ASSERT_EQ(validity.getNotBeforeTime(), expected.NOT_BEFORE_TIME);
+    ASSERT_EQ(validity.getNotAfterTime(), expected.NOT_AFTER_TIME);
 
     const auto& signature = pckCertificate.getSignature();
-    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(RAW_DER));
-    ASSERT_THAT(signature.getR(), ElementsAreArray(R));
-    ASSERT_THAT(signature.getS(), ElementsAreArray(S));
+    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(expected.RAW_DER));
+    ASSERT_THAT(signature.getR(), ElementsAreArray(expected.R));
+    ASSERT_THAT(signature.getS(), ElementsAreArray(expected.S));
 
     const auto& ppid = pckCertificate.getPpid();
-    ASSERT_THAT(ppid, ElementsAreArray(PPID));
+    ASSERT_THAT(ppid, ElementsAreArray(expected.PPID));
+
+    const auto& tcb = pckCertificate.getTcb();
+    ASSERT_THAT(tcb.getCpuSvn(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_THAT(tcb.getSgxTcbComponents(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_EQ(tcb.getPceSvn(), expected.PCESVN);
+    ASSERT_EQ(tcb, x509::Tcb(expected.CPUSVN, expected.CPUSVN, expected.PCESVN));
 
     const auto& pceId = pckCertificate.getPceId();
-    ASSERT_THAT(pceId, ElementsAreArray(PCE_ID));
+    ASSERT_THAT(pceId, ElementsAreArray(expected.PCE_ID));
 
     const auto& fmspc = pckCertificate.getFmspc();
-    ASSERT_THAT(fmspc, ElementsAreArray(FMSPC));
+    ASSERT_THAT(fmspc, ElementsAreArray(expected.FMSPC));
 
     const auto& sgxType = pckCertificate.getSgxType();
-    ASSERT_EQ(sgxType, SGX_TYPE);
+    ASSERT_EQ(sgxType, expected.SGX_TYPE);
+}
+
+TEST_F(ParseX509CertificateIT, parsePemEncodedPlatformCAPckCertAsPlatformPckCertificateClass)
+{
+    // GIVEN
+    const auto expected = ExpectedPlatformPckCertData();
+
+    // WHEN
+    const auto& pckCertificate = x509::PlatformPckCertificate::parse(PlatformPEM);
+
+    // THEN
+    ASSERT_EQ(pckCertificate.getVersion(), 3);
+
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(expected.SERIAL_NUMBER));
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expected.PUBLIC_KEY));
+
+    const auto& subject = pckCertificate.getSubject();
+    ASSERT_EQ(subject.getRaw(), expected.RAW_SUBJECT);
+    ASSERT_EQ(subject.getCommonName(), expected.COMMON_NAME_ISSUER);
+    ASSERT_EQ(subject.getCountryName(), expected.COUNTRY_NAME_ISSUER);
+    ASSERT_EQ(subject.getOrganizationName(), expected.ORGANIZATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getLocationName(), expected.LOCATION_NAME_ISSUER);
+    ASSERT_EQ(subject.getStateName(), expected.STATE_NAME_ISSUER);
+
+    const auto& issuer = pckCertificate.getIssuer();
+    ASSERT_EQ(issuer.getRaw(), expected.RAW_ISSUER);
+    ASSERT_EQ(issuer.getCommonName(), expected.COMMON_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getCountryName(), expected.COUNTRY_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getOrganizationName(), expected.ORGANIZATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getLocationName(), expected.LOCATION_NAME_SUBJECT);
+    ASSERT_EQ(issuer.getStateName(), expected.STATE_NAME_SUBJECT);
+
+    ASSERT_NE(issuer, subject); // they may be equal if certificate is self-signed
+
+    const auto& validity = pckCertificate.getValidity();
+    ASSERT_EQ(validity.getNotBeforeTime(), expected.NOT_BEFORE_TIME);
+    ASSERT_EQ(validity.getNotAfterTime(), expected.NOT_AFTER_TIME);
+
+    const auto& signature = pckCertificate.getSignature();
+    ASSERT_THAT(signature.getRawDer(), ElementsAreArray(expected.RAW_DER));
+    ASSERT_THAT(signature.getR(), ElementsAreArray(expected.R));
+    ASSERT_THAT(signature.getS(), ElementsAreArray(expected.S));
+
+    const auto& ppid = pckCertificate.getPpid();
+    ASSERT_THAT(ppid, ElementsAreArray(expected.PPID));
+
+    const auto& tcb = pckCertificate.getTcb();
+    ASSERT_THAT(tcb.getCpuSvn(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_THAT(tcb.getSgxTcbComponents(), ElementsAreArray(expected.CPUSVN));
+    ASSERT_EQ(tcb.getPceSvn(), expected.PCESVN);
+    ASSERT_EQ(tcb, x509::Tcb(expected.CPUSVN, expected.CPUSVN, expected.PCESVN));
+
+    const auto& pceId = pckCertificate.getPceId();
+    ASSERT_THAT(pceId, ElementsAreArray(expected.PCE_ID));
+
+    const auto& fmspc = pckCertificate.getFmspc();
+    ASSERT_THAT(fmspc, ElementsAreArray(expected.FMSPC));
+
+    const auto& sgxType = pckCertificate.getSgxType();
+    ASSERT_EQ(sgxType, expected.SGX_TYPE);
+
+    const auto& platformInstanceId = pckCertificate.getPlatformInstanceId();
+    ASSERT_THAT(platformInstanceId, ElementsAreArray(expected.PLATFORM_INSTANCE_ID));
+
+    const auto& sgxConfiguration = pckCertificate.getConfiguration();
+    ASSERT_TRUE(sgxConfiguration.isCachedKeys());
+    ASSERT_TRUE(sgxConfiguration.isDynamicPlatform());
+    ASSERT_FALSE(sgxConfiguration.isSmtEnabled());
 }

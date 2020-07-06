@@ -32,9 +32,10 @@
 /* Enclave.edl - Top EDL file. */
 
 enclave {
-    include "sgx_report.h"
 
     from "sgx_tstdc.edl" import *;
+    from "sgx_dcap_tvl.edl" import *;
+
     /* Import ECALL/OCALL from sub-directory EDLs.
      *  [from]: specifies the location of EDL file.
      *  [import]: specifies the functions to import,
@@ -43,25 +44,9 @@ enclave {
 
 
     trusted {
-        public sgx_status_t ecall_verify_report(
-                                [in, size = report_size] uint8_t* p_report,
-                                uint64_t report_size,
-                                [in, size = rand_size] uint8_t *p_rand,
-                                uint16_t rand_size,
-                                [in, size = quote_size]uint8_t* p_quote,
-                                uint64_t quote_size,
-                                [in, size = qveid_size]uint8_t* p_qveid,
-                                uint32_t qveid_size,
-                                [in, size = qveid_issue_chain_size]uint8_t* p_qveid_issue_chain,
-                                uint32_t qveid_issue_chain_size,
-                                [in, size = root_ca_crl_size]uint8_t* p_root_ca_crl,
-                                uint32_t root_ca_crl_size,
-                                int64_t expiration_check_date,
-                                uint32_t collateral_expiration_status,
-                                uint32_t verification_result,
-                                [in, size = supplemental_data_size] uint8_t* p_supplemental_data,
-                                uint32_t supplemental_data_size);
 
         public sgx_status_t ecall_get_target_info([out] sgx_target_info_t* target_info);
+
     };
+
 };

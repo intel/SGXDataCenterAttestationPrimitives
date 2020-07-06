@@ -34,7 +34,7 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 TCBSigningChain::TCBSigningChain()
         : _commonVerifier(new CommonVerifier()),

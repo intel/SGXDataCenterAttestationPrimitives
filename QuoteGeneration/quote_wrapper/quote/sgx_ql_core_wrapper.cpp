@@ -136,7 +136,7 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
 /**
  * The application calls this API to request the selected platform's attestation key owner to generate or obtain
  * the attestation key.  Once called, the QE that owns the attestation key described by the inputted attestation
- * key id will do what is required to get this platform’s attestation including getting any certification data
+ * key id will do what is required to get this platform's attestation including getting any certification data
  * required from the PCE.  Depending on the type of attestation key and the attestation key owner, this API will
  * return the same attestation key public ID or generate a new one.  The caller can request that the attestation
  * key owner "refresh" the key.  This will cause the owner to either re-get the key or generate a new one.  The

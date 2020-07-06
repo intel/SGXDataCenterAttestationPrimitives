@@ -142,12 +142,40 @@ ASN1_SEQUENCE(SGX_TCB_SEQ) = {
 
 DECLARE_ASN1_FUNCTIONS(SGX_TCB_SEQ)
 
+typedef struct SGX_CONFIGURATION_st {
+    SGX_BOOL *dynamicPlatform;
+    SGX_BOOL *cachedKeys;
+    SGX_BOOL *smtEnabled;
+} SGX_CONFIGURATION;
+
+ASN1_SEQUENCE(SGX_CONFIGURATION) = {
+        ASN1_OPT(SGX_CONFIGURATION, dynamicPlatform, SGX_BOOL),
+        ASN1_OPT(SGX_CONFIGURATION, cachedKeys, SGX_BOOL),
+        ASN1_OPT(SGX_CONFIGURATION, smtEnabled, SGX_BOOL)
+} ASN1_SEQUENCE_END(SGX_CONFIGURATION)
+
+DECLARE_ASN1_FUNCTIONS(SGX_CONFIGURATION)
+
+typedef struct SGX_CONFIGURATION_SEQ_st {
+    ASN1_OBJECT *oid;
+    SGX_CONFIGURATION *configuration;
+} SGX_CONFIGURATION_SEQ;
+
+ASN1_SEQUENCE(SGX_CONFIGURATION_SEQ) = {
+        ASN1_SIMPLE(SGX_CONFIGURATION_SEQ, oid, ASN1_OBJECT),
+        ASN1_SIMPLE(SGX_CONFIGURATION_SEQ, configuration, SGX_CONFIGURATION)
+} ASN1_SEQUENCE_END(SGX_CONFIGURATION_SEQ)
+
+DECLARE_ASN1_FUNCTIONS(SGX_CONFIGURATION_SEQ)
+
 typedef struct SGX_EXTENSIONS_st {
     SGX_OCTET_STRING *ppid;
     SGX_TCB_SEQ *tcb;
     SGX_OCTET_STRING *pceid;
     SGX_OCTET_STRING *fmspc;
     SGX_ENUM *sgxType;
+    SGX_OCTET_STRING *platformInstanceId;
+    SGX_CONFIGURATION_SEQ *configuration;
     SGX_BOOL *unexpectedExtension;
 } SGX_EXTENSIONS;
 
@@ -157,19 +185,23 @@ ASN1_SEQUENCE(SGX_EXTENSIONS) = {
         ASN1_SIMPLE(SGX_EXTENSIONS, pceid, SGX_OCTET_STRING),
         ASN1_SIMPLE(SGX_EXTENSIONS, fmspc, SGX_OCTET_STRING),
         ASN1_SIMPLE(SGX_EXTENSIONS, sgxType, SGX_ENUM),
+        ASN1_OPT(SGX_EXTENSIONS, platformInstanceId, SGX_OCTET_STRING),
+        ASN1_OPT(SGX_EXTENSIONS, configuration, SGX_CONFIGURATION_SEQ),
         ASN1_OPT(SGX_EXTENSIONS, unexpectedExtension, SGX_BOOL)
 } ASN1_SEQUENCE_END(SGX_EXTENSIONS)
 
 DECLARE_ASN1_FUNCTIONS(SGX_EXTENSIONS)
 
-using SGX_INT_uptr          = std::unique_ptr<SGX_INT,          decltype(&SGX_INT_free)>;
-using SGX_ENUM_uptr         = std::unique_ptr<SGX_ENUM,         decltype(&SGX_ENUM_free)>;
-using SGX_BOOL_uptr         = std::unique_ptr<SGX_BOOL,         decltype(&SGX_BOOL_free)>;
-using SGX_OCTET_STRING_uptr = std::unique_ptr<SGX_OCTET_STRING, decltype(&SGX_OCTET_STRING_free)>;
-using SGX_TCB_uptr          = std::unique_ptr<SGX_TCB,          decltype(&SGX_TCB_free)>;
-using SGX_TCB_SEQ_uptr      = std::unique_ptr<SGX_TCB_SEQ,      decltype(&SGX_TCB_SEQ_free)>;
-using SGX_EXTENSIONS_uptr   = std::unique_ptr<SGX_EXTENSIONS,   decltype(&SGX_EXTENSIONS_free)>;
-using ASN1_OBJECT_uptr      = std::unique_ptr<ASN1_OBJECT,      decltype(&ASN1_OBJECT_free)>;
+using SGX_INT_uptr               = std::unique_ptr<SGX_INT,               decltype(&SGX_INT_free)>;
+using SGX_ENUM_uptr              = std::unique_ptr<SGX_ENUM,              decltype(&SGX_ENUM_free)>;
+using SGX_BOOL_uptr              = std::unique_ptr<SGX_BOOL,              decltype(&SGX_BOOL_free)>;
+using SGX_OCTET_STRING_uptr      = std::unique_ptr<SGX_OCTET_STRING,      decltype(&SGX_OCTET_STRING_free)>;
+using SGX_TCB_uptr               = std::unique_ptr<SGX_TCB,               decltype(&SGX_TCB_free)>;
+using SGX_TCB_SEQ_uptr           = std::unique_ptr<SGX_TCB_SEQ,           decltype(&SGX_TCB_SEQ_free)>;
+using SGX_EXTENSIONS_uptr        = std::unique_ptr<SGX_EXTENSIONS,        decltype(&SGX_EXTENSIONS_free)>;
+using SGX_CONFIGURATION_uptr     = std::unique_ptr<SGX_CONFIGURATION,     decltype(&SGX_CONFIGURATION_free)>;
+using SGX_CONFIGURATION_SEQ_uptr = std::unique_ptr<SGX_CONFIGURATION_SEQ, decltype(&SGX_CONFIGURATION_SEQ_free)>;
+using ASN1_OBJECT_uptr           = std::unique_ptr<ASN1_OBJECT,           decltype(&ASN1_OBJECT_free)>;
 /* Base template for the making of OpenSSL crypto objects, automatically selected deleter - unique_ptr variant */
 //template<typename T>
 //inline auto make_unique(T*) -> std::unique_ptr<T, void(*)(T*)>;
@@ -214,6 +246,18 @@ template<>
 inline SGX_EXTENSIONS_uptr make_unique(SGX_EXTENSIONS* raw_pointer)
 {
     return SGX_EXTENSIONS_uptr(raw_pointer, SGX_EXTENSIONS_free);
+}
+
+template<>
+inline SGX_CONFIGURATION_uptr make_unique(SGX_CONFIGURATION* raw_pointer)
+{
+    return SGX_CONFIGURATION_uptr(raw_pointer, SGX_CONFIGURATION_free);
+}
+
+template<>
+inline SGX_CONFIGURATION_SEQ_uptr make_unique(SGX_CONFIGURATION_SEQ* raw_pointer)
+{
+    return SGX_CONFIGURATION_SEQ_uptr(raw_pointer, SGX_CONFIGURATION_SEQ_free);
 }
 
 template<>

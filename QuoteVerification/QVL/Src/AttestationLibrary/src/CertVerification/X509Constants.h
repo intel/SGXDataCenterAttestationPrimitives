@@ -39,7 +39,7 @@
 
 #include <string>
 
-namespace intel { namespace sgx { namespace qvl { namespace constants {
+namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 extern const dcap::parser::x509::DistinguishedName ROOT_CA_SUBJECT;
 extern const dcap::parser::x509::DistinguishedName PLATFORM_CA_SUBJECT;
@@ -72,6 +72,6 @@ const size_t MISCSELECT_BYTE_LEN = 4;
 const size_t ATTRIBUTES_BYTE_LEN = 16;
 const size_t MRSIGNER_BYTE_LEN = 32;
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace constants {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 #endif
