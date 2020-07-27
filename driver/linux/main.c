@@ -23,7 +23,6 @@
 #ifndef FEAT_CTL_LOCKED
 #define FEAT_CTL_LOCKED FEATURE_CONTROL_LOCKED
 #endif
-
 struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 static int sgx_nr_epc_sections;
 static struct task_struct *ksgxswapd_tsk;
@@ -91,10 +90,17 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 	list_for_each_entry_rcu(encl_mm, &encl->mm_list, list) {
 		if (!mmget_not_zero(encl_mm->mm))
 			continue;
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+                mmap_read_lock(encl_mm->mm);
+#else
 		down_read(&encl_mm->mm->mmap_sem);
+#endif
 		ret = !sgx_encl_test_and_clear_young(encl_mm->mm, page);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+                mmap_read_unlock(encl_mm->mm);
+#else
 		up_read(&encl_mm->mm->mmap_sem);
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
                 mmput(encl_mm->mm);
@@ -135,14 +141,20 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 		list_for_each_entry_rcu(encl_mm, &encl->mm_list, list) {
 			if (!mmget_not_zero(encl_mm->mm))
 				continue;
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+			mmap_read_lock(encl_mm->mm);
+#else
 			down_read(&encl_mm->mm->mmap_sem);
+#endif
 
 			ret = sgx_encl_find(encl_mm->mm, addr, &vma);
 			if (!ret && encl == vma->vm_private_data)
 				zap_vma_ptes(vma, addr, PAGE_SIZE);
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+			mmap_read_unlock(encl_mm->mm);
+#else
 			up_read(&encl_mm->mm->mmap_sem);
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
                         mmput(encl_mm->mm);
@@ -540,6 +552,7 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
     return true;
 }
 
+
 static struct sgx_epc_page *__sgx_alloc_epc_page_from_section(struct sgx_epc_section *section)
 {
 	struct sgx_epc_page *page;
@@ -582,6 +595,7 @@ struct sgx_epc_page *__sgx_alloc_epc_page(void)
 
 	return ERR_PTR(-ENOMEM);
 }
+
 
 /**
  * sgx_alloc_epc_page() - Allocate an EPC page

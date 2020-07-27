@@ -43,8 +43,7 @@ struct sgx_epc_section {
 
 extern struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 
-static inline struct sgx_epc_section *sgx_get_epc_section(
-		struct sgx_epc_page *page)
+static inline struct sgx_epc_section *sgx_get_epc_section(struct sgx_epc_page *page)
 {
 	return &sgx_epc_sections[page->desc & SGX_EPC_SECTION_MASK];
 }

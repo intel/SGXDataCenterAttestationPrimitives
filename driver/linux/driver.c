@@ -36,8 +36,12 @@ static int sgx_open(struct inode *inode, struct file *file)
 
 	atomic_set(&encl->flags, 0);
 	kref_init(&encl->refcount);
-	INIT_LIST_HEAD(&encl->va_pages);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	xa_init(&encl->page_array);
+#else
 	INIT_RADIX_TREE(&encl->page_tree, GFP_KERNEL);
+#endif
+	INIT_LIST_HEAD(&encl->va_pages);
 	mutex_init(&encl->lock);
 	INIT_LIST_HEAD(&encl->mm_list);
 	spin_lock_init(&encl->mm_lock);
@@ -78,7 +82,7 @@ static int sgx_release(struct inode *inode, struct file *file)
 		synchronize_srcu(&encl->srcu);
 		mmu_notifier_unregister(&encl_mm->mmu_notifier, encl_mm->mm);
 		kfree(encl_mm);
-	};
+	}
 
 	mutex_lock(&encl->lock);
 	atomic_or(SGX_ENCL_DEAD, &encl->flags);
@@ -88,21 +92,12 @@ static int sgx_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-#ifdef CONFIG_COMPAT
-static long sgx_compat_ioctl(struct file *filep, unsigned int cmd,
-			      unsigned long arg)
-{
-	return sgx_ioctl(filep, cmd, arg);
-}
-#endif
-
 static int sgx_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct sgx_encl *encl = file->private_data;
 	int ret;
 
-	ret = sgx_encl_may_map(encl, vma->vm_start, vma->vm_end,
-			       vma->vm_flags & (VM_READ | VM_WRITE | VM_EXEC));
+	ret = sgx_encl_may_map(encl, vma->vm_start, vma->vm_end, vma->vm_flags);
 	if (ret)
 		return ret;
 
@@ -131,6 +126,14 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 
 	return current->mm->get_unmapped_area(file, addr, len, pgoff, flags);
 }
+
+#ifdef CONFIG_COMPAT
+static long sgx_compat_ioctl(struct file *filep, unsigned int cmd,
+			      unsigned long arg)
+{
+	return sgx_ioctl(filep, cmd, arg);
+}
+#endif
 
 static const struct file_operations sgx_encl_fops = {
 	.owner			= THIS_MODULE,
@@ -161,7 +164,6 @@ static struct miscdevice sgx_dev_provision = {
 	.nodename = "sgx/provision",
 	.fops = &sgx_provision_fops,
 };
-
 
 int __init sgx_drv_init(void)
 {
