@@ -97,7 +97,7 @@ static int sgx_validate_secs(const struct sgx_secs *secs)
 	    secs->xfrm & sgx_xfrm_reserved_mask)
 		return -EINVAL;
 
-	if (secs->size >= max_size)
+	if (secs->size > max_size)
 		return -EINVAL;
 
 	if (!(secs->xfrm & XFEATURE_MASK_FP) ||
