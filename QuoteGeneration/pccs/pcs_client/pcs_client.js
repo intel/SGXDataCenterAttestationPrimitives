@@ -31,179 +31,142 @@
 
 
 const config = require('config');
-const request = require('request');
-const rp = require('request-promise');
+const got = require('got');
+const caw = require('caw');
 const logger = require('../utils/Logger.js');
 const PccsError = require('../utils/PccsError.js');
 const PCCS_STATUS = require('../constants/pccs_status_code.js');
 
 const HTTP_TIMEOUT = 60000;  // 60 seconds 
+let HttpsAgent;
+if (config.has('proxy') && config.get('proxy')) {
+    // use proxy settings in config file
+    HttpsAgent = {
+        https: caw(config.get('proxy'), {protocol:'https'})
+    };
+}
+else {
+    // use system proxy
+    HttpsAgent = {
+        https: caw({protocol:'https'})
+    };
+}
 
-do_request = async function(options, src) {
+do_request = async function(url, options) {
     try {
-        let response =  await rp(options);
-        logger.info('Request-ID is : ' + response.headers['request-id'] + ' ' + src);
+        logger.debug(url);
+        logger.debug(JSON.stringify(options));
+
+        // global opitons ( proxy, timeout, etc)
+        options.timeout = HTTP_TIMEOUT;
+        options.agent = HttpsAgent;
+
+        let response =  await got(url, options);
+        logger.info('Request-ID is : ' + response.headers['request-id']);
         return response;
     }
     catch(err) {
         logger.debug(err);
         if (err.response && err.response.headers) {
-            logger.info('Request-ID is : ' + err.response.headers['request-id'] + ' ' + src);
+            logger.info('Request-ID is : ' + err.response.headers['request-id']);
         }
         throw new PccsError(PCCS_STATUS.PCCS_STATUS_PCS_ACCESS_FAILURE);
     }
 }
 
-exports.getCert=async function(enc_ppid,cpusvn,pcesvn,pceid){
+exports.getCert = async function(enc_ppid,cpusvn,pcesvn,pceid){
     const options = {
-        uri: config.get('uri')+ 'pckcert',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
             encrypted_ppid:enc_ppid,
             cpusvn:cpusvn,
             pcesvn:pcesvn,
             pceid:pceid
         },
         method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
         headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
     };
 
-    logger.debug('getCert......');
-    logger.debug('enc_ppid : ' + enc_ppid);
-    logger.debug('cpusvn : ' + cpusvn);
-    logger.debug('pcesvn : ' + pcesvn);
-    logger.debug('pceid : ' + pceid);
-
-    return do_request(options, 'pckcert');
+    return do_request(config.get('uri') + 'pckcert', options);
 };
 
 exports.getCerts=async function(enc_ppid,pceid){
     const options = {
-        uri: config.get('uri')+ 'pckcerts',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
             encrypted_ppid:enc_ppid,
             pceid:pceid
         },
         method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
         headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
     };
 
-    logger.debug('getCerts......');
-    logger.debug('enc_ppid : ' + enc_ppid);
-    logger.debug('pceid : ' + pceid);
-
-    return do_request(options, 'pckcerts');
+    return do_request(config.get('uri')+ 'pckcerts', options);
 };
 
 exports.getCertsWithManifest = async function(platform_manifest, pceid){
     const options = {
-        uri: config.get('uri')+ 'pckcerts',
-        proxy: config.get('proxy'),
-        qs: {},
-        body: {
+        json: {
             platformManifest: platform_manifest,
             pceid: pceid
         },
         method: 'POST',
-        json: true,
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
         headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
     };
 
-    logger.debug('getCerts......');
-    logger.debug('platform_manifest : ' + platform_manifest);
-    logger.debug('pceid : ' + pceid);
-
-    return do_request(options, 'pckcerts');
+    return do_request(config.get('uri')+ 'pckcerts', options);
 }
 
 exports.getPckCrl=async function(ca){
     const options = {
-        uri: config.get('uri')+ 'pckcrl',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
             ca:ca.toLowerCase()
         },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
+        method: 'GET'
     };
 
-    logger.debug('getPckCrl......');
-    logger.debug('ca : ' + ca);
-
-    return do_request(options, 'pckcrl');
+    return do_request(config.get('uri')+ 'pckcrl', options);
 };
 
 exports.getTcb=async function(fmspc){
     const options = {
-        uri: config.get('uri')+ 'tcb',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
             fmspc:fmspc
         },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
+        method: 'GET'
     };
 
-    logger.debug('getTcb......');
-    logger.debug('fmspc : ' + fmspc);
-
-    return do_request(options, 'tcb');
+    return do_request(config.get('uri')+ 'tcb', options);
 };
 
 exports.getQEIdentity=async function(){
     const options = {
-        uri: config.get('uri')+ 'qe/identity',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
         },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
+        method: 'GET'
     };
 
-    logger.debug('getQEIdentity......');
-
-    return do_request(options, 'qe/identity');
+    return do_request(config.get('uri')+ 'qe/identity', options);
 };
 
 exports.getQvEIdentity=async function(){
     const options = {
-        uri: config.get('uri')+ 'qve/identity',
-        proxy: config.get('proxy'),
-        qs: {
+        searchParams: {
         },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
+        method: 'GET'
     };
 
-    logger.debug('getQvEIdentity......');
-
-    return do_request(options, 'qve/identity');
+    return do_request(config.get('uri')+ 'qve/identity', options);
 };
 
 exports.getFileFromUrl=async function(uri){
+    logger.debug(uri);
+
     const options = {
-        uri: uri,
-        proxy: config.get('proxy'),
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        encoding: null 
+        agent: HttpsAgent,
+        timeout: HTTP_TIMEOUT 
     };
 
-    logger.debug('getFileFromUrl......' + uri);
-
     try {
-        let response = await rp(options);
+        let response = await got(uri, options).buffer();
         return Buffer.from(response, 'utf8');
     }
     catch(err) {

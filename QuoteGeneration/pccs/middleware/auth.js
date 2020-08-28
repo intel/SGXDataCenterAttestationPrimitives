@@ -38,9 +38,9 @@ exports.validateUser = function (req,res,next) {
     if (token) {
         let hash = Crypto.createHash('sha512');
         hash.update(token);
-        let UserToken = hash.digest('hex');
+        let user_token_hash = hash.digest('hex');
         
-        if (UserToken != Config.get('UserToken')) {
+        if (user_token_hash != Config.get('UserTokenHash')) {
             return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
                 PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
         }
@@ -58,9 +58,9 @@ exports.validateAdmin = function (req,res,next) {
     if (token) {
         let hash = Crypto.createHash('sha512');
         hash.update(token);
-        let AdminToken = hash.digest('hex');
+        let admin_token_hash = hash.digest('hex');
 
-        if (AdminToken != Config.get('AdminToken')) {
+        if (admin_token_hash != Config.get('AdminTokenHash')) {
             return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
                 PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
         }

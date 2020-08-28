@@ -37,16 +37,13 @@
 #include <curl/curl.h>
 #include <sstream>
 #include <cstring>
-
-#ifdef _WIN32
-#include <winhttp.h>
-#include "atlstr.h"
-#endif
+#include <unistd.h>
 
 #include "network_logger.h"
 #include "MPSynchronicSender.h"
 
 #define ERROR_CODE_STR_RESPONSE_HEADER "Error-Code: "
+#define NETWORK_RETRY_COUNT 12 //this service will try 1 minute(12*5 =60s) if network is not ready.
 
 using namespace std;
 
@@ -108,6 +105,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
     long response_code = 0;
     uint8_t internalBuff[MAX_RESPONSE_SIZE];
     struct Buffer responseBuff;
+    uint8_t retry = NETWORK_RETRY_COUNT;
 
     responseBuff.buff = internalBuff;
     responseBuff.size = MAX_RESPONSE_SIZE;
@@ -285,16 +283,31 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
         network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_setopt for setting the request failed with the error: %d\n", cret);
         goto out;
     }
-
-    /* Send request and get response */
-    cret = curl_easy_perform(curl);
-    if (CURLE_OK != cret) {
-        if (CURLE_WRITE_ERROR == cret) {
-            res = MP_MEM_ERROR;
+    
+    /* this service will be started ASAS when OS power on, it is possible that network is not ready, so we will retry network */
+    do {    
+        /* Send request and get response */
+        cret = curl_easy_perform(curl);
+	if (CURLE_OK == cret) {
+            break;
+        } else if (CURLE_COULDNT_RESOLVE_HOST == cret) {
+            retry--;
+            if (0 == retry) {
+                network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: CURLE_COULDNT_RESOLVE_HOST.");
+                goto out;
+            } else {
+                network_log_message(MP_REG_LOG_LEVEL_INFO, "curl_easy_perform failed with CURLE_COULDNT_RESOLVE_HOST... retrying in 5 seconds\n");
+                sleep(5);
+                continue;
+            }
+	} else {
+            if (CURLE_WRITE_ERROR == cret) {
+                res = MP_MEM_ERROR;
+            }
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: %d\n", cret);
+            goto out;
         }
-        network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: %d\n", cret);
-        goto out;
-    }
+    }while (retry > 0);
 
     /* Get the HTTP response code */
     cret = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);

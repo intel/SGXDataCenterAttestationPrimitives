@@ -1,5 +1,5 @@
 DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/pck_retrieve_tool_enclave.signed.so	<installdir>/pck_retrieve_tool_enclave.signed.so	0	main	STP
+<deliverydir>/pck_id_retrieval_tool_enclave.signed.so	<installdir>/pck_id_retrieval_tool_enclave.signed.so	0	main	STP
 <deliverydir>/libdcap_quoteprov.so.1	<installdir>/libdcap_quoteprov.so.1	0	main	STP
 <deliverydir>/network_setting.conf	<installdir>/network_setting.conf	0	main	STP
 <deliverydir>/PCKIDRetrievalTool	<installdir>/PCKIDRetrievalTool	0	main	STP

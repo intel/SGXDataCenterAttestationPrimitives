@@ -34,7 +34,16 @@
 set -e
 
 SCRIPT_DIR=$(dirname "$0")
-COMMON_DIR="${SCRIPT_DIR}/../../common/sgx-pck-id-retrieve-tool"
+COMMON_DIR="${SCRIPT_DIR}/../../common/sgx-pck-id-retrieval-tool"
 
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.rpm
+rm -f ${SCRIPT_DIR}/libsgx*.deb
+rm -f ${SCRIPT_DIR}/libsgx*dbgsym*.ddeb
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.deb
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*dbgsym*.ddeb
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.tar.gz
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.tar.xz
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.dsc
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.changes
+rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieval-tool*.buildinfo
+rm -f ${COMMON_DIR}/gen_source.py
 rm -rf ${COMMON_DIR}/output

@@ -138,6 +138,7 @@ Enclave/%.o: Enclave/%.cpp Enclave/qve_t.h $(SGXSSL_HEADER_CHECK)
 
 $(QVE_NAME): $(QVE_OBJS) Enclave/qve_t.o $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
 	@$(CXX) $^ -o $@ $(ENCLAVE_LDFLAGS)
+	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 	@echo "LINK =>  $@"
 
 $(SIGNED_QVE_NAME): $(QVE_NAME)

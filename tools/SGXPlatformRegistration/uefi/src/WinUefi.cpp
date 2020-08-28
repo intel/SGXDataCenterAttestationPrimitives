@@ -348,7 +348,7 @@ int WinUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataS
 	if (SetFirmwareEnvironmentVariableA(var.c_str(), guid.c_str(), (PVOID)data, (DWORD)dataSize) == FALSE)
 	{
 		uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "SetFirmwareEnvironmentVariableA failed, error %u\n", GetLastError());
-		return 0;
+		return -1;
 	}
 
 	return (int)dataSize;

@@ -55,10 +55,11 @@ exports.getPcsVersion = function()
     return parseInt(ver);
 }
 
-// Get PCK cert from Intel PCS for platform {qeid, cpusvn, pcesvn, pce_id, enc_ppid} and update cache DB
-// It's possible that only platform_manifest is provided and cpusvn, pcesvn, enc_ppid are null,
-// which means the function was called by platform registration service, and we only need to cache
-// PCK certs and don't need to run PCK cert selection tool
+// Try to get PCK certs from Intel PCS for the platform with {pce_id, platform_manifest}, 
+// and if platform manifest is not provided, then use {pce_id, enc_ppid} instead. 
+// Refresh the cache DB after a successful PCK certs retrieval. 
+// If raw TCB is not null, call the PCK cert selection tool to select the "best" cert for this
+// raw TCB and update cache DB
 exports.getPckCertFromPCS = async function(qeid, cpusvn, pcesvn, pceid, enc_ppid, platform_manifest)
 {
     let result = {};

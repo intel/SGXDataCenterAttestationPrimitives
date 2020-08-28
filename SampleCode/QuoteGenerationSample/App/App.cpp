@@ -120,9 +120,9 @@ int main(int argc, char* argv[])
 
 
 #if !defined(_MSC_VER)
-    // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process. 
+    // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process.
     // the other is out-of-proc mode, the QE3 and PCE are managed by a daemon. If you want to use in-proc
-    // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the 
+    // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the
     // out-of-proc mode, you need to install libsgx-quote-ex as well. This sample is built to demo both 2
     // modes, so you need to install libsgx-quote-ex to enable the out-of-proc mode.
     if(!is_out_of_proc)
@@ -137,33 +137,28 @@ int main(int argc, char* argv[])
             goto CLEANUP;
         }
         printf("succeed!\n");
-        #if defined(UBUNTU)
-        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so");
-        #else // This is for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in set PCE directory: 0x%04x.\n", qe3_ret);
-            ret = -1;
-            goto CLEANUP;
+
+        // Try to load PCE and QE3 from Ubuntu-like OS system path
+        if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so")) {
+
+            // Try to load PCE and QE3 from RHEL-like OS system path
+            if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so")) {
+                printf("Error in set PCE/QE3 directory.\n");
+                ret = -1;
+                goto CLEANUP;
+            }
         }
-        #if defined(UBUNTU)
-        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so");
-        #else // This for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in set QE3 directory: 0x%04x.\n", qe3_ret);
-            ret = -1;
-            goto CLEANUP;
-        }
-        #if defined(UBUNTU)
+
         qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1");
-        #else // This for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Info: /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1 not found.\n");
+        if (SGX_QL_SUCCESS != qe3_ret) {
+            qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
+            if(SGX_QL_SUCCESS != qe3_ret) {
+                printf("Error in set QPL directory.\n");
+                ret = -1;
+                goto CLEANUP;
+            }
         }
     }
 #endif

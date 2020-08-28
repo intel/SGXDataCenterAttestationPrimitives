@@ -37,7 +37,7 @@ SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
-LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-pck-id-retrieve-tool"
+LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-pck-id-retrieval-tool"
 LINUX_OS_ID=$(grep "^ID=" /usr/lib/os-release 2> /dev/null | awk -F'=' '{print $2}')
 
 source ${LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR}/installConfig
@@ -73,6 +73,9 @@ update_spec() {
 	pushd ${SCRIPT_DIR}/${RPM_BUILD_FOLDER}
     sed -i "s#@version@#${SGX_VERSION}#" SPECS/${PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME}.spec
     sed -i "s#@install_path@#${PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH}/${PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME}#" SPECS/${PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME}.spec
+    if [ "${min_version}" != "${cur_version}" ]; then
+        sed -i "s/^Recommends:/Requires:  /" SPECS/${PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME}.spec
+    fi
     popd
 }
 

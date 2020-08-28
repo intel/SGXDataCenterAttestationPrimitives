@@ -23,6 +23,7 @@ function checkNodeJs() {
 function postConfiguration() {
     pm2 update
     pm2 start pccs_server.config.js 
+    pm2 save
 
     if [[ "$argnum" == 0 || "$arg1" != "postinst" ]]; then
         pm2cfg=`pm2 startup systemd | grep 'sudo'` 
@@ -50,7 +51,8 @@ then
 fi
 
 cd `dirname $0`
-npm install --engine-strict
+npm config set engine-strict true
+npm install
 [ $? -eq 0 ] || exit $?;
 
 if which pm2 > /dev/null 
@@ -78,11 +80,19 @@ done
 
 #Ask for HTTPS port number
 port=""
-read -p "Set HTTPS listening port [8081] (1024-65535) :" port
-if [[ $port -lt 1024  ||  $port -gt 65535 ]] ; then
-    port=8081
-fi
-sed "/\"HTTPS_PORT\"*/c\ \ \ \ \"HTTPS_PORT\" \: ${port}," -i ${configFile}
+while :
+do
+    read -p "Set HTTPS listening port [8081] (1024-65535) :" port
+    if [ -z $port ]; then 
+        port=8081
+        break
+    elif [[ $port -lt 1024  ||  $port -gt 65535 ]] ; then
+        echo -e "${YELLOW}The port number is out of range, please input again.${NC} "
+    else
+        sed "/\"HTTPS_PORT\"*/c\ \ \ \ \"HTTPS_PORT\" \: ${port}," -i ${configFile}
+        break
+    fi
+done
 
 #Ask for HTTPS port number
 local_only=""
@@ -165,7 +175,7 @@ do
         admintoken2=""
     else
         HASH="$(echo -n "$admintoken1" | sha512sum | tr -d '[:space:]-')"
-        sed "/\"AdminToken\"*/c\ \ \ \ \"AdminToken\" \: \"${HASH}\"," -i ${configFile}
+        sed "/\"AdminTokenHash\"*/c\ \ \ \ \"AdminTokenHash\" \: \"${HASH}\"," -i ${configFile}
         admin_pass_set=true
     fi
 done
@@ -195,7 +205,7 @@ do
         usertoken2=""
     else
         HASH="$(echo -n "$usertoken1" | sha512sum | tr -d '[:space:]-')"
-        sed "/\"UserToken\"*/c\ \ \ \ \"UserToken\" \: \"${HASH}\"," -i ${configFile}
+        sed "/\"UserTokenHash\"*/c\ \ \ \ \"UserTokenHash\" \: \"${HASH}\"," -i ${configFile}
         user_pass_set=true
     fi
 done
@@ -211,7 +221,7 @@ then
             if [ ! -d ssl_key  ];then
                 mkdir ssl_key
             fi
-            openssl genrsa 1024 > ssl_key/private.pem 
+            openssl genrsa -out ssl_key/private.pem 2048
             openssl req -new -key ssl_key/private.pem -out ssl_key/csr.pem
             openssl x509 -req -days 365 -in ssl_key/csr.pem -signkey ssl_key/private.pem -out ssl_key/file.crt
             break

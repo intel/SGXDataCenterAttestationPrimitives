@@ -33,14 +33,14 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(NoInherit)</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
-    <TargetName>pck_retrieve_tool_enclave</TargetName>
+    <TargetName>pck_id_retrieval_tool_enclave</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(NoInherit)</IncludePath>
     <LibraryPath>$(NoInherit)</LibraryPath>
-    <TargetName>pck_retrieve_tool_enclave</TargetName>
+    <TargetName>pck_id_retrieval_tool_enclave</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -60,7 +60,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)test_enclave_signing_key.pem" -enclave "$(OutDir)pck_retrieve_tool_enclave.dll" -out "$(OutDir)pck_retrieve_tool_enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)test_enclave_signing_key.pem" -enclave "$(OutDir)pck_id_retrieval_tool_enclave.dll" -out "$(OutDir)pck_id_retrieval_tool_enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -84,7 +84,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)test_enclave_signing_key.pem" -enclave "$(OutDir)pck_retrieve_tool_enclave.dll" -out "$(OutDir)pck_retrieve_tool_enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)test_enclave_signing_key.pem" -enclave "$(OutDir)pck_id_retrieval_tool_enclave.dll" -out "$(OutDir)pck_id_retrieval_tool_enclave.signed.dll" -config "$(ProjectDir)config.xml"</Command>
       <Message>signing the enclave</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

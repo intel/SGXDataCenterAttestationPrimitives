@@ -40,7 +40,7 @@ LINUX_BUILD_DIR=$(readlink -m "${ROOT_DIR}/../../QuoteGeneration/build/linux")
 
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
-LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-pck-id-retrieve-tool"
+LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-pck-id-retrieval-tool"
 
 source ${LINUX_INSTALLER_COMMON_PCK_ID_RETRIEVAL_TOOL_DIR}/installConfig
 DEB_FOLDER=${PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME}-${PCK_ID_RETRIEVAL_TOOL_VERSION}
@@ -85,7 +85,7 @@ unpack_upstream_tarball() {
 generate_copyright() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     rm -f debian/copyright
-    find pkgroot/sgx-pck-id-retrieve-tool/License.txt -type f -print0 | xargs -0 -n1 cat >> debian/copyright
+    find pkgroot/sgx-pck-id-retrieval-tool/License.txt -type f -print0 | xargs -0 -n1 cat >> debian/copyright
     popd
 }
 
@@ -94,6 +94,7 @@ get_os_code() {
     if [ -z ${OS_CODE} ]; then
         OS_CODE=$(grep "VERSION_CODENAME" /etc/os-release 2> /dev/null | cut -d= -f2)
     fi
+    echo ${OS_CODE}
 }
 
 update_version() {

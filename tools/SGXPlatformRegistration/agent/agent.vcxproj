@@ -49,7 +49,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal;..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <ProjectReference>
@@ -64,7 +64,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal;..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>

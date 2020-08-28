@@ -22,9 +22,9 @@ set -e
 case "$1" in
     remove)
         if which pm2 > /dev/null; then
-            pm2 stop pccs || true
-            pm2 delete pccs || true
-            pm2cfg=`/bin/su -c "pm2 unstartup | grep 'sudo'" - $(logname)` || true
+            su -c "pm2 stop pccs" pccs || true
+            su -c "pm2 delete pccs" pccs || true
+            pm2cfg=`/bin/su -c "pm2 unstartup | grep 'sudo'" - pccs` || true
             eval $pm2cfg || true
         fi
 

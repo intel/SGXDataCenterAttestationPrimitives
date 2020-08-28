@@ -29,9 +29,11 @@
 #
 #
 
-ifeq ($(SGX_SDK),)
-$(error Error!!! Please make sure SGX-SDK is installed and environment script have been executed by: `source /opt/intel/sgxsdk/environment`. Stopping now)
-endif 
+######## SGX SDK Settings ########
+SGX_SDK ?= /opt/intel/sgxsdk
+SGX_MODE ?= HW
+SGX_ARCH ?= x64
+SGX_DEBUG ?= 0
 
 
 # -----------------------------------------------------------------------------
@@ -61,7 +63,7 @@ CP := /bin/cp -f
 
 CXXFLAGS := -fPIC
 
-RA_VERSION= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(LOCAL_COMMON_DIR)/inc/internal/ra_version.h)
+RA_VERSION= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(ROOT_DIR)/../../QuoteGeneration/common/inc/internal/se_version.h)
 SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 # turn on stack protector
@@ -85,7 +87,7 @@ else
     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
 endif
 
-COMMON_FLAGS += -ffunction-sections -fdata-sections -fstack-clash-protection
+COMMON_FLAGS += -ffunction-sections -fdata-sections 
 
 # turn on compiler warnings as much as possible
 COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
@@ -109,7 +111,7 @@ LDFLAGS += -shared
 INCLUDE += -I$(INCLUDE_DIR)
 INCLUDE += -I$(INCLUDE_DIR)/c_wrapper
 INCLUDE += -I$(LOCAL_COMMON_DIR)/inc
-INCLUDE += -I$(LOCAL_COMMON_DIR)/inc/internal
+INCLUDE += -I$(ROOT_DIR)/../../QuoteGeneration/common/inc/internal
 INCLUDE += -Iinc
 
 CPP_OBJS := $(CPP_SRCS:%.cpp=%.o)

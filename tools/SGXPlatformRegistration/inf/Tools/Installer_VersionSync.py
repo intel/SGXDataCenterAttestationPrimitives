@@ -76,7 +76,7 @@ def Main(argv):
 	local_dir = os.path.basename(local_path)
 	
 	#get version string from se_version.h
-	file = local_path + "\..\..\common\inc\internal\\ra_version.h"
+	file = local_path + "\..\..\..\..\QuoteGeneration\common\inc\internal\se_version.h"
 	f = open(file, 'r+')
 	lines = f.readlines()
 	f.close()

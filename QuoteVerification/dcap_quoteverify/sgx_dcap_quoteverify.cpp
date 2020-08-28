@@ -49,6 +49,78 @@
 #include "se_trace.h"
 #include "se_thread.h"
 #include "se_memcpy.h"
+#include "sgx_urts_wrapper.h"
+
+
+sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
+sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
+sgx_ecall_func_t p_sgx_urts_ecall = NULL;
+sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex = NULL;
+sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall = NULL;
+sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall = NULL;
+sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall = NULL;
+sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall = NULL;
+
+//redefine uRTS functions to remove sgx_urts library dependency during compilcation
+//
+sgx_status_t SGXAPI sgx_ecall(const sgx_enclave_id_t eid,
+                              const int index,
+                              const void* ocall_table,
+                              void* ms)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_FEATURE_NOT_SUPPORTED;
+    }
+
+    return p_sgx_urts_ecall(eid, index, ocall_table, ms);
+}
+
+
+void sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
+{
+    if (!sgx_dcap_load_urts()) {
+        return;
+    }
+
+    return p_sgx_oc_cpuidex(cpuinfo, leaf, subleaf);
+}
+
+int sgx_thread_wait_untrusted_event_ocall(const void *self)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_sgx_thread_wait_untrusted_event_ocall(self);
+}
+
+int sgx_thread_set_untrusted_event_ocall(const void *waiter)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_sgx_thread_set_untrusted_event_ocall(waiter);
+}
+
+int sgx_thread_setwait_untrusted_events_ocall(const void *waiter, const void *self)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_sgx_thread_setwait_untrusted_events_ocall(waiter, self);
+}
+
+int sgx_thread_set_multiple_untrusted_events_ocall(const void **waiters, size_t total)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_sgx_thread_set_multiple_untrusted_events_ocall(waiters, total);
+}
+
 
 #if defined(_MSC_VER)
 #include <tchar.h>
@@ -76,7 +148,6 @@ struct QvE_status {
         memset(&m_qve_attributes, 0, sizeof(m_qve_attributes));
     }
     ~QvE_status() {
-        if (m_qve_eid != 0) sgx_destroy_enclave(m_qve_eid);
         se_mutex_destroy(&m_qve_mutex);
     }
 };
@@ -99,10 +170,16 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
     //
     memset(p_launch_token, 0, sizeof(*p_launch_token));
 
+    // Try to load urts lib first
+    //
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_FEATURE_NOT_SUPPORTED;
+    }
+
     int rc = se_mutex_lock(&g_qve_status.m_qve_mutex);
     if (rc != 1)
     {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex");
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
         return SGX_ERROR_UNEXPECTED; // SGX_QvE_INTERFACE_UNAVAILABLE;
     }
 
@@ -113,23 +190,27 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
             rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
             if (rc != 1)
             {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
             }
             return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
         }
         do
         {
             SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QvE. %s\n", qve_enclave_path);
-            sgx_status = sgx_create_enclave(qve_enclave_path,
-                0, // Don't support debug load QvE by default
-                p_launch_token,
-                &launch_token_updated,
-                p_qve_eid,
-                p_qve_attributes);
-            if (SGX_SUCCESS != sgx_status)
-            {
-                SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+            if (p_sgx_urts_create_enclave) {
+                sgx_status = p_sgx_urts_create_enclave(qve_enclave_path,
+                    0, // Don't support debug load QvE by default
+                    p_launch_token,
+                    &launch_token_updated,
+                    p_qve_eid,
+                    p_qve_attributes);
+                if (SGX_SUCCESS != sgx_status)
+                {
+                    SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                }
             }
+            else
+                return SGX_ERROR_UNEXPECTED; //urts handle has been closed;
 
             // Retry in case there was a power transition that resulted is losing the enclave.
         } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
@@ -138,7 +219,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
             rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
             if (rc != 1)
             {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
                 return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
             }
             if (sgx_status == SGX_ERROR_OUT_OF_EPC)
@@ -156,7 +237,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
     rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
     if (rc != 1)
     {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
         return SGX_ERROR_UNEXPECTED;
     }
     return SGX_SUCCESS;
@@ -164,10 +245,17 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
 
 static void unload_qve(bool force = false)
 {
+    // Try to load urts lib first
+    //
+    if (!sgx_dcap_load_urts()) {
+        SE_TRACE(SE_TRACE_ERROR, "Error, failed to load SGX uRTS library\n");
+        return;
+    }
+
     int rc = se_mutex_lock(&g_qve_status.m_qve_mutex);
     if (rc != 1)
     {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex");
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
         return;
     }
 
@@ -177,7 +265,9 @@ static void unload_qve(bool force = false)
         )
     {
         SE_TRACE(SE_TRACE_DEBUG, "unload qve enclave 0X%llX\n", g_qve_status.m_qve_eid);
-        sgx_destroy_enclave(g_qve_status.m_qve_eid);
+        if (p_sgx_urts_destroy_enclave) {
+            p_sgx_urts_destroy_enclave(g_qve_status.m_qve_eid);
+        }
         g_qve_status.m_qve_eid = 0;
         memset(&g_qve_status.m_qve_attributes, 0, sizeof(g_qve_status.m_qve_attributes));
     }
@@ -185,7 +275,7 @@ static void unload_qve(bool force = false)
     rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
     if (rc != 1)
     {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
         return;
     }
 }
@@ -205,17 +295,14 @@ quote3_error_t sgx_qv_set_enclave_load_policy(
 /* Initialize the enclave:
  * Call sgx_create_enclave to initialize an enclave instance
  **/
-static int initialize_enclave(sgx_enclave_id_t* eid)
+static sgx_status_t initialize_enclave(sgx_enclave_id_t* eid)
 {
     sgx_launch_token_t token = { 0 };
     sgx_status_t ret = SGX_ERROR_UNEXPECTED;
     sgx_misc_attribute_t p_mist_attribute;
     ret = load_qve(eid, &p_mist_attribute, &token);
-    if (ret != SGX_SUCCESS) {
-        return -1;
-    }
 
-    return 0;
+    return ret;
 }
 
 
@@ -266,6 +353,7 @@ quote3_error_t sgx_qv_verify_quote(
 
     sgx_enclave_id_t qve_eid = 0;
     quote3_error_t qve_ret = SGX_QL_ERROR_UNEXPECTED;
+    sgx_status_t load_ret = SGX_ERROR_UNEXPECTED;
     sgx_status_t ecall_ret = SGX_ERROR_UNEXPECTED;
     unsigned char fmspc_from_quote[FMSPC_SIZE] = { 0 };
     unsigned char ca_from_quote[CA_SIZE] = { 0 };
@@ -276,10 +364,18 @@ quote3_error_t sgx_qv_verify_quote(
     //
     if (p_qve_report_info) {
         do {
+
             //create and initialize QvE
             //
-            if (initialize_enclave(&qve_eid) == -1) {
-                qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
+            load_ret = initialize_enclave(&qve_eid);
+            if (load_ret != SGX_SUCCESS) {
+                if (load_ret == SGX_ERROR_FEATURE_NOT_SUPPORTED) {
+                    qve_ret = SGX_QL_PSW_NOT_AVAILABLE;
+                }
+                else {
+                    SE_TRACE(SE_TRACE_ERROR, "Error, failed to load QvE.\n");
+                    qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
+                }
                 break;
             }
 
@@ -338,7 +434,7 @@ quote3_error_t sgx_qv_verify_quote(
         //destroy QvE enclave
         //
         if (qve_eid != 0) {
-            unload_qve();
+            unload_qve(true);
         }
     }
     else {
@@ -414,6 +510,7 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
     uint32_t trusted_version = 0, untrusted_version = 0;
     uint32_t trusted_size = 0, untrusted_size = 0;
     bool VerNumMismatch = false;
+    sgx_status_t load_ret = SGX_ERROR_UNEXPECTED;
     sgx_status_t ecall_ret = SGX_ERROR_UNEXPECTED;
     sgx_enclave_id_t qve_eid = 0;
     quote3_error_t qve_ret = SGX_QL_ERROR_INVALID_PARAMETER;
@@ -421,8 +518,15 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
     do {
         //create and initialize QvE
         //
-        if (initialize_enclave(&qve_eid) == -1) {
-            qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
+        load_ret = initialize_enclave(&qve_eid);
+        if (load_ret != SGX_SUCCESS) {
+            if (load_ret == SGX_ERROR_FEATURE_NOT_SUPPORTED) {
+                qve_ret = SGX_QL_PSW_NOT_AVAILABLE;
+            }
+            else {
+                SE_TRACE(SE_TRACE_ERROR, "Error, failed to load QvE.\n");
+                qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
+            }
             break;
         }
 
@@ -492,7 +596,7 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
     //destroy QvE enclave
     //
     if (qve_eid != 0) {
-        unload_qve();
+        unload_qve(true);
     }
 
     return qve_ret;

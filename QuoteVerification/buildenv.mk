@@ -30,18 +30,18 @@
 #
 
 # -----------------------------------------------------------------------------
-# Function : parent-dir
+# Function : root-dir
 # Arguments: 1: path
 # Returns  : Parent dir or path of $1, with final separator removed.
 # -----------------------------------------------------------------------------
 root-dir = $(patsubst %/,%,$(dir $(1:%/=%)))
 
 # -----------------------------------------------------------------------------
-# Macro    : my-dir
+# Macro    : cur-dir
 # Returns  : the directory of the current Makefile
-# Usage    : $(my-dir)
+# Usage    : $(cur-dir)
 # -----------------------------------------------------------------------------
-cur-dir = $(realpath $(call root-dir,$(lastword $(MAKEFILE_LIST))))
+cur-dir = $(call root-dir,$(lastword $(MAKEFILE_LIST)))
 
 
 CUR_DIR              := $(call cur-dir)

@@ -320,9 +320,9 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
     }
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -470,9 +470,9 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
     url.append("pckcrl?ca=").append(ca);
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -579,9 +579,9 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
     }
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -678,9 +678,9 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
     url.append("qe/identity");
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -783,9 +783,9 @@ sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity,
     url.append("qve/identity");
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -898,9 +898,9 @@ sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_
     url.append("rootcacrl");
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
 
     sgx_qcnl_error_t ret = qcnl_https_get(url.c_str(), &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {
@@ -1079,9 +1079,9 @@ sgx_qcnl_error_t sgx_qcnl_register_platform (const sgx_ql_pck_cert_id_t *p_pck_c
     }
 
     char* resp_msg = NULL;
-    uint32_t resp_size;
+    uint32_t resp_size = 0;
     char* resp_header = NULL;
-    uint32_t header_size;
+    uint32_t header_size = 0;
     
     ret = qcnl_https_post(url.c_str(), req_body.c_str(), (uint32_t)req_body.size(), user_token, user_token_size, &resp_msg, resp_size, &resp_header, header_size);
     if (ret != SGX_QCNL_SUCCESS) {

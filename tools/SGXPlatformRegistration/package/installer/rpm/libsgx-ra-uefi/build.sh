@@ -41,7 +41,7 @@ LINUX_INSTALLER_COMMON_RA_UEFI_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-ra-uefi
 
 source ${LINUX_INSTALLER_COMMON_RA_UEFI_DIR}/installConfig
 
-SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/ra_version.h|sed 's/^\"\(.*\)\"$/\1/')
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/../../QuoteGeneration/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 RPM_BUILD_FOLDER=${RA_UEFI_PACKAGE_NAME}-${SGX_VERSION}
 
 main() {

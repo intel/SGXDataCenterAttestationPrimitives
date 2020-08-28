@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 #
 # Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
 #
@@ -30,20 +29,32 @@
 #
 #
 
+include installConfig
 
-set -e
+PACKAGE_ROOT_FOLDER=pkgroot
+PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
-SCRIPT_DIR=$(dirname "$0")
-COMMON_DIR="${SCRIPT_DIR}/../../common/sgx-pck-id-retrieve-tool"
+USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
+USR_INC_PATH=/usr/$(INC_DIR)
 
-rm -f ${SCRIPT_DIR}/libsgx*.deb
-rm -f ${SCRIPT_DIR}/libsgx*dbgsym*.ddeb
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.deb
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*dbgsym*.ddeb
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.tar.gz
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.tar.xz
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.dsc
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.changes
-rm -f ${SCRIPT_DIR}/sgx-pck-id-retrieve-tool*.buildinfo
-rm -f ${COMMON_DIR}/gen_source.py
-rm -rf ${COMMON_DIR}/output
+USR_LIB_VER=1.0.0
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
+
+default:
+
+install: $(PACKAGES)
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QVL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
+	mv libsgx_dcap_quoteverify.so libsgx_dcap_quoteverify.so.$(USR_LIB_VER) && \
+	ln -fs libsgx_dcap_quoteverify.so.$(USR_LIB_VER) libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
+	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QVL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
+	ln -fs libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_quoteverify.so
+
+$(PACKAGES):
+	install -d $(shell readlink -m $(DESTDIR)/$@)
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$@/$(USR_LIB_PATH))
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/.*), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_INC_PATH)) && \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/* $(DESTDIR)/$@/$(USR_INC_PATH))

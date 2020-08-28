@@ -42,7 +42,7 @@ parent-dir = $(patsubst %/,%,$(dir $(1:%/=%)))
 # Returns  : the directory of the current Makefile
 # Usage    : $(my-dir)
 # -----------------------------------------------------------------------------
-my-dir = $(realpath $(call parent-dir,$(lastword $(MAKEFILE_LIST))))
+my-dir = $(call parent-dir,$(lastword $(MAKEFILE_LIST)))
 
 
 ROOT_DIR              := $(call my-dir)
@@ -115,13 +115,6 @@ ifdef SE_SIM
     COMMON_FLAGS += -DSE_SIM
 endif
 
-# Disable ref-LE build by default.
-# Users could enable the ref-LE build 
-# by explicitly specifying 'BUILD_REF_LE=1'
-BUILD_REF_LE ?= 0
-ifeq ($(BUILD_REF_LE), 1)
-    COMMON_FLAGS += -DREF_LE
-endif
 
 COMMON_FLAGS += -ffunction-sections -fdata-sections
 

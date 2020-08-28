@@ -32,7 +32,7 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('config');
-const Sequelize = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
 const logger = require('../../utils/Logger.js');
 const cls = require('cls-hooked');
 
@@ -46,8 +46,8 @@ const initialize_db = false;
 var db_conf = config.get(config.get('DB_CONFIG'));
 var db_opt = JSON.parse(JSON.stringify(db_conf.options));
 if (db_opt.logging == true) {
-    // Enable sequelize logging through logger.info
-    db_opt.logging = (msg)=>logger.info(msg);
+  // Enable sequelize logging through logger.info
+  db_opt.logging = (msg) => logger.info(msg);
 }
 
 const sequelize = new Sequelize(db_conf.database, db_conf.username, db_conf.password, db_opt);
@@ -59,8 +59,8 @@ fs
     (file !== basename) &&
     (file.slice(-3) === '.js'))
   .forEach(file => {
-    const model = sequelize.import(path.join(__dirname, file));
-    model.sync({force:initialize_db});
+    const model = require(path.join(__dirname, file))(sequelize, DataTypes);
+    model.sync({ force: initialize_db });
     db[model.name] = model;
   });
 

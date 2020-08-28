@@ -4,9 +4,10 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 ## How to install
 - **Prerequisites**
 
-    Install node.js (Version 10.13.0 LTS or later)
+    Install node.js (Version 12 LTS or later)
     + For Debian and Ubuntu based distributions, you can use the following command:<br/>
-         curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - sudo apt-get install -y nodejs
+         curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - <br/>
+         sudo apt-get install -y nodejs
     + To download and install, goto https://nodejs.org/en/download/
 
 - **Install via Linux Debian package installer**
@@ -48,7 +49,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
         The PCCS requires a private key and certificate pair to run as HTTPS server. For production environment
         you should use formally issued key and certificate. Please put the key files in ssl_key sub directory.
         You can also genarate an insecure key and certificate pair with following commands: (only for debug purpose)
-            openssl genrsa 1024 > private.pem 
+            openssl genrsa -out private.pem 2048
             openssl req -new -key private.pem -out csr.pem
             openssl x509 -req -days 365 -in csr.pem -signkey private.pem -out file.crt
 
@@ -74,10 +75,10 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **proxy** - Specify the proxy server for internet connection, for example, "http://192.168.1.1:80". Leave blank for no proxy or system proxy.
 - **RefreshSchedule** - cron-style refresh schedule for the PCCS to refresh cached artifacts including CRL/TCB Info/QE Identity/QVE Identity.
   The default setting is "0 0 1 * * *", which means refresh at 1:00 am every day.
-- **UserToken** - Sha512 hashed token for the PCCS client user to register a platform. For example, PCK Cert ID retrieval tool will use this token to send platform information to pccs.
-- **AdminToken** - Sha512 hashed token for the PCCS administrator to perform a manual refresh of cached artifacts. 
+- **UserTokenHash** - Sha512 hash of the user token for the PCCS client user to register a platform. For example, PCK Cert ID retrieval tool will use the user token to send platform information to pccs.
+- **AdminTokenHash** - Sha512 hash of the administrator token for the PCCS administrator to perform a manual refresh of cached artifacts. 
 
-	*NOTE* : For Windows you need to set the UserToken and AdminToken manually. You can calculate SHA512 hash with the help of openssl:
+	*NOTE* : For Windows you need to set the UserTokenHash and AdminTokenHash manually. You can calculate SHA512 hash with the help of openssl:
 
 		<nul: set /p password="mytoken" | openssl dgst -sha512
 - **CachingFillMode** - The method used to fill the cache DB. Can be one of the following: REQ/LAZY/OFFLINE. For more details see section "Caching Fill Mode".
@@ -113,13 +114,18 @@ You can test PCCS by running QuoteGeneration sample:
 For Remote service mode, you must use a formal key and certificate pair. You should also change 'hosts' to 0.0.0.0 to accept remote connections. Also make sure the firewall is not blocking your listening port.
 In /etc/sgx_default_qcnl.conf, Set USE_SECURE_CERT=TRUE (For Windows see ../qpl/README.md)
 
-## Manage the service
+## Manage the PCCS service
+- If PCCS was installed by Debian package
     1) Check status:
-        $ pm2 status
-    2) Stop PCCS 
-        $ pm2 stop pccs
-    3) Start PCCS 
-        $ pm2 start pccs
+        $ sudo PM2_HOME=/opt/intel/sgx-dcap-pccs/.pm2/ pm2 status
+    2) Start/Stop/Restart PCCS
+        $ sudo PM2_HOME=/opt/intel/sgx-dcap-pccs/.pm2/ pm2 start/stop/restart pccs
+
+- If PCCS was installed manually by current user
+    1) Check status:
+        $ sudo pm2 status
+    2) Start/Stop/Restart PCCS 
+        $ sudo pm2 start/stop/restart pccs
 
 ## Uninstall
     If the PCCS service was installed through Debian package, you can use Debian package manager to uninstall it.

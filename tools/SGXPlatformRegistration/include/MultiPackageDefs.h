@@ -83,6 +83,7 @@ typedef enum _RegistrationErrorCode
     MPA_AG_INTERNAL_SERVER_ERROR = 0x84,    /* Internal server error occurred. */
     MPA_AG_SERVER_TIMEOUT = 0x85,           /* Server timeout reached */
     MPA_AG_BIOS_PROTOCOL_ERROR = 0x86,      /* BIOS Protocol error */
+    MPA_AG_UNAUTHORIZED_ERROR = 0x87,       /* the client is unauthorized to access the registration server */
 
     /* Registration Server HTTP 400 Response Error details */
     MPA_RS_INVALID_REQUEST_SYNTAX = 0xA0,           /* The request could not be understood by the server due to malformed syntax. */
@@ -102,6 +103,7 @@ typedef enum _HttpResponseCode
     MPA_RS_PLATFORM_CREATED = 201,          /* 201 Operation successful - a new platform instance has been registered in the back-end. */
     MPA_RS_PACKAGES_BEEN_ADDED = 200,       /* 200 Operation successful - packages have been added to an existing platform instance. */
     MPA_RS_BAD_REQUEST = 400,               /* Invalid payload. The client should not repeat the request without modifications. */
+    MPA_RS_FAIL_UNAUTHORIZED = 401,         /* Failed to authenticate or authorize the request. */
     MPA_RS_INTERNAL_SERVER_ERROR = 500,     /* Internal server error occurred. */
     MPA_RS_SERVICE_UNAVAILABLE = 503,       /* Server is currently unable to process the request. The client should try to repeat its request after some time. */
     MPA_RS_UNSUPPORTED_MEDIA_TYPE = 415,    /* MIME type specified in the request is not supported by the server. */

@@ -191,8 +191,8 @@ def pcs_fetch(args):
             if pckcerts == None:
                 print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
                 return
-            # convert to JSON object
-            pckcerts_json = json.loads(pckcerts[0])
+            # Get the first property
+            pckcerts_json = pckcerts[0]
 
             # parse the first cert to get FMSPC value and put it into a set
             cert = pckcerts_json[0]["cert"]

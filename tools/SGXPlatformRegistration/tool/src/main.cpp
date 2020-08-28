@@ -250,8 +250,7 @@ int performSetServerInfo(const char *fileName) {
         goto out;
     }
 
-    management_log_message(MP_REG_LOG_LEVEL_ERROR, "strlen(param2): %d\n", strlen(param2));
-    res = manage->setRegistrationServerInfo(flags, string(param2, strlen(param2)), (uint8_t*)&serverId, buffSize);
+    res = manage->setRegistrationServerInfo(flags, string(param2, strlen(param2)), (uint8_t*)&serverId, (uint16_t)buffSize);
     if (MP_SUCCESS != res) {
         ret = (int)res;
         goto out;
@@ -333,6 +332,12 @@ int main(int argc, char * argv[]) {
     MPConfigurations conf;
 
     gargc = argc;
+    if(gargc ==1 ) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "No input commands found.\n");
+        usage();
+        ret = COVERT_TO_NEG(MP_INVALID_PARAMETER);
+        return ret;
+    }
 
     do {
 #ifndef _WIN32
@@ -351,7 +356,7 @@ int main(int argc, char * argv[]) {
         manage = new MPManagement(string(conf.uefi_path));
 
         // Count given commands
-        numOfCommands = numOfCommandLineCommands(argv, argv + argc, '-');
+        numOfCommands = numOfCommandLineCommands(argv + 1, argv + argc, '-');
         if (!numOfCommands) {
             management_log_message(MP_REG_LOG_LEVEL_ERROR, "No input commands found.\n");
             usage();
@@ -373,14 +378,14 @@ int main(int argc, char * argv[]) {
         std::map<const string, handle_func>::iterator itNoArgs = optionsNoArgs.begin();
 
         // Set verbose log level if needed
-        if (cmdOptionExists(argv, argv + argc, MANAGMENT_TOOL_VERBOSE_LOG)) {
+        if (cmdOptionExists(argv + 1, argv + argc, MANAGMENT_TOOL_VERBOSE_LOG)) {
             foundCommands++;
             setVerboseLog();
         }
 
         // Iterate over all options without arguments
         while (itNoArgs != optionsNoArgs.end()) {
-            if (cmdOptionExists(argv, argv + argc, itNoArgs->first)) {
+            if (cmdOptionExists(argv + 1, argv + argc, itNoArgs->first)) {
                 foundCommands++;
                 ret = itNoArgs->second();
                 if (MP_SUCCESS != ret) {
@@ -392,7 +397,7 @@ int main(int argc, char * argv[]) {
 
         // Iterate over all options with arguments
         while (itWithArgs != optionsWithArgs.end()) {
-            filename = getCmdOption(argv, argv + argc, itWithArgs->first);
+            filename = getCmdOption(argv + 1, argv + argc, itWithArgs->first);
             if (filename)
             {
                 foundCommands++;

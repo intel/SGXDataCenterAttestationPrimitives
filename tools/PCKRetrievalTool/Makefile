@@ -148,8 +148,8 @@ Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
 ENCLAVE_LIBRARY_PATH := Enclave/
 
 
-Enclave_Name := pck_retrieve_tool_enclave.so
-Signed_Enclave_Name := pck_retrieve_tool_enclave.signed.so
+Enclave_Name := pck_id_retrieval_tool_enclave.so
+Signed_Enclave_Name := pck_id_retrieval_tool_enclave.signed.so
 Enclave_Config_File := Enclave/config.xml
 
 ifeq ($(DEBUG), 1)

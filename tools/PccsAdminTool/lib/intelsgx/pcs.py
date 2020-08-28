@@ -394,22 +394,20 @@ class PCS:
 			return None
 
 		data= response.content
-		tcbcerts= json.loads(data)
+		tcbcerts= filter(lambda x: x["cert"] != 'Not available', json.loads(data)) 
 
+		certs_filtered = []
 		for tcbcert in tcbcerts:
+			certs_filtered.append(tcbcert)
 			cert_pem= parse.unquote(tcbcert['cert'])
 			certs_pem.append(cert_pem)
-
 
 		pycerts= self.pems_to_pycerts(certs_pem)
 		if not self.verify_cert_trust(pychain, pycerts):
 			self.error("Could not validate certificate using trust chain")
 			return None
 
-		if dec is not None:
-			data = str(data, dec)
-
-		return [data, response.headers['SGX-PCK-Certificate-Issuer-Chain']]
+		return [certs_filtered, response.headers['SGX-PCK-Certificate-Issuer-Chain']]
 
 
 #----------------------------------------------------------------------------

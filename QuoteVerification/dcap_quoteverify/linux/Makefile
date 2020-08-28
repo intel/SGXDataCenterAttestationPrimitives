@@ -59,7 +59,7 @@ QVL_PARSER := sgx_dcap_qvl_attestation
 QVL_LIB_NAME := lib$(QVL_LIB).a
 QVL_PARSER_NAME := lib$(QVL_PARSER).a
 
-LDUFLAGS	:= -pthread -ldl -L. -l$(QVL_LIB) -l$(QVL_PARSER) $(COMMON_LDFLAGS) -L$(SGX_SDK)/lib64 -lsgx_urts -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto
+LDUFLAGS	:= -pthread -ldl -L. -l$(QVL_LIB) -l$(QVL_PARSER) $(COMMON_LDFLAGS) -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto
 LDUFLAGS	+= -Wl,--version-script=sgx_dcap_quoteverify.lds -Wl,--gc-sections
 
 QVL_VERIFY_CPP_SRCS := $(wildcard ../*.cpp) $(wildcard *.cpp)

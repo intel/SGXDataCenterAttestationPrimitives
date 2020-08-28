@@ -431,9 +431,9 @@ MpResult MPUefi::setServerResponse(const uint8_t *response, const uint16_t &size
             }
         }
 #endif
-        // write certs to uefi
-        int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_SERVER_RESPONSE, (const uint8_t*)&(responseUefi->header), responseUefi->size, false);
-        if (numOfBytes != responseUefi->size) {
+        // write certs to uefi: for the UEFI variable, it has one 4 bytes header: 2 bytes for version, 2 bytes for size
+        int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_SERVER_RESPONSE, (const uint8_t*)(responseUefi), responseUefi->size + 4, true);
+        if (numOfBytes != responseUefi->size + 4) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setServerResponse: failed to write uefi variable.\n");
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -614,7 +614,7 @@ MpResult MPUefi::setRegistrationStatus(const MpRegistrationStatus& status) {
 
         statusUefi.errorCode = status.errorCode;
 
-        // write certs to uefi
+        // write registration status to uefi
         int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_STATUS, (const uint8_t*)(&statusUefi), sizeof(statusUefi), false);
         if (numOfBytes != sizeof(statusUefi)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationStatus: failed to write uefi variable.\n");
@@ -893,12 +893,18 @@ MpResult MPUefi::setRegistrationServerInfo(const uint16_t &flags, const string &
         }
 #endif
 
-        // write data to uefi
+        // write registration configuration to uefi
         int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_CONFIGURATION, (const uint8_t*)configurationUefi, sizeof(ConfigurationUEFI) + serverIdSize - 
             sizeof(configurationUefi->headerId), false);
         if (numOfBytes != (int)(sizeof(ConfigurationUEFI) + serverIdSize - sizeof(configurationUefi->headerId))) {
-            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: failed to write uefi variable.\n");
-            res = MP_UNEXPECTED_ERROR;
+	    if(numOfBytes == -1) {
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: Can't write Registration Configuration UEFI variable, please check whether the SGX has been disabled.\n");
+                res = MP_INSUFFICIENT_PRIVILEGES;
+	    } 
+            else {
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: failed to write uefi variable.\n");
+                res = MP_UNEXPECTED_ERROR;
+            }	    
             break;
         }
     } while (0);

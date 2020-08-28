@@ -60,6 +60,8 @@ sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
 
 %files -f %{_specdir}/list-%{name}
 
+%debug_package
+
 %post
 ################################################################################
 # Set up SGX Registration Agent                                                #

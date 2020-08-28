@@ -39,7 +39,7 @@
 #include "RegistrationService.h"
 #include "AgentConfiguration.h"
 #include "agent_logger.h"
-#include "ra_version.h"
+#include "se_version.h"
 
 #ifdef _WIN32
 extern bool SvcUninstall();

@@ -42,12 +42,23 @@ rel_dir_name=$rel_dir_base$1
 rm -rf $rel_dir_base*
 
 mkdir $rel_dir_name
-cp pck_retrieve_tool_enclave.signed.so $rel_dir_name
+cp pck_id_retrieval_tool_enclave.signed.so $rel_dir_name
 cp libdcap_quoteprov.so.1 $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name
 cp network_setting.conf $rel_dir_name
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_pce.signed.so $rel_dir_name
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_qe3.signed.so $rel_dir_name
+cp ../../QuoteGeneration/build/linux/libsgx_dcap_ql.so $rel_dir_name/libsgx_dcap_ql.so.1
+cp ../../QuoteGeneration/build/linux/libsgx_qe3_logic.so $rel_dir_name
+cp ../../QuoteGeneration/build/linux/libsgx_pce_logic.so $rel_dir_name
+cp ../SGXPlatformRegistration/build/lib64/libmpa_uefi.so $rel_dir_name/libmpa_uefi.so.1
+cp ../../../../build/linux/libsgx_enclave_common.so $rel_dir_name/libsgx_enclave_common.so.1
+cp ../../../../build/linux/libsgx_urts.so $rel_dir_name/libsgx_urts.so
 cp README.txt $rel_dir_name
 cp License.txt $rel_dir_name
+cd $rel_dir_name
+ln -s libsgx_urts.so libsgx_urts.so.1
+cd ..
 
 tar cvpzf $rel_dir_name.tar.gz $rel_dir_name
 

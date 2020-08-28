@@ -50,7 +50,7 @@ source ${SCRIPT_DIR}/installConfig
 cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 
 # Copy the files according to the BOM
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/pck-id-retrieval-tool.txt --installdir=pkgroot/sgx-pck-id-retrieve-tool
+python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/pck-id-retrieval-tool.txt --installdir=pkgroot/sgx-pck-id-retrieval-tool
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/pck-id-retrieval-tool-package.txt --cleanup=false
 
 

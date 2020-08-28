@@ -46,11 +46,8 @@ install: $(PACKAGES)
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libsgx_dcap_ql.so libsgx_dcap_ql.so.$(USR_LIB_VER) && \
 	ln -fs libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
-	mv libsgx_dcap_quoteverify.so libsgx_dcap_quoteverify.so.$(USR_LIB_VER) && \
-	ln -fs libsgx_dcap_quoteverify.so.$(USR_LIB_VER) libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
-	ln -fs libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_ql.so && \
-	ln -fs libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_quoteverify.so
+	ln -fs libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_ql.so
 
 $(PACKAGES):
 	install -d $(shell readlink -m $(DESTDIR)/$@)

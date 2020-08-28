@@ -66,6 +66,7 @@ all: $(SONAME)
 
 $(SONAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS) -fno-exceptions -fno-rtti
+	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 
 quoting_enclave_3.o: $(AENAME)_t.c
 

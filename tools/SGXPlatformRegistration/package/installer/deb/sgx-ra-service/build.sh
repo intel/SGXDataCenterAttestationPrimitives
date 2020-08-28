@@ -43,7 +43,7 @@ LINUX_INSTALLER_COMMON_SGX_RA_SERVICE_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-ra-
 source ${LINUX_INSTALLER_COMMON_SGX_RA_SERVICE_DIR}/installConfig
 DEB_FOLDER=${SGX_RA_SERVICE_PACKAGE_NAME}-${SGX_RA_SERVICE_VERSION}
 
-SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/ra_version.h|sed 's/^\"\(.*\)\"$/\1/')
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/../../QuoteGeneration/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 DEB_BUILD_FOLDER=${SGX_RA_SERVICE_PACKAGE_NAME}-${SGX_VERSION}
 
 main() {
@@ -92,6 +92,7 @@ get_os_code() {
     if [ -z ${OS_CODE} ]; then
         OS_CODE=$(grep "VERSION_CODENAME" /etc/os-release 2> /dev/null | cut -d= -f2)
     fi
+    echo ${OS_CODE}
 }
 
 update_version() {

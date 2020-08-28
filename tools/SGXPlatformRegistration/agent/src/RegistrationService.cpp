@@ -106,11 +106,13 @@ void RegistrationService::registerPlatformIfNeeded() {
         goto error;
     }
 
-    // Check status.errorCode for errors.
-    if (MP_BIOS_SRC_ERROR & status.errorCode) {
+    // Check status.errorCode: 
+    //          when BIOS/MCHECK reported error, the registration will be aborted
+    //          when Agent itself reported error, the registration will continue.
+    if ((status.errorCode != 0)  && !(MP_BIOS_SRC_ERROR & status.errorCode)) {
         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Registration Flow - BIOS/MCHECK failed, reported error: 0x%02X\n", status.errorCode);
-        res = MP_UEFI_INTERNAL_ERROR;
-        goto error;
+        // since it is one BIOS/MCHECK error, the Multi-package Agent server can't do anything, so just log the message and return
+        return;
     }
 
     // Check that the RegistrationStatus.RegistrationComplete flag

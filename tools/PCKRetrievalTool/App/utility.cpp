@@ -62,7 +62,7 @@
 #endif
 
 #ifdef  _MSC_VER                
-#define TOOL_ENCLAVE_NAME _T("pck_retrieve_tool_enclave.signed.dll")
+#define TOOL_ENCLAVE_NAME _T("pck_id_retrieval_tool_enclave.signed.dll")
 #define SGX_URTS_LIBRARY _T("sgx_urts.dll")
 #define SGX_DCAP_QUOTE_GENERATION_LIBRARY _T("sgx_dcap_ql.dll")
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME _T("dcap_quoteprov.dll")
@@ -79,7 +79,7 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name,
 #endif
 
 #else
-#define TOOL_ENCLAVE_NAME "pck_retrieve_tool_enclave.signed.so"
+#define TOOL_ENCLAVE_NAME "pck_id_retrieval_tool_enclave.signed.so"
 #define SGX_URTS_LIBRARY "libsgx_urts.so.1"             
 #define SGX_DCAP_QUOTE_GENERATION_LIBRARY "libsgx_dcap_ql.so.1"
 #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
