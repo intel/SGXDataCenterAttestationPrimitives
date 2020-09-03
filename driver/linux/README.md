@@ -51,11 +51,12 @@ Build and Install the Intel(R) SGX Driver
 -----------------------------------------
 ### Prerequisites
 - Ensure that you have the following required operating systems:
-  * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
-  * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
+  * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.15
+  * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.15
   * Ubuntu* 18.04 LTS Desktop 64bits
   * Ubuntu* 18.04 LTS Server 64bits
   * Red Hat Enterprise Linux Server 8 (RHEL 8) 64bits
+  * CentOS 8 64bits
 - Ensure that you have the following required hardware:
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
@@ -130,21 +131,13 @@ $ sudo groupadd sgx_prv
 $ sudo udevadm trigger
 ```
 
-- To automatically load the driver at boot time:
-```
-$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"
-```
 ### Uninstall the Intel(R) SGX Driver
 
 ```
 $ sudo /sbin/modprobe -r intel_sgx
 $ sudo dkms remove -m sgx -v <version> --all
 $ sudo rm -rf /usr/src/sgx-<version>
-```
-
-To remove intel_sgx from /etc/modules:
-```
-$ sudo /bin/sed -i '/^intel_sgx$/d' /etc/modules
+$ sudo dracut --force   # only needed on RHEL/CentOS 8
 ```
 
 You should also remove the udev rules and sgx_prv user group.
