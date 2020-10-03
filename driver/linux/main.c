@@ -82,6 +82,7 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 	struct sgx_encl_page *page = epc_page->owner;
 	struct sgx_encl *encl = page->encl;
 	struct sgx_encl_mm *encl_mm;
+	struct mm_struct *mm;
 	bool ret = true;
 	int idx;
 
@@ -102,10 +103,13 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 		up_read(&encl_mm->mm->mmap_sem);
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+		mm = encl_mm->mm;
+		srcu_read_unlock(&encl->srcu, idx);
+		mmput(mm);
+		idx = srcu_read_lock(&encl->srcu);
 #else
-                mmput_async(encl_mm->mm);
+		mmput_async(encl_mm->mm);
 #endif
 
 		if (!ret || (atomic_read(&encl->flags) & SGX_ENCL_DEAD))
@@ -127,6 +131,7 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 	struct sgx_encl *encl = page->encl;
 	unsigned long mm_list_version;
 	struct sgx_encl_mm *encl_mm;
+	struct mm_struct *mm;
 	struct vm_area_struct *vma;
 	int idx, ret;
 
@@ -156,10 +161,13 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 			up_read(&encl_mm->mm->mmap_sem);
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                        mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+			mm = encl_mm->mm;
+			srcu_read_unlock(&encl->srcu, idx);
+			mmput(mm);
+			idx = srcu_read_lock(&encl->srcu);
 #else
-                        mmput_async(encl_mm->mm);
+			mmput_async(encl_mm->mm);
 #endif
 		}
 
@@ -207,6 +215,7 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 {
 	cpumask_t *cpumask = &encl->cpumask;
 	struct sgx_encl_mm *encl_mm;
+	struct mm_struct *mm;
 	int idx;
 
 	/*
@@ -224,10 +233,13 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 
 		cpumask_or(cpumask, cpumask, mm_cpumask(encl_mm->mm));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+		mm = encl_mm->mm;
+		srcu_read_unlock(&encl->srcu, idx);
+		mmput(mm);
+		idx = srcu_read_lock(&encl->srcu);
 #else
-                mmput_async(encl_mm->mm);
+		mmput_async(encl_mm->mm);
 #endif
 	}
 
