@@ -123,7 +123,7 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 					   unsigned long pgoff,
 					   unsigned long flags)
 {
-	if (flags & MAP_PRIVATE)
+	if ((flags & MAP_TYPE) == MAP_PRIVATE)
 		return -EINVAL;
 
 	if (flags & MAP_FIXED)

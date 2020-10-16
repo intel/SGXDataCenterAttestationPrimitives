@@ -45,6 +45,9 @@ static void sgx_sanitize_section(struct sgx_epc_section *section)
 
 		cond_resched();
 	}
+	spin_lock(&section->lock);
+	list_splice(&secs_list, &section->unsanitized_page_list);
+	spin_unlock(&section->lock);
 }
 
 static int ksgxswapd(void *p)
@@ -469,11 +472,11 @@ void sgx_reclaim_pages(void)
 		continue;
 
 skip:
-		kref_put(&encl_page->encl->refcount, sgx_encl_release);
 
 		spin_lock(&sgx_active_page_list_lock);
 		list_add_tail(&epc_page->list, &sgx_active_page_list);
 		spin_unlock(&sgx_active_page_list_lock);
+		kref_put(&encl_page->encl->refcount, sgx_encl_release);
 
 		chunk[i] = NULL;
 	}
