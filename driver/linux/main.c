@@ -12,6 +12,7 @@
 #include "encls.h"
 
 #include <linux/module.h>
+#include <linux/version.h>
 #include "version.h"
 #include "dcap.h"
 #ifndef MSR_IA32_FEAT_CTL
@@ -20,6 +21,9 @@
 
 #ifndef FEAT_CTL_LOCKED
 #define FEAT_CTL_LOCKED FEATURE_CONTROL_LOCKED
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+void (*k_mmput_async)(struct mm_struct* mm);
 #endif
 
 struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
@@ -299,6 +303,15 @@ static int __init sgx_init(void)
 
 	if (!sgx_page_cache_init())
 		return -EFAULT;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+	k_mmput_async = (void*)kallsyms_lookup_name("mmput_async");
+	if (!k_mmput_async){
+		pr_err("intel_sgx: mmput_async support missing from kernel.\n");
+		return -EFAULT;
+	}
+#endif
+
 
 	if (!sgx_page_reclaimer_init())
 		goto err_page_cache;
