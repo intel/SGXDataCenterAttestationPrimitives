@@ -5,6 +5,6 @@
 #define _SGX_VERSION_H
 
 #define DRV_DESCRIPTION "Intel SGX DCAP Driver"
-#define DRV_VERSION "1.33"
+#define DRV_VERSION "1.33.2"
 
 #endif /* _SGX_VERSION_H */
