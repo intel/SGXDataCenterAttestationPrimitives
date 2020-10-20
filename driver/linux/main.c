@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
-// Copyright(c) 2016-17 Intel Corporation.
+// Copyright(c) 2016-20 Intel Corporation.
 
 #include <linux/freezer.h>
 #include <linux/highmem.h>
@@ -29,6 +29,9 @@ static struct task_struct *ksgxswapd_tsk;
 static DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
 static LIST_HEAD(sgx_active_page_list);
 static DEFINE_SPINLOCK(sgx_active_page_list_lock);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+static void (*k_mmput_async)(struct mm_struct* mm);
+#endif
 
 /**
  * sgx_mark_page_reclaimable() - Mark a page as reclaimable
@@ -102,8 +105,8 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 		up_read(&encl_mm->mm->mmap_sem);
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+                k_mmput_async(encl_mm->mm);
 #else
                 mmput_async(encl_mm->mm);
 #endif
@@ -156,8 +159,8 @@ static void sgx_reclaimer_block(struct sgx_epc_page *epc_page)
 			up_read(&encl_mm->mm->mmap_sem);
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                        mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+                        k_mmput_async(encl_mm->mm);
 #else
                         mmput_async(encl_mm->mm);
 #endif
@@ -224,8 +227,8 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 
 		cpumask_or(cpumask, cpumask, mm_cpumask(encl_mm->mm));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) || LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) )
-                mmput(encl_mm->mm);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+                k_mmput_async(encl_mm->mm);
 #else
                 mmput_async(encl_mm->mm);
 #endif
@@ -800,6 +803,13 @@ static int __init sgx_init(void)
 	if (!sgx_page_cache_init())
 		return -EFAULT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+	k_mmput_async = (void*)kallsyms_lookup_name("mmput_async");
+	if (!k_mmput_async){
+		pr_err("intel_sgx: mmput_async support missing from kernel.\n");
+		return -EFAULT;
+	}
+#endif
 	if (!sgx_page_reclaimer_init())
 		goto err_page_cache;
 

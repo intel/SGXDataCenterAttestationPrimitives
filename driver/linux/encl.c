@@ -374,6 +374,8 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 	unsigned long idx_end = PFN_DOWN(end - 1);
 	struct sgx_encl_page *page;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	unsigned long count = 0;
+	int ret = 0;
 	XA_STATE(xas, &encl->page_array, idx_start);
 #else
 	unsigned long idx;
@@ -385,9 +387,33 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 	if (!!(current->personality & READ_IMPLIES_EXEC))
 		return -EACCES;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
-	xas_for_each(&xas, page, idx_end)
-		if (!page || (~page->vm_max_prot_bits & vm_prot_bits))
-			return -EACCES;
+	mutex_lock(&encl->lock);
+	xas_lock(&xas);
+	while (xas.xa_index < idx_end) {
+		/* Move to the next index. */
+		page = xas_next(&xas);
+
+		if (!page || (~page->vm_max_prot_bits & vm_prot_bits)){
+			ret = -EACCES;
+			break;
+		}
+		/* Reschedule on every XA_CHECK_SCHED iteration. */
+		if (!(++count % XA_CHECK_SCHED)) {
+			xas_pause(&xas);
+			xas_unlock(&xas);
+			mutex_unlock(&encl->lock);
+
+			cond_resched();
+
+			mutex_lock(&encl->lock);
+			xas_lock(&xas);
+		}
+	}
+	xas_unlock(&xas);
+	mutex_unlock(&encl->lock);
+
+	return ret;
+
 #else
 	for (idx = idx_start; idx <= idx_end; ++idx) {
 		mutex_lock(&encl->lock);
@@ -396,9 +422,8 @@ int sgx_encl_may_map(struct sgx_encl *encl, unsigned long start,
 		if (!page || (~page->vm_max_prot_bits & vm_prot_bits))
 			return -EACCES;
 	}
-#endif
-
 	return 0;
+#endif
 }
 
 /* ! Note: Not ported from inkernel patches
@@ -620,7 +645,7 @@ void sgx_encl_release(struct kref *ref)
 
 	if (encl->backing)
 		fput(encl->backing);
-
+	synchronize_srcu(&encl->srcu);
 	cleanup_srcu_struct(&encl->srcu);
 
 	WARN_ON_ONCE(!list_empty(&encl->mm_list));
