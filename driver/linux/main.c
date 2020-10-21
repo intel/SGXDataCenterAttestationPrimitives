@@ -549,7 +549,6 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
 
     if (!(fc & FEAT_CTL_SGX_LC_ENABLED)) {
         pr_info_once("sgx: The launch control MSRs are not writable\n");
-        return false;
     }
 
     return true;

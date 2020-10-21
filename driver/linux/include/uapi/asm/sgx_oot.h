@@ -25,6 +25,8 @@ enum sgx_page_flags {
 	_IOWR(SGX_MAGIC, 0x01, struct sgx_enclave_add_pages)
 #define SGX_IOC_ENCLAVE_INIT \
 	_IOW(SGX_MAGIC, 0x02, struct sgx_enclave_init)
+#define SGX_IOC_ENCLAVE_INIT_WITH_TOKEN \
+	_IOW(SGX_MAGIC, 0x02, struct sgx_enclave_init_with_token)
 #define SGX_IOC_ENCLAVE_SET_ATTRIBUTE \
 	_IOW(SGX_MAGIC, 0x03, struct sgx_enclave_set_attribute)
 
@@ -64,6 +66,19 @@ struct sgx_enclave_add_pages {
 struct sgx_enclave_init {
 	__u64 sigstruct;
 };
+
+/*
+ * struct sgx_enclave_init_with_token - parameter structure for the
+ *                                      %SGX_IOC_ENCLAVE_INIT_WITH_TOKEN ioctl
+ * @addr:       address in the ELRANGE
+ * @sigstruct:  address for the SIGSTRUCT data
+ * @einittoken: address for the EINITTOKEN data
+ */
+struct sgx_enclave_init_with_token {
+	__u64 addr;
+	__u64 sigstruct;
+	__u64 einittoken;
+} __packed;
 
 /**
  * struct sgx_enclave_set_attribute - parameter structure for the

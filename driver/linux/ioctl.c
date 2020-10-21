@@ -179,6 +179,8 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	encl->secs.encl = encl;
 	encl->secs_attributes = secs->attributes;
 	encl->allowed_attributes |= SGX_ATTR_ALLOWED_MASK;
+	if (!boot_cpu_has(X86_FEATURE_SGX_LC))
+		encl->allowed_attributes |= SGX_ATTR_EINITTOKENKEY;
 	encl->base = secs->base;
 	encl->size = secs->size;
 	encl->ssaframesize = secs->ssa_frame_size;
@@ -739,6 +741,11 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 	void *token;
 	int ret;
 
+	if (!boot_cpu_has(X86_FEATURE_SGX_LC)) {
+		pr_info("The public key MSRs are not writable.\n");
+		return -ENODEV;
+	}
+
 	if ((atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) ||
 	    !(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
 		return -EINVAL;
@@ -775,6 +782,59 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 
 	ret = sgx_encl_init(encl, sigstruct, token);
 
+out:
+	kunmap(initp_page);
+	__free_page(initp_page);
+	return ret;
+}
+
+static long sgx_ioc_enclave_init_with_token(struct sgx_encl *encl, void __user *arg)
+{
+	struct sgx_sigstruct *sigstruct;
+	struct sgx_enclave_init_with_token einit;
+	struct page *initp_page;
+	void *token;
+	int ret;
+
+	if (!(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
+		return -EINVAL;
+
+	if (copy_from_user(&einit, arg, sizeof(einit)))
+		return -EFAULT;
+
+	initp_page = alloc_page(GFP_KERNEL);
+	if (!initp_page)
+		return -ENOMEM;
+
+	sigstruct = kmap(initp_page);
+	token = (void *)((unsigned long)sigstruct + PAGE_SIZE / 2);
+
+	if (copy_from_user(token, (void __user *)einit.einittoken,
+			   SGX_LAUNCH_TOKEN_SIZE)) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (copy_from_user(sigstruct, (void __user *)einit.sigstruct,
+			   sizeof(*sigstruct))) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	/*
+	 * A legacy field used with Intel signed enclaves. These used to mean
+	 * regular and architectural enclaves. The CPU only accepts these values
+	 * but they do not have any other meaning.
+	 *
+	 * Thus, reject any other values.
+	 */
+	if (sigstruct->header.vendor != 0x0000 &&
+	    sigstruct->header.vendor != 0x8086) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = sgx_encl_init(encl, sigstruct, token);
 out:
 	kunmap(initp_page);
 	__free_page(initp_page);
@@ -849,6 +909,9 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 	case SGX_IOC_ENCLAVE_INIT:
 		ret = sgx_ioc_enclave_init(encl, (void __user *)arg);
+		break;
+	case SGX_IOC_ENCLAVE_INIT_WITH_TOKEN:
+		ret = sgx_ioc_enclave_init_with_token(encl, (void __user *)arg);
 		break;
 	case SGX_IOC_ENCLAVE_SET_ATTRIBUTE:
 		ret = sgx_ioc_enclave_set_attribute(encl, (void __user *)arg);

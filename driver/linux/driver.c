@@ -172,11 +172,6 @@ int __init sgx_drv_init(void)
 	int ret;
 	int i;
 
-	if (!boot_cpu_has(X86_FEATURE_SGX_LC)) {
-		pr_info("The public key MSRs are not writable.\n");
-		return -ENODEV;
-	}
-
 	cpuid_count(SGX_CPUID, 0, &eax, &ebx, &ecx, &edx);
 	sgx_misc_reserved_mask = ~ebx | SGX_MISC_RESERVED_MASK;
 	sgx_encl_size_max_64 = 1ULL << ((edx >> 8) & 0xFF);
