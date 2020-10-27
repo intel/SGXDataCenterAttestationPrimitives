@@ -519,22 +519,22 @@ static bool detect_sgx(struct cpuinfo_x86 *c)
 
     rdmsrl(MSR_IA32_FEAT_CTL, fc);
     if (!(fc & FEAT_CTL_LOCKED)) {
-        pr_err_once("sgx: The feature control MSR is not locked\n");
+        pr_err_once("The feature control MSR is not locked\n");
         return false;
     }
 
     if (!(fc & FEAT_CTL_SGX_ENABLED)) {
-        pr_err_once("sgx: SGX is not enabled in IA32_FEATURE_CONTROL MSR\n");
+        pr_err_once("SGX is not enabled in IA32_FEATURE_CONTROL MSR\n");
         return false;
     }
 
     if (!cpu_has(c, X86_FEATURE_SGX)) {
-        pr_err_once("sgx: SGX1 instruction set is not supported\n");
+        pr_err_once("SGX1 instruction set is not supported\n");
         return false;
     }
 
     if (!(fc & FEAT_CTL_SGX_LC_ENABLED)) {
-        pr_info_once("sgx: The launch control MSRs are not writable\n");
+        pr_err_once("Locked launch policy not supported\n");
         return false;
     }
 
@@ -793,7 +793,7 @@ static int __init sgx_init(void)
 #endif
 	k_mmput_async = (void*)kallsyms_lookup_name("mmput_async");
 	if (!k_mmput_async){
-		pr_err("intel_sgx: mmput_async support missing from kernel.\n");
+		pr_err("mmput_async support missing from kernel.\n");
 		return -EFAULT;
 	}
 	if (!sgx_page_reclaimer_init())
@@ -803,7 +803,7 @@ static int __init sgx_init(void)
 	if (ret)
 		goto err_kthread;
 
-	pr_info("intel_sgx: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+	pr_info(DRV_DESCRIPTION " v" DRV_VERSION "\n");
 
 	return 0;
 
