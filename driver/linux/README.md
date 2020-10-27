@@ -193,3 +193,41 @@ This table lists the equivalent upstream kernel patch for each version of the dr
 | 1.36           | V36                     | NO      | NO      | NO            | YES     |
 
 \* Requires updated [udev rules](./10-sgx.rules)
+
+Monitoring (Proposal)
+-----------------------------------------------
+
+### Export stats to user space via sysfs
+
+The driver built with a compile time flag, CONFIG_SGX_STATS, exports following sysfs files.
+
+```
+* /sys/kernel/sgx: (global stats)
+	- free_epc_pages
+	- accumulative_swapped_out_epc_pages
+	- accumulative_swapped_in_epc_pages
+	* /sys/kernel/sgx/<pid> (per process stats)
+		* /sys/kernel/sgx/<pid>/<fd> (per enclave stats)
+			- enclave_resident_size = pages loaded in EPC
+			- enclave_epc_size = EPC pages EADDed (and EAUGed with EDMM implemented) - EREMOVED = resident + swapped out pages
+			- enclave_elrange_size = enclave->secs->size in pages
+			- enclave_accumulative_swapped_out_epc_pages
+			- enclave_accumulative_swapped_in_epc_pages
+```
+
+### Design considerations
+
+- Monitoring is not yet considered in upstream patches. To avoid divergence with future kernel implementation, we only enable this feature for driver build with the compiler flag CONFIG_SGX_STATS turned on.
+- These changes may overlap/interact with upstreaming sgx cgroups implementation, likely in following areas
+  * Global stats likely are covered by cgroups, accessible from cgroups fs. We may drop them when sgx cgroups is implemented. 
+  * Implementation code of per enclave stats will overlap with sgx cgroups implementation. But cgroups fs will less likely expose these stats. 
+- All leaf files are read-only sysfs files, each containing one value in ASCII characters. 
+- User space open those files to read corresponding values out, and calculate additional values if needed, such as:
+  * current pages swapped out per enclave = enclave_epc_size – enclave_resident_size
+  * total resident for $pid = sum of all enclave_resident_size under /sys/kernel/sgx/$pid
+- The stats only account enclave fd under PID of the host process that initially opened an fd to /dev/sgx/enclave
+  * If a process send the open fd to another process (via socket or forking a child) to share the enclave, the target process pid won't be added under /sys/kernel/sgx folder. 
+- Following global stats are not exposed 
+  * EPC usage for va pages, for current implementation it can be calculated from ceil(enclave_epc_size/512).
+  * Total EPC size, can be obtained from cpuid 
+
