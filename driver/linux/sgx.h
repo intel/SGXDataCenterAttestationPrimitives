@@ -11,7 +11,7 @@
 #include "arch.h"
 
 #undef pr_fmt
-#define pr_fmt(fmt) "sgx: " fmt
+#define pr_fmt(fmt) "intel_sgx: " fmt
 
 struct sgx_epc_page {
 	unsigned long desc;
