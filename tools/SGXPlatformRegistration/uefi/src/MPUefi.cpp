@@ -93,7 +93,7 @@ MpResult MPUefi::getRequestType(MpRequestType& type) {
         // structure version check
         if ((requestUefi->version != MP_BIOS_UEFI_VARIABLE_VERSION_1) &&
             (requestUefi->version != MP_BIOS_UEFI_VARIABLE_VERSION_2)){
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequestType: version check failed. version: %d\n", requestUefi->version);
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequestType: version check failed. version: %d\n", requestUefi->version);
             res = MP_UEFI_INTERNAL_ERROR;
             break;
         }
@@ -102,7 +102,7 @@ MpResult MPUefi::getRequestType(MpRequestType& type) {
 #ifdef MP_VERIFY_UEFI_STRUCT_READ
         if (varDataSize != sizeof(requestUefi->version) + sizeof(requestUefi->size) + requestUefi->size) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequestType: SgxRegistrationServerRequest UEFI size is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequestType: actual size: %d, expected size: %d\n", varDataSize,
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequestType: actual size: %d, expected size: %d\n", varDataSize,
                 sizeof(requestUefi->version) + sizeof(requestUefi->size) + requestUefi->size);
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -117,10 +117,10 @@ MpResult MPUefi::getRequestType(MpRequestType& type) {
             type = MP_REQ_ADD_PACKAGE;
         }
         else {
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequestType: request GUID doesn't match expected GUID's\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequestType: request GUID doesn't match expected GUID's\n");
             const uint8_t* actual = requestUefi->header.guid;
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequestType: GUID from SgxRegistrationServerRequest UEFI:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequestType: GUID from SgxRegistrationServerRequest UEFI:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                 actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                 actual[12], actual[13], actual[14], actual[15]);
@@ -164,7 +164,7 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
 #ifdef MP_VERIFY_UEFI_STRUCT_READ
         if (varDataSize != sizeof(requestUefi->version) + sizeof(requestUefi->size) + requestUefi->size) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: SgxRegistrationServerRequest UEFI size is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual size: %d, expected size: %d\n", varDataSize,
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual size: %d, expected size: %d\n", varDataSize,
                 sizeof(requestUefi->version) + sizeof(requestUefi->size) + requestUefi->size);
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -184,7 +184,7 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                 // check expected request size
                 if (sizeof(PlatformManifest) != requestUefi->size) {
                     uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PlatformManifest structure size is not as expected.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual: %d expected: %d\n", requestUefi->size, sizeof(PlatformManifest));
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual: %d expected: %d\n", requestUefi->size, sizeof(PlatformManifest));
                     res = MP_NO_PENDING_DATA;
                     break;
                 }
@@ -198,22 +198,22 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                     (MP_STRUCTURE_VERSION != manifest->header.version) ||
                     (0 != memcmp(manifest->header.guid, PlatformManifest_GUID, GUID_SIZE))) {
                     uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PlatformManifest structure is invalid.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: manifest->header.size: %d, \
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: manifest->header.size: %d, \
                     sizeof(*manifest): %d, sizeof(manifest->header): %d\n",
                         manifest->header.size, sizeof(*manifest),
                         sizeof(manifest->header));
 
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: manifest->header.version: %d\n", manifest->header.version);
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: manifest->header.version: %d\n", manifest->header.version);
     
                     const uint8_t* actual = manifest->header.guid;
                     const uint8_t* expected = PlatformManifest_GUID;
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual PlatformManifest_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual PlatformManifest_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                         actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                         actual[12], actual[13], actual[14], actual[15]);
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: expected PlatformManifest_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: expected PlatformManifest_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                         expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                         expected[12], expected[13], expected[14], expected[15]);
@@ -227,20 +227,20 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                     (0 != memcmp(manifest->platformInfo.header.guid, PlatformInfo_GUID, GUID_SIZE))) {
     
                     uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PlatformInfo structure is invalid.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: manifest->platformInfo.header.size: %d, \
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: manifest->platformInfo.header.size: %d, \
                     sizeof(manifest->platformInfo): %d, sizeof(manifest->platformInfo.header): %d\n",
                         manifest->platformInfo.header.size, sizeof(manifest->platformInfo),
                         sizeof(manifest->platformInfo.header));
     
                     const uint8_t* actual = manifest->platformInfo.header.guid;
                     const uint8_t* expected = PlatformInfo_GUID;
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual PlatformInfo_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual PlatformInfo_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                         actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                         actual[12], actual[13], actual[14], actual[15]);
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: expected PlatformInfo_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: expected PlatformInfo_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                         expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                         expected[12], expected[13], expected[14], expected[15]);
@@ -254,20 +254,20 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                     (0 != memcmp(manifest->encryptedPlatformKey.header.guid, EncryptedPlatformKey_GUID, GUID_SIZE))) {
     
                     uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: EncryptedPlatformKey structure is invalid.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: manifest->encryptedPlatformKey.header.size: %d, \
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: manifest->encryptedPlatformKey.header.size: %d, \
                     sizeof(manifest->encryptedPlatformKey): %d, sizeof(manifest->encryptedPlatformKey.header): %d\n",
                         manifest->encryptedPlatformKey.header.size, sizeof(manifest->encryptedPlatformKey),
                         sizeof(manifest->encryptedPlatformKey.header));
     
                     const uint8_t* actual = manifest->encryptedPlatformKey.header.guid;
                     const uint8_t* expected = EncryptedPlatformKey_GUID;
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual EncryptedPlatformKey_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual EncryptedPlatformKey_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                         actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                         actual[12], actual[13], actual[14], actual[15]);
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: expected EncryptedPlatformKey_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: expected EncryptedPlatformKey_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                         expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                         expected[12], expected[13], expected[14], expected[15]);
@@ -281,20 +281,20 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                         (sizeof(manifest->pairingReceipts[i]) - sizeof(manifest->pairingReceipts[i].header)))) {
     
                         uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: PairingReceipt structure is invalid.\n");
-                        uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: i: %d, manifest->pairingReceipts[i].header.size: %d, \
+                        uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: i: %d, manifest->pairingReceipts[i].header.size: %d, \
                             sizeof(manifest->pairingReceipts[i]): %d, sizeof(manifest->pairingReceipts[i].header): %d\n",
                             i, manifest->pairingReceipts[i].header.size, sizeof(manifest->pairingReceipts[i]),
                             sizeof(manifest->pairingReceipts[i].header));
     
                         const uint8_t* actual = manifest->pairingReceipts[i].header.guid;
                         const uint8_t* expected = PairingReceipt_GUID;
-                        uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual PairingReceipt_GUID:\n");
-                        uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                        uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual PairingReceipt_GUID:\n");
+                        uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                             actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                             actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                             actual[12], actual[13], actual[14], actual[15]);
-                        uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: expected PairingReceipt_GUID:\n");
-                        uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                        uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: expected PairingReceipt_GUID:\n");
+                        uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                             expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                             expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                             expected[12], expected[13], expected[14], expected[15]);
@@ -316,7 +316,7 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
             // check expected request size
             if (requestUefi->size != sizeof(AddRequest)) {
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: AddPackage structure size is not as expected.\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual: %d expected: %d\n", requestUefi->size, sizeof(AddRequest));
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual: %d expected: %d\n", requestUefi->size, sizeof(AddRequest));
                 res = MP_NO_PENDING_DATA;
                 break;
             }
@@ -328,18 +328,18 @@ MpResult MPUefi::getRequest(uint8_t *request, uint16_t &requestSize) {
                 (sizeof(*addRequest) - sizeof(addRequest->header)))) {
 
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: AddRequest structure is invalid.\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: addRequest->header.size: %d, sizeof(*addRequest): %d, sizeof(addRequest->header): %d\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: addRequest->header.size: %d, sizeof(*addRequest): %d, sizeof(addRequest->header): %d\n",
                     addRequest->header.size, sizeof(*addRequest), sizeof(addRequest->header));
 
                 const uint8_t* actual = addRequest->header.guid;
                 const uint8_t* expected = AddRequest_GUID;
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: actual AddRequest_GUID:\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: actual AddRequest_GUID:\n");
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                     actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                     actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                     actual[12], actual[13], actual[14], actual[15]);
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRequest: expected AddRequest_GUID:\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRequest: expected AddRequest_GUID:\n");
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                     expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                     expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                     expected[12], expected[13], expected[14], expected[15]);
@@ -410,18 +410,18 @@ MpResult MPUefi::setServerResponse(const uint8_t *response, const uint16_t &size
                 (certs[i].header.size != (sizeof(certs[i]) - sizeof(certs[i].header)))) {
 
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setServerResponse: PlatformMemberShip structure is invalid.\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "setServerResponse: i: %d, certs[i].header.size: %d, sizeof(certs[i]): %d, sizeof(certs[i].header): %d\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setServerResponse: i: %d, certs[i].header.size: %d, sizeof(certs[i]): %d, sizeof(certs[i].header): %d\n",
                     i, certs[i].header.size, sizeof(certs[i]), sizeof(certs[i].header));
 
                 const uint8_t* actual = certs[i].header.guid;
                 const uint8_t* expected = PlatformMemberShip_GUID;
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "setServerResponse: actual PlatformMemberShip_GUID:\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setServerResponse: actual PlatformMemberShip_GUID:\n");
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                     actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                     actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                     actual[12], actual[13], actual[14], actual[15]);
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "setServerResponse: expected PlatformMemberShip_GUID:\n");
-                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setServerResponse: expected PlatformMemberShip_GUID:\n");
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                     expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                     expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                     expected[12], expected[13], expected[14], expected[15]);
@@ -469,7 +469,7 @@ MpResult MPUefi::getKeyBlobs(uint8_t *blobs, uint16_t &blobsSize) {
         // uefi structure size check
         if (varDataSize != sizeof(packageInfoUefi->version) + sizeof(packageInfoUefi->size) + packageInfoUefi->size) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: SgxRegistrationPackageInfo UEFI size is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getKeyBlobs: actual size: %d, expected size: %d\n", varDataSize,
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: actual size: %d, expected size: %d\n", varDataSize,
                 sizeof(packageInfoUefi->version) + sizeof(packageInfoUefi->size) + packageInfoUefi->size);
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -480,7 +480,7 @@ MpResult MPUefi::getKeyBlobs(uint8_t *blobs, uint16_t &blobsSize) {
         // structure size check
         if (packageInfoUefi->size != sizeof(KeyBlob)*MAX_SOCKETS) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: keyBlob structure size is not as expected.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getKeyBlobs: actual: %d expected: %d\n", packageInfoUefi->size, sizeof(KeyBlob)*MAX_SOCKETS);
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: actual: %d expected: %d\n", packageInfoUefi->size, sizeof(KeyBlob)*MAX_SOCKETS);
             res = MP_UEFI_INTERNAL_ERROR;
             break;
         }
@@ -499,18 +499,18 @@ MpResult MPUefi::getKeyBlobs(uint8_t *blobs, uint16_t &blobsSize) {
                     (keyBlobs[i].header.size != (sizeof(keyBlobs[i]) - sizeof(keyBlobs[i].header)))) {
 
                     uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: KeyBlob structure is invalid.\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getKeyBlobs: i: %d, keyBlobs[i].header.size: %d, sizeof(keyBlobs[i]): %d, sizeof(keyBlobs[i].header): %d\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: i: %d, keyBlobs[i].header.size: %d, sizeof(keyBlobs[i]): %d, sizeof(keyBlobs[i].header): %d\n",
                         i, keyBlobs[i].header.size, sizeof(keyBlobs[i]), sizeof(keyBlobs[i].header));
 
                     const uint8_t* actual = keyBlobs[i].header.guid;
                     const uint8_t* expected = KeyBlob_GUID;
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getKeyBlobs: actual KeyBlob_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: actual KeyBlob_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                         actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                         actual[12], actual[13], actual[14], actual[15]);
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getKeyBlobs: expected KeyBlob_GUID:\n");
-                    uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getKeyBlobs: expected KeyBlob_GUID:\n");
+                    uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                         expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                         expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                         expected[12], expected[13], expected[14], expected[15]);
@@ -551,7 +551,7 @@ MpResult MPUefi::getRegistrationStatus(MpRegistrationStatus& status) {
         statusUefi = (RegistrationStatusUEFI*)m_uefi->readUEFIVar(UEFI_VAR_STATUS, varDataSize);
         if (statusUefi == 0 || varDataSize != sizeof(RegistrationStatusUEFI)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus UEFI variable was not found or size not as expected.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRegistrationStatus: SgxRegistrationStatus acutal size: %d, expected size: %d\n", varDataSize, sizeof(RegistrationStatusUEFI));
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus acutal size: %d, expected size: %d\n", varDataSize, sizeof(RegistrationStatusUEFI));
             res = MP_UEFI_INTERNAL_ERROR;
             break;
         }
@@ -569,7 +569,7 @@ MpResult MPUefi::getRegistrationStatus(MpRegistrationStatus& status) {
         // uefi structure size check
         if (statusUefi->size != sizeof(statusUefi->status) + sizeof(statusUefi->errorCode)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus structure size not as expected.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRegistrationStatus: statusUefi->size: %d, sizeof(statusUefi->status): %d, sizeof(statusUefi->errorCode): %d\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: statusUefi->size: %d, sizeof(statusUefi->status): %d, sizeof(statusUefi->errorCode): %d\n",
                 statusUefi->size, sizeof(statusUefi->status), sizeof(statusUefi->errorCode));
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -656,7 +656,7 @@ MpResult MPUefi::getRegistrationServerInfo(uint16_t &flags, string &serverAddres
 #ifdef MP_VERIFY_UEFI_STRUCT_READ
         if (varDataSize != configurationUefi->size + sizeof(configurationUefi->version) + sizeof(configurationUefi->size)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: RegistrationServerInfo UEFI size is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRegistrationServerInfo: actual size: %d, expected size: %d\n", varDataSize,
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: actual size: %d, expected size: %d\n", varDataSize,
                 configurationUefi->size + sizeof(configurationUefi->version) + sizeof(configurationUefi->size));
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -675,13 +675,13 @@ MpResult MPUefi::getRegistrationServerInfo(uint16_t &flags, string &serverAddres
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: RegistrationServerInfo structure is invalid.\n");
             const uint8_t* actual = configurationUefi->headerInfo.guid;
             const uint8_t* expected = RegistrationServerInfo_GUID;
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "actual RegistrationServerInfo_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "actual RegistrationServerInfo_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                 actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                 actual[12], actual[13], actual[14], actual[15]);
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "expect RegistrationServerInfo_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "expect RegistrationServerInfo_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                 expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                 expected[12], expected[13], expected[14], expected[15]);
@@ -693,7 +693,7 @@ MpResult MPUefi::getRegistrationServerInfo(uint16_t &flags, string &serverAddres
         registrationServerID = (RegistrationServerID*)&configurationUefi->headerId;
         if (configurationUefi->headerInfo.size != (sizeof(RegistrationServerInfo) - sizeof(configurationUefi->headerInfo))) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: RegistrationServerInfo structure is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "getRegistrationServerInfo: configurationUefi->headerInfo.size: %d, \
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: configurationUefi->headerInfo.size: %d, \
                 expected size: %d\n", configurationUefi->headerInfo.size, sizeof(RegistrationServerInfo) - sizeof(configurationUefi->headerInfo));
 
         }
@@ -704,13 +704,13 @@ MpResult MPUefi::getRegistrationServerInfo(uint16_t &flags, string &serverAddres
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: registrationServerID structure is invalid.\n");
             const uint8_t* actual = registrationServerID->header.guid;
             const uint8_t* expected = RegistrationServerID_GUID;
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "actual RegistrationServerID_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "actual RegistrationServerID_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                 actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                 actual[12], actual[13], actual[14], actual[15]);
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "expect RegistrationServerID_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "expect RegistrationServerID_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                 expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                 expected[12], expected[13], expected[14], expected[15]);
@@ -841,18 +841,18 @@ MpResult MPUefi::setRegistrationServerInfo(const uint16_t &flags, const string &
             (0 != memcmp(configurationUefi->headerInfo.guid, RegistrationServerInfo_GUID, GUID_SIZE))) {
 
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: registration server info structure is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "setRegistrationServerInfo: configurationUefi->headerInfo.size: %d, \
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: configurationUefi->headerInfo.size: %d, \
                 expected size: %d\n", configurationUefi->headerInfo.size, sizeof(RegistrationServerInfo) - sizeof(configurationUefi->headerInfo));
 
             const uint8_t* actual = configurationUefi->headerInfo.guid;
             const uint8_t* expected = RegistrationServerInfo_GUID;
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "actual RegistrationServerInfo_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "actual RegistrationServerInfo_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                 actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                 actual[12], actual[13], actual[14], actual[15]);
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "expect RegistrationServerInfo_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "expect RegistrationServerInfo_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                 expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                 expected[12], expected[13], expected[14], expected[15]);
@@ -872,18 +872,18 @@ MpResult MPUefi::setRegistrationServerInfo(const uint16_t &flags, const string &
             (0 != memcmp(registrationServerID->header.guid, RegistrationServerID_GUID, GUID_SIZE))) {
 
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: registration server ID structure is invalid.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "setRegistrationServerInfo: registrationServerID->header.size: %d, sizeof(registrationServerID->): %d, sizeof(registrationServerID->header): %d\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: registrationServerID->header.size: %d, sizeof(registrationServerID->): %d, sizeof(registrationServerID->header): %d\n",
                 registrationServerID->header.size, sizeof(*registrationServerID), sizeof(registrationServerID->header));
 
             const uint8_t* actual = registrationServerID->header.guid;
             const uint8_t* expected = RegistrationServerID_GUID;
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "actual RegistrationServerID_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "actual RegistrationServerID_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 actual[0], actual[1], actual[2], actual[3], actual[4], actual[5],
                 actual[6], actual[7], actual[8], actual[9], actual[10], actual[11],
                 actual[12], actual[13], actual[14], actual[15]);
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "expect RegistrationServerID_GUID:\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_INFO, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "expect RegistrationServerID_GUID:\n");
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n",
                 expected[0], expected[1], expected[2], expected[3], expected[4], expected[5],
                 expected[6], expected[7], expected[8], expected[9], expected[10], expected[11],
                 expected[12], expected[13], expected[14], expected[15]);
@@ -910,7 +910,7 @@ MpResult MPUefi::setRegistrationServerInfo(const uint16_t &flags, const string &
     } while (0);
 
     if (buff) {
-        delete buff;
+        delete[] buff;
     }
 
     return res;

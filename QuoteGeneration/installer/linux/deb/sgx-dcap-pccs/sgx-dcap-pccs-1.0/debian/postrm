@@ -21,19 +21,33 @@ set -e
 
 case "$1" in
     remove)
-        if which pm2 > /dev/null; then
-            su -c "pm2 stop pccs" pccs || true
-            su -c "pm2 delete pccs" pccs || true
-            pm2cfg=`/bin/su -c "pm2 unstartup | grep 'sudo'" - pccs` || true
-            eval $pm2cfg || true
-        fi
-
         if [ -d @pkg_path@ ]
         then
             pushd @pkg_path@ &> /dev/null
             rm -rf node_modules || true
             popd &> /dev/null
         fi
+
+        #Remove PCCS system service
+        echo -n "Uninstalling PCCS service ..."
+        if [ -d /run/systemd/system ]; then
+            PCCS_NAME=pccs.service
+            if [ -d /lib/systemd/system ]; then
+                PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+            else
+                PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+            fi
+            systemctl stop pccs || true
+            systemctl disable pccs || true
+            rm $PCCS_DEST || true
+            systemctl daemon-reload
+        elif [ -d /etc/init/ ]; then
+            PCCS_NAME=pccs.service
+            PCCS_DEST=/etc/init/$PCCS_NAME
+            rm $PCCS_DEST || true
+            /sbin/initctl reload-configuration
+        fi
+        echo "finished."
     ;;
 
     purge|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

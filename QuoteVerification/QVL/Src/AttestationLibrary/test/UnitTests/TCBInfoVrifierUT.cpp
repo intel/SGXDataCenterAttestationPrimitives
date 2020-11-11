@@ -268,7 +268,7 @@ TEST_F(TCBInfoVerifierUT, shouldReturnStatusTcbInfoExpiredWhenTcbInfoExpired)
     TCBInfoVerifier tcbInfoVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = tcbInfoVerifier.verify(tcbInfo, certificateChainMock, crlStoreMock, certStoreMock, 1529580963);
+    auto result = tcbInfoVerifier.verify(tcbInfo, certificateChainMock, crlStoreMock, certStoreMock, 1529584563);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_TCB_INFO_EXPIRED, result);

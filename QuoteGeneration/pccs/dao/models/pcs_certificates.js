@@ -29,15 +29,27 @@
  *
  */
 
-module.exports = (sequelize, DataTypes) => {
-    const PcsCertificates = sequelize.define('pcs_certificates', {
-      cert: { type: DataTypes.BLOB, get(){return this.getDataValue('cert').toString('utf8');}},
-      crl: { type: DataTypes.BLOB }
-    },{
+import Sequelize from 'sequelize';
+
+export default class PcsCertificates extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        cert: {
+          type: Sequelize.DataTypes.BLOB,
+          get() {
+            return this.getDataValue('cert').toString('utf8');
+          },
+        },
+        crl: { type: Sequelize.DataTypes.BLOB },
+      },
+      {
+        tableName: 'pcs_certificates',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return PcsCertificates;
-};
+        updatedAt: 'updated_time',
+        sequelize
+      }
+    );
+  }
+}

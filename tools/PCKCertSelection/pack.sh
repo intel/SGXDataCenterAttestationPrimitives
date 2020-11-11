@@ -8,6 +8,11 @@ ROOT_DIR=$(pwd)
 BIN_DIR=$ROOT_DIR/out
 INC_DIR=$ROOT_DIR/include
 TRUNK_DIR=$ROOT_DIR/../../../..
+ROOT_DIR=$ROOT_DIR/../../
+
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/QuoteGeneration/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
+
+
 
 
 # zip tool
@@ -23,7 +28,7 @@ EULA_FILE="INTEL Software License Agreement 11.2.17.pdf"
 SAMPLE_DATA=SampleData
 
 # output file
-ZIP_FILE=PCKCertSelectionLinux.zip
+ZIP_FILE=PCKCertSelectionLinux_$SGX_VERSION.zip
 
 # copy files to root dir
 cp $BIN_DIR/$SO_FILE .

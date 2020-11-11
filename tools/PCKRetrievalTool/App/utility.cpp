@@ -136,17 +136,29 @@ sgx_status_t  SGXAPI sgx_ecall(const sgx_enclave_id_t eid,
 #if defined(_MSC_VER)
     if (sgx_urts_handle == NULL) {
         printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
-        return SGX_SUCCESS;
+        return SGX_ERROR_UNEXPECTED;
     }
     sgx_ecall_func_t p_sgx_ecall = (sgx_ecall_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_ecall");
-    return p_sgx_ecall(eid, index, ocall_table, ms);
+    if(p_sgx_ecall != NULL) {
+        return p_sgx_ecall(eid, index, ocall_table, ms);
+    }
+    else {
+        printf("ERROR: didn't find function sgx_ecall in the sgx_urts.dll library. \n");
+        return SGX_ERROR_UNEXPECTED;
+    }
 #else
     if (sgx_urts_handle == NULL) {
         printf("ERROR: didn't find the sgx_urts.so library, please make sure you have installed sgx_urts installer package. \n");
-        return SGX_SUCCESS;
+        return SGX_ERROR_UNEXPECTED;
     }
     sgx_ecall_func_t p_sgx_ecall = (sgx_ecall_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_ecall");
-    return p_sgx_ecall(eid, index, ocall_table, ms);
+    if(p_sgx_ecall != NULL ) {
+        return p_sgx_ecall(eid, index, ocall_table, ms);
+    }
+    else {
+        printf("ERROR: didn't find function sgx_ecall in the sgx_urts.dll library. \n");
+        return SGX_ERROR_UNEXPECTED;
+    }
 #endif
 
 }
@@ -183,7 +195,7 @@ bool get_program_path(char *p_file_path, size_t buf_size)
 }
 #endif
 
-bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
+bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *app_report)
 {
     bool ret = true;
     uint32_t retval = 0;
@@ -499,7 +511,9 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
     qe3_ret = p_sgx_ql_set_path(SGX_QL_QPL_PATH, quote_provider_library_path);
     if (SGX_QL_SUCCESS != qe3_ret) {
         printf("Error in sgx_ql_set_path. 0x%04x\n", qe3_ret);
-        CLOSELIBRARYHANDLE(quote_provider_library_handle);
+	if(quote_provider_library_handle != NULL) {
+            CLOSELIBRARYHANDLE(quote_provider_library_handle);
+        }
         return ret;
     }
     else {

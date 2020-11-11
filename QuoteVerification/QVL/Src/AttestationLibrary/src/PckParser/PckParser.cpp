@@ -291,7 +291,7 @@ std::string asn1ToString(const ASN1_TIME* time)
     }
 
     char buff[size];
-    std::memset(buff, 0x00, size);
+    OPENSSL_cleanse(buff, size);
 
     rc = BIO_gets(bio.get(), buff, size);
     if(rc <= 0)
@@ -465,11 +465,31 @@ void cleanUpOpenSSL()
     }
 }
 
-crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& pem)
+crypto::X509_CRL_uptr str2X509Crl(const std::string& string)
 {
     auto bio_mem = crypto::make_unique(BIO_new(BIO_s_mem()));
-    BIO_puts(bio_mem.get(), pem.c_str());
-    auto ret = crypto::make_unique(PEM_read_bio_X509_CRL(bio_mem.get(), nullptr, nullptr, nullptr));
+    crypto::X509_CRL_uptr ret = crypto::make_unique<X509_CRL>(nullptr);
+    if(string.rfind(PEM_STRING_X509_CRL, 12) == std::string::npos)
+    {
+        // Attempt to read CRL as DER
+        const auto bytes = hexStringToBytes(string);
+        const auto ec = BIO_write(bio_mem.get(), bytes.data(), (int) bytes.size());
+        if (ec < 1)
+        {
+            throw FormatException(getLastError());
+        }
+        ret.reset(d2i_X509_CRL_bio(bio_mem.get(), nullptr));
+    }
+    else
+    {
+        // Attempt to read CRL as PEM
+        const auto ec = BIO_puts(bio_mem.get(), string.c_str());
+        if (ec < 1)
+        {
+            throw FormatException(getLastError());
+        }
+        ret.reset(PEM_read_bio_X509_CRL(bio_mem.get(), nullptr, nullptr, nullptr));
+    }
 
     if(!ret)
     {

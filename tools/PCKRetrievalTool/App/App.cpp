@@ -42,6 +42,15 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <string>
+
+#include <sgx_enclave_common.h>
+extern "C"
+uint32_t COMM_API sgx_tool_get_launch_token(
+    COMM_IN const enclave_init_sgx_t* css,
+    COMM_IN const enclave_sgx_attr_t* attr,
+    COMM_OUT      enclave_sgx_token_t* token
+);
+
 #else
 #include <dlfcn.h>
 #endif
@@ -349,7 +358,9 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_bu
         }
         memset(raw_data, 0x00, raw_data_size);//now pce id is zero
         memcpy(raw_data + PCE_ID_LENGTH, platform_id.c_str(), platform_id_length);
-        memcpy(raw_data + PCE_ID_LENGTH + platform_id_length, p_platform_manifest_buffer, platform_manifest_buffer_size);
+        if(platform_manifest_buffer_size) {
+            memcpy(raw_data + PCE_ID_LENGTH + platform_id_length, p_platform_manifest_buffer, platform_manifest_buffer_size);
+        }
     }
     else {
         // Output PCK Cert Retrieval Data
@@ -392,7 +403,6 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_bu
     return delivery_status;
 }
 
-
 int main(int argc, const char* argv[])
 {
     int ret = -1;
@@ -413,6 +423,22 @@ int main(int argc, const char* argv[])
         PrintHelp();
         return ret;
     }
+
+#ifdef _MSC_VER
+    // Check SGX_TOOL_GET_LAUNCH_TOKEN env var.
+    // If set, then ask the sgx_enclave_common to use our custom function to obtain launch tokens.
+    // GetEnvironmentVariableA: 
+    //   If lpBuffer is not large enough to hold the data, the return value is the buffer size, in characters, required to hold the string 
+    if (GetEnvironmentVariableA("SGX_TOOL_GET_LAUNCH_TOKEN", NULL, 0))
+    {
+        uint32_t set_err = 0;
+        bool set_ret = enclave_set_information(NULL, 2, &sgx_tool_get_launch_token, sizeof(void*), &set_err);
+        if (!set_ret)
+        {
+            fprintf(stderr, "\nError calling enclave_set_information( sgx_tool_get_launch_token ). Error code = %d\n", set_err);
+        }
+    }
+#endif
 
     //check whether it is needed to save the collected data to a file
     if (output_filename.empty() == false) {

@@ -29,31 +29,32 @@
  *
  */
 
-const { pckcrlService }= require('../services');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { pckcrlService } from '../services/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-exports.getPckCrl = async function(req,res,next) {
-    try {
-        // validate request parameters
-        let ca = req.query.ca;
-        if (ca) ca = ca.toUpperCase();
-        if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-
-        // call service
-        let pckcrlJson = await pckcrlService.getPckCrl(ca);
-
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_PCK_CRL_ISSUER_CHAIN, pckcrlJson[Constants.SGX_PCK_CRL_ISSUER_CHAIN])
-           .send(pckcrlJson.pckcrl);
+export async function getPckCrl(req, res, next) {
+  try {
+    // validate request parameters
+    let ca = req.query.ca;
+    if (ca) ca = ca.toUpperCase();
+    if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-    catch(err) {
-        next(err);
-    }
-};
 
+    // call service
+    let pckcrlJson = await pckcrlService.getPckCrl(ca);
 
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(
+        Constants.SGX_PCK_CRL_ISSUER_CHAIN,
+        pckcrlJson[Constants.SGX_PCK_CRL_ISSUER_CHAIN]
+      )
+      .send(pckcrlJson.pckcrl);
+  } catch (err) {
+    next(err);
+  }
+}

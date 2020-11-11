@@ -84,7 +84,7 @@ void X509CrlGenerator::revokeSerialNumber(const crypto::X509_CRL_uptr &crl, cons
     X509_CRL_add0_revoked(crl.get(), revoked.release());
 }
 
-std::string X509CrlGenerator::x509CrlToString(const X509_CRL *crl)
+std::string X509CrlGenerator::x509CrlToPEMString(const X509_CRL *crl)
 {
     if (nullptr == crl)
     {
@@ -114,6 +114,25 @@ std::string X509CrlGenerator::x509CrlToString(const X509_CRL *crl)
     std::string ret;
     std::copy_n(dataStart, nameLength, std::back_inserter(ret));
     return ret;
+}
+
+std::string X509CrlGenerator::x509CrlToDERString(const X509_CRL *crl)
+{
+    if (nullptr == crl)
+    {
+        return "";
+    }
+    auto crlMutable = const_cast<X509_CRL*>(crl);
+    unsigned char *buf = nullptr;
+    const auto len = i2d_X509_CRL(crlMutable, &buf);
+    if (0 == len)
+    {
+        return "";
+    }
+
+    std::vector<uint8_t> ret(buf, buf + len);
+    OPENSSL_free(buf);
+    return bytesToHexString(ret);
 }
 
 void X509CrlGenerator::addStandardCrlExtensions(const crypto::X509_CRL_uptr& crl, const crypto::X509_uptr& issuerCert) const

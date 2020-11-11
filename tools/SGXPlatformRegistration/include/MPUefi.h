@@ -201,6 +201,10 @@ class  MPUefi {
     private:            
         IUefi *m_uefi;
         LogLevel m_logLevel;
+
+        MPUefi& operator=(const MPUefi&) {return *this;}
+        MPUefi(const MPUefi& src) {(void) src; }
+
 };
 
 #endif  // #ifndef __MP_UEFI_H

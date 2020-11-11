@@ -106,20 +106,22 @@ namespace standard
 {
     struct tm * gmtime(const time_t * timep)
     {
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif
+        #ifdef _MSC_VER
+            #pragma warning(push)
+            #pragma warning(disable: 4996)
+        #endif
         return std::gmtime(timep);
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+        #ifdef _MSC_VER
+            #pragma warning(pop)
+        #endif
     }
-
     time_t mktime(struct tm* tmp)
     {
-        return std::mktime(tmp);
+#ifdef _MSC_VER
+        return _mkgmtime(tmp);
+#else
+        return timegm(tmp);
+#endif
     }
 
     time_t getCurrentTime(const time_t *in_time)

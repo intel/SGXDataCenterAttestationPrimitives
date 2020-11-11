@@ -487,9 +487,14 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
  *
  * @return
  */
-static bool get_qe_path(const TCHAR *p_file_name,
-                        TCHAR *p_file_path,
-                        size_t buf_size)
+// use noinline here to aovid __builtin_return_address(0) returning an address outside libsgx_qe3_logic.so
+static bool
+#ifndef _MSC_VER
+__attribute__ ((noinline)) 
+#endif
+get_qe_path(const TCHAR *p_file_name,
+            TCHAR *p_file_path,
+            size_t buf_size)
 {
     if(!p_file_name || !p_file_path) {
         return false;
@@ -594,7 +599,7 @@ static bool get_qe_path(const TCHAR *p_file_name,
  * @return SE_ERROR_INVALID_ISVSVNLE
  * @return SGX_ERROR_INVALID_ENCLAVE_ID
  */
-
+extern "C"
 quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                               sgx_misc_attribute_t *p_qe_attributes,
                               sgx_launch_token_t *p_launch_token)

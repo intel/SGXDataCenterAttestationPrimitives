@@ -116,7 +116,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                     url = value;
                 }
                 else {
-                    url = server_url_string + "/sgx/certification/v2/platforms";
+                    url = server_url_string + "/sgx/certification/v3/platforms";
                 }
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {

@@ -69,7 +69,7 @@ release:
 	$(VERBOSE)$(MAKE) all
 
 clean: $(PROJECTS)
-	$(VERBOSE)rm -rf out/$(ZIPFILE)
+	$(VERBOSE)rm -rf out/*.zip
 	$(VERBOSE)echo projects clean: done
 
 PCKSelectionSample : PCKCertSelectionLib

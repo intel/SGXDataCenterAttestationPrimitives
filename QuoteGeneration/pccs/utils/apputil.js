@@ -1,0 +1,130 @@
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+import logger from './Logger.js';
+import Config from 'config';
+import Constants from '../constants/index.js';
+import { sequelize, db_sync, PcsVersion } from '../dao/models/index.js';
+
+// Check the version of PCS service currently configured
+export function startup_check() {
+  let pcs_api_version;
+  let pcs_url = Config.get('uri');
+  let verstr = pcs_url.match(/\/v([1-9][0-9]*)\//);
+  if (verstr.length == 0) pcs_api_version = 1;
+  let ver = verstr[0].substr(2).slice(0, -1);
+  pcs_api_version = parseInt(ver);
+
+  if (pcs_api_version != Constants.API_VERSION) {
+    logger.error(
+      'The PCS API version ' +
+        verstr[0] +
+        ' configured is not supported. Should be version ' +
+        Constants.API_VERSION +
+        '.'
+    );
+    return false;
+  }
+  return true;
+}
+
+async function test_connection() {
+  try {
+    return await sequelize.authenticate();
+  } catch (err) {
+    throw new Error('Failed to connect to the database.');
+  }
+}
+
+async function test_db_status() {
+  const sql = 'select * from pck_crl';
+  try {
+    await sequelize.query(sql, {
+      type: sequelize.QueryTypes.SELECT,
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function database_check() {
+  try {
+    await test_connection();
+
+    let url = new URL(Config.get('uri'));
+
+    let db_initialized = await test_db_status();
+    if (!db_initialized) {
+      await db_sync();
+      // For an empty database, update pcs_version first
+      await PcsVersion.upsert({
+        id: 1,
+        api_version: Constants.API_VERSION,
+        server_addr: url.hostname,
+      });
+      return true;
+    } else {
+      // For an existing database, we need to check its API version and server address
+      const sql = 'select * from pcs_version';
+      let result = await sequelize.query(sql, {
+        type: sequelize.QueryTypes.SELECT,
+      });
+      if (result.length != 1) {
+        logger.error(
+          `Can't find the version information of the caching database. ` +
+            `Please delete the caching db and try again.`
+        );
+        return false;
+      }
+      if (result[0].api_version != Constants.API_VERSION) {
+        logger.error(
+          `The caching database can't be loaded. Current version is ` +
+            result[0].api_version +
+            '. Required : ' +
+            Constants.API_VERSION
+        );
+        return false;
+      }
+      if (result[0].server_addr != url.hostname) {
+        logger.error(
+          'The server address used by the caching db is different ' +
+            'from the one in the configuration file.'
+        );
+        return false;
+      }
+      await db_sync();
+      return true;
+    }
+  } catch (err) {
+    logger.error(err);
+    return false;
+  }
+}

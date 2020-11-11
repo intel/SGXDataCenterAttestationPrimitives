@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include "QuoteConstants.h"
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -47,10 +48,11 @@ public:
     {
         uint16_t version;
         uint16_t attestationKeyType;
-        std::array<uint8_t, 4> reserved;
+        uint16_t teeType;
+        uint16_t reserved;
         uint16_t qeSvn;
         uint16_t pceSvn;
-        std::array<uint8_t, 16> uuid;
+        std::array<uint8_t, 16> qeVendorId;
         std::array<uint8_t, 20> userData;
 
         bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
@@ -72,12 +74,12 @@ public:
         std::array<uint8_t, 64> reportData;
 
         bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-        std::array<uint8_t,384> rawBlob() const;
+        std::array<uint8_t, constants::ENCLAVE_REPORT_BYTE_LEN> rawBlob() const;
     };
 
     struct Ecdsa256BitSignature
     {
-        std::array<uint8_t, 64> signature;
+        std::array<uint8_t, dcap::constants::ECDSA_P256_SIGNATURE_BYTE_LEN> signature;
 
         bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
     };
@@ -119,20 +121,22 @@ public:
 
     bool parse(const std::vector<uint8_t>& rawQuote);
     bool parseEnclaveReport(const std::vector<uint8_t>& rawQuote);
+    bool validate() const;
 
     const Header& getHeader() const;
-    const EnclaveReport& getBody() const;
+    const EnclaveReport& getEnclaveReport() const;
     uint32_t getAuthDataSize() const;
     const Ecdsa256BitQuoteAuthData& getQuoteAuthData() const;
     const std::vector<uint8_t>& getSignedData() const;
 
 private:
-    std::vector<uint8_t> getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote) const;
+    std::vector<uint8_t> getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote,
+                                                        const std::vector<uint8_t>::difference_type ) const;
 
 protected:
     std::vector<uint8_t> signedData{};
     Header header{};
-    EnclaveReport body{};
+    EnclaveReport bodyEnclaveReport{};
     uint32_t authDataSize{0};
     Ecdsa256BitQuoteAuthData authData{};
 };

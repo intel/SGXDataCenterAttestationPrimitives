@@ -35,7 +35,6 @@
 #include "Utils/TimeUtils.h"
 
 #include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 #include <tuple>
 #include <algorithm>
@@ -66,96 +65,99 @@ const rapidjson::Value* JsonParser::getField(const std::string& fieldName) const
     return &jsonDocument[fieldName.c_str()];
 }
 
-std::pair<std::vector<uint8_t>, bool> JsonParser::getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const
+std::pair<std::string, JsonParser::ParseStatus> JsonParser::getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const
 {
-    static auto FailedReturnValue = std::make_pair(std::vector<uint8_t>{}, false);
     if(!parent.HasMember(fieldName.c_str()))
     {
-        return FailedReturnValue;
+        return std::make_pair("", ParseStatus::Missing);
     }
     const ::rapidjson::Value& property_v = parent[fieldName.c_str()];
     if(!property_v.IsString())
     {
-        return FailedReturnValue;
+        return std::make_pair("", ParseStatus::Invalid);
+    }
+
+    const std::string propertyStr = property_v.GetString();
+    return std::make_pair(propertyStr, ParseStatus::OK);
+}
+
+std::pair<std::vector<uint8_t>, JsonParser::ParseStatus> JsonParser::getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const
+{
+    static auto FailedReturnValue = std::make_pair(std::vector<uint8_t>{}, false);
+    if(!parent.HasMember(fieldName.c_str()))
+    {
+        return std::make_pair(std::vector<uint8_t>{}, ParseStatus::Missing);
+    }
+    const ::rapidjson::Value& property_v = parent[fieldName.c_str()];
+    if(!property_v.IsString())
+    {
+        return std::make_pair(std::vector<uint8_t>{}, ParseStatus::Invalid);
     }
 
     const std::string propertyStr = property_v.GetString();
     if(propertyStr.length() == length && isValidHexstring(propertyStr))
     {
-        return std::make_pair(hexStringToBytes(propertyStr), true);
+        return std::make_pair(hexStringToBytes(propertyStr), ParseStatus::OK);
     }
-    return FailedReturnValue;
+    return std::make_pair(std::vector<uint8_t>{}, ParseStatus::Invalid);
 }
 
-std::pair<tm, bool> JsonParser::getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
+std::pair<tm, JsonParser::ParseStatus> JsonParser::getDateFieldOf(
+        const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
     if(!parent.HasMember(fieldName.c_str()))
     {
-        return std::make_pair(tm{}, false);
+        return std::make_pair(tm{}, ParseStatus::Missing);
     }
     const auto& date = parent[fieldName.c_str()];
     if(!date.IsString() || !isValidTimeString(date.GetString()))
     {
-        return std::make_pair(tm{}, false);
+        return std::make_pair(tm{}, ParseStatus::Invalid);
     }
-    return std::make_pair(getTimeFromString(date.GetString()), true);
+    return std::make_pair(getTimeFromString(date.GetString()), ParseStatus::OK);
 }
 
-bool JsonParser::checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
+JsonParser::ParseStatus JsonParser::checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
-    bool status = false;
+    ParseStatus status = ParseStatus::Missing;
     std::tie(std::ignore, status) = getDateFieldOf(parent, fieldName);
     return status;
 }
 
-std::pair<unsigned int, bool> JsonParser::getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
+std::pair<unsigned int, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
+        const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
     if(!parent.HasMember(fieldName.c_str()))
     {
-        return std::make_pair(0u, false);
+        return std::make_pair(0u, ParseStatus::Missing);
     }
     const ::rapidjson::Value& value = parent[fieldName.c_str()];
     if(!value.IsUint())
     {
-        return std::make_pair(0u, false);
+        return std::make_pair(0u, ParseStatus::Invalid);
     }
-    return std::make_pair(value.GetUint(), true);
+    return std::make_pair(value.GetUint(), ParseStatus::OK);
 }
 
-std::pair<int, bool> JsonParser::getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
+std::pair<int, JsonParser::ParseStatus> JsonParser::getIntFieldOf(
+        const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
     if(!parent.HasMember(fieldName.c_str()))
     {
-        return std::make_pair(0, false);
+        return std::make_pair(0, ParseStatus::Missing);
     }
     const ::rapidjson::Value& value = parent[fieldName.c_str()];
     if(!value.IsInt())
     {
-        return std::make_pair(0, false);
+        return std::make_pair(0, ParseStatus::Invalid);
     }
-
-    return std::make_pair(value.GetInt(), true);
-}
-
-std::pair<std::string, bool> JsonParser::getStringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const
-{
-    if(!parent.HasMember(fieldName.c_str()))
-    {
-        return std::make_pair("", false);
-    }
-    const ::rapidjson::Value& value = parent[fieldName.c_str()];
-    if(!value.IsString())
-    {
-        return std::make_pair("", false);
-    }
-
-    return std::make_pair(value.GetString(), true);
+    return std::make_pair(value.GetInt(), ParseStatus::OK);
 }
 
 bool JsonParser::isValidHexstring(const std::string& hexString) const
 {
     return std::find_if(hexString.cbegin(), hexString.cend(),
-        [](const char c){return !::isxdigit(static_cast<unsigned char>(c));}) == hexString.cend();
+                        [](const char c){return !::isxdigit(static_cast<unsigned char>(c));}) == hexString.cend();
 }
 
 }}} // namespace intel { namespace sgx { namespace dcap {

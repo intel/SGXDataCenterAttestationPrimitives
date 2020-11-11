@@ -20,20 +20,43 @@ set -e
 
 case "$1" in
     configure)
-        adduser --quiet --system pccs --group --home /opt/intel/sgx-dcap-pccs --no-create-home --shell /bin/bash
-        chown -R pccs:pccs /opt/intel/sgx-dcap-pccs/
-        if which pm2 > /dev/null
-        then
-            echo "pm2 is installed, continue ..."
-        else
-            npm install -g pm2
-        fi
+        PCCS_USER=pccs
+        PCCS_HOME=/opt/intel/sgx-dcap-pccs
+        adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
+        chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
         if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
         then
-            /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh postinst" pccs
-            pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" pccs` || true
-            eval $pm2cfg
+            /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh" $PCCS_USER
         fi
+
+        #Install PCCS as system service
+        echo -n "Installing PCCS service ..."
+        if [ -d /run/systemd/system ]; then
+            PCCS_NAME=pccs.service
+            PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
+            if [ -d /lib/systemd/system ]; then
+                PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+            else
+                PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+            fi
+            cp $PCCS_TEMP $PCCS_DEST
+            chmod 0644 $PCCS_DEST
+            systemctl daemon-reload
+            systemctl enable pccs
+        elif [ -d /etc/init/ ]; then
+            PCCS_NAME=pccs.service
+            PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
+            PCCS_DEST=/etc/init/$PCCS_NAME
+            cp $PCCS_TEMP $PCCS_DEST
+            chmod 0644 $PCCS_DEST
+            /sbin/initctl reload-configuration
+        else
+            echo "failed."
+            echo "Unsupported platform - neither systemctl nor initctl was found."
+            exit 5
+        fi
+        echo "finished."
+        echo "Installation completed successfully."
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

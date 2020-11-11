@@ -28,18 +28,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+import Sequelize from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
-    const qve_identities = sequelize.define('qve_identities', {
-      id: { type: DataTypes.INTEGER, primaryKey: true},
-      qve_identity: { type: DataTypes.BLOB },
-      root_cert_id: { type: DataTypes.INTEGER },
-      signing_cert_id: { type: DataTypes.INTEGER }
-    },{
+export default class QveIdentities extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
+        qve_identity: { type: Sequelize.DataTypes.BLOB },
+        root_cert_id: { type: Sequelize.DataTypes.INTEGER },
+        signing_cert_id: { type: Sequelize.DataTypes.INTEGER },
+      },
+      {
+        tableName: 'qve_identities',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return qve_identities;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

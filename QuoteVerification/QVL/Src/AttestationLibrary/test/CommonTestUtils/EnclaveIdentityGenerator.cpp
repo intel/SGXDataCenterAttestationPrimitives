@@ -35,6 +35,8 @@
 #include <sstream>
 #include "EnclaveIdentityGenerator.h"
 
+namespace intel { namespace sgx { namespace dcap { namespace test {
+
 static std::string createEnclaveIdentityJSON(const std::string &version,
                                              const std::string &issueDate,
                                              const std::string &nextUpdate,
@@ -60,11 +62,11 @@ std::string EnclaveIdentityVectorModel::toJSON()
     return createEnclaveIdentityJSON(std::to_string(version),
                                      issueDate,
                                      nextUpdate,
-                                     toHexString(miscselect),
-                                     toHexString(miscselectMask),
-                                     toHexString(attributes),
-                                     toHexString(attributesMask),
-                                     toHexString(mrsigner),
+                                     bytesToHexString(miscselect),
+                                     bytesToHexString(miscselectMask),
+                                     bytesToHexString(attributes),
+                                     bytesToHexString(attributesMask),
+                                     bytesToHexString(mrsigner),
                                      std::to_string(isvprodid),
                                      std::to_string(isvsvn)
     );
@@ -104,24 +106,7 @@ std::string enclaveIdentityJsonWithSignature(const std::string &enclaveIdentityB
     return R"({"enclaveIdentity":)" + enclaveIdentityBody + R"(,"signature":")" + signature + R"("})";
 }
 
-std::string toHexString(const std::vector<uint8_t> &vector)
-{
-    std::string result;
-    result.reserve(vector.size() * 2);   // two digits per character
-
-    static constexpr char hex[] = "0123456789ABCDEF";
-
-    for (uint8_t c : vector)
-    {
-        result.push_back(hex[c / 16]);
-        result.push_back(hex[c % 16]);
-    }
-
-    return result;
-}
-
-uint32_t vectorToUint32(const std::vector<uint8_t> &input)
-{
+uint32_t vectorToUint32(const std::vector<uint8_t> &input) {
     auto position = input.cbegin();
     return intel::sgx::dcap::swapBytes(intel::sgx::dcap::toUint32(*position, *(std::next(position)),
                                                                 *(std::next(position, 2)), *(std::next(position, 3))));
@@ -133,3 +118,4 @@ void removeWordFromString(std::string word, std::string &input)
         input.replace(input.find(word), word.length(), "");
 }
 
+}}}}

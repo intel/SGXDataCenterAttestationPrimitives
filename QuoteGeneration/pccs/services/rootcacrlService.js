@@ -28,66 +28,72 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('../utils/Logger.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const X509 = require('../x509/x509.js');
-const {sequelize, Sequelize} = require('../dao/models/');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Config from 'config';
+import Constants from '../constants/index.js';
+import X509 from '../x509/x509.js';
+import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as pcsClient from '../pcs_client/pcs_client.js';
+import { sequelize } from '../dao/models/index.js';
 
-exports.getRootCACrlFromPCS = async function(rootca) {
-    return await sequelize.transaction(async (t)=>{
+export async function getRootCACrlFromPCS(rootca) {
+  return await sequelize.transaction(async (t) => {
+    if (rootca == null) {
+      // Root Cert not cached
+      const pck_server_res = await pcsClient.getQeIdentity();
+      if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
+        // update certificates
+        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
+          pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+        );
+        // Root cert should be cached now, query DB again
+        rootca = await pcsCertificatesDao.getCertificateById(
+          Constants.PROCESSOR_ROOT_CERT_ID
+        );
         if (rootca == null) {
-            // Root Cert not cached
-            const pck_server_res = await PcsClient.getQEIdentity();
-            if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-                // update certificates
-                await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
-                // Root cert should be cached now, query DB again
-                rootca = await pcsCertificatesDao.getCertificateById(Constants.PROCESSOR_ROOT_CERT_ID);
-                if (rootca == null){
-                    return null;
-                }
-            }
-            else {
-                return null;
-            }
+          return null;
         }
+      } else {
+        return null;
+      }
+    }
 
-        const x509 = new X509();
-        if (!x509.parseCert(unescape(rootca.cert)) || !x509.cdp_uri) {
-            // Certificate is invalid
-            throw new Error('Invalid PCS certificate!');
-        }
+    const x509 = new X509();
+    if (!x509.parseCert(unescape(rootca.cert)) || !x509.cdp_uri) {
+      // Certificate is invalid
+      throw new Error('Invalid PCS certificate!');
+    }
 
-        let crl = await PcsClient.getFileFromUrl(x509.cdp_uri);
+    let crl_bin = await pcsClient.getFileFromUrl(x509.cdp_uri);
+    rootca.crl = Buffer.from(crl_bin, 'utf8').toString('hex');
 
-        rootca.crl = crl;
-
-        await pcsCertificatesDao.upsertPcsCertificates({
-            id: rootca.id,
-            cert: rootca.cert,
-            crl: rootca.crl
-        });
-
-        return crl;
+    await pcsCertificatesDao.upsertPcsCertificates({
+      id: rootca.id,
+      cert: rootca.cert,
+      crl: rootca.crl,
     });
+
+    return rootca.crl;
+  });
 }
 
-exports.getRootCACrl=async function() {
-    let rootca = await pcsCertificatesDao.getCertificateById(Constants.PROCESSOR_ROOT_CERT_ID);
+export async function getRootCaCrl() {
+  let rootca = await pcsCertificatesDao.getCertificateById(
+    Constants.PROCESSOR_ROOT_CERT_ID
+  );
 
-    if (rootca != null && rootca.crl != null) {
-        return rootca.crl;
-    }
-        
-    if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-        return this.getRootCACrlFromPCS(rootca);
-    }
-    else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+  if (rootca != null && rootca.crl != null) {
+    return rootca.crl;
+  }
+
+  if (
+    Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
+    Constants.CACHE_FILL_MODE_LAZY
+  ) {
+    let crl_hex = await this.getRootCACrlFromPCS(rootca);
+    return crl_hex;
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
 }

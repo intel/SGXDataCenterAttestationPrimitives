@@ -93,8 +93,7 @@ void RegistrationService::registerPlatformIfNeeded() {
         m_uefi = new MPUefi(string(m_conf.uefi_path), m_gLogLevel);
         if (!m_uefi) {
             agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Allocation error during uefi initiation.\n");
-            errorCode = MPA_AG_OUT_OF_MEMORY;
-            goto error;
+            return;
         }
     }
 

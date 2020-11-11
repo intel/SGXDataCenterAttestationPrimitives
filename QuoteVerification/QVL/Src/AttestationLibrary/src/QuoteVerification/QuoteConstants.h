@@ -33,15 +33,19 @@
 #define INTEL_SGX_QVL_QUOTE_CONSTANTS_H_
 
 #include <array>
+
+// includes needed on Fedora 32
 #include <cstddef>
 #include <cstdint>
 
 namespace intel { namespace sgx { namespace dcap { namespace constants {
 
-const uint16_t QUOTE_VERSION = 3;
+const uint32_t TEE_TYPE_SGX = 0;
+const uint16_t QUOTE_VERSION_3 = 3;
+const uint16_t QUOTE_VERSION_4 = 4;
 
-const uint16_t ECDSA_256_WITH_P256_CURVE = 1;
-const uint16_t ECDSA_384_WITH_P384_CURVE = 2;
+const uint16_t ECDSA_256_WITH_P256_CURVE = 2;
+const uint16_t ECDSA_384_WITH_P384_CURVE = 3;
 constexpr size_t ECDSA_P256_SIGNATURE_BYTE_LEN = 64;
 constexpr size_t ENCLAVE_REPORT_BYTE_LEN = 384;
 
@@ -51,9 +55,8 @@ const uint16_t PCK_ID_ENCRYPTED_PPID_3072 = 3;
 const uint16_t PCK_ID_PCK_CERTIFICATE = 4;
 const uint16_t PCK_ID_PCK_CERT_CHAIN = 5;
 
-const std::array<uint16_t, 5> SUPPORTED_PCK_IDS = {{ PCK_ID_PLAIN_PPID, PCK_ID_ENCRYPTED_PPID_2048,
-    PCK_ID_ENCRYPTED_PPID_3072, PCK_ID_PCK_CERTIFICATE, PCK_ID_PCK_CERT_CHAIN }};
-
+const std::array<uint16_t, 2> ALLOWED_QUOTE_VERSIONS = {{ QUOTE_VERSION_3, QUOTE_VERSION_4 }};
+const std::array<uint32_t, 2> ALLOWED_TEE_TYPES = {{ TEE_TYPE_SGX }};
 const std::array<uint16_t, 1> ALLOWED_ATTESTATION_KEY_TYPES = {{ ECDSA_256_WITH_P256_CURVE }};
 const std::array<uint8_t, 16> INTEL_QE_VENDOR_ID = {{ 0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F, 0x06, 0x07 }};
 

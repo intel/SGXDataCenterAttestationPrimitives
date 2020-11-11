@@ -62,11 +62,11 @@ bool CrlStore::operator!=(const CrlStore& other) const
     return !(*this == other);
 }
 
-bool CrlStore::parse(const std::string& pemCrl)
+bool CrlStore::parse(const std::string& crlString)
 {
     try
     {
-        _crl = pckparser::pemBuff2X509Crl(pemCrl);
+        _crl = pckparser::str2X509Crl(crlString);
         QVL_ASSERT(_crl);
 
         _issuer = pckparser::getIssuer(*_crl);

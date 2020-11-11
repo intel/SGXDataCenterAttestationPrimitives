@@ -34,6 +34,7 @@
 
 #include "QuoteGenerator.h"
 
+#include <OpensslHelpers/Bytes.h>
 #include <Verifiers/EnclaveIdentityV2.h>
 #include <QuoteVerification/ByteOperands.h>
 
@@ -62,7 +63,7 @@ namespace
     }
 }
 
-std::string toHexString(const std::vector<uint8_t> &vector);
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
 class EnclaveIdentityVectorModel {
 public:
@@ -126,10 +127,10 @@ public:
         version = std::to_string(vectorModel.version);
         issueDate = vectorModel.issueDate;
         nextUpdate = vectorModel.nextUpdate;
-        miscselect = toHexString(vectorModel.miscselect);
-        miscselectMask = toHexString(vectorModel.miscselectMask);
-        attributes = toHexString(vectorModel.attributes);
-        mrsigner = toHexString(vectorModel.mrsigner);
+        miscselect = bytesToHexString(vectorModel.miscselect);
+        miscselectMask = bytesToHexString(vectorModel.miscselectMask);
+        attributes = bytesToHexString(vectorModel.attributes);
+        mrsigner = bytesToHexString(vectorModel.mrsigner);
         isvprodid = std::to_string(vectorModel.isvprodid);
         isvsvn = std::to_string(vectorModel.isvsvn);
     }
@@ -198,5 +199,7 @@ const std::string validSignatureTemplate = "fb1530326344ee4baded1120a7a07b1c7c46
 std::string qeIdentityJsonWithSignature(const std::string &qeIdentityBody = validQEIdentityTemplate, const std::string &signature = validSignatureTemplate);
 std::string enclaveIdentityJsonWithSignature(const std::string &qeIdentityBody = validEnclaveIdentityTemplate, const std::string &signature = validSignatureTemplate);
 void removeWordFromString(std::string word, std::string &input);
+
+}}}}
 
 #endif //SGXECDSAATTESTATION_ENCLAVEIDENTITYGENERATOR_H

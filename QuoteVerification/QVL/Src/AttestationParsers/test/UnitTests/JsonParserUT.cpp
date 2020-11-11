@@ -78,10 +78,10 @@ TEST_F(JsonParserTests, shouldParseObjectWithHexstring)
     std::vector<uint8_t> expectedValue = {0xad, 0xff, 0x09, 0xa7};
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": "adff09a7"}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     std::vector<uint8_t> value{};
     std::tie(value, status) = jsonParser.getBytesFieldOf(data, "v", 8);
-    EXPECT_TRUE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::OK, status);
     EXPECT_EQ(expectedValue, value);
 }
 
@@ -90,10 +90,10 @@ TEST_F(JsonParserTests, shouldParseObjectWithUint)
 	unsigned int expectedValue = 234;
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": 234}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
 	unsigned int value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
-    EXPECT_TRUE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::OK, status);
     EXPECT_EQ(expectedValue, value);
 }
 
@@ -102,70 +102,61 @@ TEST_F(JsonParserTests, shouldParseObjectWithInt)
     int expectedValue = -43;
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": -43}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     int value = 0;
     std::tie(value, status) = jsonParser.getIntFieldOf(data, "v");
-    EXPECT_TRUE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::OK, status);
     EXPECT_EQ(expectedValue, value);
-}
-
-TEST_F(JsonParserTests, shouldCheckObjectWithDates)
-{
-    ASSERT_TRUE(jsonParser.parse(R"json({"data": {"date": "2017-10-04T11:10:45Z", "invalidDate": "qwr234"}})json"));
-    const auto& data = *jsonParser.getField("data");
-    EXPECT_TRUE(jsonParser.checkDateFieldOf(data, "date"));
-    EXPECT_FALSE(jsonParser.checkDateFieldOf(data, "invalidDate"));
 }
 
 TEST_F(JsonParserTests, shouldParseObjectWithDate)
 {
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"date": "2018-09-29T15:17:22Z"}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     time_t value = 0;
     std::tie(value, status) = jsonParser.getDateFieldOf(data, "date");
 
-
-    EXPECT_TRUE(status);
-    EXPECT_EQ(value, 1538230642);
+    EXPECT_EQ(JsonParser::ParseStatus::OK, status);
+    EXPECT_EQ(value, 1538234242);
 }
 
 TEST_F(JsonParserTests, shouldFailWhenParsingInvalidHexstringField)
 {
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": "adff09a732544$#^&%"}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     std::vector<uint8_t> value{};
     std::tie(value, status) = jsonParser.getBytesFieldOf(data, "v", 8);
-    EXPECT_FALSE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::Invalid, status);
 }
 
 TEST_F(JsonParserTests, shouldFailWhenParsingWrongLengthHexstringField)
 {
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": "ad34"}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     std::vector<uint8_t> value{};
     std::tie(value, status) = jsonParser.getBytesFieldOf(data, "v", 5);
-    EXPECT_FALSE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::Invalid, status);
 }
 
 TEST_F(JsonParserTests, shouldFailWhenParsingInvalidIntField)
 {
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": "asd"}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
     int value = 0;
     std::tie(value, status) = jsonParser.getIntFieldOf(data, "v");
-    EXPECT_FALSE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::Invalid, status);
 }
 
 TEST_F(JsonParserTests, shouldFailWhenParsingInvalidUintField)
 {
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": -55555}})json"));
     const auto& data = *jsonParser.getField("data");
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
 	unsigned int value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
-    EXPECT_FALSE(status);
+    EXPECT_EQ(JsonParser::ParseStatus::Invalid, status);
 }

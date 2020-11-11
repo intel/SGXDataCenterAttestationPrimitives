@@ -37,6 +37,7 @@ Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions PCK Caching Service
 Group:          Applications/Internet
+Requires:       gcc gcc-c++ make
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
@@ -54,25 +55,67 @@ install -d %{?buildroot}%{_docdir}/%{name}
 find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
 echo "%{_install_path}" > %{_specdir}/listfiles
 echo %{_docdir}/%{name}/%{_license_file} >> %{_specdir}/listfiles
-echo "%config %{_install_path}/config/production-0.json" >> %{_specdir}/listfiles
+echo "%config %{_install_path}/config/default.json" >> %{_specdir}/listfiles
 
 %files -f %{_specdir}/listfiles
 
 %post
-chown -R $(logname):$(logname) %{_install_path}
-if which pm2 > /dev/null; then
-    echo "pm2 is installed, continue ..."
-else
-    npm install -g pm2
+PCCS_USER=pccs
+PCCS_HOME=%{_install_path}
+if [ ! $(getent group $PCCS_USER) ]; then
+    groupadd $PCCS_USER
 fi
+adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
+chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
+#Install PCCS as system service
+echo -n "Installing PCCS service ..."
+if [ -d /run/systemd/system ]; then
+    PCCS_NAME=pccs.service
+    PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
+    if [ -d /lib/systemd/system ]; then
+        PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+    else
+        PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+    fi
+    cp $PCCS_TEMP $PCCS_DEST
+    chmod 0644 $PCCS_DEST
+    systemctl daemon-reload
+    systemctl enable pccs
+elif [ -d /etc/init/ ]; then
+    PCCS_NAME=pccs.service
+    PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
+    PCCS_DEST=/etc/init/$PCCS_NAME
+    cp $PCCS_TEMP $PCCS_DEST
+    chmod 0644 $PCCS_DEST
+    /sbin/initctl reload-configuration
+else
+    echo " failed."
+    echo "Unsupported platform - neither systemctl nor initctl was found."
+    exit 5
+fi
+echo "finished."
+echo "Installation completed successfully."
 
 %postun
-if which pm2 > /dev/null; then
-    pm2 stop pccs || true
-    pm2 delete pccs || true
-    pm2cfg=`/bin/su -c "pm2 unstartup | grep 'sudo'" - $(logname)` || true
-    eval $pm2cfg || true
+echo -n "Uninstalling PCCS service ..."
+if [ -d /run/systemd/system ]; then
+    PCCS_NAME=pccs.service
+    if [ -d /lib/systemd/system ]; then
+        PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+    else
+        PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+    fi
+    systemctl stop pccs || true
+    systemctl disable pccs || true
+    rm $PCCS_DEST || true
+    systemctl daemon-reload
+elif [ -d /etc/init/ ]; then
+    PCCS_NAME=pccs.service
+    PCCS_DEST=/etc/init/$PCCS_NAME
+    rm $PCCS_DEST || true
+    /sbin/initctl reload-configuration
 fi
+echo "finished."
 
 if [ -d %{_install_path} ]; then
     pushd %{_install_path} &> /dev/null

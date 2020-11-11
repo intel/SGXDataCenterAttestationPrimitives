@@ -135,56 +135,70 @@ TcbInfo::TcbInfo(const std::string& jsonString)
     }
 
     auto version = jsonParser.getUintFieldOf(*tcbInfo, "version");
-    bool status = version.second;
-
-    if (!status)
+    JsonParser::ParseStatus status = version.second;
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [version] field of TCB info JSON to integer");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [version] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [version] field of TCB info JSON to integer");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     _version = static_cast<Version>(version.first);
 
     if (_version != Version::V1  && _version != Version::V2)
     {
-        std::string err =  "Unsupported version[" + std::to_string(static_cast<unsigned int>(_version))
-                + "] value for field of TCB info JSON. Supported versions is ["
+        std::string err = "Unsupported version[" + std::to_string(static_cast<unsigned int>(_version))
+                + "] value for field of TCB info JSON. Supported versions are ["
                 + std::to_string(static_cast<unsigned int>(Version::V1)) + " | "
                 + std::to_string(static_cast<unsigned int>(Version::V2)) + "]";
         throw InvalidExtensionException(err);
     }
 
-    if (!jsonParser.checkDateFieldOf(*tcbInfo, "issueDate"))
-    {
-        throw InvalidExtensionException("[issueDate] field of TCB info JSON should be ISO formatted date");
-    }
-
-    if (!jsonParser.checkDateFieldOf(*tcbInfo, "nextUpdate"))
-    {
-        throw InvalidExtensionException("[nextUpdate] field of TCB info JSON should be ISO formatted date");
-    }
-
     std::tie(_issueDate, status) = jsonParser.getDateFieldOf(*tcbInfo, "issueDate");
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [issueDate] field of TCB info JSON to date");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [issueDate] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [issueDate] field of TCB info JSON to date. [issueDate] should be ISO formatted date");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     std::tie(_nextUpdate, status) = jsonParser.getDateFieldOf(*tcbInfo, "nextUpdate");
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [nextUpdate] field of TCB info JSON to date");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [nextUpdate] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [nextUpdate] field of TCB info JSON to date. [nextUpdate] should be ISO formatted date");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     std::tie(_fmspc, status) = jsonParser.getBytesFieldOf(*tcbInfo, "fmspc", constants::FMSPC_BYTE_LEN * 2);
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [fmspc] field of TCB info JSON to bytes");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [fmspc] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [fmspc] field of TCB info JSON to bytes");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     std::tie(_pceId, status) = jsonParser.getBytesFieldOf(*tcbInfo, "pceId", constants::PCEID_BYTE_LEN * 2);
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [pceId] field of TCB info JSON to bytes");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [pceId] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [pceId] field of TCB info JSON to bytes");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     if(!signatureField->IsString() || signatureField->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
@@ -198,14 +212,13 @@ TcbInfo::TcbInfo(const std::string& jsonString)
         throw InvalidExtensionException("Missing [tcbLevels] field of TCB info JSON");
     }
 
-
-    if(_version == Version::V2)
+    if(_version != Version::V1)
     {
         parsePartV2(*tcbInfo, jsonParser);
     }
 
     const auto& tcbs = (*tcbInfo)["tcbLevels"];
-    if(!tcbs.IsArray() || tcbs.Size() == 0)
+    if(!tcbs.IsArray())
     {
         throw InvalidExtensionException("[tcbLevels] field of TCB info JSON should be a nonempty array");
     }
@@ -227,6 +240,7 @@ TcbInfo::TcbInfo(const std::string& jsonString)
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.SetMaxDecimalPlaces(25);
     tcbInfo->Accept(writer);
 
     _infoBody = std::vector<uint8_t>{ buffer.GetString(),
@@ -235,18 +249,28 @@ TcbInfo::TcbInfo(const std::string& jsonString)
 
 void TcbInfo::parsePartV2(const ::rapidjson::Value &tcbInfo, JsonParser &jsonParser)
 {
-    bool status = false;
+    JsonParser::ParseStatus status = JsonParser::Missing;
 
     std::tie(_tcbType, status) = jsonParser.getIntFieldOf(tcbInfo, "tcbType");
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [tcbType] field of TCB info JSON to number");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [tcbType] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [tcbType] field of TCB Info JSON to number");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     std::tie(_tcbEvaluationDataNumber, status) = jsonParser.getUintFieldOf(tcbInfo, "tcbEvaluationDataNumber");
-    if (!status)
+    switch (status)
     {
-        throw InvalidExtensionException("Could not parse [tcbEvaluationDataNumber] field of TCB info JSON to number");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB Info JSON should has [tcbEvaluationDataNumber] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [tcbEvaluationDataNumber] field of TCB Info JSON to number");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 }
 

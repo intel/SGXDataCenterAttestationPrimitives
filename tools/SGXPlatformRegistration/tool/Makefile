@@ -29,11 +29,7 @@
 #
 #
 
-######## SGX SDK Settings ########
-SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
-SGX_ARCH ?= x64
-SGX_DEBUG ?= 0
+include ../../../QuoteGeneration/buildenv.mk
 
 
 LIBS_DIR := ../build/lib64
@@ -43,40 +39,15 @@ MPA_MANAGEMENT_DIR = ../management
 MPA_REGISTRATION_COMMON_DIR = ../common
 MPA_REGISTRATION_CORE_DIR = ../agent
 
-# turn on stack protector
-CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
-ifeq ($(CC_BELOW_4_9), 1)
-    COMMON_FLAGS += -fstack-protector
-else
-    COMMON_FLAGS += -fstack-protector-strong
-endif
-
 # turn on cet
 CC_GREAT_EQUAL_8 := $(shell expr "`$(CC) -dumpversion`" \>= "8")
 ifeq ($(CC_GREAT_EQUAL_8), 1)
     COMMON_FLAGS += -fcf-protection
 endif
 
-ifdef DEBUG
-    COMMON_FLAGS += -ggdb -DDEBUG -UNDEBUG
-    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
-else
-    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
-endif
-
-COMMON_FLAGS += -ffunction-sections -fdata-sections 
-
-# turn on compiler warnings as much as possible
-COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
-		-Waddress -Wsequence-point -Wformat-security \
-		-Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
-		-Wcast-align -Wconversion -Wredundant-decls
-
-# additional warnings flags for C++
-CXXFLAGS += -Wnon-virtual-dtor
 
 CXXFLAGS += $(COMMON_FLAGS)
-CXXFLAGS += -fPIC -std=c++11 -Wnon-virtual-dtor -DITT_ARCH_IA64
+CXXFLAGS += -fPIC 
 
 MPA_MANAGEMENT_EXECUTABLE_OUTPUT_FILE := ../build/bin/mpa_manage
 
@@ -97,6 +68,8 @@ CPP_SRCS := $(wildcard src/*.cpp)
 CPP_SRCS += $(MPA_REGISTRATION_CORE_DIR)/src/AgentConfiguration.cpp $(MPA_REGISTRATION_CORE_DIR)/src/agent_logger.cpp $(MPA_REGISTRATION_COMMON_DIR)/src/common.cpp
 CPP_OBJS := $(CPP_SRCS:.cpp=.o)
 CPP_DEPS := $(CPP_OBJS:%.o=%.d)
+
+LDFLAGS := $(COMMON_LDFLAGS)
 
 .PHONY: clean all
 all: $(LIBS_MPA) $(CPP_OBJS)

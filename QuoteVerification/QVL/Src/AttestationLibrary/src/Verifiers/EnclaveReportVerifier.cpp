@@ -62,20 +62,20 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
         return STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH;
     }
 
-    /// 4.1.2.9.8
+    /// 4.1.2.9.7
     std::vector<uint8_t> mrSigner(enclaveReport.mrSigner.begin(), enclaveReport.mrSigner.end());
     if(!enclaveIdentity->getMrsigner().empty() && enclaveIdentity->getMrsigner() != mrSigner)
     {
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
 
-    /// 4.1.2.9.9
+    /// 4.1.2.9.8
     if(enclaveReport.isvProdID != enclaveIdentity->getIsvProdId())
     {
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
 
-    /// 4.1.2.9.10 & 4.1.2.9.11
+    /// 4.1.2.9.9 & 4.1.2.9.10
     auto enclaveIdentityStatus = enclaveIdentity->getTcbStatus(enclaveReport.isvSvn);
     if(enclaveIdentityStatus != TcbStatus::UpToDate)
     {
@@ -86,7 +86,7 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;
     }
 
-    /// 4.1.2.9.12
+    /// 4.1.2.9.11
     return STATUS_OK;
 }
 

@@ -366,7 +366,7 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
 * @param url HTTPS POST URL
 * @param req_body Request body in raw JSON format
 * @param req_body_size Size of request body
-* @param user_token user token to access PCCS v2/platforms API
+* @param user_token user token to access PCCS v3/platforms API
 * @param user_token_size Size of user token
 * @param resp_msg Output buffer of response body
 * @param resp_size Size of response body

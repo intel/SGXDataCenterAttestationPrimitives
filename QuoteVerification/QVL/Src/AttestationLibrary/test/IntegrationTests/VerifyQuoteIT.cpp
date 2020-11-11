@@ -70,7 +70,8 @@ struct VerifyQuoteIT : public Test
     Bytes cpusvn = Bytes(16, 0xff);
     Bytes pceId = {0x04, 0xf3};
     Bytes fmspc = {0x04, 0xf3, 0x44, 0x45, 0xaa, 0x00};
-    Bytes pcesvn = {0x01, 0x02};
+    Bytes pcesvnLE = {0x01, 0x02};
+    Bytes pcesvnBE = {0x02, 0x01};
 
     crypto::EVP_PKEY_uptr keyInt = crypto::make_unique<EVP_PKEY>(nullptr);
     crypto::EVP_PKEY_uptr key = crypto::make_unique<EVP_PKEY>(nullptr);
@@ -104,7 +105,7 @@ struct VerifyQuoteIT : public Test
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                              constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                             ppid, cpusvn, pcesvn, pceId, fmspc, 0);
+                                             ppid, cpusvn, pcesvnBE, pceId, fmspc, 0);
 
         intel::sgx::dcap::parser::x509::DistinguishedName subject =
                 {"", "Intel SGX PCK Platform CA", "US", "Intel Corporation", "Santa Clara", "CA"};
@@ -113,7 +114,7 @@ struct VerifyQuoteIT : public Test
 
         interCert = certGenerator.generateCaCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(), subject, issuer);
 
-        positiveTcbInfoJsonBody = tcbInfoJsonBody(version, issueDate, nextUpdate, fmspcStr, pceIdStr,
+        positiveTcbInfoJsonBody = tcbInfoJsonV1Body(version, issueDate, nextUpdate, fmspcStr, pceIdStr,
                                                   getRandomTcb(), pcesvnStr, status);
 
         EnclaveIdentityVectorModel model;
@@ -121,12 +122,20 @@ struct VerifyQuoteIT : public Test
         model.applyTo(enclaveReport);
     }
 
-    std::string getValidCrl(const crypto::X509_uptr &ucert)
+    std::string getValidPEMCrl(const crypto::X509_uptr &ucert)
     {
         auto revokedList = std::vector<Bytes>{{0x12, 0x10, 0x13, 0x11}, {0x11, 0x33, 0xff, 0x56}};
         auto rootCaCRL = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, 0, 3600, ucert, revokedList);
 
-        return X509CrlGenerator::x509CrlToString(rootCaCRL.get());
+        return X509CrlGenerator::x509CrlToPEMString(rootCaCRL.get());
+    }
+
+    std::string getValidDERCrl(const crypto::X509_uptr &ucert)
+    {
+        auto revokedList = std::vector<Bytes>{{0x12, 0x10, 0x13, 0x11}, {0x11, 0x33, 0xff, 0x56}};
+        auto rootCaCRL = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, 0, 3600, ucert, revokedList);
+
+        return X509CrlGenerator::x509CrlToDERString(rootCaCRL.get());
     }
 
     std::vector<uint8_t> concat(const std::vector<uint8_t>& rhs, const std::vector<uint8_t>& lhs)
@@ -215,7 +224,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQuoteFormatWhenQuoteSizeIsIncorrec
 {
     // GIVEN
     auto incorrectQouteSize = 0;
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
 
     // WHEN
     auto result = sgxAttestationVerifyQuote(quote.data(), (unsigned) incorrectQouteSize, placeHolder, placeHolder, placeHolder, placeHolder);
@@ -230,7 +239,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQuoteFormatWhenQuoteHeaderVersionI
     QuoteGenerator::QuoteHeader quoteHeader{};
     quoteHeader.version = 999;
     quoteGenerator.withHeader(quoteHeader);
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
 
 
     // WHEN
@@ -248,7 +257,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCertFormatWhenVerifyPckCertFail
 
     test::QuoteGenerator::QeCertData qeCertData;
     qeCertData.keyDataType = constants::PCK_ID_PLAIN_PPID;
-    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvn));
+    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvnLE));
     qeCertData.size = static_cast<uint16_t>(qeCertData.keyData.size());
 
     quoteGenerator.withQeCertData(qeCertData);
@@ -262,10 +271,10 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCertFormatWhenVerifyPckCertFail
     quoteGenerator.getQuoteAuthData().qeReportSignature.signature =
             signEnclaveReport(quoteGenerator.getQuoteAuthData().qeReport, *pckCertKeyPtr);
     quoteGenerator.getQuoteAuthData().ecdsaSignature.signature =
-            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getBody().bytes()), *pckCertKeyPtr);
+            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getEnclaveReport().bytes()), *pckCertKeyPtr);
 
-    auto quote = quoteGenerator.buildQuote();
-    auto pckCrl = getValidCrl(interCert);
+    auto quote = quoteGenerator.buildSgxQuote();
+    auto pckCrl = getValidPEMCrl(interCert);
     auto tcbInfoBodyBytes = Bytes{};
     tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
     auto signatureTcb = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());
@@ -289,7 +298,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCertFormatWhenVerifyPckCertFail
 TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCrlFormatWhenVerifyPckCrlFail)
 {
     // GIVEN
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
 
     // WHEN
@@ -302,9 +311,9 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCrlFormatWhenVerifyPckCrlFail)
 TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedTcbInfoFormatWhenVerifyTcbInfoFail)
 {
     // GIVEN
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
-    auto pckCrl = getValidCrl(cert);
+    auto pckCrl = getValidPEMCrl(cert);
 
     // WHEN
     auto result = sgxAttestationVerifyQuote(quote.data(), (uint32_t) quote.size(), pckPem.c_str(), pckCrl.c_str(), placeHolder, placeHolder);
@@ -316,9 +325,9 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedTcbInfoFormatWhenVerifyTcbInfoFail
 TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQeIdentityFormatWhenVerifyQEidentityFail)
 {
     // GIVEN
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
-    auto pckCrl = getValidCrl(cert);
+    auto pckCrl = getValidPEMCrl(cert);
     auto tcbInfoBodyBytes = Bytes{};
     tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());
@@ -336,9 +345,9 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQeIdentityFormatWhenVerifyQEidenti
 TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQeIdentityFormatWhenQEIdentityIsWrong)
 {
     // GIVEN
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
-    auto pckCrl = getValidCrl(cert);
+    auto pckCrl = getValidPEMCrl(cert);
     auto tcbInfoBodyBytes = Bytes{};
     tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());
@@ -353,7 +362,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQeIdentityFormatWhenQEIdentityIsWr
     EXPECT_EQ(STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT, result);
 }
 
-TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffuly)
+TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWhenCrlAsPem)
 {
     // GIVEN
     auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
@@ -361,7 +370,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffuly)
 
     test::QuoteGenerator::QeCertData qeCertData;
     qeCertData.keyDataType = constants::PCK_ID_PLAIN_PPID;
-    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvn));
+    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvnLE));
     qeCertData.size = static_cast<uint16_t>(qeCertData.keyData.size());
 
     quoteGenerator.withQeCertData(qeCertData);
@@ -375,11 +384,11 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffuly)
     quoteGenerator.getQuoteAuthData().qeReportSignature.signature =
             signEnclaveReport(quoteGenerator.getQuoteAuthData().qeReport, *pckCertKeyPtr);
     quoteGenerator.getQuoteAuthData().ecdsaSignature.signature =
-            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getBody().bytes()), *pckCertKeyPtr);
+            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getEnclaveReport().bytes()), *pckCertKeyPtr);
 
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
-    auto pckCrl = getValidCrl(interCert);
+    auto pckCrl = getValidPEMCrl(interCert);
     auto tcbInfoBodyBytes = Bytes{};
     tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
     auto signatureTcb = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());
@@ -401,7 +410,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffuly)
     EXPECT_EQ(STATUS_OK, result);
 }
 
-TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWithNoQeIdentityJson)
+TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWhenCrlAsDer)
 {
     // GIVEN
     auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
@@ -409,7 +418,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWithNoQeI
 
     test::QuoteGenerator::QeCertData qeCertData;
     qeCertData.keyDataType = constants::PCK_ID_PLAIN_PPID;
-    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvn));
+    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvnLE));
     qeCertData.size = static_cast<uint16_t>(qeCertData.keyData.size());
 
     quoteGenerator.withQeCertData(qeCertData);
@@ -423,11 +432,59 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWithNoQeI
     quoteGenerator.getQuoteAuthData().qeReportSignature.signature =
             signEnclaveReport(quoteGenerator.getQuoteAuthData().qeReport, *pckCertKeyPtr);
     quoteGenerator.getQuoteAuthData().ecdsaSignature.signature =
-            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getBody().bytes()), *pckCertKeyPtr);
+            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getEnclaveReport().bytes()), *pckCertKeyPtr);
 
-    auto quote = quoteGenerator.buildQuote();
+    auto quote = quoteGenerator.buildSgxQuote();
     auto pckPem = certGenerator.x509ToString(cert.get());
-    auto pckCrl = getValidCrl(interCert);
+    auto pckCrl = getValidDERCrl(interCert);
+    auto tcbInfoBodyBytes = Bytes{};
+    tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
+    auto signatureTcb = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());
+    auto tcbInfoJsonWithSignature = tcbInfoJsonGenerator(positiveTcbInfoJsonBody,
+                                                         EcdsaSignatureGenerator::signatureToHexString(signatureTcb));
+
+    auto qeIdentityBodyBytes = Bytes{};
+    qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), postiveQEIdentityJsonBody.begin(), postiveQEIdentityJsonBody.end());
+    auto signatureQE = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, key.get());
+    auto qeIdentityJsonWithSignature = ::qeIdentityJsonWithSignature(postiveQEIdentityJsonBody,
+                                                                     EcdsaSignatureGenerator::signatureToHexString(
+                                                                             signatureQE));
+
+    // WHEN
+    auto result = sgxAttestationVerifyQuote(quote.data(), (uint32_t) quote.size(), pckPem.c_str(), pckCrl.c_str(),
+                                            tcbInfoJsonWithSignature.c_str(), qeIdentityJsonWithSignature.c_str());
+
+    // THEN
+    EXPECT_EQ(STATUS_OK, result);
+}
+
+TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteSuccessffulyWithNoQeIdentityJson)
+{
+    // GIVEN
+    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
+    auto pckCertKeyPtr = key.get();
+
+    test::QuoteGenerator::QeCertData qeCertData;
+    qeCertData.keyDataType = constants::PCK_ID_PLAIN_PPID;
+    qeCertData.keyData = concat(ppid, concat(cpusvn, pcesvnLE));
+    qeCertData.size = static_cast<uint16_t>(qeCertData.keyData.size());
+
+    quoteGenerator.withQeCertData(qeCertData);
+    quoteGenerator.getAuthSize() += (uint32_t) qeCertData.keyData.size();
+    quoteGenerator.getQuoteAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+
+    enclaveReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(quoteGenerator.getQuoteAuthData().ecdsaAttestationKey.publicKey,
+                                                                                   quoteGenerator.getQuoteAuthData().qeAuthData.data)));
+
+    quoteGenerator.getQuoteAuthData().qeReport = enclaveReport;
+    quoteGenerator.getQuoteAuthData().qeReportSignature.signature =
+            signEnclaveReport(quoteGenerator.getQuoteAuthData().qeReport, *pckCertKeyPtr);
+    quoteGenerator.getQuoteAuthData().ecdsaSignature.signature =
+            signAndGetRaw(concat(quoteGenerator.getHeader().bytes(), quoteGenerator.getEnclaveReport().bytes()), *pckCertKeyPtr);
+
+    auto quote = quoteGenerator.buildSgxQuote();
+    auto pckPem = certGenerator.x509ToString(cert.get());
+    auto pckCrl = getValidPEMCrl(interCert);
     auto tcbInfoBodyBytes = Bytes{};
     tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), positiveTcbInfoJsonBody.begin(), positiveTcbInfoJsonBody.end());
     auto signatureTcb = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, key.get());

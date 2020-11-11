@@ -81,7 +81,7 @@ TEST_F(VerifyEnclaveIdentityIT, nullptrRootCertShoudReturnUnsupportedCertStatus)
                                                                              nullptr));
 }
 
-TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOk)
+TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrlAsDER)
 {
     auto keyRoot = certGenerator.generateEcKeypair();
     auto tcbSigningKey = certGenerator.generateEcKeypair();
@@ -97,7 +97,36 @@ TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOk)
     auto rootCertPem = certGenerator.x509ToString(rootCert.get());
     auto intPem = certGenerator.x509ToString(tcbSigningCert.get());
     auto certChain = rootCertPem  + intPem;
-    auto rootCaCrlPem = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+    auto rootCaCrlDer = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
+
+    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toJSON();
+    auto qeIdentityBodyBytes = Bytes{};
+    qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), qeIdentityBody.begin(), qeIdentityBody.end());
+    auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, tcbSigningKey.get());
+
+    auto qeIdentityJson = qeIdentityJsonWithSignature(qeIdentityBody,
+                                                      EcdsaSignatureGenerator::signatureToHexString(signature));
+
+    ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveIdentity(qeIdentityJson.c_str(), certChain.c_str(), rootCaCrlDer.c_str(), rootCertPem.c_str(), nullptr));
+}
+
+TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrlAsPEM)
+{
+    auto keyRoot = certGenerator.generateEcKeypair();
+    auto tcbSigningKey = certGenerator.generateEcKeypair();
+
+    auto rootCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, keyRoot.get(), keyRoot.get(),
+                                                 constants::ROOT_CA_SUBJECT, constants::ROOT_CA_SUBJECT);
+
+    auto tcbSigningCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, tcbSigningKey.get(), keyRoot.get(),
+                                                       constants::TCB_SUBJECT, constants::ROOT_CA_SUBJECT);
+
+    auto rootCaCrl = crlGenerator.generateCRL(CRL_VERSION_2, timeNow, timeOneHour, rootCert, std::vector<Bytes>{});
+
+    auto rootCertPem = certGenerator.x509ToString(rootCert.get());
+    auto intPem = certGenerator.x509ToString(tcbSigningCert.get());
+    auto certChain = rootCertPem  + intPem;
+    auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
     auto qeIdentityBody = EnclaveIdentityVectorModel{}.toJSON();
     auto qeIdentityBodyBytes = Bytes{};

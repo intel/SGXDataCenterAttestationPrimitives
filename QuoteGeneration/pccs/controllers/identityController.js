@@ -29,38 +29,42 @@
  *
  */
 
-const { identityService }= require('../services');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { identityService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-exports.getQEIdentity = async function(req,res,next) {
-    try {
-        // call service
-        let qeidJson = await identityService.getQEIdentity();
+export async function getQeIdentity(req, res, next) {
+  try {
+    // call service
+    let qeIdJson = await identityService.getQeIdentity();
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN, qeidJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])
-           .json(qeidJson.qeid);
-    }
-    catch(err) {
-        next(err);
-    }
-};
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
+        qeIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+      )
+      .json(qeIdJson.qeid);
+  } catch (err) {
+    next(err);
+  }
+}
 
-exports.getQvEIdentity = async function(req,res,next) {
-    try {
-        // call service 
-        let qveidJson = await identityService.getQvEIdentity();
+export async function getQveIdentity(req, res, next) {
+  try {
+    // call service
+    let qveIdJson = await identityService.getQveIdentity();
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN, qveidJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])
-           .json(qveidJson.qveid);
-    }
-    catch(err) {
-        next(err);
-    }
-};
-
-
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
+        qveIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+      )
+      .json(qveIdJson.qveid);
+  } catch (err) {
+    next(err);
+  }
+}

@@ -29,80 +29,77 @@
  *
  */
 
-const { Certificate } = require('@fidm/x509')
-const { ASN1 } = require('@fidm/asn1')
-const logger = require('../utils/Logger.js');
-const Constants = require('../constants/index.js');
+import * as x509 from '@fidm/x509';
+import * as asn1 from '@fidm/asn1';
+import logger from '../utils/Logger.js';
+import Constants from '../constants/index.js';
 
 const SGX_EXTENSIONS_OID = '1.2.840.113741.1.13.1';
 const TAG_OID = 6;
 const SGX_EXTENSIONS_FMSPC_OID = '1.2.840.113741.1.13.1.4';
 const X509_EXTENSIONS_CDP_OID = '2.5.29.31';
+const { Certificate } = x509;
+const { ASN1 } = asn1;
 
-function X509(){
+class X509 {
+  constructor() {
     if (!(this instanceof X509)) {
-        return new X509();
+      return new X509();
     }
 
     this.fmspc = null;
     this.cdp_uri = null;
     this.ca = null;
-}
-
-X509.prototype.parseCert=function(cert_buffer) {
+  }
+  parseCert(cert_buffer) {
     try {
-        let cert = Certificate.fromPEM(cert_buffer);
-        let issuerCN = cert.issuer.attributes[0].value;
-        let extensions = cert.extensions;
-        let sgx_extensions = null;
-        let cdp_extensions = null;
+      let cert = Certificate.fromPEM(cert_buffer);
+      let issuerCN = cert.issuer.attributes[0].value;
+      let extensions = cert.extensions;
+      let sgx_extensions = null;
+      let cdp_extensions = null;
 
-        // parse the issuer CN
-        if (issuerCN.includes('Platform')) {
-            this.ca = Constants.CA_PLATFORM;
-        }
-        else if (issuerCN.includes('Processor')) {
-            this.ca = Constants.CA_PROCESSOR;
-        }
+      // parse the issuer CN
+      if (issuerCN.includes('Platform')) {
+        this.ca = Constants.CA_PLATFORM;
+      } else if (issuerCN.includes('Processor')) {
+        this.ca = Constants.CA_PROCESSOR;
+      }
 
-        for (var i = 0; i < extensions.length; i++)
-        {
-            if (extensions[i].oid === SGX_EXTENSIONS_OID)
-            {
-                sgx_extensions = extensions[i].value;
-            }
-            else if (extensions[i].oid === X509_EXTENSIONS_CDP_OID)
-            {
-                cdp_extensions = extensions[i].value;
-            }
+      for (let i = 0; i < extensions.length; i++) {
+        if (extensions[i].oid === SGX_EXTENSIONS_OID) {
+          sgx_extensions = extensions[i].value;
+        } else if (extensions[i].oid === X509_EXTENSIONS_CDP_OID) {
+          cdp_extensions = extensions[i].value;
         }
+      }
 
-        if (sgx_extensions) {
-            let asn1 = ASN1.fromDER(sgx_extensions);
-            let sgx_ext_values = asn1.value;
-            for (var i = 0; i < sgx_ext_values.length; i++)
-            {
-                var obj = sgx_ext_values[i];
-                if (obj.value[0].tag == TAG_OID && obj.value[0].value === SGX_EXTENSIONS_FMSPC_OID)
-                {
-                    this.fmspc = obj.value[1].value.toString('hex');
-                    break;
-                }
-            }
+      if (sgx_extensions) {
+        let asn1 = ASN1.fromDER(sgx_extensions);
+        let sgx_ext_values = asn1.value;
+        for (let i = 0; i < sgx_ext_values.length; i++) {
+          let obj = sgx_ext_values[i];
+          if (
+            obj.value[0].tag == TAG_OID &&
+            obj.value[0].value === SGX_EXTENSIONS_FMSPC_OID
+          ) {
+            this.fmspc = obj.value[1].value.toString('hex');
+            break;
+          }
         }
-        if (cdp_extensions) {
-            let asn1 = ASN1.fromDER(cdp_extensions);
-            let cdp_ext_values = asn1.value;
-            this.cdp_uri = cdp_ext_values[0].value[0].value[0].value[0].value.toString()
-        }
+      }
+      if (cdp_extensions) {
+        let asn1 = ASN1.fromDER(cdp_extensions);
+        let cdp_ext_values = asn1.value;
+        this.cdp_uri = cdp_ext_values[0].value[0].value[0].value[0].value.toString();
+      }
 
-        return true;
-    } 
-    catch (err){
-        logger.error("Failed to parse x509 cert : " + err);
-        return false;
+      return true;
+    } catch (err) {
+      logger.error('Failed to parse x509 cert : ' + err);
+      return false;
     }
+  }
 }
 
-module.exports = X509
-
+export default X509;

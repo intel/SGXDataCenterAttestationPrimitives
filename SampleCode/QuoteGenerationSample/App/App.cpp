@@ -155,9 +155,8 @@ int main(int argc, char* argv[])
         if (SGX_QL_SUCCESS != qe3_ret) {
             qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
             if(SGX_QL_SUCCESS != qe3_ret) {
-                printf("Error in set QPL directory.\n");
-                ret = -1;
-                goto CLEANUP;
+                // Ignore the error, because user may want to get cert type=3 quote
+                printf("Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
             }
         }
     }

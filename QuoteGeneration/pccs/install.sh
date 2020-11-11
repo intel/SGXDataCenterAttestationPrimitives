@@ -4,30 +4,29 @@ arg1=$1
 argnum=$#
 ## Set mydir to the directory containing the script
 mydir="${0%/*}"
-configFile="$mydir"/config/production-0.json
+configFile="$mydir"/config/default.json
 YELLOW='\033[1;33m'
+RED='\033[1;31m'
 NC='\033[0m'
 
-# check if nodejs is installed
+function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+
+# check nodejs version
 function checkNodeJs() {
-    echo "Checking if nodejs is installed ..."
-    if which node > /dev/null 
+    echo "Checking nodejs version ..."
+    expected_node_v="v10.20.0"
+    if which node > /dev/null
     then
-        echo "nodejs is installed, continue..."
+        cur_node_v=$(node -v)
+        if version_gt $cur_node_v $expected_node_v; then
+            echo "nodejs is installed, continue..."
+        else
+            echo -e "${RED}The minimum node.js version required is ${expected_node_v}. Installation aborted. ${NC} "
+            exit 1
+        fi
     else
-        echo "Please install nodejs first..."
-        exit 0
-    fi
-}
-
-function postConfiguration() {
-    pm2 update
-    pm2 start pccs_server.config.js 
-    pm2 save
-
-    if [[ "$argnum" == 0 || "$arg1" != "postinst" ]]; then
-        pm2cfg=`pm2 startup systemd | grep 'sudo'` 
-        eval $pm2cfg
+        echo -e "${RED}Node.js not installed. Please install Node.js version ${expected_node_v} or later. ${NC} "
+        exit 1
     fi
 }
 
@@ -51,16 +50,12 @@ then
 fi
 
 cd `dirname $0`
+npm config set proxy $http_proxy
+npm config set http-proxy $http_proxy
+npm config set https-proxy $https_proxy
 npm config set engine-strict true
-npm install
+npm ci
 [ $? -eq 0 ] || exit $?;
-
-if which pm2 > /dev/null 
-then 
-    echo "pm2 is installed, continue ..."
-else
-    sudo npm install -g pm2
-fi
 
 doconfig=""
 while [ "$doconfig" == "" ]
@@ -71,7 +66,8 @@ do
         break
     elif [[ "$doconfig" == "N" || "$doconfig" == "n" ]] 
     then
-        postConfiguration
+        #Check PCK Cert Selection Library
+        checkPCKSelectionLib
         exit 0
     else
         doconfig=""
@@ -118,7 +114,7 @@ do
     read -p "Set your Intel PCS API key (Press ENTER to skip) :" apikey 
     if [ -z $apikey ]
     then
-        echo -e "${YELLOW}You didn't set Intel PCS API key. You can set it later in config/production-0.json. ${NC} "
+        echo -e "${YELLOW}You didn't set Intel PCS API key. You can set it later in config/default.json. ${NC} "
         break
     elif [[ $apikey =~ ^[a-zA-Z0-9]{32}$ ]] && sed "/\"ApiKey\"*/c\ \ \ \ \"ApiKey\" \: \"${apikey}\"," -i ${configFile}
     then
@@ -235,8 +231,6 @@ then
 else
     echo -e "${YELLOW}You need to setup HTTPS key and cert for PCCS to work. For how-to please check README. ${NC} "
 fi
-
-postConfiguration
 
 #Check PCK Cert Selection Library
 checkPCKSelectionLib

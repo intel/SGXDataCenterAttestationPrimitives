@@ -35,7 +35,7 @@
 
 namespace intel { namespace sgx { namespace dcap {
 
-const std::string validTcb = R"json(
+const std::string validSgxTcb = R"json(
     "tcb": {
         "sgxtcbcomp01svn": 12,
         "sgxtcbcomp02svn": 23,
@@ -55,6 +55,7 @@ const std::string validTcb = R"json(
         "sgxtcbcomp16svn": 7,
         "pcesvn": 30865
     })json";
+
 const std::string validUpToDateStatus = R"json("status": "UpToDate")json";
 const std::string validOutOfDateStatus = R"json("status": "OutOfDate")json";
 const std::string validRevokedStatus = R"json("status": "Revoked")json";
@@ -89,7 +90,7 @@ const std::string validTcbInfoV2Template = R"json({
 const std::string validSignatureTemplate = R"json("signature": "62f2eb97227d906c158e8500964c8d10029e1a318e0e95054fbc1b9636913555d7147ceefe07c4cb7ac1ac700093e2ee3fd4f7d00c7caf135dc5243be51e1def")json";
 
 const int DEFAULT_TCB_TYPE = 1;
-const int DEFAULT_TCB_RECOVERY_NUMBER = 1;
+const int DEFAULT_TCB_EVALUATION_DATA_NUMBER = 1;
 const std::vector<uint8_t> DEFAULT_CPUSVN {12, 23, 34, 45, 100, 0, 1, 156, 208, 255, 2, 3, 4, 5, 6, 7};
 const int DEFAULT_PCESVN = 30865;
 const std::vector<uint8_t> DEFAULT_FMSPC = { 0x01, 0x92, 0x83, 0x74, 0x65, 0xAF };

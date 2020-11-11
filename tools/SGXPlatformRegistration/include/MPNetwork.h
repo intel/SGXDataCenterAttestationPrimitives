@@ -98,6 +98,9 @@ private:
     string m_serverAddress;
     string m_subscriptionKey;
     LogLevel m_logLevel;
+    MPNetwork& operator=(const MPNetwork&) {return *this;}
+    MPNetwork(const MPNetwork& src) {(void) src; }
+
 };
 
 #endif // #ifndef __MPNETWORK_H

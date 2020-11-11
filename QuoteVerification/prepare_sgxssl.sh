@@ -36,13 +36,13 @@ sgxssl_dir=$top_dir/sgxssl
 openssl_out_dir=$sgxssl_dir/openssl_source
 openssl_ver_name=openssl-1.1.1g
 sgxssl_github_archive=https://github.com/01org/intel-sgx-ssl/archive
-sgxssl_file_name=lin_2.10_1.1.1g
+sgxssl_file_name=lin_2.11_1.1.1g
 build_script=$sgxssl_dir/Linux/build_openssl.sh
 server_url_path=https://www.openssl.org/source/
 full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/1.1.1/$openssl_ver_name.tar.gz
 
-sgxssl_chksum=5fb5328fdd55d643cc125dd43cbd0a1f7d74ead7948b52cf15d8533d47a0d266
+sgxssl_chksum=12828839c4555e0f5e88e86db090c995053d98d99091862c498fc55f379183fc
 openssl_chksum=ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46
 rm -f check_sum_sgxssl.txt check_sum_openssl.txt
 if [ ! -f $build_script ]; then

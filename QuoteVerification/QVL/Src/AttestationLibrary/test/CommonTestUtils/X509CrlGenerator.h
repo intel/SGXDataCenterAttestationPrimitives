@@ -52,7 +52,8 @@ public:
     crypto::X509_CRL_uptr generateCRL(CRLVersion version, long notBeforeOffset, long notAfterOffset,
                                       const crypto::X509_uptr &issuerCert, const std::vector<Bytes> &revokedSerials = std::vector<Bytes>{}) const;
 
-    static std::string x509CrlToString(const X509_CRL *crl);
+    static std::string x509CrlToPEMString(const X509_CRL *crl);
+    static std::string x509CrlToDERString(const X509_CRL *crl);
 
 private:
     void revokeSerialNumber(const crypto::X509_CRL_uptr &crl, const Bytes &serialNumber) const;

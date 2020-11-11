@@ -205,7 +205,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                     url = value;
                 }
                 else {
-                    url = server_url_string + "/sgx/certification/v2/platforms";
+                    url = server_url_string + "/sgx/certification/v3/platforms";
                 }
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {
@@ -453,11 +453,14 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
             ret = POST_SUCCESS;
             break;
         }
+        else if (http_code == 401) {
+            ret = POST_AUTHENTICATION_ERROR;
+            break;
+        }
         else {
             ret = POST_UNEXPECTED_ERROR;
             break;
         }
-        ret = POST_SUCCESS;
 
     } while (0);
 
@@ -475,7 +478,7 @@ bool is_server_url_available() {
     bool ret = get_program_path(local_configuration_file_path, MAX_PATH);
     if (ret) {
         if(strnlen(local_configuration_file_path ,MAX_PATH)+strnlen(LOCAL_NETWORK_SETTING,MAX_PATH)+sizeof(char) > MAX_PATH) {
-            ret = false;
+            return false;
         }
         else {
             (void)strncat(local_configuration_file_path,LOCAL_NETWORK_SETTING, strnlen(LOCAL_NETWORK_SETTING,MAX_PATH));

@@ -125,7 +125,7 @@ TEST_F(PlatformPckCertificateUT, pckCertificateConstructors)
     ASSERT_EQ(platformPckCertificateFromCert.getPpid(), platformPckCertificateFromPEM.getPpid());
     ASSERT_EQ(platformPckCertificateFromCert.getPceId(), platformPckCertificateFromPEM.getPceId());
     ASSERT_EQ(platformPckCertificateFromCert.getSgxType(), platformPckCertificateFromPEM.getSgxType());
-
+    
     ASSERT_EQ(platformPckCertificateFromCert.getPlatformInstanceId(), platformPckCertificateFromPEM.getPlatformInstanceId());
     ASSERT_EQ(platformPckCertificateFromCert.getConfiguration(), platformPckCertificateFromPEM.getConfiguration());
 

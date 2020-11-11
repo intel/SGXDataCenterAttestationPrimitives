@@ -204,8 +204,8 @@ int performSetServerInfo(const char *fileName) {
     MpResult res = MP_UNEXPECTED_ERROR;
     memset(&serverId, 0, sizeof(serverId));
     
-    param1 = (char*)fileName+strlen(fileName)+1;
-    param2 = (char*)fileName+strlen(fileName)+1+(FLAGS_PARAM_SIZE+1);
+    param1 = (char*)fileName+strnlen(fileName, MAX_PATH_SIZE)+1;
+    param2 = (char*)fileName+strnlen(fileName, MAX_PATH_SIZE)+1+(FLAGS_PARAM_SIZE+1);
     
     if (gargc - 2 != 3) {
         management_log_message(MP_REG_LOG_LEVEL_ERROR, "Invalid number of parameters, please use the following syntax:\n");
@@ -250,7 +250,7 @@ int performSetServerInfo(const char *fileName) {
         goto out;
     }
 
-    res = manage->setRegistrationServerInfo(flags, string(param2, strlen(param2)), (uint8_t*)&serverId, (uint16_t)buffSize);
+    res = manage->setRegistrationServerInfo(flags, string(param2, strnlen(param2, MAX_PATH_SIZE)), (uint8_t*)&serverId, (uint16_t)buffSize);
     if (MP_SUCCESS != res) {
         ret = (int)res;
         goto out;

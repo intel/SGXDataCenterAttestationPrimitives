@@ -41,6 +41,7 @@
 #include <map>
 #include <fstream>
 #include <algorithm>
+#include <regex>
 #include <sgx_key.h>
 #include "sgx_default_qcnl_wrapper.h"
 #include "sgx_pce.h"
@@ -1098,4 +1099,31 @@ sgx_qcnl_error_t sgx_qcnl_register_platform (const sgx_ql_pck_cert_id_t *p_pck_c
     }
 
     return ret;
+}
+
+/**
+ * This function gets the API version of the configured URL.
+ */
+int sgx_qcnl_get_api_version()
+{
+    string url(server_url);
+    smatch result;
+    regex pattern("/v([1-9][0-9]*)/");
+
+    try {
+        string::const_iterator iterStart = url.begin();
+        string::const_iterator iterEnd = url.end();
+        if (regex_search(iterStart, iterEnd, result, pattern)) {
+            string strver = result[0];
+            strver = strver.substr(2);
+            strver.pop_back();
+            std::string::size_type sz;
+            return std::stoi(strver, &sz);
+        }
+    }
+    catch(...){
+        return 0;
+    }
+
+    return 0;
 }

@@ -28,56 +28,60 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('../utils/Logger.js');
-const fmspcTcbDao = require('../dao/fmspcTcbDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const {sequelize, Sequelize} = require('../dao/models/');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Config from 'config';
+import Constants from '../constants/index.js';
+import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
+import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as pcsClient from '../pcs_client/pcs_client.js';
+import { sequelize } from '../dao/models/index.js';
 
-exports.getTcbInfoFromPCS=async function(fmspc) {
-    const pck_server_res = await PcsClient.getTcb(fmspc);
+export async function getTcbInfoFromPCS(fmspc) {
+  const pck_server_res = await pcsClient.getTcb(fmspc);
 
-    if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
 
-    let result = {};
-    result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] = pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN];
-    result["tcbinfo"] = JSON.parse(pck_server_res.body);
+  let result = {};
+  result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN];
+  result['tcbinfo'] = JSON.parse(pck_server_res.body);
 
-    await sequelize.transaction(async (t)=>{
-        // update or insert TCB Info 
-        await fmspcTcbDao.upsertFmspcTcb({
-            "fmspc": fmspc,
-            "tcbinfo": result["tcbinfo"]
-        });
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertTcbInfoIssuerChain(pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
+  await sequelize.transaction(async (t) => {
+    // update or insert TCB Info
+    await fmspcTcbDao.upsertFmspcTcb({
+      fmspc: fmspc,
+      tcbinfo: result['tcbinfo'],
     });
+    // update or insert certificate chain
+    await pcsCertificatesDao.upsertTcbInfoIssuerChain(
+      pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN]
+    );
+  });
 
-    return result;
+  return result;
 }
 
-exports.getTcbInfo=async function(fmspc) {
-    // query tcbinfo from local database first
-    const tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
-    let result = {};
-    if (tcbinfo == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            result = await this.getTcbInfoFromPCS(fmspc);    
-        }
-        else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
+export async function getTcbInfo(fmspc) {
+  // query tcbinfo from local database first
+  const tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
+  let result = {};
+  if (tcbinfo == null) {
+    if (
+      Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
+      Constants.CACHE_FILL_MODE_LAZY
+    ) {
+      result = await this.getTcbInfoFromPCS(fmspc);
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
     }
-    else {
-        result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] = tcbinfo.signing_cert + tcbinfo.root_cert;
-        result["tcbinfo"] = JSON.parse(tcbinfo.tcbinfo);
-    }
+  } else {
+    result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] =
+      tcbinfo.signing_cert + tcbinfo.root_cert;
+    result['tcbinfo'] = JSON.parse(tcbinfo.tcbinfo);
+  }
 
-    return result;
+  return result;
 }

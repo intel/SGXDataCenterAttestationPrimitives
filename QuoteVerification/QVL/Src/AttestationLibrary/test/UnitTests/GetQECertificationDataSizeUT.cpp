@@ -80,7 +80,7 @@ TEST_F(GetQECertificationDataSizeTests, positiveValidParametersShouldReturnOkSta
     generator.withQeCertData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
 
-    auto quote = generator.buildQuote();
+    auto quote = generator.buildSgxQuote();
 
     // WHEN
     const auto status = sgxAttestationGetQECertificationDataSize(quote.data(), (uint32_t) quote.size(), &qeCertificationDataSize);
@@ -97,7 +97,7 @@ TEST_F(GetQECertificationDataSizeTests, positiveEmptyQeCertDataShouldReturnOkSta
     const Bytes pckData; // empty
     generator.withQeCertData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
-    const auto quote = generator.buildQuote();
+    const auto quote = generator.buildSgxQuote();
 
     // WHEN
     const auto status = sgxAttestationGetQECertificationDataSize(quote.data(), (uint32_t) quote.size(), &qeCertificationDataSize);

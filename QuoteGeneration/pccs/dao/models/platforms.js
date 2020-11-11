@@ -28,25 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+import Sequelize from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
-    const Platforms = sequelize.define('platforms', {
-      qe_id: { type: DataTypes.STRING, primaryKey: true},
-      pce_id: { type: DataTypes.STRING, primaryKey: true },
-      platform_manifest: { type: DataTypes.BLOB, get(){
-          let platform_manifest = this.getDataValue('platform_manifest');
-          if (platform_manifest != null)
-            return platform_manifest.toString('utf8');
-          else return "";}
+export default class Platforms extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        qe_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        pce_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        platform_manifest: {
+          type: Sequelize.DataTypes.BLOB,
+          get() {
+            let platform_manifest = this.getDataValue('platform_manifest');
+            if (platform_manifest != null)
+              return platform_manifest.toString('utf8');
+            else return '';
+          },
+        },
+        enc_ppid: {
+          type: Sequelize.DataTypes.BLOB,
+          get() {
+            return this.getDataValue('enc_ppid').toString('utf8');
+          },
+        },
+        fmspc: { type: Sequelize.DataTypes.STRING },
+        ca: { type: Sequelize.DataTypes.STRING },
       },
-      enc_ppid: { type: DataTypes.BLOB, get(){return this.getDataValue('enc_ppid').toString('utf8');}  },
-      fmspc: { type: DataTypes.STRING },
-      ca: { type: DataTypes.STRING }
-    },{
+      {
+        tableName: 'platforms',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return Platforms;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

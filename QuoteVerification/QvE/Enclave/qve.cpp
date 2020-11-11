@@ -1091,7 +1091,7 @@ static quote3_error_t sgx_qve_generate_report(
     do {
         //Create QvE report
         //
-        //report_data = SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00s)
+        //report_data = SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data]) || 32 - 0x00s
         //
         sgx_status = sgx_sha256_init(&sha_handle);
         SGX_ERR_BREAK(sgx_status);
@@ -1188,6 +1188,7 @@ static bool is_collateral_deep_copied(const struct _sgx_ql_qve_collateral_t *p_q
  *      - SGX_QL_QUOTE_FORMAT_UNSUPPORTED
  *      - SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED
  *      - SGX_QL_UNABLE_TO_GENERATE_REPORT
+ *      - SGX_QL_CRL_UNSUPPORTED_FORMAT
  *      - SGX_QL_ERROR_UNEXPECTED
  **/
 quote3_error_t sgx_qve_verify_quote(
@@ -1243,9 +1244,10 @@ quote3_error_t sgx_qve_verify_quote(
         quote_size < QUOTE_MIN_SIZE ||
         !sgx_is_within_enclave(p_quote, quote_size) ||
         p_quote_collateral == NULL ||
-        p_quote_collateral->version != QVE_COLLATERAL_VERSION ||
         !sgx_is_within_enclave(p_quote_collateral, sizeof(*p_quote_collateral)) ||
         !is_collateral_deep_copied(p_quote_collateral) ||
+        (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION3) ||
         expiration_check_date <= 0 ||
         (p_qve_report_info != NULL && !sgx_is_within_enclave(p_qve_report_info, sizeof(*p_qve_report_info))) ||
         (p_supplemental_data == NULL && supplemental_data_size != 0)) {
@@ -1267,6 +1269,7 @@ quote3_error_t sgx_qve_verify_quote(
     time_t set_time = 0;
     CertificateChain chain;
     json::TcbInfo tcb_info_obj;
+    const char* quote_trusted_root_ca_cert;
 
     //start the verification operation
     //
@@ -1314,9 +1317,20 @@ quote3_error_t sgx_qve_verify_quote(
         //create CRLs combined array
         //
         const std::array<const char*, 2> crls{ p_quote_collateral->root_ca_crl, p_quote_collateral->pck_crl };
-        //production ROOT CA CERT
-        //
-        const char* quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT;
+
+        //collateral version 1 will use v1 root CA
+        //collateral version 3 will use v3 root CA
+        //all other collateral versions are not supported
+        if (p_quote_collateral->version == QVE_COLLATERAL_VERSION1)
+            quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT;
+        else if (p_quote_collateral->version == QVE_COLLATERAL_VERSION3)
+            quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT_V3;
+        else {
+            //defense in depth
+            //only collateral version 1 and 3 are supported
+            ret = SGX_QL_ERROR_INVALID_PARAMETER;
+            break;
+        }
 
         ret = qve_get_collateral_dates(&chain, &tcb_info_obj, p_quote_collateral,
             &earliest_issue_date, &earliest_expiration_date,

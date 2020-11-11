@@ -101,29 +101,34 @@ namespace intel { namespace sgx { namespace dcap {
         return nextUpdate;
     }
 
+    EnclaveID EnclaveIdentity::getID() const
+    {
+        return id;
+    }
+
     bool EnclaveIdentity::parseVersion(const rapidjson::Value &input)
     {
-        bool l_status = false;
+        auto l_status = JsonParser::ParseStatus::Missing;
         std::tie(version, l_status) = jsonParser.getIntFieldOf(input, "version");
-        return l_status;
+        return l_status == JsonParser::OK;
     }
 
     bool EnclaveIdentity::parseIssueDate(const rapidjson::Value &input)
     {
-        bool l_status = false;
+        auto l_status = JsonParser::ParseStatus::Missing;
         struct tm issueDateTm{};
         std::tie(issueDateTm, l_status) = jsonParser.getDateFieldOf(input, "issueDate");
         issueDate = dcap::mktime(&issueDateTm);
-        return l_status;
+        return l_status == JsonParser::OK;
     }
 
     bool EnclaveIdentity::parseNextUpdate(const rapidjson::Value &input)
     {
-        bool l_status = false;
+        auto l_status = JsonParser::ParseStatus::Missing;
         struct tm nextUpdateTm{};
         std::tie(nextUpdateTm, l_status) = jsonParser.getDateFieldOf(input, "nextUpdate");
         nextUpdate = dcap::mktime(&nextUpdateTm);
-        return l_status;
+        return l_status == JsonParser::OK;
     }
 
     bool EnclaveIdentity::parseMiscselect(const rapidjson::Value &input)
@@ -153,9 +158,9 @@ namespace intel { namespace sgx { namespace dcap {
 
     bool EnclaveIdentity::parseHexstringProperty(const rapidjson::Value &object, const std::string &propertyName, const size_t length, std::vector<uint8_t> &saveAs)
     {
-        bool parseSuccessful = false;
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
         std::tie(saveAs, parseSuccessful) = jsonParser.getHexstringFieldOf(object, propertyName, length);
-        return parseSuccessful;
+        return parseSuccessful == JsonParser::OK;
     }
 
     bool EnclaveIdentity::parseIsvprodid(const rapidjson::Value &input)
@@ -165,9 +170,9 @@ namespace intel { namespace sgx { namespace dcap {
 
     bool EnclaveIdentity::parseUintProperty(const rapidjson::Value &object, const std::string &propertyName, unsigned int &saveAs)
     {
-        bool parseSuccessful = false;
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
         std::tie(saveAs, parseSuccessful) = jsonParser.getUintFieldOf(object, propertyName);
-        return parseSuccessful;
+        return parseSuccessful == JsonParser::OK;
     }
 
     bool EnclaveIdentity::checkDateCorrectness(const time_t expirationDate) const

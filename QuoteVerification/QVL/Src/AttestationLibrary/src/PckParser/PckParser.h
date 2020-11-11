@@ -136,7 +136,7 @@ void cleanUpOpenSSL();
 //
 ////////////////////////////////////////////////////////////////////////////
 
-crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
+crypto::X509_CRL_uptr str2X509Crl(const std::string& data);
 long getVersion(const X509_CRL& crl);
 Issuer getIssuer(const X509_CRL& crl);
 int getExtensionCount(const X509_CRL& crl);

@@ -411,10 +411,10 @@ static MpResult http_network_send_data(http_network_info_t *info, const string& 
                 size_t count_coverted = 0;
                 errno_t err_covert = wcstombs_s(&count_coverted, header_line_str_char, (const wchar_t *)header_line_str, sizeof(header_line_str_char));
                 if (0 == err_covert && wcslen((const wchar_t *)header_line_str) + 1 == count_coverted) {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Found response Error-Code: %s\n", header_line_str_char);
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Found response Error-Code: %s\n", header_line_str_char);
                     errorCodeStr = string(header_line_str_char);
                 } else {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Error during Error-Code convertion: %d, last error: %d\n", err_covert, GetLastError());
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error during Error-Code convertion: %d, last error: %d\n", err_covert, GetLastError());
                     break;
                 }
             }
@@ -429,10 +429,10 @@ static MpResult http_network_send_data(http_network_info_t *info, const string& 
                 size_t count_coverted = 0;
                 errno_t err_covert = wcstombs_s(&count_coverted, header_line_str_char, (const wchar_t *)header_line_str, sizeof(header_line_str_char));
                 if (0 == err_covert && wcslen((const wchar_t *)header_line_str) + 1 == count_coverted) {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Found response Error-Message: %s\n", header_line_str_char);
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Found response Error-Message: %s\n", header_line_str_char);
                 }
                 else {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Error during Error-Message convertion: %d, last error: %d\n", err_covert, GetLastError());
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error during Error-Message convertion: %d, last error: %d\n", err_covert, GetLastError());
                     break;
                 }
             }

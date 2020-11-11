@@ -28,47 +28,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const Config = require('config');
-const Crypto = require('crypto');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants');
+import Config from 'config';
+import Crypto from 'crypto';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-exports.validateUser = function (req,res,next) {
-    const token = req.headers[Constants.HTTP_HEADER_USER_TOKEN];
-    if (token) {
-        let hash = Crypto.createHash('sha512');
-        hash.update(token);
-        let user_token_hash = hash.digest('hex');
-        
-        if (user_token_hash != Config.get('UserTokenHash')) {
-            return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-                PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
-        }
-        else {
-            next()
-        }
-    }else {
-        res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-            PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
+export function validateUser(req, res, next) {
+  const token = req.headers[Constants.HTTP_HEADER_USER_TOKEN];
+  if (token) {
+    let hash = Crypto.createHash('sha512');
+    hash.update(token);
+    let user_token_hash = hash.digest('hex');
+
+    if (user_token_hash != Config.get('UserTokenHash')) {
+      return res
+        .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
+        .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+    } else {
+      next();
     }
+  } else {
+    res
+      .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
+      .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+  }
 }
 
-exports.validateAdmin = function (req,res,next) {
-    const token = req.headers[Constants.HTTP_HEADER_ADMIN_TOKEN];
-    if (token) {
-        let hash = Crypto.createHash('sha512');
-        hash.update(token);
-        let admin_token_hash = hash.digest('hex');
+export function validateAdmin(req, res, next) {
+  const token = req.headers[Constants.HTTP_HEADER_ADMIN_TOKEN];
+  if (token) {
+    let hash = Crypto.createHash('sha512');
+    hash.update(token);
+    let admin_token_hash = hash.digest('hex');
 
-        if (admin_token_hash != Config.get('AdminTokenHash')) {
-            return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-                PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
-        }
-        else {
-            next()
-        }
-    }else {
-        res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-            PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
+    if (admin_token_hash != Config.get('AdminTokenHash')) {
+      return res
+        .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
+        .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+    } else {
+      next();
     }
+  } else {
+    res
+      .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
+      .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+  }
 }

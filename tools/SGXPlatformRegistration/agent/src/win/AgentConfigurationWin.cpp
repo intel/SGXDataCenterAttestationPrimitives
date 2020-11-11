@@ -65,7 +65,7 @@ MpResult aesm_read_registry_dword(mp_config_type entry, const TCHAR *name, uint3
     HKEY key = NULL;
     LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, KEY_READ, &key);
     if (ERROR_SUCCESS != status) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to open registry key (%s), return value %ld\n", entry_path, status);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to open registry key (%s), return value %ld\n", entry_path, status);
         return MP_UNEXPECTED_ERROR;
     }
     DWORD type, count;
@@ -74,7 +74,7 @@ MpResult aesm_read_registry_dword(mp_config_type entry, const TCHAR *name, uint3
     RegCloseKey(key);
     if (ERROR_SUCCESS != status ||
         type != REG_DWORD) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to query value %s:status=%d, type=%d\n", name, (int)status, (int)type);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to query value %s:status=%d, type=%d\n", name, (int)status, (int)type);
         return MP_UNEXPECTED_ERROR;
     }
     return MP_SUCCESS;
@@ -90,7 +90,7 @@ MpResult aesm_write_registry_dword(mp_config_type entry, const TCHAR *name, uint
     HKEY key = NULL;
     LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, KEY_WRITE, &key);
     if (ERROR_SUCCESS != status) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to open registry key (%s), return value %ld\n", entry_path, status);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to open registry key (%s), return value %ld\n", entry_path, status);
         return MP_UNEXPECTED_ERROR;
     }
     DWORD type, count;
@@ -99,7 +99,7 @@ MpResult aesm_write_registry_dword(mp_config_type entry, const TCHAR *name, uint
     status = RegSetValueEx(key, name, NULL, type, (LPBYTE)&result, count);
     RegCloseKey(key);
     if (ERROR_SUCCESS != status) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to set value %s:status=%d\n", name, (int)status);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to set value %s:status=%d\n", name, (int)status);
         return MP_UNEXPECTED_ERROR;
     }
     return MP_SUCCESS;
@@ -112,7 +112,7 @@ MpResult aesm_read_registry_value(const TCHAR * registry_path, const TCHAR *name
         return MP_INVALID_PARAMETER;
     LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, registry_path, 0, KEY_READ, &key);
     if (ERROR_SUCCESS != status) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to open registry key (%s), return value %ld\n", registry_path, status);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to open registry key (%s), return value %ld\n", registry_path, status);
         return MP_UNEXPECTED_ERROR;
     }
     DWORD type, count;
@@ -121,7 +121,7 @@ MpResult aesm_read_registry_value(const TCHAR * registry_path, const TCHAR *name
     RegCloseKey(key);
     if (ERROR_SUCCESS != status ||
         type != REG_SZ) {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Fail to query value s: name (%s) status=%d, type=%d\n", name, (int)status, (int)type);
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to query value s: name (%s) status=%d, type=%d\n", name, (int)status, (int)type);
         return MP_UNEXPECTED_ERROR;
     }
     if (strnlen(value, tchar_num) >= tchar_num) {

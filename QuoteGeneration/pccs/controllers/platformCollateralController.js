@@ -29,19 +29,19 @@
  *
  */
 
-const { platformCollateralService }= require('../services');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
+import { platformCollateralService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
 
-exports.putPlatformCollateral = async function(req, res, next) {
-    try {
-        // call service
-        let platf = await platformCollateralService.addPlatformCollateral(req.body);
+export async function putPlatformCollateral(req, res, next) {
+  try {
+    // call service
+    let platf = await platformCollateralService.addPlatformCollateral(req.body);
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0]).send(PCCS_STATUS.PCCS_STATUS_SUCCESS[1]);
-    }
-    catch(err) {
-        next(err);
-    }
-};
-
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .send(PccsStatus.PCCS_STATUS_SUCCESS[1]);
+  } catch (err) {
+    next(err);
+  }
+}

@@ -28,22 +28,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+import Sequelize from 'sequelize';
 
-#ifndef SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H
-#define SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H
-
-#include <string>
-#include <array>
-
-std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                                 std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status,
-                                 std::string signature);
-
-std::string tcbInfoJsonGenerator(std::string tcbInfoBody, std::string signature);
-
-std::string tcbInfoJsonBody(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                            std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status);
-
-std::array<int, 16> getRandomTcb();
-
-#endif //SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H
+export default class PcsVersion extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
+        api_version: { type: Sequelize.DataTypes.INTEGER },
+        server_addr: { type: Sequelize.DataTypes.STRING },
+      },
+      {
+        tableName: 'pcs_version',
+        timestamps: true,
+        createdAt: 'created_time',
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

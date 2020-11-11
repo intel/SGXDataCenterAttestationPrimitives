@@ -84,7 +84,7 @@ ENCLAVE_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack -fPIC \
 				   -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
 				   -L$(SGX_LIBRARY_PATH) -L$(SGXSSL_PACKAGE_PATH)/lib64 \
 				   -Wl,--whole-archive -l$(TRTS_NAME) -l$(SGXSSL_TLIB) -Wl,--no-whole-archive \
-				   -Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(SGXSSL_TCRYPTO) -l$(CRYPTO_LIB_NAME) \
+				   -Wl,--start-group -lsgx_tstdc -lsgx_pthread -lsgx_tcxx -l$(SGXSSL_TCRYPTO) -l$(CRYPTO_LIB_NAME) \
 				   -l$(SERVICE_NAME) -Wl,--end-group \
 				   -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,--gc-sections \
 				   -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,-Map,qve.map \

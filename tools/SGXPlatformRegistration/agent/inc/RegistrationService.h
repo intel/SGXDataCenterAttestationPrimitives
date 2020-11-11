@@ -55,6 +55,8 @@ class RegistrationService {
         MPUefi *m_uefi;
         MPNetwork *m_network;
         LogLevel m_gLogLevel;
+        RegistrationService& operator=(const RegistrationService&) {return *this;}
+        RegistrationService(const RegistrationService& src) {(void) src; }
 };
 #pragma pack(pop) 
 #endif  // #ifndef __REGISTRATION_SERVICE_H

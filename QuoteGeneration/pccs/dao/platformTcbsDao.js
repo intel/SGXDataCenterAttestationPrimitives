@@ -29,49 +29,58 @@
  *
  */
 
-const { platform_tcbs }= require('./models/');
-const Constants = require('../constants/index.js');
-const {Sequelize, sequelize} = require('./models/');
+import { PlatformTcbs, sequelize } from './models/index.js';
 
-exports.upsertPlatformTcbs = async function(qe_id, pce_id, cpu_svn, pce_svn, tcbm) {
-    return await platform_tcbs.upsert({
-        qe_id: qe_id,
-        pce_id: pce_id,
-        cpu_svn: cpu_svn,
-        pce_svn: pce_svn,
-        tcbm: tcbm
-    });
+export async function upsertPlatformTcbs(
+  qe_id,
+  pce_id,
+  cpu_svn,
+  pce_svn,
+  tcbm
+) {
+  return await PlatformTcbs.upsert({
+    qe_id: qe_id,
+    pce_id: pce_id,
+    cpu_svn: cpu_svn,
+    pce_svn: pce_svn,
+    tcbm: tcbm,
+  });
 }
 
 // Query all platform TCBs that has the same fmspc
-exports.getPlatformTcbs = async function(fmspc){
-    let sql;
-    if (fmspc == null) {
-        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id';
-        return await sequelize.query(sql,
-                { type:  sequelize.QueryTypes.SELECT
-                });
-    }
-    else {
-        sql = 'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc in(:FMSPC)';
-        return await sequelize.query(sql,
-                { type:  sequelize.QueryTypes.SELECT,
-                  replacements: {FMSPC : fmspc.split(',')}
-                });
-    }
+export async function getPlatformTcbs(fmspc) {
+  let sql;
+  if (fmspc == null) {
+    sql =
+      'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b ' +
+      ' where a.qe_id=b.qe_id and a.pce_id=b.pce_id';
+    return await sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  } else {
+    sql =
+      'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b ' +
+      ' where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc in(:FMSPC)';
+    return await sequelize.query(sql, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: { FMSPC: fmspc.split(',') },
+    });
+  }
 }
 
 // Query all TCBs for a platform
-exports.getPlatformTcbsById = async function(qe_id, pce_id){
-    return await platform_tcbs.findAll({where:{
-        qe_id: qe_id,
-        pce_id: pce_id
-    }});
+export async function getPlatformTcbsById(qe_id, pce_id) {
+  return await PlatformTcbs.findAll({
+    where: {
+      qe_id: qe_id,
+      pce_id: pce_id,
+    },
+  });
 }
 
-exports.deletePlatformTcbsById = async function(qe_id, pce_id) {
-    return await platform_tcbs.destroy({where:{
-        qe_id: qe_id,
-        pce_id: pce_id
-    }});
+export async function deletePlatformTcbsById(qe_id, pce_id) {
+  return await PlatformTcbs.destroy({
+    where: {
+      qe_id: qe_id,
+      pce_id: pce_id,
+    },
+  });
 }

@@ -53,7 +53,7 @@ static std::string getTcb(std::array<int, 16> tcb)
     return result;
 }
 
-static std::string getTcbLevels(std::array<int, 16> tcb, int pcesvn, std::string status)
+static std::string getTcbLevelsV1(std::array<int, 16> tcb, int pcesvn, std::string status)
 {
     std::string result;
     result = R"([{"tcb":{)" + getTcb(tcb) + R"("pcesvn":)" + std::to_string(pcesvn);
@@ -62,17 +62,40 @@ static std::string getTcbLevels(std::array<int, 16> tcb, int pcesvn, std::string
     return result;
 }
 
-std::string tcbInfoJsonBody(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                            std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status)
+static std::string getTcbLevels(std::array<int, 16> tcb, int pcesvn, std::string status, std::string tcbDate)
 {
     std::string result;
-    result = R"({"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
-    result +=  R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
-    result +=  R"(","tcbLevels":)" + getTcbLevels(tcb, pcesvn, status);
+    result = R"([{"tcb":{)" + getTcb(tcb) + R"("pcesvn":)" + std::to_string(pcesvn);
+    result += R"(},"tcbDate":")" + tcbDate;
+    result += R"(","tcbStatus":")" + status + R"("}]})";
 
     return result;
 }
 
+std::string tcbInfoJsonV1Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status)
+{
+    std::string result;
+    result = R"({"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
+    result +=  R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
+    result += R"(","tcbLevels":)" + getTcbLevelsV1(tcb, pcesvn, status);
+
+    return result;
+}
+
+std::string tcbInfoJsonV2Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string tcbStatus,
+                              int tcbType, int tcbEvaluationDataNumber, std::string tcbDate)
+{
+    std::string result;
+    result = R"({"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
+    result += R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
+    result += R"(","tcbType":)" + std::to_string(tcbType);
+    result += R"(,"tcbEvaluationDataNumber":)" + std::to_string(tcbEvaluationDataNumber);
+    result += R"(,"tcbLevels":)" + getTcbLevels(tcb, pcesvn, tcbStatus, tcbDate);
+
+    return result;
+}
 
 std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
                                  std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status,
@@ -80,8 +103,8 @@ std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string
 {
     std::string result;
     result = R"({"tcbInfo":{"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
-    result +=  R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
-    result +=  R"(","tcbLevels":)" + getTcbLevels(tcb, pcesvn, status) + R"(,"signature":")" + signature + R"("})";
+    result += R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
+    result += R"(","tcbLevels":)" + getTcbLevelsV1(tcb, pcesvn, status) + R"(,"signature":")" + signature + R"("})";
 
     return result;
 }

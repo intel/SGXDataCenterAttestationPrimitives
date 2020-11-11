@@ -110,6 +110,7 @@ class TcbMock: public dcap::parser::x509::Tcb
 {
 public:
     MOCK_CONST_METHOD0(getPceSvn, unsigned int());
+    MOCK_CONST_METHOD0(getCpuSvn, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD1(getSgxTcbComponentSvn, unsigned int(unsigned int));
 };
 

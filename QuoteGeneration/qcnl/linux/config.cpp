@@ -47,7 +47,7 @@ using namespace std;
 #define MAX_URL_LENGTH  2083
 
 // Default URL for PCCS server if configuration file doesn't exist
-char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v2/";
+char server_url[MAX_URL_LENGTH]  = "https://localhost:8081/sgx/certification/v3/";
 // Use secure HTTPS certificate or not
 bool g_use_secure_cert = true;
 

@@ -28,45 +28,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const express = require('express');
-const {platformsController, 
-       platformCollateralController,
-       pckcertController,
-       pckcrlController,
-       tcbinfoController,
-       identityController,
-       rootcacrlController,
-       refreshController} = require('../controllers');
+import Router from 'express';
+import {
+  platformsController,
+  platformCollateralController,
+  pckcertController,
+  pckcrlController,
+  tcbinfoController,
+  identityController,
+  rootcacrlController,
+  refreshController,
+} from '../controllers/index.js';
 
 // express routes for our API
-const router = express.Router();
+const router = Router();
 
-router.route('/platforms')
-    .post(platformsController.postPlatforms)
-    .get(platformsController.getPlatforms);
+router
+  .route('/platforms')
+  .post(platformsController.postPlatforms)
+  .get(platformsController.getPlatforms);
 
-router.route('/platformcollateral')
-    .put(platformCollateralController.putPlatformCollateral);
+router
+  .route('/platformcollateral')
+  .put(platformCollateralController.putPlatformCollateral);
 
-router.route('/pckcert')
-    .get(pckcertController.getPckCert);
+router.route('/pckcert').get(pckcertController.getPckCert);
 
-router.route('/pckcrl')
-    .get(pckcrlController.getPckCrl);
+router.route('/pckcrl').get(pckcrlController.getPckCrl);
 
-router.route('/tcb')
-    .get(tcbinfoController.getTcbInfo);
+router.route('/tcb').get(tcbinfoController.getTcbInfo);
 
-router.route('/qe/identity')
-    .get(identityController.getQEIdentity);
+router.route('/qe/identity').get(identityController.getQeIdentity);
 
-router.route('/qve/identity')
-    .get(identityController.getQvEIdentity);
+router.route('/qve/identity').get(identityController.getQveIdentity);
 
-router.route('/rootcacrl')
-    .get(rootcacrlController.getRootCACrl);
+router.route('/rootcacrl').get(rootcacrlController.getRootCaCrl);
 
-router.route('/refresh')
-    .get(refreshController.refreshCache);
+router.route('/refresh').get(refreshController.refreshCache);
 
-module.exports = router;
+export default router;

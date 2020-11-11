@@ -39,6 +39,7 @@
 
 using namespace testing;
 using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
 
 struct EnclaveIdentityV1ParserFormatUT : public Test
 {

@@ -28,18 +28,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+import Sequelize from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
-    const FmspcTcb = sequelize.define('fmspc_tcbs', {
-      fmspc: { type: DataTypes.STRING, primaryKey: true},
-      tcbinfo: { type: DataTypes.BLOB},
-      root_cert_id: { type: DataTypes.INTEGER },
-      signing_cert_id: { type: DataTypes.INTEGER }
-    },{
+export default class FmspcTcbs extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        fmspc: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        tcbinfo: { type: Sequelize.DataTypes.BLOB },
+        root_cert_id: { type: Sequelize.DataTypes.INTEGER },
+        signing_cert_id: { type: Sequelize.DataTypes.INTEGER },
+      },
+      {
+        tableName: 'fmspc_tcbs',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return FmspcTcb;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

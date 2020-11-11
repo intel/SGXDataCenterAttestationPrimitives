@@ -8,5 +8,5 @@ Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
 
 Package: sgx-dcap-pccs
 Architecture: any
-Depends: npm, nodejs
+Depends: npm, nodejs, build-essential
 Description: Intel(R) Software Guard Extensions PCK Caching Service

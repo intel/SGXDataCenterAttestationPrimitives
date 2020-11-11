@@ -64,11 +64,11 @@ struct EnclaveReportVerifierUT : public Test
 
     Quote::EnclaveReport getEnclaveReport()
     {
-        quoteGenerator.withBody(enclaveReport);
-        const auto enclaveReportBody = quoteGenerator.getBody().bytes();
+        quoteGenerator.withEnclaveReport(enclaveReport);
+        const auto enclaveReportBody = quoteGenerator.getEnclaveReport().bytes();
         Quote quote;
         quote.parseEnclaveReport(enclaveReportBody);
-        return quote.getBody();
+        return quote.getEnclaveReport();
     }
 
     std::string generateEnclaveIdentity(std::string bodyJson);

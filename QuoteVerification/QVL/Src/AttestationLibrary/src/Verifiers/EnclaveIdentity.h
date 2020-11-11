@@ -46,6 +46,11 @@
 
 namespace intel { namespace sgx { namespace dcap {
 
+    enum EnclaveID
+    {
+        QE, QVE
+    };
+
     class EnclaveIdentity
     {
     public:
@@ -73,6 +78,7 @@ namespace intel { namespace sgx { namespace dcap {
         virtual TcbStatus getTcbStatus(unsigned int p_isvSvn) const = 0;
         virtual bool checkDateCorrectness(time_t expirationDate) const;
         virtual Status getStatus() const;
+        virtual EnclaveID getID() const;
 
     protected:
         EnclaveIdentity() = default;
@@ -103,6 +109,7 @@ namespace intel { namespace sgx { namespace dcap {
         time_t nextUpdate;
         unsigned int isvProdId;
         int version;
+        EnclaveID id = EnclaveID::QE;
 
         Status status = STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT;
     };

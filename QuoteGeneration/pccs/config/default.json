@@ -1,7 +1,7 @@
 {
     "HTTPS_PORT" : 8081,
     "hosts" : "127.0.0.1",
-    "uri": "https://api.trustedservices.intel.com/sgx/certification/v2/",
+    "uri": "https://api.trustedservices.intel.com/sgx/certification/v3/",
     "ApiKey": "",
     "proxy" : "",
     "RefreshSchedule": "0 0 1 * * *",

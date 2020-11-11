@@ -38,11 +38,6 @@
 
 namespace intel { namespace sgx { namespace dcap {
 
-    enum EnclaveID
-    {
-        QE, QVE
-    };
-
     class TCBLevel
     {
     public:
@@ -67,7 +62,6 @@ namespace intel { namespace sgx { namespace dcap {
         virtual TcbStatus getTcbStatus(unsigned int isvSvn) const;
         virtual unsigned int getTcbEvaluationDataNumber() const;
         virtual const std::vector<TCBLevel>& getTcbLevels() const;
-        virtual EnclaveID getID() const;
 
     protected:
         EnclaveIdentityV2() = default;
@@ -78,7 +72,6 @@ namespace intel { namespace sgx { namespace dcap {
 
         unsigned int tcbEvaluationDataNumber;
         std::vector<TCBLevel> tcbLevels;
-        EnclaveID id;
     };
 }}}
 

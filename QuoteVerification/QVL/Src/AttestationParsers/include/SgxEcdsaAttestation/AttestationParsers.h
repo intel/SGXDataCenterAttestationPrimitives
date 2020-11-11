@@ -262,16 +262,16 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             static TcbInfo parse(const std::string& json);
 
         private:
-            Version _version;
-            std::time_t _issueDate;
-            std::time_t _nextUpdate;
+            Version _version = Version::V2;
+            std::time_t _issueDate = 0;
+            std::time_t _nextUpdate = 0;
             std::vector<uint8_t> _fmspc;
             std::vector<uint8_t> _pceId;
             std::set<TcbLevel, std::greater<TcbLevel>> _tcbLevels;
             std::vector<uint8_t> _signature;
             std::vector<uint8_t> _infoBody;
-            int _tcbType;
-            unsigned int _tcbEvaluationDataNumber;
+            int _tcbType{};
+            unsigned int _tcbEvaluationDataNumber{};
 
             void parsePartV2(const ::rapidjson::Value &tcbInfo, JsonParser& jsonParser);
             explicit TcbInfo(const std::string& jsonString);
@@ -387,8 +387,8 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             virtual std::time_t getNotAfterTime() const;
 
         private:
-            std::time_t _notBeforeTime;
-            std::time_t _notAfterTime;
+            std::time_t _notBeforeTime{};
+            std::time_t _notAfterTime{};
         };
 
         /**
@@ -720,7 +720,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         private:
             std::vector<uint8_t> _cpuSvn;
             std::vector<uint8_t> _cpuSvnComponents;
-            unsigned int _pceSvn;
+            unsigned int _pceSvn{};
 
             explicit Tcb(const ASN1_TYPE *);
 

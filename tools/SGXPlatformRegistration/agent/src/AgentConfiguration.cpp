@@ -242,17 +242,17 @@ bool AgentConfiguration::read(MPConfigurations& conf)
 
 	FILE *f = NULL;
 	if (fopen_s(&f, conf_file_path.c_str(), "r") != 0 || f == NULL) {
-         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Cannot read configuration file %s\n", conf_file_path.c_str());
+         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Cannot read configuration file %s\n", conf_file_path.c_str());
          return false;
     }
 
     init_config_patterns(entries);
     while(fgets(line, MAX_LINE, f)!=NULL){
-        size_t len=strlen(line);
+        size_t len=strnlen(line, MAX_LINE);
         if(len>0&&line[len-1]=='\n')line[len-1]='\0';//remove the line ending
         line_no++;
         if(!config_process_one_line(line, entries, conf)){
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "format error in file %s:%d [%s]\n", conf_file_path.c_str(), line_no, line);
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "format error in file %s:%d [%s]\n", conf_file_path.c_str(), line_no, line);
             ret = false;//continue process the file but save the error status
         }
     }
@@ -260,7 +260,7 @@ bool AgentConfiguration::read(MPConfigurations& conf)
     fclose(f);
     if(conf.proxy.proxy_type>=NUM_PROXY_TYPE||
           (conf.proxy.proxy_type==MP_REG_PROXY_TYPE_MANUAL_PROXY&&conf.proxy.proxy_url[0]=='\0')){
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "Invalid proxy type %d\n",conf.proxy.proxy_type);
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Invalid proxy type %d\n",conf.proxy.proxy_type);
             conf.proxy.proxy_type = MP_REG_PROXY_TYPE_DEFAULT_PROXY;
             ret = false;
     }

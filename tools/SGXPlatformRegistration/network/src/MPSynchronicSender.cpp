@@ -101,7 +101,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
     CURL *curl = NULL;
     struct curl_slist* header_list = NULL;
     CURLcode cret = CURLE_OK;
-    char errbuf[CURL_ERROR_SIZE];
+    char errbuf[CURL_ERROR_SIZE] = {0};
     long response_code = 0;
     uint8_t internalBuff[MAX_RESPONSE_SIZE];
     struct Buffer responseBuff;
@@ -178,7 +178,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
 
     cret = curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
     if (CURLE_OK != cret) {
-        network_log_message(MP_REG_LOG_LEVEL_INFO, "curl_easy_setopt for setting protocols, error: %d\n", cret);
+        network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_setopt for setting protocols, error: %d\n", cret);
         res = MP_UNEXPECTED_ERROR;
         goto out;
     }
@@ -201,7 +201,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
         break;
         default:
             if (MP_REG_PROXY_TYPE_DIRECT_ACCESS != m_proxy.proxy_type) {
-                network_log_message(MP_REG_LOG_LEVEL_INFO, "Unrecognized proxy type, using no proxy. %d\n", m_proxy.proxy_type);
+                network_log_message(MP_REG_LOG_LEVEL_ERROR, "Unrecognized proxy type, using no proxy. %d\n", m_proxy.proxy_type);
             }
             cret = curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
             if (CURLE_OK != cret) {
@@ -332,13 +332,13 @@ out:
     responseSize = responseBuff.pos;
 
     if (CURLE_OK != cret) {
-        size_t len = strlen(errbuf);
+        size_t len = strnlen(errbuf, CURL_ERROR_SIZE);
         if (len) {
-            network_log_message(MP_REG_LOG_LEVEL_INFO, "Detailed curl error: %s%s", errbuf,
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "Detailed curl error: %s%s", errbuf,
                 ((errbuf[len - 1] != '\n') ? "\n" : ""));
         }
         else {
-            network_log_message(MP_REG_LOG_LEVEL_INFO, "Readable curl error: %s\n", curl_easy_strerror(cret));
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "Readable curl error: %s\n", curl_easy_strerror(cret));
         }
         network_log_message(MP_REG_LOG_LEVEL_INFO, "libcurl version: %s\n", curl_version());
     }
@@ -349,6 +349,5 @@ out:
         curl_easy_cleanup(curl);
     }
     curl_global_cleanup();
-	//TODO: if init is out of this function, this should be also out
     return res;
 }

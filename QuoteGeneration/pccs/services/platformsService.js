@@ -28,34 +28,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const platformsDao = require('../dao/platformsDao.js');
-const pckcertDao = require('../dao/pckcertDao.js');
-const pckcrlDao = require('../dao/pckcrlDao.js');
-const qeidentityDao = require('../dao/qeidentityDao.js');
-const qveidentityDao = require('../dao/qveidentityDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const pckcertService = require('./pckcertService.js');
-const pckcrlService = require('./pckcrlService.js');
-const identityService = require('./identityService.js');
-const rootcacrlService = require('./rootcacrlService.js');
-const PccsError = require('../utils/PccsError.js');
-const Constants = require('../constants/index.js');
-const Ajv = require('ajv');
-const Schema = require('./pccs_schemas.js');
-const Config = require('config');
+import * as platformsDao from '../dao/platformsDao.js';
 
-const ajv = new Ajv();
+export async function getCachedPlatforms(fmspc_arr) {
+  let platfs = await platformsDao.getCachedPlatformsByFmspc(fmspc_arr);
 
-exports.getCachedPlatforms=async function(fmspc_arr) {
-    let platfs = await platformsDao.getCachedPlatformsByFmspc(fmspc_arr);
+  for (const platf of platfs) {
+    // Convert buffer to string
+    if (platf.enc_ppid) platf.enc_ppid = platf.enc_ppid.toString('utf8');
+    if (platf.platform_manifest)
+      platf.platform_manifest = platf.platform_manifest.toString('utf8');
+  }
 
-    for (const platf of platfs) {
-        // Convert buffer to string
-        if (platf.enc_ppid)
-            platf.enc_ppid = platf.enc_ppid.toString('utf8');
-        if (platf.platform_manifest)
-            platf.platform_manifest = platf.platform_manifest.toString('utf8');
-    }
-
-    return platfs;
+  return platfs;
 }

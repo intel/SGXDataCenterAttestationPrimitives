@@ -13,6 +13,7 @@ global:
     sgx_qcnl_get_root_ca_crl;
     sgx_qcnl_free_root_ca_crl;
     sgx_qcnl_register_platform;
+    sgx_qcnl_get_api_version;
 
 local:
     *;

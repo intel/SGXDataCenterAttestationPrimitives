@@ -128,6 +128,11 @@ void TcbLevel::parseStatus(const ::rapidjson::Value &tcbLevel,
                            const std::vector<std::string> &validStatuses,
                            const std::string &filedName)
 {
+    if(!tcbLevel.HasMember(filedName.c_str()))
+    {
+        throw FormatException("TCB level JSON should has [" + filedName + "] field");
+    }
+
     const ::rapidjson::Value& status_v = tcbLevel[filedName.c_str()];
     if(!status_v.IsString())
     {
@@ -142,13 +147,18 @@ void TcbLevel::parseStatus(const ::rapidjson::Value &tcbLevel,
 
 void TcbLevel::parseSvns(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
 {
+    if(!tcbLevel.HasMember("tcb"))
+    {
+        throw FormatException("TCB level JSON should has [tcb] field");
+    }
+
     const ::rapidjson::Value& tcb = tcbLevel["tcb"];
 
     setCpuSvn(tcb, jsonParser);
 
-    bool pceSvnValid = false;
+    JsonParser::ParseStatus pceSvnValid = JsonParser::Missing;
     std::tie(_pceSvn, pceSvnValid) = jsonParser.getUintFieldOf(tcb, "pcesvn");
-    if(!pceSvnValid)
+    if(pceSvnValid != JsonParser::OK)
     {
         throw FormatException("Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
     }
@@ -159,16 +169,6 @@ void TcbLevel::parseTcbLevelV1(const ::rapidjson::Value &tcbLevel, JsonParser& j
     if(!tcbLevel.IsObject() || tcbLevel.MemberCount() != 2)
     {
         throw FormatException("TCB level should be a JSON object having 2 members");
-    }
-
-    if(!tcbLevel.HasMember("tcb"))
-    {
-        throw FormatException("TCB level JSON should has [tcb] field");
-    }
-
-    if(!tcbLevel.HasMember("status"))
-    {
-        throw FormatException("TCB level JSON should has [status] field");
     }
 
     static const std::vector<std::string> validStatuses = {{"UpToDate", "OutOfDate", "ConfigurationNeeded", "Revoked"}};
@@ -184,41 +184,27 @@ void TcbLevel::parseTcbLevelV2(const ::rapidjson::Value &tcbLevel, JsonParser& j
         throw FormatException("TCB level should be a JSON object");
     }
 
-    if(!tcbLevel.HasMember("tcb"))
+    JsonParser::ParseStatus parsedStatus = JsonParser::Missing;
+    std::tie(_tcbDate, parsedStatus) = jsonParser.getDateFieldOf(tcbLevel, "tcbDate");
+    switch (parsedStatus)
     {
-        throw FormatException("TCB level JSON should has [tcb] field");
+        case JsonParser::ParseStatus::Missing:
+            throw FormatException("TCB level JSON should has [tcbDate] field");
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [tcbDate] field of TCB info JSON to date. [tcbDate] should be ISO formatted date");
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
-    if(!tcbLevel.HasMember("tcbStatus"))
+    parsedStatus = JsonParser::Missing;
+    std::tie(_advisoryIDs, parsedStatus) = jsonParser.getStringVecFieldOf(tcbLevel, "advisoryIDs");
+    switch (parsedStatus)
     {
-        throw FormatException("TCB level JSON should has [tcbStatus] field");
-    }
-
-    if(!tcbLevel.HasMember("tcbDate"))
-    {
-        throw FormatException("TCB level JSON should has [tcbDate] field");
-    }
-
-    if (!jsonParser.checkDateFieldOf(tcbLevel, "tcbDate"))
-    {
-        throw InvalidExtensionException("[tcbDate] field of TCB info JSON should be ISO formatted date");
-    }
-
-    bool tcbDateValid = false;
-    std::tie(_tcbDate, tcbDateValid) = jsonParser.getDateFieldOf(tcbLevel, "tcbDate");
-    if (!tcbDateValid)
-    {
-        throw InvalidExtensionException("Could not parse [tcbDate] field of TCB info JSON to date");
-    }
-
-    if(tcbLevel.HasMember("advisoryIDs"))
-    {
-        bool advisoryIDsValid = false;
-        std::tie(_advisoryIDs, advisoryIDsValid) = jsonParser.getStringVecFieldOf(tcbLevel, "advisoryIDs");
-        if (!advisoryIDsValid)
-        {
-            throw InvalidExtensionException("Could not parse [advisoryIDs] field of TCB info JSON to array");
-        }
+        case JsonParser::ParseStatus::Invalid:
+            throw InvalidExtensionException("Could not parse [advisoryIDs] field of TCB info JSON to an array.");
+        case JsonParser::ParseStatus::Missing: // advisoryIDs field is optional
+        case JsonParser::ParseStatus::OK:
+            break;
     }
 
     static const std::vector<std::string> validStatuses =
@@ -259,12 +245,17 @@ void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
     for(const auto &componentName : sgxTcbSvnComponentsNames)
     {
         const auto componentNameRaw = componentName.data();
-        bool status = false;
+        JsonParser::ParseStatus status = JsonParser::Missing;
         unsigned int componentValue = 0u;
         std::tie(componentValue, status) = jsonParser.getUintFieldOf(tcb, componentNameRaw);
-        if(!status)
+        switch (status)
         {
-            throw FormatException("Could not parse [" + componentName + "] field of TCB level JSON to unsigned integer");
+            case JsonParser::ParseStatus::Missing:
+                throw FormatException("TCB level JSON should has [" + componentName + "] field");
+            case JsonParser::ParseStatus::Invalid:
+                throw InvalidExtensionException("Could not parse [" + componentName + "] field of TCB level JSON to unsigned integer");
+            case JsonParser::ParseStatus::OK:
+                break;
         }
         _cpuSvnComponents.push_back(static_cast<uint8_t>(componentValue));
     }

@@ -54,7 +54,6 @@ cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 # Copy the files according to the BOM
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql.txt --installdir=pkgroot/libsgx-dcap-ql
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-dev.txt  --cleanup=false --installdir=pkgroot/libsgx-dcap-ql-dev
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-dev-commoninc.txt --deliverydir=${SGX_SDK}/include  --cleanup=false --installdir=pkgroot/libsgx-dcap-ql-dev
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-package.txt  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 

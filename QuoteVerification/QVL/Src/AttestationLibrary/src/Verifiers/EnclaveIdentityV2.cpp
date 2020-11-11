@@ -29,7 +29,6 @@
  *
  */
 
-#include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "EnclaveIdentityV2.h"
 
@@ -38,7 +37,7 @@
 namespace intel { namespace sgx { namespace dcap {
 
     EnclaveIdentityV2::EnclaveIdentityV2(const ::rapidjson::Value &p_body)
-        : tcbEvaluationDataNumber(0), id(QE)
+        : tcbEvaluationDataNumber(0)
     {
         if(!p_body.IsObject())
         {
@@ -69,7 +68,7 @@ namespace intel { namespace sgx { namespace dcap {
 
     bool EnclaveIdentityV2::parseID(const rapidjson::Value &input)
     {
-        bool parseSuccessful = false;
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
         std::string idString;
         std::tie(idString, parseSuccessful) = jsonParser.getStringFieldOf(input, "id");
         if (idString == "QE")
@@ -84,7 +83,7 @@ namespace intel { namespace sgx { namespace dcap {
         {
             return false;
         }
-        return parseSuccessful;
+        return parseSuccessful == JsonParser::OK;
     }
 
     bool EnclaveIdentityV2::parseTcbEvaluationDataNumber(const rapidjson::Value &input)
@@ -106,7 +105,7 @@ namespace intel { namespace sgx { namespace dcap {
             return false;
         }
 
-        auto l_status = true;
+        auto l_status = JsonParser::ParseStatus::Missing;
         for (rapidjson::Value::ConstValueIterator itr = l_tcbLevels.Begin(); itr != l_tcbLevels.End(); itr++)
         {
             struct tm tcbDate{};
@@ -114,14 +113,14 @@ namespace intel { namespace sgx { namespace dcap {
             unsigned int isvsvn = 0;
 
             std::tie(tcbDate, l_status) = jsonParser.getDateFieldOf(*itr, "tcbDate");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
             std::tie(tcbStatus, l_status) = jsonParser.getStringFieldOf(*itr, "tcbStatus");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
 
             if (!(*itr).HasMember("tcb"))
@@ -137,9 +136,9 @@ namespace intel { namespace sgx { namespace dcap {
             }
 
             std::tie(isvsvn, l_status) = jsonParser.getUintFieldOf(tcb, "isvsvn");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
 
 
@@ -155,7 +154,7 @@ namespace intel { namespace sgx { namespace dcap {
 
             this->tcbLevels.emplace_back(isvsvn, tcbDate, tcbStatusEnum);
         }
-        return l_status;
+        return true;
     }
 
     TcbStatus EnclaveIdentityV2::getTcbStatus(unsigned int p_isvSvn) const
@@ -179,11 +178,6 @@ namespace intel { namespace sgx { namespace dcap {
     const std::vector<TCBLevel>& EnclaveIdentityV2::getTcbLevels() const
     {
         return tcbLevels;
-    }
-
-    EnclaveID EnclaveIdentityV2::getID() const
-    {
-        return id;
     }
 
     unsigned int TCBLevel::getIsvsvn() const

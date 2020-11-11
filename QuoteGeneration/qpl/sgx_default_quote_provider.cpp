@@ -169,7 +169,17 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
 
     do {
         // Set version
-        (*pp_quote_collateral)->version = 1;
+        int api_version = sgx_qcnl_get_api_version();
+        if (api_version == 0) {
+            return SGX_QL_UNKNOWN_API_VERSION;
+        }
+        else if (api_version == 2) {
+            // Keep it consistent with old releases
+            (*pp_quote_collateral)->version = 1;
+        }
+        else {
+            (*pp_quote_collateral)->version = api_version;
+        }
 
         // Set PCK CRL and certchain
         qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strnlen(pck_ca, USHRT_MAX), &p_pck_crl_chain, &pck_crl_chain_size);

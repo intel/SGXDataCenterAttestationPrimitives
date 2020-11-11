@@ -4,6 +4,7 @@
 import argparse,textwrap
 import requests
 import os
+import csv
 import json
 import urllib
 from lib.intelsgx.pckcert import SgxPckCertificateExtensions
@@ -19,10 +20,10 @@ def main():
     #  subparser for get
     parser_get = subparsers.add_parser('get', formatter_class=argparse.RawTextHelpFormatter)
     # add optional arguments for get
-    parser_get.add_argument("-u", "--url", help="The URL of the PCCS service")
-    parser_get.add_argument("-o", "--output_file", help="The output file name for platform list")
+    parser_get.add_argument("-u", "--url", help="The URL of the PCCS's GET platforms API; default: https://localhost:8081/sgx/certification/v3/platforms")
+    parser_get.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
     parser_get.add_argument("-s", "--source", help=
-              "reg - Default to get platforms from registration table.\n"
+              "reg - Get platforms from registration table.(default)\n"
             + "[FMSPC1,FMSPC2,...] - Get platforms from cache based on the fmspc values. [] to get all cached platforms.")
     # add mandatory arguments for get
     parser_get.add_argument("-t", "--token", required=True, help="Administrator token")
@@ -31,8 +32,8 @@ def main():
     #  subparser for put
     parser_put = subparsers.add_parser('put')
     # add optional arguments for put
-    parser_put.add_argument("-u", "--url", help="The URL of the PCCS service")
-    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals")
+    parser_put.add_argument("-u", "--url", help="The URL of the PCCS's PUT collateral API; default: https://localhost:8081/sgx/certification/v3/platformcollateral")
+    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals; default: platform_collaterals.json")
     # add mandatory arguments for put
     parser_put.add_argument("-t", "--token", required=True, help="Administrator token")
     parser_put.set_defaults(func=pccs_put)
@@ -40,12 +41,19 @@ def main():
     #  subparser for fetch
     parser_fetch = subparsers.add_parser('fetch')
     # add optional arguments for fetch
-    parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service")
-    parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list")
-    parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals")
+    parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v3/")
+    parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.json")
+    parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals; default: platform_collaterals.json")
     # add mandatory arguments for fetch
     parser_fetch.add_argument("-k", "--key", required=True, help="Your Intel PCS API key")
     parser_fetch.set_defaults(func=pcs_fetch)
+
+    #  subparser for collect 
+    parser_collect = subparsers.add_parser('collect')
+    # add optional arguments for collect
+    parser_collect.add_argument("-d", "--directory", help="The directory where platform CSV files are saved; default: ./")
+    parser_collect.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
+    parser_collect.set_defaults(func=pcs_collect)
 
     args = parser.parse_args()
     if len(args.__dict__) <= 1:
@@ -55,12 +63,24 @@ def main():
 
     args.func(args)
 
+def is_file_writable(filename):
+    fullpath = os.path.join(os.getcwd(), filename)
+    if os.path.isfile(fullpath):
+        while True:
+            overwrite = input('File %s already exists. Overwrite? (y/n) ' %(filename))
+            if overwrite.lower() == "y":
+                break
+            if overwrite.lower() == "n":
+                print("Aborted.")
+                return False
+    return True
+
 def pccs_get(args):
     try :
         token = args.token
-        url = "https://localhost:8081/sgx/certification/v2/platforms"
+        url = "https://localhost:8081/sgx/certification/v3/platforms"
         if args.url:
-            url = urllib.parse.urljoin(args.url, '/sgx/certification/v2/platforms')
+            url = args.url
         output_file = "platform_list.json"
         if args.output_file:
             output_file = args.output_file
@@ -72,18 +92,10 @@ def pccs_get(args):
         r = requests.get(url = url, headers=HEADERS, params = PARAMS, verify=False)
         if r.status_code == 200:
             # write output file
-            fullpath = os.path.join(os.getcwd(), output_file)
-            if os.path.isfile(fullpath):
-                while True:
-                    overwrite = input('File %s already exists. Overwrite? (y/n) ' %(output_file))
-                    if overwrite.lower() == "y":
-                        break
-                    if overwrite.lower() == "n":
-                        print("Aborted.")
-                        return
-            with open(fullpath, "w") as ofile:
-                json.dump(r.json(), ofile)
-            print(output_file, " saved successfully.")
+            if is_file_writable(output_file):
+                with open(output_file, "w") as ofile:
+                    json.dump(r.json(), ofile)
+                print(output_file, " saved successfully.")
         else:
             # print error
             print("Failed to get platforms list from the PCCS.")
@@ -95,9 +107,9 @@ def pccs_get(args):
 def pccs_put(args):
     try :
         token = args.token
-        url = "https://localhost:8081/sgx/certification/v2/platformcollateral"
+        url = "https://localhost:8081/sgx/certification/v3/platformcollateral"
         if args.url:
-            url = urllib.parse.urljoin(args.url, '/sgx/certification/v2/platformcollateral')
+            url = args.url
         input_file = "platform_collaterals.json"
         if args.input_file:
             input_file = args.input_file
@@ -122,13 +134,13 @@ def pccs_put(args):
 
 def pcs_fetch(args):
     try :
-        url = 'https://api.trustedservices.intel.com/sgx/certification/v2/'
-        ApiVersion = 2
+        url = 'https://api.trustedservices.intel.com/sgx/certification/v3/'
+        ApiVersion = 3
 
         if args.url:
             url = args.url
-        if url.find('/v3/')!=-1 :
-            ApiVersion = 3 
+        if url.find('/v2/')!=-1 :
+            ApiVersion = 2 
 
         apikey = args.key
         input_file = "platform_list.json"
@@ -139,15 +151,8 @@ def pcs_fetch(args):
             output_file = args.output_file
 
         # prompt for overwriting output file
-        output_fullpath = os.path.join(os.getcwd(), output_file)
-        if os.path.isfile(output_fullpath):
-            while True:
-                overwrite = input('File %s already exists. Overwrite? (y/n) ' %(output_file))
-                if overwrite.lower() == "y":
-                    break
-                if overwrite.lower() == "n":
-                    print("Aborted.")
-                    return
+        if not is_file_writable(output_file):
+            return
 
         # Initialize PCS object
         pcsclient = PCS(url,ApiVersion,apikey)
@@ -268,12 +273,44 @@ def pcs_fetch(args):
         rootcacrl = pcsclient.getFileFromUrl(cdp)
         output_json["collaterals"]["rootcacrl"] = rootcacrl
 
-        with open(output_fullpath, "w") as ofile:
+        with open(output_file, "w") as ofile:
             json.dump(output_json, ofile)
         print(output_file, " saved successfully.")
 
     except Exception as e:
         print(e)
         traceback.print_exc()
+
+def pcs_collect(args):
+    try :
+       csv_dir = '.'
+       output_file = "platform_list.json"
+       if args.directory:
+           csv_dir = args.directory
+       if args.output_file:
+           output_file = args.output_file
+
+       if not is_file_writable(output_file):
+           return
+
+       fieldnames = ("enc_ppid", "pce_id", "cpu_svn", "pce_svn", "qe_id", "platform_manifest")
+       platform_list = list()
+       jsonfile = open(output_file, 'w')
+       arr = os.listdir(csv_dir)
+       if len(arr) < 2:
+           print("At least 2 csv files are needed. Please make sure this is an administrator platform.")
+           return
+       for file in arr:
+           if file.endswith(".csv"):
+               csvfile = open(os.path.join(csv_dir,file), 'r')
+               reader = csv.DictReader(csvfile, fieldnames)
+               for row in reader:
+                   platform_list.append(row)
+               csvfile.close()
+       json.dump(platform_list, jsonfile)
         
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+
 main()

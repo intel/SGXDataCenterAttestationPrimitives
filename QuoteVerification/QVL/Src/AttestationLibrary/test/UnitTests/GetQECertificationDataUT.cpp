@@ -52,7 +52,7 @@ struct GetQECertificationDataTests : public Test
         const Bytes pckData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
         generator.withQeCertData(type, data)
                  .withAuthDataSize((uint32_t)(generator.getAuthSize() + data.size()));
-        return generator.buildQuote();
+        return generator.buildSgxQuote();
     }
 };
 

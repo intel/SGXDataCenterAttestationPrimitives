@@ -29,147 +29,141 @@
  *
  */
 
+import Config from 'config';
+import got from 'got';
+import caw from 'caw';
+import logger from '../utils/Logger.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
 
-const config = require('config');
-const got = require('got');
-const caw = require('caw');
-const logger = require('../utils/Logger.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-
-const HTTP_TIMEOUT = 60000;  // 60 seconds 
+const HTTP_TIMEOUT = 60000; // 60 seconds
 let HttpsAgent;
-if (config.has('proxy') && config.get('proxy')) {
-    // use proxy settings in config file
-    HttpsAgent = {
-        https: caw(config.get('proxy'), {protocol:'https'})
-    };
-}
-else {
-    // use system proxy
-    HttpsAgent = {
-        https: caw({protocol:'https'})
-    };
-}
-
-do_request = async function(url, options) {
-    try {
-        logger.debug(url);
-        logger.debug(JSON.stringify(options));
-
-        // global opitons ( proxy, timeout, etc)
-        options.timeout = HTTP_TIMEOUT;
-        options.agent = HttpsAgent;
-
-        let response =  await got(url, options);
-        logger.info('Request-ID is : ' + response.headers['request-id']);
-        return response;
-    }
-    catch(err) {
-        logger.debug(err);
-        if (err.response && err.response.headers) {
-            logger.info('Request-ID is : ' + err.response.headers['request-id']);
-        }
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_PCS_ACCESS_FAILURE);
-    }
+if (Config.has('proxy') && Config.get('proxy')) {
+  // use proxy settings in config file
+  HttpsAgent = {
+    https: caw(Config.get('proxy'), { protocol: 'https' }),
+  };
+} else {
+  // use system proxy
+  HttpsAgent = {
+    https: caw({ protocol: 'https' }),
+  };
 }
 
-exports.getCert = async function(enc_ppid,cpusvn,pcesvn,pceid){
-    const options = {
-        searchParams: {
-            encrypted_ppid:enc_ppid,
-            cpusvn:cpusvn,
-            pcesvn:pcesvn,
-            pceid:pceid
-        },
-        method: 'GET',
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
-    };
+async function do_request(url, options) {
+  try {
+    logger.debug(url);
+    logger.debug(JSON.stringify(options));
 
-    return do_request(config.get('uri') + 'pckcert', options);
-};
+    // global opitons ( proxy, timeout, etc)
+    options.timeout = HTTP_TIMEOUT;
+    options.agent = HttpsAgent;
 
-exports.getCerts=async function(enc_ppid,pceid){
-    const options = {
-        searchParams: {
-            encrypted_ppid:enc_ppid,
-            pceid:pceid
-        },
-        method: 'GET',
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
-    };
-
-    return do_request(config.get('uri')+ 'pckcerts', options);
-};
-
-exports.getCertsWithManifest = async function(platform_manifest, pceid){
-    const options = {
-        json: {
-            platformManifest: platform_manifest,
-            pceid: pceid
-        },
-        method: 'POST',
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
-    };
-
-    return do_request(config.get('uri')+ 'pckcerts', options);
+    let response = await got(url, options);
+    logger.info('Request-ID is : ' + response.headers['request-id']);
+    return response;
+  } catch (err) {
+    logger.debug(err);
+    if (err.response && err.response.headers) {
+      logger.info('Request-ID is : ' + err.response.headers['request-id']);
+    }
+    throw new PccsError(PccsStatus.PCCS_STATUS_PCS_ACCESS_FAILURE);
+  }
 }
 
-exports.getPckCrl=async function(ca){
-    const options = {
-        searchParams: {
-            ca:ca.toLowerCase()
-        },
-        method: 'GET'
-    };
+export async function getCert(enc_ppid, cpusvn, pcesvn, pceid) {
+  const options = {
+    searchParams: {
+      encrypted_ppid: enc_ppid,
+      cpusvn: cpusvn,
+      pcesvn: pcesvn,
+      pceid: pceid,
+    },
+    method: 'GET',
+    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+  };
 
-    return do_request(config.get('uri')+ 'pckcrl', options);
-};
+  return do_request(Config.get('uri') + 'pckcert', options);
+}
 
-exports.getTcb=async function(fmspc){
-    const options = {
-        searchParams: {
-            fmspc:fmspc
-        },
-        method: 'GET'
-    };
+export async function getCerts(enc_ppid, pceid) {
+  const options = {
+    searchParams: {
+      encrypted_ppid: enc_ppid,
+      pceid: pceid,
+    },
+    method: 'GET',
+    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+  };
 
-    return do_request(config.get('uri')+ 'tcb', options);
-};
+  return do_request(Config.get('uri') + 'pckcerts', options);
+}
 
-exports.getQEIdentity=async function(){
-    const options = {
-        searchParams: {
-        },
-        method: 'GET'
-    };
+export async function getCertsWithManifest(platform_manifest, pceid) {
+  const options = {
+    json: {
+      platformManifest: platform_manifest,
+      pceid: pceid,
+    },
+    method: 'POST',
+    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+  };
 
-    return do_request(config.get('uri')+ 'qe/identity', options);
-};
+  return do_request(Config.get('uri') + 'pckcerts', options);
+}
 
-exports.getQvEIdentity=async function(){
-    const options = {
-        searchParams: {
-        },
-        method: 'GET'
-    };
+export async function getPckCrl(ca) {
+  const options = {
+    searchParams: {
+      ca: ca.toLowerCase(),
+      encoding: 'der',
+    },
+    method: 'GET',
+  };
 
-    return do_request(config.get('uri')+ 'qve/identity', options);
-};
+  return do_request(Config.get('uri') + 'pckcrl', options);
+}
 
-exports.getFileFromUrl=async function(uri){
-    logger.debug(uri);
+export async function getTcb(fmspc) {
+  const options = {
+    searchParams: {
+      fmspc: fmspc,
+    },
+    method: 'GET',
+  };
 
-    const options = {
-        agent: HttpsAgent,
-        timeout: HTTP_TIMEOUT 
-    };
+  return do_request(Config.get('uri') + 'tcb', options);
+}
 
-    try {
-        let response = await got(uri, options).buffer();
-        return Buffer.from(response, 'utf8');
-    }
-    catch(err) {
-        throw err;
-    }
-};
+export async function getQeIdentity() {
+  const options = {
+    searchParams: {},
+    method: 'GET',
+  };
+
+  return do_request(Config.get('uri') + 'qe/identity', options);
+}
+
+export async function getQveIdentity() {
+  const options = {
+    searchParams: {},
+    method: 'GET',
+  };
+
+  return do_request(Config.get('uri') + 'qve/identity', options);
+}
+
+export async function getFileFromUrl(uri) {
+  logger.debug(uri);
+
+  const options = {
+    agent: HttpsAgent,
+    timeout: HTTP_TIMEOUT,
+  };
+
+  try {
+    return await got(uri, options).buffer();
+  } catch (err) {
+    throw err;
+  }
+}

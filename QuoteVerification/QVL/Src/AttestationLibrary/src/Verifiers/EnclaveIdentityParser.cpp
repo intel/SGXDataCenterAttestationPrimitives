@@ -67,7 +67,7 @@ namespace intel { namespace sgx { namespace dcap {
         auto signatureBytes = hexStringToBytes(signature->GetString());
 
         unsigned int version = 0;
-        bool status = false;
+        auto status = JsonParser::ParseStatus::Missing;
 
         // v1 qeidentity has a different field name for enclave identity body.
         // First check if it exists.
@@ -84,7 +84,7 @@ namespace intel { namespace sgx { namespace dcap {
         }
 
         std::tie(version, status) = jsonParser.getIntFieldOf(*identityField, "version");
-        if (!status)
+        if (status != JsonParser::OK)
         {
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }

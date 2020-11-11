@@ -29,40 +29,38 @@
  *
  */
 
-const { qve_identities }= require('./models/');
-const Constants = require('../constants/index.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const {Sequelize, sequelize} = require('./models/');
+import Constants from '../constants/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import { QveIdentities, sequelize } from './models/index.js';
 
-exports.upsertQvEIdentity = async function(qve_identity) {
-    return await qve_identities.upsert({
-        id: 1,
-        qve_identity: qve_identity,
-        root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-        signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID
-    });
+export async function upsertQveIdentity(qve_identity) {
+  return await QveIdentities.upsert({
+    id: 1,
+    qve_identity: qve_identity,
+    root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
+    signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
+  });
 }
 
 //Query QvEIdentity
-exports.getQvEIdentity = async function(){
-    const sql = 'select a.*,' +
-              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
-              ' from qve_identities a ' +
-              ' where a.id=1';
-    const qve_identity = await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT
-        });
-    if (qve_identity.length == 0)
-        return null;
-    else if (qve_identity.length == 1 ){
-        if (qve_identity[0].root_cert != null && qve_identity[0].signing_cert != null)
-            return qve_identity[0];
-        else return null;
-    }
-    else 
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+export async function getQveIdentity() {
+  const sql =
+    'select a.*,' +
+    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
+    ' from qve_identities a ' +
+    ' where a.id=1';
+  const qve_identity = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
+  if (qve_identity.length == 0) return null;
+  else if (qve_identity.length == 1) {
+    if (
+      qve_identity[0].root_cert != null &&
+      qve_identity[0].signing_cert != null
+    )
+      return qve_identity[0];
+    else return null;
+  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }
-

@@ -35,11 +35,16 @@
 #include <Enclaveapi.h>
 
 #include "sgx_arch.h"
+
+#ifndef _CONSOLE
 #include <wdf.h>
 #include "Trace.h"
 #include "winleproxy.tmh"
+#else
+#define TraceEvents(...)
+#endif
 
-// Include encalve and sigstruct
+// Include enclave and sigstruct
 #include "sgx_le_blob.h"
 #include "sgx_le_ss.h"
 
@@ -63,7 +68,7 @@ void *start_launch_enclave(void)
     for (secs.size = 0x1000; secs.size < sgx_le_blob_length; )
         secs.size <<= 1;
 
-    DWORD encalveError = 0;
+    DWORD enclaveError = 0;
     PVOID lpBase = CreateEnclave(
                        hProcess,
                        NULL,
@@ -72,11 +77,11 @@ void *start_launch_enclave(void)
                        ENCLAVE_TYPE_SGX,
                        (LPCVOID)&secs,
                        sizeof(secs),
-                       &encalveError);
+                       &enclaveError);
 
     if (!lpBase)
     {
-        TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "CreateEnclave failed - error: %d lasterror: %d\n", encalveError, GetLastError());
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "CreateEnclave failed - error: %d lasterror: %d\n", enclaveError, GetLastError());
         goto out;
     }
 
@@ -90,19 +95,19 @@ void *start_launch_enclave(void)
             flProtect = PAGE_ENCLAVE_THREAD_CONTROL | PAGE_READWRITE;
 
         bSuccess = LoadEnclaveData(hProcess, lpAddress, lpBuffer, 0x1000, flProtect, NULL, 0,
-                                   &numberOfBytesWritten, &encalveError);
+                                   &numberOfBytesWritten, &enclaveError);
         if (!bSuccess)
         {
-            TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "LoadEnclaveData failed - offset: 0x%I64X error: %d lasterror: %d\n", offset, encalveError, GetLastError());
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "LoadEnclaveData failed - offset: 0x%I64X error: %d lasterror: %d\n", offset, enclaveError, GetLastError());
             goto out;
         }
     }
 
     memcpy_s(&initInfo, sizeof(initInfo), sgx_le_ss, sgx_le_ss_length);
-    bSuccess = InitializeEnclave(hProcess, lpBase, &initInfo, sizeof(initInfo), &encalveError);
+    bSuccess = InitializeEnclave(hProcess, lpBase, &initInfo, sizeof(initInfo), &enclaveError);
     if (!bSuccess)
     {
-        TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "InitializeEnclave failed - error: %d lasterror: %d\n", encalveError, GetLastError());
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "InitializeEnclave failed - error: %d lasterror: %d\n", enclaveError, GetLastError());
         goto out;
     }
 
@@ -110,6 +115,11 @@ void *start_launch_enclave(void)
     return (void *)lpBase;
 out:
     TraceEvents(TRACE_LEVEL_ERROR, TRACE_PROXY, "%!FUNC! Exit. PLE load failed");
+    if (lpBase)
+    {
+        VirtualFree(lpBase, 0, MEM_RELEASE);
+        lpBase = NULL;
+    }
     return NULL;
 }
 

@@ -28,96 +28,104 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const qeidentityDao = require('../dao/qeidentityDao.js');
-const qveidentityDao = require('../dao/qveidentityDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const {sequelize, Sequelize} = require('../dao/models/');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Config from 'config';
+import Constants from '../constants/index.js';
+import * as qeidentityDao from '../dao/qeidentityDao.js';
+import * as qveidentityDao from '../dao/qveidentityDao.js';
+import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as pcsClient from '../pcs_client/pcs_client.js';
+import { sequelize } from '../dao/models/index.js';
 
-exports.getQEIdentityFromPCS = async function(){
-    const pck_server_res = await PcsClient.getQEIdentity();
+export async function getQeIdentityFromPCS() {
+  const pck_server_res = await pcsClient.getQeIdentity();
 
-    if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
 
-    let result = {};
-    result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] = pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN];
-    result["qeid"] = JSON.parse(pck_server_res.body);
+  let result = {};
+  result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN];
+  result['qeid'] = JSON.parse(pck_server_res.body);
 
-    await sequelize.transaction(async (t)=>{
-        // update or insert QE Identity 
-        await qeidentityDao.upsertQEIdentity(pck_server_res.body);
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-            pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
-    });
+  await sequelize.transaction(async (t) => {
+    // update or insert QE Identity
+    await qeidentityDao.upsertQeIdentity(pck_server_res.body);
+    // update or insert certificate chain
+    await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
+      pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+    );
+  });
 
-    return result;
+  return result;
 }
 
-exports.getQEIdentity=async function() {
-    // query qeid from local database first
-    const qeid = await qeidentityDao.getQEIdentity();
-    let result = {};
-    if (qeid == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            result = await this.getQEIdentityFromPCS();
-        }
-        else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
+export async function getQeIdentity() {
+  // query qeid from local database first
+  const qeid = await qeidentityDao.getQeIdentity();
+  let result = {};
+  if (qeid == null) {
+    if (
+      Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
+      Constants.CACHE_FILL_MODE_LAZY
+    ) {
+      result = await this.getQeIdentityFromPCS();
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
     }
-    else {
-        result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] = qeid.signing_cert + qeid.root_cert;
-        result["qeid"] = JSON.parse(qeid.qe_identity);
-    }
+  } else {
+    result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+      qeid.signing_cert + qeid.root_cert;
+    result['qeid'] = JSON.parse(qeid.qe_identity);
+  }
 
-    return result;
+  return result;
 }
 
-exports.getQvEIdentityFromPCS = async function(){
-    const pck_server_res = await PcsClient.getQvEIdentity();
+export async function getQveIdentityFromPCS() {
+  const pck_server_res = await pcsClient.getQveIdentity();
 
-    if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
 
-    let result = {};
-    result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] = pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN];
-    result["qveid"] = JSON.parse(pck_server_res.body);
+  let result = {};
+  result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN];
+  result['qveid'] = JSON.parse(pck_server_res.body);
 
-    await sequelize.transaction(async (t)=>{
-        // update or insert QvE Identity 
-        await qveidentityDao.upsertQvEIdentity(pck_server_res.body);
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-            pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
-    });
+  await sequelize.transaction(async (t) => {
+    // update or insert QvE Identity
+    await qveidentityDao.upsertQveIdentity(pck_server_res.body);
+    // update or insert certificate chain
+    await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
+      pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+    );
+  });
 
-    return result;
+  return result;
 }
 
-exports.getQvEIdentity=async function() {
-    // query qveid from local database first
-    const qveid = await qveidentityDao.getQvEIdentity();
-    let result = {};
-    if (qveid == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            result = await this.getQvEIdentityFromPCS();
-        }
-        else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
+export async function getQveIdentity() {
+  // query qveid from local database first
+  const qveid = await qveidentityDao.getQveIdentity();
+  let result = {};
+  if (qveid == null) {
+    if (
+      Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
+      Constants.CACHE_FILL_MODE_LAZY
+    ) {
+      result = await this.getQveIdentityFromPCS();
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
     }
-    else {
-        result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] = qveid.signing_cert + qveid.root_cert;
-        result["qveid"] = JSON.parse(qveid.qve_identity);
-    }
+  } else {
+    result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+      qveid.signing_cert + qveid.root_cert;
+    result['qveid'] = JSON.parse(qveid.qve_identity);
+  }
 
-    return result;
+  return result;
 }

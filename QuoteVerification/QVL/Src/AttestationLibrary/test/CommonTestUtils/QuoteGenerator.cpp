@@ -103,7 +103,8 @@ QuoteGenerator::QuoteHeader defaultHeader()
     return {
             DEFAULT_VERSION,
             DEFAULT_ATTESTATION_KEY_TYPE,
-            {{0}},
+            0,
+            0,
             0,
             0,
             {{0}},
@@ -144,8 +145,8 @@ QuoteGenerator::QeCertData defaultQeCertData()
 } //anonymous namespace
 
 QuoteGenerator::QuoteGenerator() :
-        header(defaultHeader()), 
-        body(defaultEnclaveReport()),
+        header(defaultHeader()),
+        enclaveReport(defaultEnclaveReport()),
         quoteAuthData{
             test::QUOTE_AUTH_DATA_MIN_SIZE,
             defaultSignature(),
@@ -162,7 +163,7 @@ QuoteGenerator::QuoteGenerator() :
     static_assert(sizeof(EcdsaPublicKey) == ECDSA_PUBLIC_KEY_SIZE, "Incorrect public key size");
 
     auto uuid = hexStringToBytes(INTEL_QE_VENDOR_UUID);
-    std::copy(uuid.begin(), uuid.end(), header.uuid.begin());
+    std::copy(uuid.begin(), uuid.end(), header.qeVendorId.begin());
 }
 
 QuoteGenerator& QuoteGenerator::withQeSvn(uint16_t qeSvn)
@@ -183,9 +184,9 @@ QuoteGenerator& QuoteGenerator::withHeader(const QuoteHeader& _header)
     return *this;
 }
 
-QuoteGenerator& QuoteGenerator::withBody(const EnclaveReport& _body)
+QuoteGenerator& QuoteGenerator::withEnclaveReport(const EnclaveReport& _body)
 {
-    this->body = _body;
+    this->enclaveReport = _body;
     return *this;
 }
 
@@ -252,21 +253,22 @@ QuoteGenerator& QuoteGenerator::withQeCertData(uint16_t type, const Bytes& keyDa
     return *this;
 }
 
-Bytes QuoteGenerator::buildQuote()
+Bytes QuoteGenerator::buildSgxQuote()
 {
-	return header.bytes() + body.bytes() +quoteAuthData.bytes();
+	return header.bytes() + enclaveReport.bytes() + quoteAuthData.bytes();
 }
 
 Bytes QuoteGenerator::QuoteHeader::bytes() const
 {
     return
-        convertToBytes(version) +
-        convertToBytes(attestationKeyType) +
-        convertToBytes(reserved) +
-        convertToBytes(qeSvn) +
-        convertToBytes(pceSvn) +
-        convertToBytes(uuid) +
-        convertToBytes(userData);
+            convertToBytes(version) +
+            convertToBytes(attestationKeyType) +
+            convertToBytes(teeType) +
+            convertToBytes(reserved) +
+            convertToBytes(qeSvn) +
+            convertToBytes(pceSvn) +
+            convertToBytes(qeVendorId) +
+            convertToBytes(userData);
 }
 
 Bytes QuoteGenerator::EnclaveReport::bytes() const

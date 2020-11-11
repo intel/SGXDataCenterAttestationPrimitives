@@ -28,52 +28,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('../utils/Logger.js');
-const pckcrlDao = require('../dao/pckcrlDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const {sequelize, Sequelize} = require('../dao/models/');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Config from 'config';
+import Constants from '../constants/index.js';
+import * as pckcrlDao from '../dao/pckcrlDao.js';
+import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as pcsClient from '../pcs_client/pcs_client.js';
+import { sequelize } from '../dao/models/index.js';
 
-exports.getPckCrlFromPCS = async function(ca) {
-    const pck_server_res = await PcsClient.getPckCrl(ca);
+export async function getPckCrlFromPCS(ca) {
+  const pck_server_res = await pcsClient.getPckCrl(ca);
 
-    if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
 
-    let result = {};
-    result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] = pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN];
-    result["pckcrl"] = pck_server_res.body;
+  let result = {};
+  result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN];
+  let crl_hex = Buffer.from(pck_server_res.rawBody, 'utf8').toString('hex');
+  result['pckcrl'] = crl_hex;
 
-    await sequelize.transaction(async (t)=>{
-        // update or insert PCK CRL
-        await pckcrlDao.upsertPckCrl(ca, pck_server_res.body);
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertPckCrlCertchain(ca, pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
-    });
-    return result;
+  await sequelize.transaction(async (t) => {
+    // update or insert PCK CRL
+    await pckcrlDao.upsertPckCrl(ca, crl_hex);
+    // update or insert certificate chain
+    await pcsCertificatesDao.upsertPckCrlCertchain(
+      ca,
+      pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]
+    );
+  });
+  return result;
 }
 
-exports.getPckCrl=async function(ca) {
-    // query pck crl from local database first
-    const pckcrl = await pckcrlDao.getPckCrl(ca);
-    let result = {};
-    if (pckcrl == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            result = await this.getPckCrlFromPCS(ca);
-        }
-        else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
+export async function getPckCrl(ca) {
+  // query pck crl from local database first
+  const pckcrl = await pckcrlDao.getPckCrl(ca);
+  let result = {};
+  if (pckcrl == null) {
+    if (
+      Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
+      Constants.CACHE_FILL_MODE_LAZY
+    ) {
+      result = await this.getPckCrlFromPCS(ca);
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
     }
-    else {
-        result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] = pckcrl.intmd_cert + pckcrl.root_cert;
-        result["pckcrl"] = pckcrl.pck_crl;
-    }
+  } else {
+    result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] =
+      pckcrl.intmd_cert + pckcrl.root_cert;
+    result['pckcrl'] = pckcrl.pck_crl;
+  }
 
-    return result;
+  return result;
 }

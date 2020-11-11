@@ -65,8 +65,8 @@ struct AppCoreTests: public Test
     std::vector<uint8_t> quoteContent = {1, 2, 255, 0, 0, 43, 58};
     std::string pckCertContent = "pckCert content";
     std::string pckSigningChainContent = "pckSigningChain content";
-    std::string rootCaCrlContent = "rootCaCrl content";
-    std::string intermediateCaCrlContent = "intermediateCaCrl content";
+    std::string rootCaCrlContent = "-----BEGIN X509 CRL-----rootCaCrl content";
+    std::string intermediateCaCrlContent = "-----BEGIN X509 CRL-----intermediateCaCrl content";
     std::string trustedRootCertContent = "trustedRootCA content";
     std::string tcbInfoContent = "tcbInfo content";
     std::string qeIdentityContent = "qeIdentity content";
@@ -120,7 +120,7 @@ TEST_F(AppCoreTests, shouldFailWhenFileOperationFailed)
 TEST_F(AppCoreTests, shouldFailWhenBinaryFileOperationFailed)
 {
     std::string exceptionMessage = "Exception message";
-    EXPECT_CALL(*fileReaderMock, readContent(_)).WillRepeatedly(Return("content"));
+    EXPECT_CALL(*fileReaderMock, readContent(_)).WillRepeatedly(Return("-----BEGIN X509 CRL-----content"));
     EXPECT_CALL(*fileReaderMock, readBinaryContent(_)).WillOnce(Throw(IFileReader::ReadFileException(exceptionMessage)));
     EXPECT_CALL(*attestationLibraryMock, verifyTCBInfo(_, _, _, _, _)).WillOnce(Return(STATUS_OK));
     EXPECT_CALL(*attestationLibraryMock, verifyQeIdentity(_, _, _, _, _)).Times(2).WillRepeatedly(Return(STATUS_OK));

@@ -44,15 +44,22 @@ namespace intel { namespace sgx { namespace dcap {
 class JsonParser
 {
 public:
+    enum ParseStatus {
+        OK,
+        Missing,
+        Invalid
+    };
+
     bool parse(const std::string& json);
     const rapidjson::Value* getRoot() const;
     const rapidjson::Value* getField(const std::string& fieldName) const;
-    std::pair<std::vector<uint8_t>, bool> getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const;
-    std::pair<tm, bool> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    bool checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<unsigned int, bool> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<int, bool> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<std::string, bool> getStringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<std::vector<uint8_t>, ParseStatus> getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const;
+    std::pair<std::string, ParseStatus> getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const;
+    std::pair<tm, ParseStatus> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    JsonParser::ParseStatus checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<unsigned int, ParseStatus> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<int, ParseStatus> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+
 private:
     bool isValidHexstring(const std::string& hexString) const;
 

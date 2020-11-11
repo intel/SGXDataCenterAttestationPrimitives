@@ -79,10 +79,11 @@ public:
     {
         uint16_t version;
         uint16_t attestationKeyType;
-        std::array<uint8_t, 4> reserved;
+        uint16_t teeType;
+        uint16_t reserved;
         uint16_t qeSvn;
         uint16_t pceSvn;
-        std::array<uint8_t, 16> uuid;
+        std::array<uint8_t, 16> qeVendorId;
         std::array<uint8_t, 20> userData;
 
         Bytes bytes() const;
@@ -155,12 +156,12 @@ public:
     QuoteGenerator();
  
     QuoteGenerator& withHeader(const QuoteHeader& header);
-    QuoteGenerator& withBody(const EnclaveReport& body);
+    QuoteGenerator& withEnclaveReport(const EnclaveReport& _body);
     QuoteGenerator& withAuthDataSize(uint32_t size);
     QuoteGenerator& withAuthData(const QuoteAuthData& authData);
 
     QuoteHeader& getHeader() {return header;}
-    EnclaveReport& getBody() {return body;}
+    EnclaveReport& getEnclaveReport() {return enclaveReport;}
     uint32_t& getAuthSize() {return quoteAuthData.authDataSize;}
     QuoteAuthData& getQuoteAuthData() {return quoteAuthData;}
 
@@ -180,11 +181,11 @@ public:
     QuoteGenerator& withQeCertData(const QeCertData& qeCertData);
     QuoteGenerator& withQeCertData(uint16_t type, const Bytes& keyData);
 
-    Bytes buildQuote();
+    Bytes buildSgxQuote();
 
 private:  
     QuoteHeader header;
-    EnclaveReport body;
+    EnclaveReport enclaveReport;
     QuoteAuthData quoteAuthData;
 };
 

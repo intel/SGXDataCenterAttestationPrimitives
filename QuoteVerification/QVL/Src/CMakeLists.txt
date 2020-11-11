@@ -153,8 +153,8 @@ option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.23.240.tar.gz"
-		SHA1 "ca19f3769e6c80cfdd19d8b12ba5102c27b074e0"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.23.269.tar.gz"
+		SHA1 "64024b7b95b4c86d50ae05b926814448c93a70a0"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
@@ -174,7 +174,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
 			message(FATAL_ERROR "Clang 5.0 or above required.")
 		endif()
-
 		set(IGNORED_WARNINGS
 				"-Wno-gnu-statement-expression" #warns about __FILE__, __LINE__, etc. compiler macros
 				"-Wno-c++98-compat"             #family of warnings indicating this code may cause errors if compiled with C++98 compiler
@@ -186,14 +185,22 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 				)
 		set(CMAKE_CXX_FLAGS_CLANG
 				"-fcolor-diagnostics"           #clang coloured output
+				"-fwrapv"                       #Treat signed integer overflow as two’s complement
 				"-Wno-unused-command-line-argument"
 				)
-		set(CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG "-fsanitize=safe-stack")
+        # implicit-conversion: Checks for suspicious behavior of implicit conversions. Enables implicit-unsigned-integer-truncation, implicit-signed-integer-truncation, and implicit-integer-sign-change.
+		# nullability: Enables nullability-arg, nullability-assign, and nullability-return. While violating nullability does not have undefined behavior, it is often unintentional, so UBSan offers to catch it.
+		set(CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG "-fsanitize=undefined,safe-stack,implicit-conversion,nullability")
 	endif()
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
 			message(FATAL_ERROR "GCC 5.0 or above required.")
 		endif()
+        set(CMAKE_CXX_FLAGS_GCC
+                "-fno-strict-overflow"            # tells the compiler NOT to assume that signed overflow does not occur.
+                "-fno-delete-null-pointer-checks" # tells the compiler NOT to assume that null pointer deference does not exist.
+                "-fwrapv"                         # tells the compiler that # signed overflow always wraps.
+                )
 	endif()
 	set(CMAKE_C_FLAGS
 			"-fpic"                         #Position Independent Execution (PIE)
@@ -231,6 +238,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 			"-std=c++14"                    #currently used C++ standard
 			"-Wnon-virtual-dtor"
 			"${CMAKE_CXX_FLAGS_CLANG}"
+			"${CMAKE_CXX_FLAGS_GCC}"
 			"${IGNORED_WARNINGS}"           #but ignore some unimportant ones
 			"${SANITIZE_FLAGS}"
 			)
@@ -260,6 +268,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 			"/MP" # Multi processor compilation
 			"/guard:cf"
 			"/INCREMENTAL"
+			"/sdl"  # superset of the baseline security checks
 			"${SANITIZE_FLAGS}"
 			)
 

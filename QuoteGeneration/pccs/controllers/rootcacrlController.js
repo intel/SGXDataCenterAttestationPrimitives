@@ -29,21 +29,17 @@
  *
  */
 
-const { rootcacrlService }= require('../services');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
+import { rootcacrlService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
 
-exports.getRootCACrl = async function(req,res,next) {
-    try {
-        // call service
-        let rootcacrl = await rootcacrlService.getRootCACrl();
+export async function getRootCaCrl(req, res, next) {
+  try {
+    // call service
+    let rootcacrl = await rootcacrlService.getRootCaCrl();
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .send(rootcacrl);
-    }
-    catch(err) {
-        next(err);
-    }
-};
-
-
+    // send response
+    res.status(PccsStatus.PCCS_STATUS_SUCCESS[0]).send(rootcacrl);
+  } catch (err) {
+    next(err);
+  }
+}

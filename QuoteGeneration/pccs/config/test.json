@@ -1,9 +1,8 @@
 {
     "HTTPS_PORT" : 8082,
-    "hosts" : "127.0.0.1",
-    "uri": "https://api.trustedservices.intel.com/sgx/certification/v2/",
+    "hosts" : "0.0.0.0",
+    "uri": "https://api.trustedservices.intel.com/sgx/certification/v3/",
     "ApiKey": "",
-    "proxy" : "",
     "RefreshSchedule": "0 0 1 * * *",
     "UserTokenHash" : "",
     "AdminTokenHash" : "",
@@ -27,7 +26,7 @@
                 "freezeTableName": true
             },
             "logging" : false, 
-            "storage": "pckcache_test.db"
+            "storage": "test.db"
         }
     }, 
     "mysql" : {

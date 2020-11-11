@@ -29,18 +29,25 @@
  *
  */
 
-module.exports = (sequelize, DataTypes) => {
-    const PlatformTcb = sequelize.define('platform_tcbs', {
-      qe_id: { type: DataTypes.STRING, primaryKey: true},
-      pce_id: { type: DataTypes.STRING, primaryKey: true },
-      cpu_svn: { type: DataTypes.STRING, primaryKey: true },
-      pce_svn: { type: DataTypes.STRING, primaryKey: true },
-      tcbm: { type: DataTypes.STRING }
-    },{
-        timestamps: true,
-        createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
+#ifndef SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H
+#define SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H
 
-    return PlatformTcb;
-};
+#include <string>
+#include <array>
+
+std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                                 std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status,
+                                 std::string signature);
+
+std::string tcbInfoJsonGenerator(std::string tcbInfoBody, std::string signature);
+
+std::string tcbInfoJsonV1Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status);
+
+std::string tcbInfoJsonV2Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string tcbStatus,
+                              int tcbType, int tcbEvaluationDataNumber, std::string tcbDate);
+
+std::array<int, 16> getRandomTcb();
+
+#endif //SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H

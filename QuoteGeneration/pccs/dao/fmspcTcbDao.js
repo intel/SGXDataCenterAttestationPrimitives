@@ -29,47 +29,42 @@
  *
  */
 
-const { fmspc_tcbs }= require('./models/');
-const Constants = require('../constants/index.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const {Sequelize, sequelize} = require('./models/');
+import Constants from '../constants/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import { FmspcTcbs, sequelize } from './models/index.js';
 
 // Update or insert a record in JSON format
-exports.upsertFmspcTcb = async function(tcbinfoJson) {
-    return await fmspc_tcbs.upsert({
-        fmspc: tcbinfoJson.fmspc,
-        tcbinfo: JSON.stringify(tcbinfoJson.tcbinfo),
-        root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-        signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID
-    });
+export async function upsertFmspcTcb(tcbinfoJson) {
+  return await FmspcTcbs.upsert({
+    fmspc: tcbinfoJson.fmspc,
+    tcbinfo: JSON.stringify(tcbinfoJson.tcbinfo),
+    root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
+    signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
+  });
 }
 
 //Query TCBInfo by fmspc
-exports.getTcbInfo = async function(fmspc) {
-    const sql = 'select a.*,' +
-              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
-              ' from fmspc_tcbs a ' +
-              ' where a.fmspc=$fmspc';
-    const tcbinfo = await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT,
-            bind: { fmspc : fmspc }
-        });
-    if (tcbinfo.length == 0)
-        return null;
-    else if (tcbinfo.length == 1 ){
-        if (tcbinfo[0].root_cert != null && tcbinfo[0].signing_cert != null)
-            return tcbinfo[0];
-        else return null;
-    }
-    else 
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+export async function getTcbInfo(fmspc) {
+  const sql =
+    'select a.*,' +
+    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
+    ' from fmspc_tcbs a ' +
+    ' where a.fmspc=$fmspc';
+  const tcbinfo = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+    bind: { fmspc: fmspc },
+  });
+  if (tcbinfo.length == 0) return null;
+  else if (tcbinfo.length == 1) {
+    if (tcbinfo[0].root_cert != null && tcbinfo[0].signing_cert != null)
+      return tcbinfo[0];
+    else return null;
+  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }
 
 //Query all TCBInfos
-exports.getAllTcbs = async function(){
-    return await fmspc_tcbs.findAll();
+export async function getAllTcbs() {
+  return await FmspcTcbs.findAll();
 }
-

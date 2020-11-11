@@ -55,7 +55,7 @@ public:
     bool operator==(const CrlStore& other) const;
     bool operator!=(const CrlStore& other) const;
 
-    virtual bool parse(const std::string& pemCrl);
+    virtual bool parse(const std::string& crlString);
 
     virtual bool expired(const time_t& expirationDate) const;
     virtual const Issuer& getIssuer() const;

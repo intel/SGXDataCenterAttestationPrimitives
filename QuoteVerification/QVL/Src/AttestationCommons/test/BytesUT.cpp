@@ -53,3 +53,9 @@ TEST_F(BytesUT, hexStringToBytes)
     ASSERT_EQ(intel::sgx::dcap::hexStringToBytes("0001090A0D0f149FAFFf"), val1);
     ASSERT_NE(intel::sgx::dcap::hexStringToBytes("0001090A0D0f149FAFFf"), val2);
 }
+
+TEST_F(BytesUT, bytesToHexString)
+{
+    ASSERT_EQ(intel::sgx::dcap::bytesToHexString(val1), "0001090A0D0F149FAFFF");
+    ASSERT_NE(intel::sgx::dcap::bytesToHexString(val2), "0001090A0D0F149FAFFF");
+}

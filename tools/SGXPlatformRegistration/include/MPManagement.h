@@ -84,6 +84,10 @@ class MPManagement {
         virtual ~MPManagement();
     private:
         MPUefi *m_mpuefi;
+
+        MPManagement& operator=(const MPManagement&) {return *this;}
+        MPManagement(const MPManagement& src) {(void) src; }
+
 };
 
 #endif  // #ifndef __MPMANAGEMENT_H

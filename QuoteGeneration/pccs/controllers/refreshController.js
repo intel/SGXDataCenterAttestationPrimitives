@@ -29,26 +29,22 @@
  *
  */
 
-const { refreshService }= require('../services');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { refreshService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
 
-exports.refreshCache = async function(req,res,next) {
-    try {
-        const type = req.query.type;
-        const fmspc = req.query.fmspc;
+export async function refreshCache(req, res, next) {
+  try {
+    const type = req.query.type;
+    const fmspc = req.query.fmspc;
 
-        // call service
-        await refreshService.refreshCache(type, fmspc);
+    // call service
+    await refreshService.refreshCache(type, fmspc);
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .send(PCCS_STATUS.PCCS_STATUS_SUCCESS[1]);
-    }
-    catch(err) {
-        next(err);
-    }
-};
-
-
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .send(PccsStatus.PCCS_STATUS_SUCCESS[1]);
+  } catch (err) {
+    next(err);
+  }
+}

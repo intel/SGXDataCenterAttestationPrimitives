@@ -44,16 +44,22 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 class JsonParser
 {
 public:
+    enum ParseStatus {
+        OK,
+        Missing,
+        Invalid
+    };
+
     bool parse(const std::string& json);
     const rapidjson::Value* getField(const std::string& fieldName) const;
-    std::pair<std::vector<uint8_t>, bool> getBytesFieldOf(const ::rapidjson::Value &parent,
-                                                          const std::string &fieldName, size_t length) const;
-    std::pair<std::vector<std::string>, bool> getStringVecFieldOf(const ::rapidjson::Value& parent,
-                                                                  const std::string& fieldName) const;
-    std::pair<time_t, bool> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    bool checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<unsigned int, bool> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<int, bool> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<std::vector<uint8_t>, ParseStatus> getBytesFieldOf(const ::rapidjson::Value &parent,
+                                                                 const std::string &fieldName, size_t length) const;
+    std::pair<std::string, ParseStatus> getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const;
+    std::pair<std::vector<std::string>, ParseStatus> getStringVecFieldOf(const ::rapidjson::Value& parent,
+                                                                         const std::string& fieldName) const;
+    std::pair<time_t, ParseStatus> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<unsigned int, ParseStatus> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<int, ParseStatus> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
 
 private:
     bool isValidHexstring(const std::string& hexString) const;

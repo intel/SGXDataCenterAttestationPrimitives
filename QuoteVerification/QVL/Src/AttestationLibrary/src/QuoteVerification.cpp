@@ -161,7 +161,7 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
     }
 }
 
-Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl,
+Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *stringRootCaCrl,
         const char *pemRootCaCertificate, const time_t* expirationDate)
 {
     time_t currentTime;
@@ -176,7 +176,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
 
     if(!tcbInfo ||
        !pemCertChain ||
-       !pemRootCaCrl ||
+       !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
@@ -209,7 +209,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     }
 
     dcap::pckparser::CrlStore rootCaCrl;
-    if(!rootCaCrl.parse(pemRootCaCrl))
+    if(!rootCaCrl.parse(stringRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
@@ -229,7 +229,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     }
 }
 
-Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *pemRootCaCrl,
+Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *stringRootCaCrl,
         const char *pemRootCaCertificate, const time_t* expirationDate)
 {
 
@@ -245,7 +245,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
 
     if(!enclaveIdentityString ||
        !pemCertChain ||
-       !pemRootCaCrl ||
+       !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
@@ -275,7 +275,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     }
 
     dcap::pckparser::CrlStore rootCaCrl;
-    if(!rootCaCrl.parse(pemRootCaCrl))
+    if(!rootCaCrl.parse(stringRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
@@ -313,7 +313,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
 
     /// 4.1.2.4.2
     dcap::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
@@ -395,7 +395,7 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
         return e.getStatus();
     }
 
-    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getBody());
+    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getEnclaveReport());
 }
 
 Status sgxAttestationGetQECertificationDataSize(
@@ -414,7 +414,7 @@ Status sgxAttestationGetQECertificationDataSize(
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     dcap::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
@@ -443,7 +443,7 @@ Status sgxAttestationGetQECertificationData(
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     dcap::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != dcap::constants::QUOTE_VERSION)
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }

@@ -45,7 +45,7 @@ std::string obj2Str(const ASN1_OBJECT* obj)
 
     constexpr size_t size = 1024;
     char extname[size];
-    std::memset(extname, 0x00, size);
+    OPENSSL_cleanse(extname, size);
     OBJ_obj2txt(extname, size, obj, 1);
 
     return std::string(extname);
@@ -55,7 +55,7 @@ std::string getLastError()
 {
     constexpr size_t size = 1024;
     char buff[size];
-    std::memset(buff, 0x00, size);
+    OPENSSL_cleanse(buff, size);
 
     const auto code = ERR_get_error();
 

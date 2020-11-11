@@ -90,6 +90,22 @@ inline Bytes hexStringToBytes(const std::string& hexEncoded)
     }
 }
 
+inline std::string bytesToHexString(const Bytes &vector)
+{
+    std::string result;
+    result.reserve(vector.size() * 2);   // two digits per character
+
+    static constexpr char hex[] = "0123456789ABCDEF";
+
+    for (const uint8_t c : vector)
+    {
+        result.push_back(hex[c / 16]);
+        result.push_back(hex[c % 16]);
+    }
+
+    return result;
+}
+
 }}}
 
 #endif //SGX_DCAP_COMMONS_BYTES_H

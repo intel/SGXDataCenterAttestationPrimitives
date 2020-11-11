@@ -67,9 +67,10 @@ bool isCpuSvnHigherOrEqual(const dcap::parser::x509::PckCertificate& pckCert,
     return CPUSVN_EQUAL_OR_HIGHER;
 }
 
-const std::string& getMatchingTcbLevel(const std::set<dcap::parser::json::TcbLevel, std::greater<dcap::parser::json::TcbLevel>> &tcbs,
-                                      const dcap::parser::x509::PckCertificate &pckCert)
+const std::string& getMatchingTcbLevel(const dcap::parser::json::TcbInfo &tcbInfo,
+                                       const dcap::parser::x509::PckCertificate &pckCert)
 {
+    const auto &tcbs = tcbInfo.getTcbLevels();
     const auto certPceSvn = pckCert.getTcb().getPceSvn();
 
     for (const auto& tcb : tcbs)
@@ -80,14 +81,14 @@ const std::string& getMatchingTcbLevel(const std::set<dcap::parser::json::TcbLev
         }
     }
 
-    /// 4.1.2.4.17.3
+    /// 4.1.2.4.16.3
     throw RuntimeException(STATUS_TCB_NOT_SUPPORTED);
 }
 
 Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert)
 {
-    /// 4.1.2.4.17.1 & 4.1.2.4.17.2
-    const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson.getTcbLevels(), pckCert);
+    /// 4.1.2.4.16.1 & 4.1.2.4.16.2
+    const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson, pckCert);
 
     if (tcbLevelStatus == "OutOfDate")
     {
@@ -119,7 +120,7 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
         return STATUS_TCB_SW_HARDENING_NEEDED;
     }
 
-    if(tcbInfoJson.getVersion() == 2 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
+    if(tcbInfoJson.getVersion() > 1 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
     {
         return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
     }
@@ -158,6 +159,7 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
         case STATUS_OK:
             return tcbLevelStatus;
         default:
+            /// 4.1.2.4.16.4
             return STATUS_TCB_UNRECOGNIZED_STATUS;
     }
 }
@@ -189,7 +191,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_PCK_REVOKED;
     }
 
-    /// 4.1.2.4.9
+    /// 4.1.2.4.10
     if(pckCert.getFmspc() != tcbInfoJson.getFmspc())
     {
         return STATUS_TCB_INFO_MISMATCH;
@@ -200,7 +202,6 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_TCB_INFO_MISMATCH;
     }
 
-    /// 4.1.2.4.10 ?
     const auto qeCertData = quote.getQuoteAuthData().qeCertData;
     auto qeCertDataVerificationStatus = verifyQeCertData(qeCertData);
     if(qeCertDataVerificationStatus != STATUS_OK)
@@ -214,7 +215,8 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_PCK_CERT; // if there were issues with parsing public key it means cert was invalid.
                                         // Probably it will never happen because parsing cert should fail earlier.
     }
-    /// 4.1.2.4.13
+
+    /// 4.1.2.4.11
     if(!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().qeReportSignature.signature,
                                            quote.getQuoteAuthData().qeReport.rawBlob(),
                                            *pubKey))
@@ -222,7 +224,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_QE_REPORT_SIGNATURE;
     }
 
-    /// 4.1.2.4.14
+    /// 4.1.2.4.12
     const auto hashedConcatOfAttestKeyAndQeReportData = [&]() -> std::vector<uint8_t>
     {
         const auto attestKeyData = quote.getQuoteAuthData().ecdsaAttestationKey.pubKey;
@@ -242,9 +244,22 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_QE_REPORT_DATA;
     }
 
-    /// 4.1.2.4.15
     if (enclaveIdentity)
     {
+        /// 4.1.2.4.13
+        if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_SGX)
+        {
+            if(enclaveIdentity->getID() != EnclaveID::QE)
+            {
+                return STATUS_QE_IDENTITY_MISMATCH;
+            }
+        }
+        else
+        {
+            return STATUS_QE_IDENTITY_MISMATCH;
+        }
+
+        /// 4.1.2.4.14
         qeIdentityStatus = enclaveReportVerifier.verify(enclaveIdentity, quote.getQuoteAuthData().qeReport);
         switch(qeIdentityStatus) {
             case STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT:
@@ -271,7 +286,7 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
-    /// 4.1.2.4.16
+    /// 4.1.2.4.15
     if (!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().ecdsa256BitSignature.signature,
                                             quote.getSignedData(),
                                             *attestKey))
@@ -281,7 +296,7 @@ Status QuoteVerifier::verify(const Quote& quote,
 
     try
     {
-        /// 4.1.2.4.17
+        /// 4.1.2.4.16
         const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert);
 
         if (enclaveIdentity)
@@ -303,6 +318,7 @@ Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) cons
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
+
     return STATUS_OK;
 }
 

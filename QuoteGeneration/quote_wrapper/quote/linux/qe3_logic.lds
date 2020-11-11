@@ -7,6 +7,7 @@ global:
     sgx_set_qe3_path;
     sgx_set_qpl_path;
     sgx_ql_get_keyid;
+    load_qe;
 local:
     *;
 };

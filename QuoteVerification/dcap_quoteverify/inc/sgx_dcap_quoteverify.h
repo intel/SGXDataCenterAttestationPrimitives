@@ -100,6 +100,7 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size);
  *      - SGX_QL_QUOTE_FORMAT_UNSUPPORTED
  *      - SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED
  *      - SGX_QL_UNABLE_TO_GENERATE_REPORT
+ *      - SGX_QL_CRL_UNSUPPORTED_FORMAT
  *      - SGX_QL_ERROR_UNEXPECTED
  **/
 quote3_error_t sgx_qv_verify_quote(

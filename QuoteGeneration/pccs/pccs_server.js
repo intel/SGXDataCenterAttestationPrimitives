@@ -30,68 +30,92 @@
  *
  */
 
-const config = require('config');
-const morgan = require('morgan');
-const express = require('express');
-const fs = require('fs');
-const logger = require('./utils/Logger.js');
-const https = require('https');
-const schedule = require('node-schedule');
-const bodyParser = require('body-parser');
-const routes = require('./routes');
-const Auth = require('./middleware/auth.js');
-const ErrorHandling = require('./middleware/error.js');
-const RefreshService = require('./services/refreshService.js');
+import Config from 'config';
+import morgan from 'morgan';
+import express from 'express';
+import logger from './utils/Logger.js';
+import node_schedule from 'node-schedule';
+import body_parser from 'body-parser';
+import routes from './routes/index.js';
+import * as fs from 'fs';
+import * as https from 'https';
+import * as auth from './middleware/auth.js';
+import * as error from './middleware/error.js';
+import * as refreshService from './services/refreshService.js';
+import * as appUtil from './utils/apputil.js';
 
 // Create ./logs if it doesn't exist
-fs.mkdir('./logs', (err)=> {/* do nothing*/});
-
-const app = express();
-
-// logger
-app.use(morgan('combined', {stream: logger.stream}));
-
-// body parser middleware, this will let us get the data from a POST
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json({limit:"200000kb"}));
-
-// authentication middleware
-app.get('/sgx/certification/v2/platforms', Auth.validateAdmin);
-app.post('/sgx/certification/v2/platforms', Auth.validateUser);
-app.use('/sgx/certification/v2/platformcollateral', Auth.validateAdmin);
-app.use('/sgx/certification/v2/refresh', Auth.validateAdmin);
-
-// router
-app.use('/sgx/certification/v2', routes);
-
-// error handling middleware
-app.use(ErrorHandling.errorHandling);
-
-// Start HTTPS server 
-try {
-    var privateKey = fs.readFileSync('./ssl_key/private.pem', 'utf8');
-    var certificate = fs.readFileSync('./ssl_key/file.crt', 'utf8');
-} catch (err){
-    logger.error("The private key or certificate for HTTPS server is missing.");
-}
-const credentials = {key: privateKey, cert: certificate};
-const httpsServer = https.createServer(credentials, app);
-httpsServer.listen(config.get('HTTPS_PORT'), config.get('hosts'), function() {
-    logger.info('HTTPS Server is running on: https://localhost:' + config.get('HTTPS_PORT'));
+fs.mkdir('./logs', (err) => {
+  /* do nothing*/
 });
 
-// Schedule the refresh job in cron-style
-// # ┌───────────── minute (0 - 59)
-// # │ ┌───────────── hour (0 - 23)
-// # │ │ ┌───────────── day of the month (1 - 31)
-// # │ │ │ ┌───────────── month (1 - 12)
-// # │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
-// # │ │ │ │ │                                   7 is also Sunday on some systems)
-// # │ │ │ │ │
-// # │ │ │ │ │
-// # * * * * * command to execute
-//
-schedule.scheduleJob(config.get('RefreshSchedule'), RefreshService.scheduledRefresh);
+const app = express();
+const { urlencoded, json } = body_parser;
+const { scheduleJob } = node_schedule;
 
-module.exports = app;
+// logger
+app.use(morgan('combined', { stream: logger.stream }));
 
+// startup check
+if (!appUtil.startup_check()){
+  logger.endAndExitProcess();
+}
+
+appUtil.database_check().then((db_init_ok) => {
+  if (!db_init_ok) {
+    logger.endAndExitProcess();
+  }
+
+  // body parser middleware, this will let us get the data from a POST
+  app.use(urlencoded({ extended: true }));
+  app.use(json({ limit: '200000kb' }));
+
+  // authentication middleware
+  app.get('/sgx/certification/v3/platforms', auth.validateAdmin);
+  app.post('/sgx/certification/v3/platforms', auth.validateUser);
+  app.use('/sgx/certification/v3/platformcollateral', auth.validateAdmin);
+  app.use('/sgx/certification/v3/refresh', auth.validateAdmin);
+
+  // router
+  app.use('/sgx/certification/v3', routes);
+
+  // error handling middleware
+  app.use(error.errorHandling);
+
+  // Start HTTPS server
+  let privateKey;
+  let certificate;
+  try {
+    privateKey = fs.readFileSync('./ssl_key/private.pem', 'utf8');
+    certificate = fs.readFileSync('./ssl_key/file.crt', 'utf8');
+  } catch (err) {
+    logger.error('The private key or certificate for HTTPS server is missing.');
+  }
+  const credentials = { key: privateKey, cert: certificate };
+  const httpsServer = https.createServer(credentials, app);
+  httpsServer.listen(
+    Config.get('HTTPS_PORT'),
+    Config.get('hosts'),
+    function () {
+      logger.info(
+        'HTTPS Server is running on: https://localhost:' +
+          Config.get('HTTPS_PORT')
+      );
+    }
+  );
+
+  // Schedule the refresh job in cron-style
+  // # ┌───────────── minute (0 - 59)
+  // # │ ┌───────────── hour (0 - 23)
+  // # │ │ ┌───────────── day of the month (1 - 31)
+  // # │ │ │ ┌───────────── month (1 - 12)
+  // # │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
+  // # │ │ │ │ │                                   7 is also Sunday on some systems)
+  // # │ │ │ │ │
+  // # │ │ │ │ │
+  // # * * * * * command to execute
+  //
+  scheduleJob(Config.get('RefreshSchedule'), refreshService.scheduledRefresh);
+});
+
+export default app;

@@ -29,51 +29,63 @@
  *
  */
 
-const { pckcertService }= require('../services');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { pckcertService } from '../services/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-exports.getPckCert = async function(req,res,next) {
-    try {
-        let qeid = req.query.qeid;
-        let cpusvn = req.query.cpusvn;
-        let pcesvn = req.query.pcesvn;
-        let pceid = req.query.pceid;
-        let enc_ppid = req.query.encrypted_ppid;
+export async function getPckCert(req, res, next) {
+  try {
+    let qeid = req.query.qeid;
+    let cpusvn = req.query.cpusvn;
+    let pcesvn = req.query.pcesvn;
+    let pceid = req.query.pceid;
+    let enc_ppid = req.query.encrypted_ppid;
 
-        // validate request parameters
-        if (!qeid || !cpusvn || !pcesvn || !pceid) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-        if (qeid.length > Constants.QEID_MAX_SIZE || cpusvn.length != Constants.CPUSVN_SIZE 
-            || pcesvn.length != Constants.PCESVN_SIZE || pceid.length != Constants.PCEID_SIZE){
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-        if (enc_ppid != null && enc_ppid.length != Constants.ENC_PPID_SIZE) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-
-        // normalize the request parameters
-        qeid = qeid.toUpperCase();
-        cpusvn = cpusvn.toUpperCase();
-        pcesvn = pcesvn.toUpperCase();
-        pceid = pceid.toUpperCase();
-        if (enc_ppid)  // can be null
-            enc_ppid = enc_ppid.toUpperCase();
-
-        // call service
-        const pckcertJson = await pckcertService.getPckCert(qeid, cpusvn, pcesvn, pceid, enc_ppid);
-
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_TCBM, pckcertJson[Constants.SGX_TCBM])
-           .header(Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN, pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN])
-           .send(pckcertJson.cert);
+    // validate request parameters
+    if (!qeid || !cpusvn || !pcesvn || !pceid) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-    catch(err) {
-        next(err);
+    if (
+      qeid.length > Constants.QEID_MAX_SIZE ||
+      cpusvn.length != Constants.CPUSVN_SIZE ||
+      pcesvn.length != Constants.PCESVN_SIZE ||
+      pceid.length != Constants.PCEID_SIZE
+    ) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-};
+    if (enc_ppid != null && enc_ppid.length != Constants.ENC_PPID_SIZE) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
 
+    // normalize the request parameters
+    qeid = qeid.toUpperCase();
+    cpusvn = cpusvn.toUpperCase();
+    pcesvn = pcesvn.toUpperCase();
+    pceid = pceid.toUpperCase();
+    if (enc_ppid)
+      // can be null
+      enc_ppid = enc_ppid.toUpperCase();
 
+    // call service
+    const pckcertJson = await pckcertService.getPckCert(
+      qeid,
+      cpusvn,
+      pcesvn,
+      pceid,
+      enc_ppid
+    );
+
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(Constants.SGX_TCBM, pckcertJson[Constants.SGX_TCBM])
+      .header(
+        Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN,
+        pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN]
+      )
+      .send(pckcertJson.cert);
+  } catch (err) {
+    next(err);
+  }
+}

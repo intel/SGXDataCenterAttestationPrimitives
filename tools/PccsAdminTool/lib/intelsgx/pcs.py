@@ -3,6 +3,7 @@ import requests
 import os
 import json
 import hashlib
+import binascii
 from urllib import parse
 from cryptography.x509.oid import ExtensionOID
 from . import pckcert
@@ -16,7 +17,7 @@ certEndOffset= len(certEnd)
 
 class PCS:
 	BaseUrl= ''
-	ApiVersion= 2
+	ApiVersion= 3
 	Key= ''
 	HttpError= 200
 	Errors= []
@@ -421,11 +422,14 @@ class PCS:
 			return None
 
 		url= self._geturl('pckcrl')
-		url+= "?ca={:s}".format(target)
+		if self.ApiVersion<3:
+			url+= "?ca={:s}".format(target)
+		else:
+			url+= "?ca={:s}&encoding=der".format(target)
 
 		response= self._get_request(url, False)
 		if response.status_code != 200:
-			print(str(response.content, 'utf-8'))
+			self.error(response.status_code)
 			return None
 
 		# Verify expected headers
@@ -436,10 +440,6 @@ class PCS:
 			self.error("Response missing SGX-PCK-CRL-Issuer-Chain header")
 			return None
 
-		if response.headers['Content-Type'] != 'application/x-pem-file':
-			self.error("Content-Type should be application/x-pem-file")
-			return None
-	
 		# Validate the CRL 
 
 		chain= parse.unquote(
@@ -451,17 +451,19 @@ class PCS:
 		if pychain is None:
 			return None
 
-		crl_pem= response.content
-		pycrl= crypto.load_crl(crypto.FILETYPE_PEM, crl_pem)
+		crl= response.content
+		if self.ApiVersion<3:
+			crl_str= str(crl, dec)
+			pycrl= crypto.load_crl(crypto.FILETYPE_PEM, crl)
+		else:
+			crl_str= binascii.hexlify(crl).decode(dec)
+			pycrl= crypto.load_crl(crypto.FILETYPE_ASN1, crl)
 
 		if not self.verify_crl_trust(pychain, pycrl):
 			self.error("Could not validate certificate using trust chain")
 			return None
 
-		if dec is not None:
-			crl_pem = str(crl_pem, dec)
-
-		return [crl_pem, response.headers['SGX-PCK-CRL-Issuer-Chain']]
+		return [crl_str, response.headers['SGX-PCK-CRL-Issuer-Chain']]
 
 #----------------------------------------------------------------------------
 # PCS: Get TCB Info
@@ -704,4 +706,7 @@ class PCS:
 		else:
 			r = requests.get(url, proxies=urllib.request.getproxies())
 
-		return str(r.content, 'utf-8')
+		if self.ApiVersion<3:
+			return str(r.content, 'utf-8')
+		else:
+			return binascii.hexlify(r.content).decode('utf-8')

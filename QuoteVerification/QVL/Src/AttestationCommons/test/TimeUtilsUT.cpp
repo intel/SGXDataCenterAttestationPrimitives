@@ -52,9 +52,14 @@ struct TimeUtilsUT: public testing::TestWithParam<time_t>
     }
 
     time_t now = time(0);
+#if defined(_MSC_VER)
+#pragma warning(disable:4996)
+#endif
     struct tm *tm_now = std::gmtime(&now);
+#if defined(_MSC_VER)
+#pragma warning(default:4996)
+#endif
     time_t tmp = std::mktime(tm_now);
-    time_t timeZoneDiff = now - tmp; // Enclave assumes that given time is always GMT
 };
 
 TEST_P(TimeUtilsUT, gmtime)
@@ -74,9 +79,15 @@ INSTANTIATE_TEST_SUITE_P(TestsWithParameters, TimeUtilsUT, ::testing::ValuesIn(p
 TEST_P(TimeUtilsUT, mktime)
 {
     std::cout << "mktime input value: " << GetParam() << std::endl;
+#if defined(_MSC_VER)
+#pragma warning(disable:4996)
+#endif
     auto val = std::gmtime(&GetParam());
+#if defined(_MSC_VER)
+#pragma warning(default:4996)
+#endif
     assert(val != nullptr);
-    ASSERT_EQ(standard::mktime(val), enclave::mktime(val) - timeZoneDiff);
+    ASSERT_EQ(standard::mktime(val), enclave::mktime(val));
 }
 
 TEST_F(TimeUtilsUT, mktimeNullAsParam)
