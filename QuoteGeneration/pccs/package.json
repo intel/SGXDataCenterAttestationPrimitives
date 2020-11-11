@@ -1,7 +1,7 @@
 {
   "name": "PCCS",
   "description": "Provisioning Certificate Caching Service",
-  "version": "1.9.0",
+  "version": "1.8.0",
   "dependencies": {
     "@fidm/x509": "^1.2.1",
     "ajv": "^6.12.4",

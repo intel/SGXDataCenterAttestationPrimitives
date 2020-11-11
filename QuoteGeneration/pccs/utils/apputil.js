@@ -52,7 +52,6 @@ export function startup_check() {
     );
     return false;
   }
-  return true;
 }
 
 async function test_connection() {
