@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
-// Copyright(c) 2016-19 Intel Corporation.
+/*  Copyright(c) 2016-20 Intel Corporation. */
 
 #include <asm/mman.h>
 #include <linux/mman.h>
@@ -17,10 +17,7 @@
 #include "encls.h"
 
 #include <linux/version.h>
-#include "sgx_wl.h"
 
-/* A per-cpu cache for the last known values of IA32_SGXLEPUBKEYHASHx MSRs. */
-static DEFINE_PER_CPU(u64 [4], sgx_lepubkeyhash_cache);
 
 static struct sgx_va_page *sgx_encl_grow(struct sgx_encl *encl)
 {
@@ -59,76 +56,13 @@ static void sgx_encl_shrink(struct sgx_encl *encl, struct sgx_va_page *va_page)
 	}
 }
 
-static u32 sgx_calc_ssa_frame_size(u32 miscselect, u64 xfrm)
-{
-	u32 size_max = PAGE_SIZE;
-	u32 size;
-	int i;
-
-	for (i = 2; i < 64; i++) {
-		if (!((1UL << i) & xfrm))
-			continue;
-
-		size = SGX_SSA_GPRS_SIZE + sgx_xsave_size_tbl[i];
-
-		if (miscselect & SGX_MISC_EXINFO)
-			size += SGX_SSA_MISC_EXINFO_SIZE;
-
-		if (size > size_max)
-			size_max = size;
-	}
-
-	return PFN_UP(size_max);
-}
-
-static int sgx_validate_secs(const struct sgx_secs *secs)
-{
-	u64 max_size = (secs->attributes & SGX_ATTR_MODE64BIT) ?
-		       sgx_encl_size_max_64 : sgx_encl_size_max_32;
-
-	if (secs->size < (2 * PAGE_SIZE) || !is_power_of_2(secs->size))
-		return -EINVAL;
-
-	if (secs->base & (secs->size - 1))
-		return -EINVAL;
-
-	if (secs->miscselect & sgx_misc_reserved_mask ||
-	    secs->attributes & sgx_attributes_reserved_mask ||
-	    secs->xfrm & sgx_xfrm_reserved_mask)
-		return -EINVAL;
-
-	if (secs->size > max_size)
-		return -EINVAL;
-
-	if (!(secs->xfrm & XFEATURE_MASK_FP) ||
-	    !(secs->xfrm & XFEATURE_MASK_SSE) ||
-	    (((secs->xfrm >> XFEATURE_BNDREGS) & 1) !=
-	     ((secs->xfrm >> XFEATURE_BNDCSR) & 1)))
-		return -EINVAL;
-
-	if (!secs->ssa_frame_size)
-		return -EINVAL;
-
-	if (sgx_calc_ssa_frame_size(secs->miscselect, secs->xfrm) >
-	    secs->ssa_frame_size)
-		return -EINVAL;
-
-	if (memchr_inv(secs->reserved1, 0, sizeof(secs->reserved1)) ||
-	    memchr_inv(secs->reserved2, 0, sizeof(secs->reserved2)) ||
-	    memchr_inv(secs->reserved3, 0, sizeof(secs->reserved3)) ||
-	    memchr_inv(secs->reserved4, 0, sizeof(secs->reserved4)))
-		return -EINVAL;
-
-	return 0;
-}
-
 static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 {
-	unsigned long encl_size = secs->size + PAGE_SIZE;
 	struct sgx_epc_page *secs_epc;
 	struct sgx_va_page *va_page;
 	struct sgx_pageinfo pginfo;
 	struct sgx_secinfo secinfo;
+	unsigned long encl_size;
 	struct file *backing;
 	long ret;
 
@@ -137,12 +71,10 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 		return PTR_ERR(va_page);
 	else if (va_page)
 		list_add(&va_page->list, &encl->va_pages);
+	/* else the tail page of the VA page list had free slots. */
 
-	if (sgx_validate_secs(secs)) {
-		pr_debug("invalid SECS\n");
-		ret = -EINVAL;
-		goto err_out_shrink;
-	}
+	/* The extra page goes to SECS. */
+	encl_size = secs->size + PAGE_SIZE;
 
 	backing = shmem_file_setup("SGX backing", encl_size + (encl_size >> 5),
 				   VM_NORESERVE);
@@ -167,28 +99,24 @@ static int sgx_encl_create(struct sgx_encl *encl, struct sgx_secs *secs)
 	pginfo.secs = 0;
 	memset(&secinfo, 0, sizeof(secinfo));
 
-	ret = __ecreate((void *)&pginfo, sgx_get_epc_addr(secs_epc));
+	ret = __ecreate((void *)&pginfo, sgx_get_epc_virt_addr(secs_epc));
 	if (ret) {
+		ret = -EIO;
 		pr_debug("ECREATE returned %ld\n", ret);
 		goto err_out;
 	}
 
 	if (secs->attributes & SGX_ATTR_DEBUG)
-		atomic_or(SGX_ENCL_DEBUG, &encl->flags);
+		set_bit(SGX_ENCL_DEBUG, &encl->flags);
 
 	encl->secs.encl = encl;
-	encl->secs_attributes = secs->attributes;
-	encl->allowed_attributes |= SGX_ATTR_ALLOWED_MASK;
 	encl->base = secs->base;
 	encl->size = secs->size;
-	encl->ssaframesize = secs->ssa_frame_size;
+	encl->attributes = secs->attributes;
+	encl->attributes_mask = SGX_ATTR_DEBUG | SGX_ATTR_MODE64BIT | SGX_ATTR_KSS;
 
-	/*
-	 * Set SGX_ENCL_CREATED only after the enclave is fully prepped.  This
-	 * allows setting and checking enclave creation without having to take
-	 * encl->lock.
-	 */
-	atomic_or(SGX_ENCL_CREATED, &encl->flags);
+	/* Set only after completion, as encl->lock has not been taken. */
+	set_bit(SGX_ENCL_CREATED, &encl->flags);
 
 	return 0;
 
@@ -207,49 +135,39 @@ err_out_shrink:
 }
 
 /**
- * sgx_ioc_enclave_create - handler for %SGX_IOC_ENCLAVE_CREATE
- * @filep:	open file to /dev/sgx
- * @arg:	userspace pointer to a struct sgx_enclave_create instance
+ * sgx_ioc_enclave_create() - handler for %SGX_IOC_ENCLAVE_CREATE
+ * @encl:	An enclave pointer.
+ * @arg:	The ioctl argument.
  *
- * Allocate kernel data structures for a new enclave and execute ECREATE after
- * verifying the correctness of the provided SECS.
- *
- * Note, enforcement of restricted and disallowed attributes is deferred until
- * sgx_ioc_enclave_init(), only the architectural correctness of the SECS is
- * checked by sgx_ioc_enclave_create().
+ * Allocate kernel data structures for the enclave and invoke ECREATE.
  *
  * Return:
- *   0 on success,
- *   -errno otherwise
+ * - 0:		Success.
+ * - -EIO:	ECREATE failed.
+ * - -errno:	POSIX error.
  */
 static long sgx_ioc_enclave_create(struct sgx_encl *encl, void __user *arg)
 {
-	struct sgx_enclave_create ecreate;
-	struct page *secs_page;
-	struct sgx_secs *secs;
+	struct sgx_enclave_create create_arg;
+	void *secs;
 	int ret;
 
-	if (atomic_read(&encl->flags) & SGX_ENCL_CREATED)
+	if (test_bit(SGX_ENCL_CREATED, &encl->flags))
 		return -EINVAL;
 
-	if (copy_from_user(&ecreate, arg, sizeof(ecreate)))
+	if (copy_from_user(&create_arg, arg, sizeof(create_arg)))
 		return -EFAULT;
 
-	secs_page = alloc_page(GFP_KERNEL);
-	if (!secs_page)
+	secs = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!secs)
 		return -ENOMEM;
 
-	secs = kmap(secs_page);
-	if (copy_from_user(secs, (void __user *)ecreate.src, sizeof(*secs))) {
+	if (copy_from_user(secs, (void __user *)create_arg.src, PAGE_SIZE))
 		ret = -EFAULT;
-		goto out;
-	}
+	else
+		ret = sgx_encl_create(encl, secs);
 
-	ret = sgx_encl_create(encl, secs);
-
-out:
-	kunmap(secs_page);
-	__free_page(secs_page);
+	kfree(secs);
 	return ret;
 }
 
@@ -288,7 +206,7 @@ static struct sgx_encl_page *sgx_encl_page_alloc(struct sgx_encl *encl,
 static int sgx_validate_secinfo(struct sgx_secinfo *secinfo)
 {
 	u64 perm = secinfo->flags & SGX_SECINFO_PERMISSION_MASK;
-	u64 pt = secinfo->flags & SGX_SECINFO_PAGE_TYPE_MASK;
+	u64 pt   = secinfo->flags & SGX_SECINFO_PAGE_TYPE_MASK;
 
 	if (pt != SGX_SECINFO_REG && pt != SGX_SECINFO_TCS)
 		return -EINVAL;
@@ -322,26 +240,24 @@ static int __sgx_encl_add_page(struct sgx_encl *encl,
 	struct page *src_page;
 	int ret;
 
-	/* Query vma's VM_MAYEXEC as an indirect path_noexec() check. */
-	if (encl_page->vm_max_prot_bits & VM_EXEC) {
-		vma = find_vma(current->mm, src);
-		if (!vma)
-			return -EFAULT;
+	/* Deny noexec. */
+	vma = find_vma(current->mm, src);
+	if (!vma)
+		return -EFAULT;
 
-		if (!(vma->vm_flags & VM_MAYEXEC))
-			return -EACCES;
-	}
+	if (!(vma->vm_flags & VM_MAYEXEC))
+		return -EACCES;
 
 	ret = get_user_pages(src, 1, 0, &src_page, NULL);
 	if (ret < 1)
-		return ret;
+		return -EFAULT;
 
-	pginfo.secs = (unsigned long)sgx_get_epc_addr(encl->secs.epc_page);
-	pginfo.addr = SGX_ENCL_PAGE_ADDR(encl_page);
+	pginfo.secs = (unsigned long)sgx_get_epc_virt_addr(encl->secs.epc_page);
+	pginfo.addr = encl_page->desc & PAGE_MASK;
 	pginfo.metadata = (unsigned long)secinfo;
 	pginfo.contents = (unsigned long)kmap_atomic(src_page);
 
-	ret = __eadd(&pginfo, sgx_get_epc_addr(epc_page));
+	ret = __eadd(&pginfo, sgx_get_epc_virt_addr(epc_page));
 
 	kunmap_atomic((void *)pginfo.contents);
 	put_page(src_page);
@@ -357,15 +273,16 @@ static int __sgx_encl_add_page(struct sgx_encl *encl,
 static int __sgx_encl_extend(struct sgx_encl *encl,
 			     struct sgx_epc_page *epc_page)
 {
+	unsigned long offset;
 	int ret;
-	int i;
 
-	for (i = 0; i < 16; i++) {
-		ret = __eextend(sgx_get_epc_addr(encl->secs.epc_page),
-				sgx_get_epc_addr(epc_page) + (i * 0x100));
+	for (offset = 0; offset < PAGE_SIZE; offset += SGX_EEXTEND_BLOCK_SIZE) {
+		ret = __eextend(sgx_get_epc_virt_addr(encl->secs.epc_page),
+				sgx_get_epc_virt_addr(epc_page) + offset);
 		if (ret) {
 			if (encls_failed(ret))
 				ENCLS_WARN(ret, "EEXTEND");
+
 			return -EIO;
 		}
 	}
@@ -374,8 +291,8 @@ static int __sgx_encl_extend(struct sgx_encl *encl,
 }
 
 static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
-			     unsigned long offset, unsigned long length,
-			     struct sgx_secinfo *secinfo, unsigned long flags)
+			     unsigned long offset, struct sgx_secinfo *secinfo,
+			     unsigned long flags)
 {
 	struct sgx_encl_page *encl_page;
 	struct sgx_epc_page *epc_page;
@@ -433,7 +350,7 @@ static int sgx_encl_add_page(struct sgx_encl *encl, unsigned long src,
 
 	/*
 	 * Complete the "add" before doing the "extend" so that the "add"
-	 * isn't in a half-baked state in the extremely unlikely scenario the
+	 * isn't in a half-baked state in the extremely unlikely scenario
 	 * the enclave will be destroyed in response to EEXTEND failure.
 	 */
 	encl_page->encl = encl;
@@ -476,22 +393,12 @@ err_out_free:
 	sgx_free_epc_page(epc_page);
 	kfree(encl_page);
 
-	/*
-	 * Destroy enclave on ENCLS failure as this means that EPC has been
-	 * invalidated.
-	 */
-	if (ret == -EIO) {
-		mutex_lock(&encl->lock);
-		sgx_encl_destroy(encl);
-		mutex_unlock(&encl->lock);
-	}
-
 	return ret;
 }
 
 /**
  * sgx_ioc_enclave_add_pages() - The handler for %SGX_IOC_ENCLAVE_ADD_PAGES
- * @encl:       pointer to an enclave instance (via ioctl() file pointer)
+ * @encl:       an enclave pointer
  * @arg:	a user pointer to a struct sgx_enclave_add_pages instance
  *
  * Add one or more pages to an uninitialized enclave, and optionally extend the
@@ -512,80 +419,73 @@ err_out_free:
  * mmap() is not allowed to surpass the minimum of the maximum protection bits
  * within the given address range.
  *
- * If ENCLS opcode fails, that effectively means that EPC has been invalidated.
- * When this happens the enclave is destroyed and -EIO is returned to the
- * caller.
+ * The function deinitializes kernel data structures for enclave and returns
+ * -EIO in any of the following conditions:
+ *
+ * - Enclave Page Cache (EPC), the physical memory holding enclaves, has
+ *   been invalidated. This will cause EADD and EEXTEND to fail.
+ * - If the source address is corrupted somehow when executing EADD.
  *
  * Return:
- *   0 on success,
- *   -EACCES if an executable source page is located in a noexec partition,
- *   -EIO if either ENCLS[EADD] or ENCLS[EEXTEND] fails
- *   -errno otherwise
+ * - 0:			Success.
+ * - -EACCES:		The source page is located in a noexec partition.
+ * - -ENOMEM:		Out of EPC pages.
+ * - -ERESTARTSYS:	The call was interrupted before data was processed.
+ * - -EIO:		Either EADD or EEXTEND failed because invalid source address
+ *			or power cycle.
+ * - -errno:		POSIX error.
  */
 static long sgx_ioc_enclave_add_pages(struct sgx_encl *encl, void __user *arg)
 {
-	struct sgx_enclave_add_pages addp;
+	struct sgx_enclave_add_pages add_arg;
 	struct sgx_secinfo secinfo;
 	unsigned long c;
 	int ret;
 
-	if ((atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) ||
-	    !(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
+	if (!test_bit(SGX_ENCL_CREATED, &encl->flags) ||
+	    test_bit(SGX_ENCL_INITIALIZED, &encl->flags))
 		return -EINVAL;
 
-	if (copy_from_user(&addp, arg, sizeof(addp)))
+	if (copy_from_user(&add_arg, arg, sizeof(add_arg)))
 		return -EFAULT;
 
-	if (!IS_ALIGNED(addp.offset, PAGE_SIZE) ||
-	    !IS_ALIGNED(addp.src, PAGE_SIZE))
+	if (!IS_ALIGNED(add_arg.offset, PAGE_SIZE) ||
+	    !IS_ALIGNED(add_arg.src, PAGE_SIZE))
 		return -EINVAL;
 
-	if (!(access_ok(
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) && (!defined(RHEL_RELEASE_CODE)))
-		VERIFY_READ,
-#else
-    #if( defined(RHEL_RELEASE_VERSION) && defined(RHEL_RELEASE_CODE))
-        #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 0))
-            #error "RHEL version not supported"
-        #elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 1))
-		VERIFY_READ,
-        #endif
-    #endif
-#endif
-	        addp.src, PAGE_SIZE)))
-		return -EFAULT;
-
-	if (addp.length & (PAGE_SIZE - 1))
+	if (!add_arg.length || add_arg.length & (PAGE_SIZE - 1))
 		return -EINVAL;
 
-	if (addp.offset + addp.length - PAGE_SIZE >= encl->size)
+	if (add_arg.offset + add_arg.length - PAGE_SIZE >= encl->size)
 		return -EINVAL;
 
-	if (copy_from_user(&secinfo, (void __user *)addp.secinfo,
+	if (copy_from_user(&secinfo, (void __user *)add_arg.secinfo,
 			   sizeof(secinfo)))
 		return -EFAULT;
 
 	if (sgx_validate_secinfo(&secinfo))
 		return -EINVAL;
 
-	for (c = 0 ; c < addp.length; c += PAGE_SIZE) {
+	for (c = 0 ; c < add_arg.length; c += PAGE_SIZE) {
 		if (signal_pending(current)) {
-			ret = -EINTR;
+			if (!c)
+				ret = -ERESTARTSYS;
+
 			break;
 		}
 
 		if (need_resched())
 			cond_resched();
 
-		ret = sgx_encl_add_page(encl, addp.src + c, addp.offset + c,
-					addp.length - c, &secinfo, addp.flags);
+		ret = sgx_encl_add_page(encl, add_arg.src + c, add_arg.offset + c,
+					&secinfo, add_arg.flags);
 		if (ret)
 			break;
 	}
 
-	addp.count = c;
+	add_arg.count = c;
 
-	if (copy_to_user(arg, &addp, sizeof(addp)))
+	if (copy_to_user(arg, &add_arg, sizeof(add_arg)))
 		return -EFAULT;
 
 	return ret;
@@ -616,71 +516,66 @@ static int sgx_get_key_hash(const void *modulus, void *hash)
 	return ret;
 }
 
-static void sgx_update_lepubkeyhash_msrs(u64 *lepubkeyhash, bool enforce)
-{
-	u64 *cache;
-	int i;
-
-	cache = per_cpu(sgx_lepubkeyhash_cache, smp_processor_id());
-	for (i = 0; i < 4; i++) {
-		if (enforce || (lepubkeyhash[i] != cache[i])) {
-			wrmsrl(MSR_IA32_SGXLEPUBKEYHASH0 + i, lepubkeyhash[i]);
-			cache[i] = lepubkeyhash[i];
-		}
-	}
-}
-
-static int sgx_einit(struct sgx_sigstruct *sigstruct, void *token,
-		     struct sgx_epc_page *secs, u64 *lepubkeyhash)
-{
-	int ret;
-
-	preempt_disable();
-	sgx_update_lepubkeyhash_msrs(lepubkeyhash, false);
-	ret = __einit(sigstruct, token, sgx_get_epc_addr(secs));
-	if (ret == SGX_INVALID_EINITTOKEN) {
-		sgx_update_lepubkeyhash_msrs(lepubkeyhash, true);
-		ret = __einit(sigstruct, token, sgx_get_epc_addr(secs));
-	}
-	preempt_enable();
-	return ret;
-}
-
 static int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 			 void *token)
 {
 	u64 mrsigner[4];
+	int i, j, k;
+	void *addr;
 	int ret;
-	int i;
-	int j;
+
+	/*
+	 * Deny initializing enclaves with attributes (namely provisioning)
+	 * that have not been explicitly allowed.
+	 */
+	if (encl->attributes & ~encl->attributes_mask)
+		return -EACCES;
+
+	/*
+	 * Attributes should not be enforced *only* against what's available on
+	 * platform (done in sgx_encl_create) but checked and enforced against
+	 * the mask for enforcement in sigstruct. For example an enclave could
+	 * opt to sign with AVX bit in xfrm, but still be loadable on a platform
+	 * without it if the sigstruct->body.attributes_mask does not turn that
+	 * bit on.
+	 */
+	if (sigstruct->body.attributes & sigstruct->body.attributes_mask &
+	    sgx_attributes_reserved_mask)
+		return -EINVAL;
+
+	if (sigstruct->body.miscselect & sigstruct->body.misc_mask &
+	    sgx_misc_reserved_mask)
+		return -EINVAL;
+
+	if (sigstruct->body.xfrm & sigstruct->body.xfrm_mask &
+	    sgx_xfrm_reserved_mask)
+		return -EINVAL;
 
 	ret = sgx_get_key_hash(sigstruct->modulus, mrsigner);
 	if (ret)
 		return ret;
 
-	if((encl->secs_attributes & ~encl->allowed_attributes) && (encl->secs_attributes & SGX_ATTR_PROVISIONKEY)) {
-		for(i = 0; i < (sizeof(G_SERVICE_ENCLAVE_MRSIGNER) / sizeof(G_SERVICE_ENCLAVE_MRSIGNER[0])); i++) {
-			if(0 == memcmp(&G_SERVICE_ENCLAVE_MRSIGNER[i], mrsigner, sizeof(G_SERVICE_ENCLAVE_MRSIGNER[0]))) {
-				encl->allowed_attributes |= SGX_ATTR_PROVISIONKEY;
-				break;
-			}
-		}
-	}
-
-	/* Check that the required attributes have been authorized. */
-	if (encl->secs_attributes & ~encl->allowed_attributes)
-		return -EACCES;
-
 	mutex_lock(&encl->lock);
 
 	/*
-	 * Periodically, EINIT polls for certain asynchronous events. If such an
-	 * event is detected, it completes with SGX_UNMSKED_EVENT.
+	 * ENCLS[EINIT] is interruptible because it has such a high latency,
+	 * e.g. 50k+ cycles on success. If an IRQ/NMI/SMI becomes pending,
+	 * EINIT may fail with SGX_UNMASKED_EVENT so that the event can be
+	 * serviced.
 	 */
 	for (i = 0; i < SGX_EINIT_SLEEP_COUNT; i++) {
 		for (j = 0; j < SGX_EINIT_SPIN_COUNT; j++) {
-			ret = sgx_einit(sigstruct, token, encl->secs.epc_page,
-					mrsigner);
+			addr = sgx_get_epc_virt_addr(encl->secs.epc_page);
+
+			preempt_disable();
+
+			for (k = 0; k < 4; k++)
+				wrmsrl(MSR_IA32_SGXLEPUBKEYHASH0 + k, mrsigner[k]);
+
+			ret = __einit(sigstruct, token, addr);
+
+			preempt_enable();
+
 			if (ret == SGX_UNMASKED_EVENT)
 				continue;
 			else
@@ -702,13 +597,12 @@ static int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
 		if (encls_failed(ret))
 			ENCLS_WARN(ret, "EINIT");
 
-		sgx_encl_destroy(encl);
-		ret = -EFAULT;
+		ret = -EIO;
 	} else if (ret) {
 		pr_debug("EINIT returned %d\n", ret);
 		ret = -EPERM;
 	} else {
-		atomic_or(SGX_ENCL_INITIALIZED, &encl->flags);
+		set_bit(SGX_ENCL_INITIALIZED, &encl->flags);
 	}
 
 err_out:
@@ -717,9 +611,8 @@ err_out:
 }
 
 /**
- * sgx_ioc_enclave_init - handler for %SGX_IOC_ENCLAVE_INIT
- *
- * @filep:	open file to /dev/sgx
+ * sgx_ioc_enclave_init() - handler for %SGX_IOC_ENCLAVE_INIT
+ * @encl:	an enclave pointer
  * @arg:	userspace pointer to a struct sgx_enclave_init instance
  *
  * Flush any outstanding enqueued EADD operations and perform EINIT.  The
@@ -727,23 +620,24 @@ err_out:
  * the enclave's MRSIGNER, which is caculated from the provided sigstruct.
  *
  * Return:
- *   0 on success,
- *   SGX error code on EINIT failure,
- *   -errno otherwise
+ * - 0:		Success.
+ * - -EPERM:	Invalid SIGSTRUCT.
+ * - -EIO:	EINIT failed because of a power cycle.
+ * - -errno:	POSIX error.
  */
 static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 {
 	struct sgx_sigstruct *sigstruct;
-	struct sgx_enclave_init einit;
+	struct sgx_enclave_init init_arg;
 	struct page *initp_page;
 	void *token;
 	int ret;
 
-	if ((atomic_read(&encl->flags) & SGX_ENCL_INITIALIZED) ||
-	    !(atomic_read(&encl->flags) & SGX_ENCL_CREATED))
+	if (!test_bit(SGX_ENCL_CREATED, &encl->flags) ||
+	    test_bit(SGX_ENCL_INITIALIZED, &encl->flags))
 		return -EINVAL;
 
-	if (copy_from_user(&einit, arg, sizeof(einit)))
+	if (copy_from_user(&init_arg, arg, sizeof(init_arg)))
 		return -EFAULT;
 
 	initp_page = alloc_page(GFP_KERNEL);
@@ -754,7 +648,7 @@ static long sgx_ioc_enclave_init(struct sgx_encl *encl, void __user *arg)
 	token = (void *)((unsigned long)sigstruct + PAGE_SIZE / 2);
 	memset(token, 0, SGX_LAUNCH_TOKEN_SIZE);
 
-	if (copy_from_user(sigstruct, (void __user *)einit.sigstruct,
+	if (copy_from_user(sigstruct, (void __user *)init_arg.sigstruct,
 			   sizeof(*sigstruct))) {
 		ret = -EFAULT;
 		goto out;
@@ -782,63 +676,47 @@ out:
 }
 
 /**
- * sgx_ioc_enclave_set_attribute - handler for %SGX_IOC_ENCLAVE_SET_ATTRIBUTE
- * @filep:	open file to /dev/sgx
- * @arg:	userspace pointer to a struct sgx_enclave_set_attribute instance
+ * sgx_ioc_enclave_provision() - handler for %SGX_IOC_ENCLAVE_PROVISION
+ * @encl:	an enclave pointer
+ * @arg:	userspace pointer to a struct sgx_enclave_provision instance
  *
- * Mark the enclave as being allowed to access a restricted attribute bit.
- * The requested attribute is specified via the attribute_fd field in the
- * provided struct sgx_enclave_set_attribute.  The attribute_fd must be a
- * handle to an SGX attribute file, e.g. "/dev/sgx/provision".
+ * Allow ATTRIBUTE.PROVISION_KEY for an enclave by providing a file handle to
+ * /dev/sgx_provision.
  *
- * Failure to explicitly request access to a restricted attribute will cause
- * sgx_ioc_enclave_init() to fail.  Currently, the only restricted attribute
- * is access to the PROVISION_KEY.
- *
- * Note, access to the EINITTOKEN_KEY is disallowed entirely.
- *
- * Return: 0 on success, -errno otherwise
+ * Return:
+ * - 0:		Success.
+ * - -errno:	Otherwise.
  */
-static long sgx_ioc_enclave_set_attribute(struct sgx_encl *encl,
-					  void __user *arg)
+static long sgx_ioc_enclave_provision(struct sgx_encl *encl, void __user *arg)
 {
-	struct sgx_enclave_set_attribute params;
-	struct file *attribute_file;
-	int ret;
+	struct sgx_enclave_provision params;
+	struct file *file;
 
 	if (copy_from_user(&params, arg, sizeof(params)))
 		return -EFAULT;
 
-	attribute_file = fget(params.attribute_fd);
-	if (!attribute_file)
+	file = fget(params.fd);
+	if (!file)
 		return -EINVAL;
 
-	if (attribute_file->f_op != &sgx_provision_fops) {
-		ret = -EINVAL;
-		goto out;
+	if (file->f_op != &sgx_provision_fops) {
+		fput(file);
+		return -EINVAL;
 	}
 
-	encl->allowed_attributes |= SGX_ATTR_PROVISIONKEY;
-	ret = 0;
+	encl->attributes_mask |= SGX_ATTR_PROVISIONKEY;
 
-out:
-	fput(attribute_file);
-	return ret;
+	fput(file);
+	return 0;
 }
 
 long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	struct sgx_encl *encl = filep->private_data;
-	int ret, encl_flags;
+	int ret;
 
-	encl_flags = atomic_fetch_or(SGX_ENCL_IOCTL, &encl->flags);
-	if (encl_flags & SGX_ENCL_IOCTL)
+	if (test_and_set_bit(SGX_ENCL_IOCTL, &encl->flags))
 		return -EBUSY;
-
-	if (encl_flags & SGX_ENCL_DEAD) {
-		ret = -EFAULT;
-		goto out;
-	}
 
 	switch (cmd) {
 	case SGX_IOC_ENCLAVE_CREATE:
@@ -850,15 +728,14 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	case SGX_IOC_ENCLAVE_INIT:
 		ret = sgx_ioc_enclave_init(encl, (void __user *)arg);
 		break;
-	case SGX_IOC_ENCLAVE_SET_ATTRIBUTE:
-		ret = sgx_ioc_enclave_set_attribute(encl, (void __user *)arg);
+	case SGX_IOC_ENCLAVE_PROVISION:
+		ret = sgx_ioc_enclave_provision(encl, (void __user *)arg);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
 	}
 
-out:
-	atomic_andnot(SGX_ENCL_IOCTL, &encl->flags);
+	clear_bit(SGX_ENCL_IOCTL, &encl->flags);
 	return ret;
 }

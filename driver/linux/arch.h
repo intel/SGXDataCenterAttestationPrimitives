@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause) */
 /**
- * Copyright(c) 2016-18 Intel Corporation.
+ * Copyright(c) 2016-20 Intel Corporation.
  *
  * Contains data structures defined by the SGX architecture.  Data structures
  * defined by the Linux software stack should not be placed here.
@@ -10,8 +10,16 @@
 
 #include <linux/types.h>
 
-#define SGX_CPUID				0x12
-#define SGX_CPUID_FIRST_VARIABLE_SUB_LEAF	2
+/* The SGX specific CPUID function. */
+#define SGX_CPUID		0x12
+/* EPC enumeration. */
+#define SGX_CPUID_EPC		2
+/* An invalid EPC section, i.e. the end marker. */
+#define SGX_CPUID_EPC_INVALID	0x0
+/* A valid EPC section. */
+#define SGX_CPUID_EPC_SECTION	0x1
+/* The bitmask for the EPC section type. */
+#define SGX_CPUID_EPC_MASK	GENMASK(3, 0)
 
 /**
  * enum sgx_return_code - The return code type for ENCLS, ENCLU and ENCLV
@@ -27,18 +35,7 @@ enum sgx_return_code {
 	SGX_UNMASKED_EVENT		= 128,
 };
 
-/**
- * enum sgx_sub_leaf_types - SGX CPUID variable sub-leaf types
- * %SGX_CPUID_SUB_LEAF_INVALID:		Indicates this sub-leaf is invalid.
- * %SGX_CPUID_SUB_LEAF_EPC_SECTION:	Sub-leaf enumerates an EPC section.
- */
-enum sgx_sub_leaf_types {
-	SGX_CPUID_SUB_LEAF_INVALID	= 0x0,
-	SGX_CPUID_SUB_LEAF_EPC_SECTION	= 0x1,
-};
-
-#define SGX_CPUID_SUB_LEAF_TYPE_MASK	GENMASK(3, 0)
-
+/* The modulus size for 3072-bit RSA keys. */
 #define SGX_MODULUS_SIZE 384
 
 /**
@@ -80,8 +77,6 @@ enum sgx_attribute {
 };
 
 #define SGX_ATTR_RESERVED_MASK	(BIT_ULL(3) | BIT_ULL(6) | GENMASK_ULL(63, 8))
-#define SGX_ATTR_ALLOWED_MASK	(SGX_ATTR_DEBUG | SGX_ATTR_MODE64BIT | \
-				 SGX_ATTR_KSS)
 
 /**
  * struct sgx_secs - SGX Enclave Control Structure (SECS)
@@ -102,7 +97,7 @@ enum sgx_attribute {
  * visible in the address space. In fact, this structure defines the address
  * range and other global attributes for the enclave and it is the first EPC
  * page created for any enclave. It is moved from a temporary buffer to an EPC
- * by the means of ENCLS(ECREATE) leaf.
+ * by the means of ENCLS[ECREATE] function.
  */
 struct sgx_secs {
 	u64 size;
