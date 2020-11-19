@@ -183,13 +183,13 @@ Compatibility with Intel(R) SGX PSW releases
 This table lists the equivalent upstream kernel patch for each version of the driver and summarizes compatibility between driver versions and PSW releases. 
 
   
-| Driver version | Equivalent kernel patch | PSW 2.7 | PSW 2.8 | PSW 2.9/2.9.1 |PSW 2.10 |
-| -------------- | ------------------------| ------- | ------- | ------------- |-------- |
-| 1.21           | N/A                     | YES     | YES     | YES           | YES     |   
-| 1.22           | V14(approximate)        | NO      | YES     | YES           | YES     |
-| 1.32/1.33      | V28                     | NO      | NO\*    | YES           | YES     |
-| 1.34           | V29                     | NO      | NO      | NO            | YES     |
-| 1.35           | V32                     | NO      | NO      | NO            | YES     |
-| 1.36           | V36                     | NO      | NO      | NO            | YES     |
+| Driver version | Equivalent kernel patch | PSW 2.7 | PSW 2.8 | PSW 2.9/2.9.1 |PSW 2.10-2.12 |
+| -------------- | ------------------------| ------- | ------- | ------------- |------------- |
+| 1.21           | N/A                     | YES     | YES     | YES           | YES          |
+| 1.22           | V14(approximate)        | NO      | YES     | YES           | YES          |
+| 1.32/1.33      | V28                     | NO      | NO\*    | YES           | YES          |
+| 1.34           | V29                     | NO      | NO      | NO            | YES          |
+| 1.35           | V32                     | NO      | NO      | NO            | YES          |
+| 1.36           | V36                     | NO      | NO      | NO            | YES          |
 
 \* Requires updated [udev rules](./10-sgx.rules)
