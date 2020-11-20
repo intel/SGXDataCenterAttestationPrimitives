@@ -220,7 +220,9 @@ The driver built with a compile time flag, CONFIG_SGX_STATS, exports following s
 - Monitoring is not yet considered in upstream patches. To avoid divergence with future kernel implementation, we only enable this feature for driver build with the compiler flag CONFIG_SGX_STATS turned on.
 - These changes may overlap/interact with upstreaming sgx cgroups implementation, likely in following areas
   * Global stats likely are covered by cgroups, accessible from cgroups fs. We may drop them when sgx cgroups is implemented. 
-  * Implementation code of per enclave stats will overlap with sgx cgroups implementation. But cgroups fs will less likely expose these stats. 
+  * Implementation code of per enclave stats will overlap with sgx cgroups implementation. But cgroups fs will less likely expose these stats.
+  * Current Intel cgroups candidate patches: https://github.com/intel/kvm-sgx/releases/tag/sgx-v5.8.0-rc4-r3
+- Future kernel may have [statsfs implementation](https://lwn.net/Articles/818710/) and the per enclave stats proposed here may be implemented with statsfs.
 - All leaf files are read-only sysfs files, each containing one value in ASCII characters. 
 - User space open those files to read corresponding values out, and calculate additional values if needed, such as:
   * current pages swapped out per enclave = enclave_epc_size – enclave_resident_size
@@ -229,5 +231,6 @@ The driver built with a compile time flag, CONFIG_SGX_STATS, exports following s
   * If a process send the open fd to another process (via socket or forking a child) to share the enclave, the target process pid won't be added under /sys/kernel/sgx folder. 
 - Following global stats are not exposed 
   * EPC usage for va pages, for current implementation it can be calculated from ceil(enclave_epc_size/512).
-  * Total EPC size, can be obtained from cpuid 
+  * Total EPC size, can be obtained from cpuid
+  
 
