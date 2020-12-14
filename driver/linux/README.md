@@ -147,7 +147,11 @@ Launching an Enclave with Provision Bit Set
 ### Background
 An enclave may set the provision bit in its attributes to be able to request provision key. Acquiring provision key may have privacy implications and should be limited. Such enclaves are referred to as provisioning enclaves below.
 
-The current Intel(R) SGX driver allows Intel(R)’s provisioning enclaves to be launched with provision bit set without any additional permissions. But, for 3rd party signed provisioning enclaves, the platform owner (administrator) must modify the permissions of the process loading the provisioning enclaves as described below.
+For applications loading provisioning enclaves, the platform owner (administrator) must grant provisioning access to the app process as described below.
+
+**Note for Intel Signed Provisioning Enclaves:** The Intel(R) SGX driver before V1.41 allows Intel(R)’s provisioning enclaves to be launched without any additional permissions. But the special treatment for Intel signed enclaves is removed in the driver starting from V1.41 release to be aligned with upstream kernel changes. If you upgrade driver from versions older than 1.41 or switch to future mainline kernel with SGX support, please make sure apps loading Intel signed provisioning enclaves have the right permissions as described below. 
+
+
 
 ### Driver Settings
 The Intel(R) SGX driver installation process described above creates 2 new devices on the platform, and setup these devices with the following permissions:
