@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause) WITH Linux-syscall-note */
 /*
- * Copyright(c) 2016-20 Intel Corporation.
+ * Copyright(c) 2016-21 Intel Corporation.
  */
 #ifndef _UAPI_ASM_X86_SGX_H
 #define _UAPI_ASM_X86_SGX_H

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
-/*  Copyright(c) 2016-20 Intel Corporation. */
+/*  Copyright(c) 2016-21 Intel Corporation. */
 
 #include <linux/freezer.h>
 #include <linux/highmem.h>
