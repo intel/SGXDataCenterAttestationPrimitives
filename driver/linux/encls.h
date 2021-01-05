@@ -12,7 +12,7 @@
 #include "sgx.h"
 #include "dcap.h"
 
-enum sgx_encls_leaf {
+enum sgx_encls_function {
 	ECREATE	= 0x00,
 	EADD	= 0x01,
 	EINIT	= 0x02,
@@ -48,7 +48,7 @@ enum sgx_encls_leaf {
 /* Retrieve the encoded trapnr from the specified return code. */
 #define ENCLS_TRAPNR(r) ((r) & ~ENCLS_FAULT_FLAG)
 
-/* Issue a WARN() about an ENCLS leaf. */
+/* Issue a WARN() about an ENCLS function. */
 #define ENCLS_WARN(r, name) {						  \
 	do {								  \
 		int _r = (r);						  \
@@ -57,12 +57,12 @@ enum sgx_encls_leaf {
 }
 
 /**
- * encls_failed() - Check if an ENCLS leaf function failed
- * @ret:	the return value of an ENCLS leaf function call
+ * encls_failed() - Check if an ENCLS function failed
+ * @ret:	the return value of an ENCLS function call
  *
- * Check if an ENCLS leaf function failed. This happens when the leaf function
- * causes a fault that is not caused by an EPCM conflict or when the leaf
- * function returns a non-zero value.
+ * Check if an ENCLS function failed. This happens when the function causes a
+ * fault that is not caused by an EPCM conflict or when the function returns a
+ * non-zero value.
  */
 static inline bool encls_failed(int ret)
 {
@@ -80,12 +80,12 @@ static inline bool encls_failed(int ret)
 }
 
 /**
- * __encls_ret_N - encode an ENCLS leaf that returns an error code in EAX
- * @rax:	leaf number
- * @inputs:	asm inputs for the leaf
+ * __encls_ret_N - encode an ENCLS function that returns an error code in EAX
+ * @rax:	function number
+ * @inputs:	asm inputs for the function
  *
- * Emit assembly for an ENCLS leaf that returns an error code, e.g. EREMOVE.
- * And because SGX isn't complex enough as it is, leafs that return an error
+ * Emit assembly for an ENCLS function that returns an error code, e.g. EREMOVE.
+ * And because SGX isn't complex enough as it is, function that return an error
  * code also modify flags.
  *
  * Return:
@@ -125,15 +125,15 @@ static inline bool encls_failed(int ret)
 	})
 
 /**
- * __encls_N - encode an ENCLS leaf that doesn't return an error code
- * @rax:	leaf number
+ * __encls_N - encode an ENCLS function that doesn't return an error code
+ * @rax:	function number
  * @rbx_out:	optional output variable
- * @inputs:	asm inputs for the leaf
+ * @inputs:	asm inputs for the function
  *
- * Emit assembly for an ENCLS leaf that does not return an error code,
- * e.g. ECREATE.  Leaves without error codes either succeed or fault.
- * @rbx_out is an optional parameter for use by EDGBRD, which returns
- * the the requested value in RBX.
+ * Emit assembly for an ENCLS function that does not return an error code, e.g.
+ * ECREATE.  Leaves without error codes either succeed or fault.  @rbx_out is an
+ * optional parameter for use by EDGBRD, which returns the requested value in
+ * RBX.
  *
  * Return:
  *   0 on success,

@@ -16,6 +16,8 @@ Documentation
 
 Change Log
 ----------
+### V1.41
+- Sync with upstream patch v41, the last one before merged to mainline 5.11 release.
 ### V1.36
 - Sync with upstream patch v36, rebased for kernel release 5.8.
 ### V1.35
@@ -147,7 +149,11 @@ Launching an Enclave with Provision Bit Set
 ### Background
 An enclave may set the provision bit in its attributes to be able to request provision key. Acquiring provision key may have privacy implications and should be limited. Such enclaves are referred to as provisioning enclaves below.
 
-The current Intel(R) SGX driver allows Intel(R)’s provisioning enclaves to be launched with provision bit set without any additional permissions. But, for 3rd party signed provisioning enclaves, the platform owner (administrator) must modify the permissions of the process loading the provisioning enclaves as described below.
+For applications loading provisioning enclaves, the platform owner (administrator) must grant provisioning access to the app process as described below.
+
+**Note for Intel Signed Provisioning Enclaves:** The Intel(R) SGX driver before V1.41 allows Intel(R)’s provisioning enclaves to be launched without any additional permissions. But the special treatment for Intel signed enclaves is removed in the driver starting from V1.41 release to be aligned with upstream kernel changes. If you upgrade driver from versions older than 1.41 or switch to future mainline kernel with SGX support, please make sure apps loading Intel signed provisioning enclaves have the right permissions as described below. 
+
+
 
 ### Driver Settings
 The Intel(R) SGX driver installation process described above creates 2 new devices on the platform, and setup these devices with the following permissions:
@@ -183,13 +189,14 @@ Compatibility with Intel(R) SGX PSW releases
 This table lists the equivalent upstream kernel patch for each version of the driver and summarizes compatibility between driver versions and PSW releases. 
 
   
-| Driver version | Equivalent kernel patch | PSW 2.7 | PSW 2.8 | PSW 2.9/2.9.1 |PSW 2.10-2.12 |
-| -------------- | ------------------------| ------- | ------- | ------------- |------------- |
-| 1.21           | N/A                     | YES     | YES     | YES           | YES          |
-| 1.22           | V14(approximate)        | NO      | YES     | YES           | YES          |
-| 1.32/1.33      | V28                     | NO      | NO\*    | YES           | YES          |
-| 1.34           | V29                     | NO      | NO      | NO            | YES          |
-| 1.35           | V32                     | NO      | NO      | NO            | YES          |
-| 1.36           | V36                     | NO      | NO      | NO            | YES          |
+| Driver version | Equivalent kernel patch | PSW 2.7 | PSW 2.8 | PSW 2.9/2.9.1 |PSW 2.10-2.12 |PSW 2.13 |
+| -------------- | ------------------------| ------- | ------- | ------------- |------------- |-------- |
+| 1.21           | N/A                     | YES     | YES     | YES           | YES          | YES     |
+| 1.22           | V14(approximate)        | NO      | YES     | YES           | YES          | YES     |
+| 1.32/1.33      | V28                     | NO      | NO\*    | YES           | YES          | YES     |
+| 1.34           | V29                     | NO      | NO      | NO            | YES          | YES     |
+| 1.35           | V32                     | NO      | NO      | NO            | YES          | YES     |
+| 1.36           | V36                     | NO      | NO      | NO            | YES          | YES     |
+| 1.41           | V41                     | NO      | NO      | NO            | YES\*        | YES     |
 
 \* Requires updated [udev rules](./10-sgx.rules)

@@ -16,12 +16,9 @@
 #define SGX_EINIT_SLEEP_COUNT	50
 #define SGX_EINIT_SLEEP_TIME	20
 
-extern u64 sgx_encl_size_max_32;
-extern u64 sgx_encl_size_max_64;
-extern u32 sgx_misc_reserved_mask;
 extern u64 sgx_attributes_reserved_mask;
 extern u64 sgx_xfrm_reserved_mask;
-extern u32 sgx_xsave_size_tbl[64];
+extern u32 sgx_misc_reserved_mask;
 
 extern const struct file_operations sgx_provision_fops;
 
