@@ -10,7 +10,7 @@ else
 
 KDIR := /lib/modules/$(shell uname -r)/build
 
-#INKERNEL_SGX :=$(shell cat $(KDIR)/.config | grep "CONFIG_INTEL_SGX=y")
+INKERNEL_SGX :=$(shell cat $(KDIR)/.config | grep "CONFIG_X86_SGX=y\|CONFIG_INTEL_SGX=y")
 ifneq ($(INKERNEL_SGX),)
 default:
 	$(error Can't install DCAP SGX driver with inkernel SGX support)
