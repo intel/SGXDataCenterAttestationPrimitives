@@ -9,7 +9,7 @@
 #include <linux/rwsem.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
-#include "uapi/asm/sgx_oot.h"
+#include "sgx_user.h"
 #include "sgx.h"
 
 #define SGX_EINIT_SPIN_COUNT	20
