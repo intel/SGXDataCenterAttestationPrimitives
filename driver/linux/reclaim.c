@@ -14,9 +14,7 @@
 #include "driver.h"
 
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
 extern void (*k_mmput_async)(struct mm_struct* mm);
-#endif
 struct task_struct *ksgxswapd_tsk;
 DECLARE_WAIT_QUEUE_HEAD(ksgxswapd_waitq);
 LIST_HEAD(sgx_active_page_list);
@@ -177,11 +175,7 @@ static bool sgx_reclaimer_age(struct sgx_epc_page *epc_page)
 		ret = !sgx_encl_test_and_clear_young(encl_mm->mm, page);
 		up_read(&encl_mm->mm->mmap_sem);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 		k_mmput_async(encl_mm->mm);
-#else
-		mmput_async(encl_mm->mm);
-#endif
 
 		if (!ret || (atomic_read(&encl->flags) & SGX_ENCL_DEAD))
 			break;
@@ -228,11 +222,7 @@ retry:
 
 		up_read(&encl_mm->mm->mmap_sem);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 		k_mmput_async(encl_mm->mm);
-#else
-		mmput_async(encl_mm->mm);
-#endif
 	}
 
 	srcu_read_unlock(&encl->srcu, idx);
@@ -308,11 +298,7 @@ static const cpumask_t *sgx_encl_ewb_cpumask(struct sgx_encl *encl)
 
 		cpumask_or(cpumask, cpumask, mm_cpumask(encl_mm->mm));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 		k_mmput_async(encl_mm->mm);
-#else
-		mmput_async(encl_mm->mm);
-#endif
 	}
 
 	srcu_read_unlock(&encl->srcu, idx);

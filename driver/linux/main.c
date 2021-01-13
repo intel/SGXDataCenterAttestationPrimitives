@@ -6,13 +6,13 @@
 #include <linux/kthread.h>
 #include <linux/pagemap.h>
 #include <linux/ratelimit.h>
+#include <linux/sched/mm.h>
 #include <linux/sched/signal.h>
 #include <linux/slab.h>
 #include "driver.h"
 #include "encls.h"
 
 #include <linux/module.h>
-#include <linux/version.h>
 #include "version.h"
 #include "dcap.h"
 #ifndef MSR_IA32_FEAT_CTL
@@ -22,9 +22,7 @@
 #ifndef FEAT_CTL_LOCKED
 #define FEAT_CTL_LOCKED FEATURE_CONTROL_LOCKED
 #endif
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
 void (*k_mmput_async)(struct mm_struct* mm);
-#endif
 
 struct sgx_epc_section sgx_epc_sections[SGX_MAX_EPC_SECTIONS];
 int sgx_nr_epc_sections;
@@ -303,15 +301,19 @@ static int __init sgx_init(void)
 
 	if (!sgx_page_cache_init())
 		return -EFAULT;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) )
+#ifdef HAVE_MMPUT_ASYNC
+	k_mmput_async = mmput_async;
+#else
+#ifdef HAVE_KSYM_LOOKUP
 	k_mmput_async = (void*)kallsyms_lookup_name("mmput_async");
+#else
+	#error "kernel version is not supported. We need either mmput_async or kallsyms_lookup_name exported from the kernel"
+#endif
+#endif
 	if (!k_mmput_async){
 		pr_err("intel_sgx: mmput_async support missing from kernel.\n");
 		return -EFAULT;
 	}
-#endif
-
 
 	if (!sgx_page_reclaimer_init())
 		goto err_page_cache;
