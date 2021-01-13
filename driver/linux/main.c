@@ -766,10 +766,15 @@ static int __init sgx_init(void)
 
 	if (!sgx_page_cache_init())
 		return -EFAULT;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 0) )
-#pragma message "kernel version may not be supported"
-#endif
+#ifdef HAVE_MMPUT_ASYNC
+	k_mmput_async = mmput_async;
+#else
+#ifdef HAVE_KSYM_LOOKUP
 	k_mmput_async = (void*)kallsyms_lookup_name("mmput_async");
+#else
+	#error "kernel version is not be supported. We need either mmput_async or kallsyms_lookup_name exported from kernel"
+#endif
+#endif
 	if (!k_mmput_async){
 		pr_err("mmput_async support missing from kernel.\n");
 		return -EFAULT;
