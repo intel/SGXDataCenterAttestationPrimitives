@@ -472,6 +472,14 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
             }
         }
 
+
+        // Enable the certificate revocation check
+        DWORD dwEnableSSLRevocOpt = WINHTTP_ENABLE_SSL_REVOCATION;
+        if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_ENABLE_FEATURE, &dwEnableSSLRevocOpt, sizeof(dwEnableSSLRevocOpt))) {
+            ret = windows_last_error_to_network_post_error();
+            break;
+        }
+
 		WCHAR header[MAX_HEADER_SIZE];
 		WCHAR *p = header;
 		uint32_t left_size = MAX_HEADER_SIZE;

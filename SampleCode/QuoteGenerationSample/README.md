@@ -15,7 +15,7 @@ Requirements:
 * g++
 * bash shell
 
-Pre-requisets:
+Prerequisite:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
@@ -24,8 +24,25 @@ Pre-requisets:
 *Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf" to install above dependencies*<br/>
 *Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*
 
+### Apps with "in-process" quote
 
-Build and run QuoteGenerationSample to generate an ECDSA quote
+If your app uses Intel(R) SGX AESM service for "out-of-process" quote generation (quote generated in AESM process using Intel(R) signed PCE and QE), then the AESM installer will do the configuration described here and you can ignore this section.
+
+If your app is doing so-called "in-process" quote generation, i.e., it loads provisioning/quoting enclaves by itself including Intel(R) signed PCE, QE, then the app needs to be run with an uid in `sgx_prv` group.
+
+Use below command to add the user running the process to `sgx_prv` group, then run app again:
+```
+    $ sudo usermod -a -G sgx_prv <user name>
+```
+Note that you need to `open another terminal to make above command take effect`.
+
+Details please refer to driver [README](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver/linux#launching-an-enclave-with-provision-bit-set).
+
+*Note:* Without proper access, the app will fail on loading the provisioning enclaves with error. e.g. SGX_ERROR_SERVICE_INVALID_PRIVILEGE(0x4004) from enclave loader.
+
+
+### Build and run QuoteGenerationSample to generate SGX ECDSA quote
+
 *Note that you need to install libsgx-quote-ex-dev package and all its dependencies and recommends in order to build and run this sample. Or you can remove the `-l$(Uae_Library_Name)` in Makefile.
 ```
    Release build:
@@ -38,6 +55,7 @@ Build and run QuoteGenerationSample to generate an ECDSA quote
    $ SGX_AESM_ADDR=1 ./app
 ```
 
+
 ## Windows
 Supported operating systems:
    * Windows* Server 2016 (Long-Term Servicing Channel)
@@ -46,7 +64,7 @@ Supported operating systems:
 Requirements:
 * Microsoft Visual Studio 2019 or newer.
 
-Pre-requisets:
+Prerequisite:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages

@@ -15,7 +15,7 @@ Requirements:
 * g++
 * bash shell
 
-Pre-requisites:
+Prerequisite:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
@@ -50,7 +50,7 @@ Supported operating systems:
 Requirements:
 * Microsoft Visual Studio 2019 or newer.
 
-Pre-requisites:
+Prerequisite:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages

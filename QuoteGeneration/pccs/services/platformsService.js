@@ -31,14 +31,5 @@
 import * as platformsDao from '../dao/platformsDao.js';
 
 export async function getCachedPlatforms(fmspc_arr) {
-  let platfs = await platformsDao.getCachedPlatformsByFmspc(fmspc_arr);
-
-  for (const platf of platfs) {
-    // Convert buffer to string
-    if (platf.enc_ppid) platf.enc_ppid = platf.enc_ppid.toString('utf8');
-    if (platf.platform_manifest)
-      platf.platform_manifest = platf.platform_manifest.toString('utf8');
-  }
-
-  return platfs;
+  return await platformsDao.getCachedPlatformsByFmspc(fmspc_arr);
 }

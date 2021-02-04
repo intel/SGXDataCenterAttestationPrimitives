@@ -31,11 +31,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Enclave_private.pem">
-      <Filter>Resource Files</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Xml Include="Enclave.config.xml">
       <Filter>Resource Files</Filter>
     </Xml>
@@ -44,5 +39,10 @@
     <CustomBuild Include="Enclave.edl">
       <Filter>Source Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Enclave_private_sample.pem">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

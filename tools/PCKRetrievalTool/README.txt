@@ -12,6 +12,7 @@ For Linux version:
     a. enclave mode: it means that to retrieve the platform's information, enclave load is needed. Thus in this mode, the following requirements are needed.
         - Please build and install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
              sudo ./sgx_linux_x64_driver.bin
+          or you can use Linux kernel 5.11 or higher version kernel 
         - Please install these Debian or RPM packages, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
              a. libsgx-enclave-common_{version}-{revision}_{arch}.deb or libsgx-enclave-common_{version}-{revision}_{arch}.rpm
              b. libsgx-dcap-ql_{version}-{revision}_{arch}.deb or libsgx-dcap-ql_{version}-{revision}_{arch}.rpm
@@ -69,3 +70,9 @@ in non-enclave mode:
 And the retrieved data can also be uploaded to cache server if user provide the cache server's url and access token.
 
 #Notes:
+  1. If you are using DCAP driver 1.41 or higher version to drive SGX, 
+     you need run this tool with root permission or add your account to sgx_prv group like: 
+       $ sudo usermod -a -G sgx_prv <user name>
+  2. If you are using Linux Kernel 5.11 or higher version to to drive SGX, 
+     you need run this tool with root permission or add your account to sgx_prv group like:
+       $ sudo usermod -a -G sgx_prv <user name>

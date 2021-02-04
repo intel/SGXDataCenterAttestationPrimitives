@@ -37,7 +37,7 @@ import Constants from '../constants/index.js';
 export async function postPlatforms(req, res, next) {
   try {
     // call registration service
-    let platf = await platformsRegService.registerPlatforms(req.body);
+    await platformsRegService.registerPlatforms(req.body);
 
     // send response
     res
@@ -51,11 +51,20 @@ export async function postPlatforms(req, res, next) {
 export async function getPlatforms(req, res, next) {
   try {
     let platformsJson;
-    if (!req.query.fmspc) {
-      // call registration service
+    if (!req.query.source || req.query.source == 'reg') {
+      // call registration service to get registered platforms
       platformsJson = await platformsRegService.getRegisteredPlatforms();
+      await platformsRegService.deleteRegisteredPlatforms(
+        Constants.PLATF_REG_NEW
+      );
+    } else if (req.query.source == 'reg_na') {
+      // call registration service to get registered 'Not available' platforms
+      platformsJson = await platformsRegService.getRegisteredNaPlatforms();
+      await platformsRegService.deleteRegisteredPlatforms(
+        Constants.PLATF_REG_NOT_AVAILABLE
+      );
     } else {
-      let fmspc = req.query.fmspc;
+      let fmspc = req.query.source;
       if (fmspc.length < 2 || fmspc[0] != '[' || fmspc[fmspc.length - 1] != ']')
         throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
       fmspc = fmspc
@@ -70,13 +79,9 @@ export async function getPlatforms(req, res, next) {
 
     // send response
     res
-      .header(Constants.HTTP_HEADER_PLATFORM_COUNT, platformsJson.length)
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(Constants.HTTP_HEADER_PLATFORM_COUNT, platformsJson.length)
       .send(platformsJson);
-
-    if (!req.query.fmspc) {
-      await platformsRegService.deleteRegisteredPlatforms();
-    }
   } catch (err) {
     next(err);
   }

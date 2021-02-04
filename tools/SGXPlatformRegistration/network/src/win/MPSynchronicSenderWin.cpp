@@ -81,6 +81,7 @@ static MpResult http_network_init(http_network_info_t *info, const char *url, Pr
     DWORD request_flags = 0;
     DWORD temp_value = 0;
     DWORD options_flags = 0;
+    DWORD dwEnableSSLRevocOpt = 0;
     size_t count = 0;
     LogLevel m_logLevel = info->log_level;
 
@@ -187,6 +188,14 @@ static MpResult http_network_init(http_network_info_t *info, const char *url, Pr
     temp_value = DEFAULT_CONNECT_TIME_OUT_VALUE;//set default connection timeout value
     if (!WinHttpSetOption(info->http_handle, WINHTTP_OPTION_CONNECT_TIMEOUT, &temp_value, sizeof(DWORD))) {
         network_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to set timeout information, last error: %d\n", GetLastError());
+        ret = MP_NETWORK_ERROR;
+        goto out;
+    }
+
+    // Enable the certificate revocation check
+    dwEnableSSLRevocOpt = WINHTTP_ENABLE_SSL_REVOCATION;
+    if (!WinHttpSetOption(info->http_handle, WINHTTP_OPTION_ENABLE_FEATURE, &dwEnableSSLRevocOpt, sizeof(dwEnableSSLRevocOpt))) {
+        network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error enabing SSL revocation check with error code: %d\n", GetLastError());
         ret = MP_NETWORK_ERROR;
         goto out;
     }

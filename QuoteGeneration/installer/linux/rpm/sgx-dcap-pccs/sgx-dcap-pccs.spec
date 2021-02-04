@@ -65,8 +65,10 @@ PCCS_HOME=%{_install_path}
 if [ ! $(getent group $PCCS_USER) ]; then
     groupadd $PCCS_USER
 fi
-adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
-chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
+if ! id "$PCCS_USER" &>/dev/null; then
+    adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
+    chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
+fi
 #Install PCCS as system service
 echo -n "Installing PCCS service ..."
 if [ -d /run/systemd/system ]; then
@@ -97,30 +99,32 @@ echo "finished."
 echo "Installation completed successfully."
 
 %postun
-echo -n "Uninstalling PCCS service ..."
-if [ -d /run/systemd/system ]; then
-    PCCS_NAME=pccs.service
-    if [ -d /lib/systemd/system ]; then
-        PCCS_DEST=/lib/systemd/system/$PCCS_NAME
-    else
-        PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+if [ $1 == 0 ]; then
+    echo -n "Uninstalling PCCS service ..."
+    if [ -d /run/systemd/system ]; then
+        PCCS_NAME=pccs.service
+        if [ -d /lib/systemd/system ]; then
+            PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+        else
+            PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
+        fi
+        systemctl stop pccs || true
+        systemctl disable pccs || true
+        rm $PCCS_DEST || true
+        systemctl daemon-reload
+    elif [ -d /etc/init/ ]; then
+        PCCS_NAME=pccs.service
+        PCCS_DEST=/etc/init/$PCCS_NAME
+        rm $PCCS_DEST || true
+        /sbin/initctl reload-configuration
     fi
-    systemctl stop pccs || true
-    systemctl disable pccs || true
-    rm $PCCS_DEST || true
-    systemctl daemon-reload
-elif [ -d /etc/init/ ]; then
-    PCCS_NAME=pccs.service
-    PCCS_DEST=/etc/init/$PCCS_NAME
-    rm $PCCS_DEST || true
-    /sbin/initctl reload-configuration
-fi
-echo "finished."
+    echo "finished."
 
-if [ -d %{_install_path} ]; then
-    pushd %{_install_path} &> /dev/null
-    rm -rf node_modules || true
-    popd &> /dev/null
+    if [ -d %{_install_path} ]; then
+        pushd %{_install_path} &> /dev/null
+        rm -rf node_modules || true
+        popd &> /dev/null
+    fi
 fi
 
 %changelog

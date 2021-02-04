@@ -219,7 +219,13 @@ void RegistrationService::registerPlatformIfNeeded() {
     }
     else
     {
-        agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration Flow - Registration status indicates registration is complete.  Nothing to do.\n");
+        if(status.errorCode == MPA_SUCCESS) {
+            agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration Flow - Registration status indicates registration is completed successfully. MPA has nothing to do.\n");
+        }
+        else
+        {
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Registration Flow - Registration status indicates registration is completed unsuccessfully, and the error code is %d. \n", status.errorCode);
+        }
     }
     return;
     

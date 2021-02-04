@@ -64,7 +64,7 @@ export async function getPckCert(req, res, next) {
     pcesvn = pcesvn.toUpperCase();
     pceid = pceid.toUpperCase();
     if (enc_ppid)
-      // can be null
+      // enc_ppid can be null
       enc_ppid = enc_ppid.toUpperCase();
 
     // call service
@@ -80,10 +80,16 @@ export async function getPckCert(req, res, next) {
     res
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
       .header(Constants.SGX_TCBM, pckcertJson[Constants.SGX_TCBM])
+      .header(Constants.SGX_FMSPC, pckcertJson[Constants.SGX_FMSPC])
+      .header(
+        Constants.SGX_PCK_CERTIFICATE_CA_TYPE,
+        pckcertJson[Constants.SGX_PCK_CERTIFICATE_CA_TYPE]
+      )
       .header(
         Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN,
         pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN]
       )
+      .header('Content-Type', 'application/x-pem-file')
       .send(pckcertJson.cert);
   } catch (err) {
     next(err);

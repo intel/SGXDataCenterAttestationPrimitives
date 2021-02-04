@@ -383,7 +383,7 @@ export const PLATFORM_COLLATERAL_SCHEMA = {
         certificates: {
           type: 'object',
           properties: {
-            'sgx-pck-certificate-issuer-chain': {
+            'SGX-PCK-Certificate-Issuer-Chain': {
               type: 'object',
               properties: {
                 PROCESSOR: {
@@ -394,14 +394,14 @@ export const PLATFORM_COLLATERAL_SCHEMA = {
                 },
               },
             },
-            'sgx-tcb-info-issuer-chain': {
+            'SGX-TCB-Info-Issuer-Chain': {
               type: 'string',
             },
-            'sgx-enclave-identity-issuer-chain': {
+            'SGX-Enclave-Identity-Issuer-Chain': {
               type: 'string',
             },
           },
-          required: ['sgx-pck-certificate-issuer-chain'],
+          required: ['SGX-PCK-Certificate-Issuer-Chain'],
         },
         rootcacrl: {
           type: 'string',

@@ -58,6 +58,7 @@ typedef enum _sgx_qcnl_error_t{
     SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA = SGX_QCNL_MK_ERROR(0x000F),    ///< No cache data
     SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN = SGX_QCNL_MK_ERROR(0x0010), ///< Platform unknown
     SGX_QCNL_ERROR_STATUS_UNEXPECTED = SGX_QCNL_MK_ERROR(0x0011),       ///< Unexpected cache error
+    SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE = SGX_QCNL_MK_ERROR(0x0012),///< Certs not available
 } sgx_qcnl_error_t;
 
 

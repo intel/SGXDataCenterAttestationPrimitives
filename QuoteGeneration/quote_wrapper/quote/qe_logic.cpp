@@ -60,6 +60,7 @@
 #include "ecdsa_quote.h"
 #include "se_thread.h"
 #include "sgx_ql_core_wrapper.h"
+#include "se_trace.h"
 
 #ifndef _MSC_VER
     #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so"
@@ -244,18 +245,23 @@ void * get_qpl_handle()
     void * handle = NULL;
     if (g_ql_global_data.qpl_path[0]) {
         handle = dlopen(g_ql_global_data.qpl_path, RTLD_LAZY);
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s\n", g_ql_global_data.qpl_path);
+        if (NULL == handle) {
+            SE_PROD_LOG("Cannot open Quote Provider Library %s\n", g_ql_global_data.qpl_path);
+        }
         return handle;
     }
     else {
         handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-        if (NULL == handle)
-        {
+        if (NULL == handle) {
             ///TODO:
             // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
             // We shall remove this when we have a major version change later and drop the backward compatible
             // support for old lib name.
             handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+            if (NULL == handle) {
+                SE_PROD_LOG("Cannot open Quote Provider Library %s and %s\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
+                        SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
+            }
         }
     }
     return handle;
@@ -337,16 +343,16 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
                 goto CLEANUP;
             }
             if(NULL == p_pck_cert_config) {
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
                 goto CLEANUP;
             }
             if(p_pck_cert_config->version != SGX_QL_CONFIG_VERSION_1) {
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
@@ -366,12 +372,12 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                     // The buffer passed in to this API is not large enouge to contain the provider library's returned cert data.
                     // This shouldn't happen since the passed in value should be the result of calling this function
                     // with the inputted p_cert_data equal to NULL just befor this caller.
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
                     ret_val = SGX_QL_ERROR_INVALID_PARAMETER;
                     goto CLEANUP;
                 }
                 if(NULL == p_pck_cert_config->p_cert_data) {
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
                     ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                     goto CLEANUP;
                 }
@@ -384,10 +390,10 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                 *p_cert_data_size = p_pck_cert_config->cert_data_size;
             }
         } else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %s\n", dlerror());
+            SE_PROD_LOG("Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %s\n", dlerror());
         }
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
 
     CLEANUP:
@@ -411,16 +417,16 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
                 goto CLEANUP;
             }
             if (NULL == p_pck_cert_config) {
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
                 goto CLEANUP;
             }
             if (p_pck_cert_config->version != SGX_QL_CONFIG_VERSION_1) {
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
@@ -440,12 +446,12 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                     // The buffer passed in to this API is not large enouge to contain the provider library's returned cert data.
                     // This shouldn't happen since the passed in value should be the result of calling this function
                     // with the inputted p_cert_data equal to NULL just befor this caller.
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
                     ret_val = SGX_QL_ERROR_INVALID_PARAMETER;
                     goto CLEANUP;
                 }
                 if (NULL == p_pck_cert_config->p_cert_data) {
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
                     ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                     goto CLEANUP;
                 }
@@ -459,11 +465,11 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library.\n");
+            SE_PROD_LOG("Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %d\n", GetLastError());
         }
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
     CLEANUP:
     if (NULL != p_sgx_free_quote_config) {
@@ -632,8 +638,7 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                                         p_qe_eid,
                                         p_qe_attributes);
         if (SGX_SUCCESS != sgx_status) {
-            SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave QE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
-            SE_TRACE(SE_TRACE_ERROR, "Failed to load enclave.\n");
+            SE_PROD_LOG("Error, call sgx_create_enclave QE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
             if (sgx_status == SGX_ERROR_OUT_OF_EPC) {
                 ret_val = SGX_QL_OUT_OF_EPC;
             }
@@ -825,14 +830,14 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
                                                         buf_size,
                                                         p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
             SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n", dlerror());
         }
         dlclose(handle);
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
@@ -845,16 +850,16 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
                 buf_size,
                 p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n");
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %d\n", GetLastError());
         }
         FreeLibrary(handle);
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
     #endif
 
@@ -906,14 +911,14 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
                                                     p_buf_size,
                                                     p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
             SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %s\n", dlerror());
         }
         dlclose(handle);
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
@@ -926,16 +931,16 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
                                                     p_buf_size,
                                                     p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n");
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %d\n", GetLastError());
         }
         FreeLibrary(handle);
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
 
     #endif

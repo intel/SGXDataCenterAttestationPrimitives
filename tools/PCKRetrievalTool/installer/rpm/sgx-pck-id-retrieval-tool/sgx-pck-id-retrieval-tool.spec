@@ -37,7 +37,7 @@ Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions:this tool is used to collect the platform information to retrieve the PCK certs from PCS(Provisioning Certification Server)
 Group:          Development/System
-Recommends:     libsgx-urts >= 2.11, libsgx-dcap-ql >= %{version}-%{release}, libsgx-ra-uefi >= %{version}-%{release}
+Recommends:     libsgx-urts >= 2.13, libsgx-dcap-ql >= %{version}-%{release}, libsgx-ra-uefi >= %{version}-%{release}
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
@@ -68,7 +68,7 @@ sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
 ################################################################################
 
 # Install the SGX_PCK_ID_RETRIEVE_TOOL 
-ln -s /opt/intel/sgx-pck-id-retrieval-tool/PCKIDRetrievalTool /usr/local/bin/PCKIDRetrievalTool
+ln -s -f /opt/intel/sgx-pck-id-retrieval-tool/PCKIDRetrievalTool /usr/local/bin/PCKIDRetrievalTool
 retval=$?
 
 if test $retval -ne 0; then

@@ -167,3 +167,7 @@ export async function getFileFromUrl(uri) {
     throw err;
   }
 }
+
+export function getHeaderValue(headers, key) {
+  return headers[key.toLowerCase()];
+}

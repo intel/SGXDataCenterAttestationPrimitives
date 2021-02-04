@@ -30,196 +30,14 @@
  */
 import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
-import Config from 'config';
 import Constants from '../constants/index.js';
-import X509 from '../x509/x509.js';
 import * as pckcertDao from '../dao/pckcertDao.js';
 import * as platformTcbsDao from '../dao/platformTcbsDao.js';
 import * as platformsDao from '../dao/platformsDao.js';
 import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
-import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
 import * as pckCertchainDao from '../dao/pckCertchainDao.js';
-import * as pcsClient from '../pcs_client/pcs_client.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
-import { sequelize } from '../dao/models/index.js';
-
-// Try to get PCK certs from Intel PCS for the platform with {pce_id, platform_manifest},
-// and if platform manifest is not provided, then use {pce_id, enc_ppid} instead.
-// Refresh the cache DB after a successful PCK certs retrieval.
-// If raw TCB is not null, call the PCK cert selection tool to select the "best" cert for this
-// raw TCB and update cache DB
-export async function getPckCertFromPCS(
-  qeid,
-  cpusvn,
-  pcesvn,
-  pceid,
-  enc_ppid,
-  platform_manifest
-) {
-  let result = {};
-  if (!enc_ppid && !platform_manifest) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
-  }
-
-  let pck_server_res;
-  if (platform_manifest) {
-    // if platform manifest is provided, will call Intel PCS API with platform manifest
-    pck_server_res = await pcsClient.getCertsWithManifest(
-      platform_manifest,
-      pceid
-    );
-  } else {
-    // if enc_ppid is all zero, return NOT_FOUND
-    if (enc_ppid.match(/^0+$/)) {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NOT_FOUND);
-    }
-
-    // Call Intel PCS API with encrypted PPID
-    pck_server_res = await pcsClient.getCerts(enc_ppid, pceid);
-  }
-
-  // check HTTP status
-  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  // Get PCK certificate issuer chain
-  const pck_certchain =
-    pck_server_res.headers[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN];
-
-  // Parse the response body
-  let pckcerts = null;
-  if (typeof pck_server_res.body === 'object') {
-    pckcerts = pck_server_res.body;
-  } else if (typeof pck_server_res.body === 'string') {
-    pckcerts = JSON.parse(pck_server_res.body);
-  } else {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
-  // The latest PCS service may return 'Not available' in the certs array, need to filter them out
-  pckcerts = pckcerts.filter((pckcert) => {
-    return pckcert.cert != 'Not available';
-  });
-  if (pckcerts.length == 0) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  // parse arbitary cert to get fmspc value
-  const x509 = new X509();
-  if (!x509.parseCert(unescape(pckcerts[0].cert))) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
-
-  if (x509.fmspc == null || x509.ca == null) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
-  const fmspc = x509.fmspc.toUpperCase();
-
-  // get tcbinfo for this fmspc
-  pck_server_res = await pcsClient.getTcb(fmspc);
-  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-  const tcbinfo = JSON.parse(pck_server_res.body);
-  const tcbinfo_str = JSON.stringify(tcbinfo);
-
-  // Before we flush the caching database, get current raw TCBs that are already cached
-  // We need to re-run PCK cert selection tool for existing raw TCB levels due to certs change
-  let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(
-    qeid,
-    pceid
-  );
-
-  await sequelize.transaction(async (t) => {
-    // Update the platform entry in the cache
-    await platformsDao.upsertPlatform(
-      qeid,
-      pceid,
-      platform_manifest,
-      enc_ppid,
-      fmspc,
-      x509.ca
-    );
-
-    // flush pck_cert
-    await pckcertDao.deleteCerts(qeid, pceid);
-    for (const pckcert of pckcerts) {
-      await pckcertDao.upsertPckCert(
-        qeid,
-        pceid,
-        pckcert.tcbm,
-        unescape(pckcert.cert)
-      );
-    }
-
-    // delete old TCB mappings
-    await platformTcbsDao.deletePlatformTcbsById(qeid, pceid);
-
-    // Update or insert fmspc_tcbs
-    await fmspcTcbDao.upsertFmspcTcb({
-      fmspc: fmspc,
-      tcbinfo: tcbinfo,
-    });
-    // Update or insert PCK Certchain
-    await pckCertchainDao.upsertPckCertchain(x509.ca);
-    // Update or insert PCS certificates
-    await pcsCertificatesDao.upsertPckCertificateIssuerChain(
-      x509.ca,
-      pck_certchain
-    );
-  });
-
-  // For all cached TCB levels, re-run PCK cert selection tool
-  let pem_certs = pckcerts.map((o) => unescape(o.cert));
-  for (const platform_tcb of cached_platform_tcbs) {
-    let cert_index = pckLibWrapper.pck_cert_select(
-      platform_tcb.cpu_svn,
-      platform_tcb.pce_svn,
-      platform_tcb.pce_id,
-      tcbinfo_str,
-      pem_certs,
-      pem_certs.length
-    );
-    if (cert_index == -1) {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-    }
-    await platformTcbsDao.upsertPlatformTcbs(
-      platform_tcb.qe_id,
-      platform_tcb.pce_id,
-      platform_tcb.cpu_svn,
-      platform_tcb.pce_svn,
-      pckcerts[cert_index].tcbm
-    );
-  }
-  if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
-  // get the best cert with PCKCertSelectionTool for this raw TCB
-  let cert_index = pckLibWrapper.pck_cert_select(
-    cpusvn,
-    pcesvn,
-    pceid,
-    tcbinfo_str,
-    pem_certs,
-    pem_certs.length
-  );
-  if (cert_index == -1) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  // create an entry for the new TCB level
-  await platformTcbsDao.upsertPlatformTcbs(
-    qeid,
-    pceid,
-    cpusvn,
-    pcesvn,
-    pckcerts[cert_index].tcbm
-  );
-
-  result[Constants.SGX_TCBM] = pckcerts[cert_index].tcbm;
-  result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] = pck_certchain;
-  result['cert'] = pem_certs[cert_index];
-
-  return result;
-}
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
 // If a new raw TCB was reported, needs to run PCK Cert Selection for this raw TCB
 export async function pckCertSelection(
@@ -238,7 +56,7 @@ export async function pckCertSelection(
 
   let pem_certs = [];
   for (let i = 0; i < pck_certs.length; i++) {
-    pem_certs.push(pck_certs[i].pck_cert);
+    pem_certs.push(pck_certs[i].pck_cert.toString('utf8'));
   }
 
   let tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
@@ -263,6 +81,8 @@ export async function pckCertSelection(
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
 
   result[Constants.SGX_TCBM] = pck_certs[cert_index].tcbm;
+  result[Constants.SGX_FMSPC] = fmspc;
+  result[Constants.SGX_PCK_CERTIFICATE_CA_TYPE] = ca;
   result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] =
     certchain.intmd_cert + certchain.root_cert;
   result['cert'] = pem_certs[cert_index];
@@ -291,22 +111,14 @@ export async function getPckCert(qeid, cpusvn, pcesvn, pceid, enc_ppid) {
   let result = {};
   if (pckcert == null) {
     if (platform == null) {
-      if (
-        Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
-        Constants.CACHE_FILL_MODE_LAZY
-      ) {
-        // for LAZY mode, if no record found in local database, then request the cert from Intel PCS service
-        result = await this.getPckCertFromPCS(
-          qeid,
-          cpusvn,
-          pcesvn,
-          pceid,
-          enc_ppid,
-          platform ? platform.platform_manifest : ''
-        );
-      } else {
-        throw new PccsError(PccsStatus.PCCS_STATUS_PLATFORM_UNKNOWN);
-      }
+      result = await cachingModeManager.getPckCertFromPCS(
+        qeid,
+        cpusvn,
+        pcesvn,
+        pceid,
+        enc_ppid,
+        platform ? platform.platform_manifest : ''
+      );
     } else {
       // Always treat presence of platform record as platform collateral is cached
       result = await this.pckCertSelection(
@@ -321,6 +133,8 @@ export async function getPckCert(qeid, cpusvn, pcesvn, pceid, enc_ppid) {
     }
   } else {
     result[Constants.SGX_TCBM] = pckcert.tcbm;
+    result[Constants.SGX_FMSPC] = platform.fmspc;
+    result[Constants.SGX_PCK_CERTIFICATE_CA_TYPE] = platform.ca;
     result[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN] =
       pckcert.intmd_cert + pckcert.root_cert;
     result['cert'] = pckcert.pck_cert;

@@ -32,6 +32,8 @@ import logger from './Logger.js';
 import Config from 'config';
 import Constants from '../constants/index.js';
 import { sequelize, db_sync, PcsVersion } from '../dao/models/index.js';
+import Umzug from 'umzug';
+import * as fs from 'fs';
 
 // Check the version of PCS service currently configured
 export function startup_check() {
@@ -75,6 +77,56 @@ async function test_db_status() {
   }
 }
 
+async function db_migration() {
+  const umzug = new Umzug({
+    storage: 'sequelize',
+    storageOptions: {
+      sequelize: sequelize,
+      tableName: 'umzug',
+    },
+    migrations: {
+      pattern: /\.js|\.up\.sql$/,
+      customResolver: (path) => {
+        return {
+          up: async (sequelize) => {
+            if (path.endsWith('.up.sql')) {
+              const sqls = fs.readFileSync(path, 'utf-8').split(';');
+              let queries = [];
+              for (const sql of sqls) {
+                queries.push(sequelize.query(sql));
+              }
+              return Promise.all(queries);
+            } else {
+              const migration = await import(path);
+              return migration.default.up(sequelize);
+            }
+          },
+          down: async (sequelize) => {
+            if (path.endsWith('.up.sql')) {
+              const downPath = path.replace('.up.sql', '.down.sql');
+              if (fs.existsSync(downPath)) {
+                const sqls = fs.readFileSync(downPath, 'utf-8').split(';');
+                let queries = [];
+                for (const sql of sqls) {
+                  queries.push(sequelize.query(sql));
+                }
+                return Promise.all(queries);
+              }
+            } else {
+              const migration = await import(path);
+              return migration.default.down(sequelize);
+            }
+          },
+        };
+      },
+      params: [sequelize],
+    },
+    logger: console,
+  });
+  // Auto migration from previous databases
+  await umzug.up();
+}
+
 export async function database_check() {
   try {
     await test_connection();
@@ -83,12 +135,16 @@ export async function database_check() {
 
     let db_initialized = await test_db_status();
     if (!db_initialized) {
+      // auto-migration
+      await db_migration();
+      // sync database models
       await db_sync();
-      // For an empty database, update pcs_version first
+      // update pcs_version
       await PcsVersion.upsert({
         id: 1,
         api_version: Constants.API_VERSION,
         server_addr: url.hostname,
+        db_version: Constants.DB_VERSION,
       });
       return true;
     } else {
@@ -98,6 +154,7 @@ export async function database_check() {
         type: sequelize.QueryTypes.SELECT,
       });
       if (result.length != 1) {
+        // This database is created by PCCS v1.8 or earlier
         logger.error(
           `Can't find the version information of the caching database. ` +
             `Please delete the caching db and try again.`
@@ -105,6 +162,7 @@ export async function database_check() {
         return false;
       }
       if (result[0].api_version != Constants.API_VERSION) {
+        // If API version changes, the database won't be valid any more
         logger.error(
           `The caching database can't be loaded. Current version is ` +
             result[0].api_version +
@@ -114,12 +172,16 @@ export async function database_check() {
         return false;
       }
       if (result[0].server_addr != url.hostname) {
+        // If PCS server address changes, the database won't be valid any more
         logger.error(
           'The server address used by the caching db is different ' +
             'from the one in the configuration file.'
         );
         return false;
       }
+      // auto-migration
+      await db_migration();
+      // sync database models
       await db_sync();
       return true;
     }

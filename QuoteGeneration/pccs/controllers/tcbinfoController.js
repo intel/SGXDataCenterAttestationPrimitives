@@ -55,7 +55,8 @@ export async function getTcbInfo(req, res, next) {
         Constants.SGX_TCB_INFO_ISSUER_CHAIN,
         tcbinfoJson[Constants.SGX_TCB_INFO_ISSUER_CHAIN]
       )
-      .json(tcbinfoJson.tcbinfo);
+      .header('Content-Type', 'application/json')
+      .send(tcbinfoJson.tcbinfo);
   } catch (err) {
     next(err);
   }

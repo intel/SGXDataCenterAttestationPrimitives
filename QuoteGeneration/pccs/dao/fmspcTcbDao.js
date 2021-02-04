@@ -38,7 +38,7 @@ import { FmspcTcbs, sequelize } from './models/index.js';
 export async function upsertFmspcTcb(tcbinfoJson) {
   return await FmspcTcbs.upsert({
     fmspc: tcbinfoJson.fmspc,
-    tcbinfo: JSON.stringify(tcbinfoJson.tcbinfo),
+    tcbinfo: tcbinfoJson.tcbinfo,
     root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
     signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
   });

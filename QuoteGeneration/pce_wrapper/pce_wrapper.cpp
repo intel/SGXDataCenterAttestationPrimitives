@@ -172,7 +172,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
                 p_pce_attributes);
             if (SGX_SUCCESS != sgx_status)
             {
-                SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                SE_PROD_LOG("Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
             }
 
             // Retry in case there was a power transition that resulted is losing the enclave.

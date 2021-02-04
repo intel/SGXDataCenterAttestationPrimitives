@@ -195,6 +195,7 @@ export async function addPlatformCollateral(collateralJson) {
     // loop through tcbinfos
     for (const tcbinfo of tcbinfos) {
       tcbinfo.fmspc = toUpper(tcbinfo.fmspc);
+      tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.tcbinfo));
       await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
     }
 
@@ -203,12 +204,12 @@ export async function addPlatformCollateral(collateralJson) {
       if (collaterals.pckcacrl.processorCrl)
         await pckcrlDao.upsertPckCrl(
           Constants.CA_PROCESSOR,
-          collaterals.pckcacrl.processorCrl
+          Buffer.from(collaterals.pckcacrl.processorCrl, 'hex')
         );
       if (collaterals.pckcacrl.platformCrl)
         await pckcrlDao.upsertPckCrl(
           Constants.CA_PLATFORM,
-          collaterals.pckcacrl.platformCrl
+          Buffer.from(collaterals.pckcacrl.platformCrl, 'hex')
         );
     }
 
@@ -288,7 +289,9 @@ export async function addPlatformCollateral(collateralJson) {
 
     // Update or insert rootcacrl in DER format
     if (collaterals.rootcacrl) {
-      await pcsCertificatesDao.upsertRootCACrl(collaterals.rootcacrl);
+      await pcsCertificatesDao.upsertRootCACrl(
+        Buffer.from(collaterals.rootcacrl, 'hex')
+      );
     }
   });
 }

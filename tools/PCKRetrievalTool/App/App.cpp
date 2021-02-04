@@ -296,6 +296,7 @@ int send_collected_data_to_file(FILE* pFile, uint8_t* p_quote_buffer, uint8_t* p
         PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
         PRINT_MESSAGE("\n PLATFORM_ID:\n");
         PRINT_BYTE_ARRAY(stdout, &p_quote->header.user_data[0], DEFAULT_PLATFORM_ID_LENGTH);
+        PRINT_MESSAGE("\n\n");
 #endif
         data_index = 0;
         //write encrypted PPID to file
@@ -403,6 +404,12 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_bu
     return delivery_status;
 }
 
+// returned error code:
+//     0: success, maybe there are some warning message
+//    -1: when error happens
+//    when this tool was used in user's script, maybe we need give more 
+//    returned error code to help user identify what kinds of warning message.
+
 int main(int argc, const char* argv[])
 {
     int ret = -1;
@@ -464,10 +471,9 @@ int main(int argc, const char* argv[])
     ret_mpa = get_platform_manifest(&p_platform_manifest_buffer, platform_manifest_out_buffer_size);
     if (non_enclave_mode) {
         if (ret_mpa == UEFI_OPERATION_VARIABLE_NOT_AVAILABLE) {
-            fprintf(stderr, "Warning: PLATFORM MANIFEST UEFI variable is not avaialbe.\n");
             // in this mode, it is possible platform manifest is not avaialbe,
             // if it happens, since there is no valid data, 
-	    // will not write data to file or send data to cache server, just return
+            // will not write data to file or send data to cache server, just return
             if (NULL != p_platform_manifest_buffer) {
                 free(p_platform_manifest_buffer);
                 p_platform_manifest_buffer = NULL;
@@ -475,8 +481,8 @@ int main(int argc, const char* argv[])
             if (pFile) {
                fclose(pFile);
             }
-	    ret = 0;
-	    return ret;
+            ret = 0;
+            return ret;
         }
         else if(ret_mpa != UEFI_OPERATION_SUCCESS) {
             if (NULL != p_platform_manifest_buffer) {
@@ -493,7 +499,6 @@ int main(int argc, const char* argv[])
     else {
         // in enclave mode: collecting the platform manifest is not MUST, so just give a warning 
         if (ret_mpa != UEFI_OPERATION_SUCCESS) {
-            fprintf(stderr, "Warning: Couldn't collect platform manifest. If you are using single-package platform, you can ignore this warning.\n");
             // in this mode, if platform manifest is not availabe, just ignore it. 
             platform_manifest_out_buffer_size = 0;
         }
@@ -548,15 +553,15 @@ int main(int argc, const char* argv[])
 
     if(delivery_status == DELIVERY_SUCCESS) {
         if(pFile != NULL) {
-            fprintf(stdout, "the data has been sent to cache server successfuly and %s has been generated successfully!\n",output_filename.c_str());
+            fprintf(stdout, "the data has been sent to cache server successfully and %s has been generated successfully!\n",output_filename.c_str());
         }
         else {
-            fprintf(stdout, "the data has been sent to cache server successfuly!\n");
+            fprintf(stdout, "the data has been sent to cache server successfully!\n");
         }	
     }
     else if(delivery_status == DELIVERY_FAIL) {
         if(pFile != NULL) {
-            fprintf(stdout, "%s has been generated successfuly, however the data couldn't be sent to cache server!\n",output_filename.c_str());
+            fprintf(stdout, "%s has been generated successfully, however the data couldn't be sent to cache server!\n",output_filename.c_str());
         }
         else {
             fprintf(stderr, "Error: the data couldn't be sent to cache server!\n");
@@ -564,7 +569,7 @@ int main(int argc, const char* argv[])
     } 
     else {
         if(pFile != NULL) {
-            fprintf(stdout, "%s has been generated successfuly!\n",output_filename.c_str());
+            fprintf(stdout, "%s has been generated successfully!\n",output_filename.c_str());
         }
         else {
             fprintf(stderr, "Error: the retrieved data doesn't save to file, and it doesn't upload to cache server.\n");

@@ -216,6 +216,9 @@
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PostBuildEvent>
+      <Command>xcopy /FY "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)..\..\PSW_installer\InstallBinaries\$(Platform)\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\QuoteGeneration\common\src\se_thread.c" />

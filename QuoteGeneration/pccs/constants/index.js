@@ -39,8 +39,10 @@ function define(name, value) {
 }
 
 define('API_VERSION', 3);
+define('DB_VERSION', 1);
 
 define('PLATF_REG_NEW', 0);
+define('PLATF_REG_NOT_AVAILABLE', 1);
 define('PLATF_REG_DELETED', 9);
 
 define('HTTP_SUCCESS', 200);
@@ -52,7 +54,9 @@ define('PCESVN_SIZE', 4);
 define('PCEID_SIZE', 4);
 define('ENC_PPID_SIZE', 768);
 define('FMSPC_SIZE', 12);
-define('SGX_TCBM', 'sgx-tcbm');
+define('SGX_TCBM', 'SGX-TCBm');
+define('SGX_FMSPC', 'SGX-FMSPC');
+define('SGX_PCK_CERTIFICATE_CA_TYPE', 'SGX-PCK-Certificate-CA-Type');
 
 // Certificate IDs
 define('PROCESSOR_ROOT_CERT_ID', 1);
@@ -65,10 +69,10 @@ define('CA_PROCESSOR', 'PROCESSOR');
 define('CA_PLATFORM', 'PLATFORM');
 
 //Certchain names
-define('SGX_PCK_CERTIFICATE_ISSUER_CHAIN', 'sgx-pck-certificate-issuer-chain');
-define('SGX_TCB_INFO_ISSUER_CHAIN', 'sgx-tcb-info-issuer-chain');
-define('SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN', 'sgx-enclave-identity-issuer-chain');
-define('SGX_PCK_CRL_ISSUER_CHAIN', 'sgx-pck-crl-issuer-chain');
+define('SGX_PCK_CERTIFICATE_ISSUER_CHAIN', 'SGX-PCK-Certificate-Issuer-Chain');
+define('SGX_TCB_INFO_ISSUER_CHAIN', 'SGX-TCB-Info-Issuer-Chain');
+define('SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN', 'SGX-Enclave-Identity-Issuer-Chain');
+define('SGX_PCK_CRL_ISSUER_CHAIN', 'SGX-PCK-CRL-Issuer-Chain');
 
 //HTTP headers
 define('HTTP_HEADER_PLATFORM_COUNT', 'platform-count');

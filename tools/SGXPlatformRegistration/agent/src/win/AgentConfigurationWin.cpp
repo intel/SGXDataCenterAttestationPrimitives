@@ -55,7 +55,7 @@ static const TCHAR *get_registry_entry_path(mp_config_type entry)
     }
 }
 
-MpResult aesm_read_registry_dword(mp_config_type entry, const TCHAR *name, uint32_t *result)
+MpResult mpa_read_registry_dword(mp_config_type entry, const TCHAR *name, uint32_t *result)
 {
     const TCHAR *entry_path = get_registry_entry_path(entry);
     if (entry_path == NULL) {
@@ -80,7 +80,7 @@ MpResult aesm_read_registry_dword(mp_config_type entry, const TCHAR *name, uint3
     return MP_SUCCESS;
 }
 
-MpResult aesm_write_registry_dword(mp_config_type entry, const TCHAR *name, uint32_t result)
+MpResult mpa_create_registry_and_set_default_value_dword(mp_config_type entry, const TCHAR *name, uint32_t result)
 {
     const TCHAR *entry_path = get_registry_entry_path(entry);
     if (entry_path == NULL) {
@@ -88,7 +88,7 @@ MpResult aesm_write_registry_dword(mp_config_type entry, const TCHAR *name, uint
         return MP_INVALID_PARAMETER;
     }
     HKEY key = NULL;
-    LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, KEY_WRITE, &key);
+    LSTATUS status = RegCreateKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
     if (ERROR_SUCCESS != status) {
         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to open registry key (%s), return value %ld\n", entry_path, status);
         return MP_UNEXPECTED_ERROR;
@@ -105,7 +105,62 @@ MpResult aesm_write_registry_dword(mp_config_type entry, const TCHAR *name, uint
     return MP_SUCCESS;
 }
 
-MpResult aesm_read_registry_value(const TCHAR * registry_path, const TCHAR *name, TCHAR value[], uint32_t tchar_num)
+
+MpResult mpa_create_registry_string_subscriptionkey(mp_config_type entry)
+{
+    const TCHAR* entry_path = get_registry_entry_path(entry);
+    if (entry_path == NULL) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Cannot find registry entry path\n");
+        return MP_INVALID_PARAMETER;
+    }
+   
+    HKEY key = NULL;
+    LSTATUS status = RegCreateKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, NULL,0, KEY_WRITE, NULL, &key, NULL);
+    if (ERROR_SUCCESS != status) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to create registry key (%s), return value %ld\n", entry_path, status);
+        return MP_UNEXPECTED_ERROR;
+    }
+
+    TCHAR subscriptionkey[] = _T("12345678901234567890123456789012");
+    status = RegSetValueEx(key, _T("token"), NULL, REG_SZ, (LPBYTE)subscriptionkey, sizeof(subscriptionkey));
+    RegCloseKey(key);
+    if (ERROR_SUCCESS != status) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to set the sub scription key, and the status=%d\n", (int)status);
+        return MP_UNEXPECTED_ERROR;
+    }
+
+    return MP_SUCCESS;
+}
+
+MpResult mpa_create_registry_string_proxy_url(mp_config_type entry)
+{
+    const TCHAR* entry_path = get_registry_entry_path(entry);
+    if (entry_path == NULL) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Cannot find registry entry path\n");
+        return MP_INVALID_PARAMETER;
+    }
+
+    HKEY key = NULL;
+    LSTATUS status = RegCreateKeyEx(HKEY_LOCAL_MACHINE, entry_path, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+    if (ERROR_SUCCESS != status) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to create registry key (%s), return value %ld\n", entry_path, status);
+        return MP_UNEXPECTED_ERROR;
+    }
+
+    TCHAR proxy_url[] = _T("http://proxy-url:proxy-port");
+    status = RegSetValueEx(key, _T("url"), NULL, REG_SZ, (LPBYTE)proxy_url, sizeof(proxy_url));
+    RegCloseKey(key);
+    if (ERROR_SUCCESS != status) {
+        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to set proxy url for manual proxy type, and the status=%ld\n", status);
+        return MP_UNEXPECTED_ERROR;
+    }
+    return MP_SUCCESS;
+}
+
+
+
+
+MpResult mpa_read_registry_value(const TCHAR * registry_path, const TCHAR *name, TCHAR value[], uint32_t tchar_num)
 {
     HKEY key = NULL;
     if (!registry_path || !name || !value || !tchar_num)
@@ -130,104 +185,16 @@ MpResult aesm_read_registry_value(const TCHAR * registry_path, const TCHAR *name
     return MP_SUCCESS;
 }
 
-MpResult aesm_read_registry_string(mp_config_type entry, const TCHAR *name, TCHAR value[], uint32_t tchar_num)
+MpResult mpa_read_registry_string(mp_config_type entry, const TCHAR *name, TCHAR value[], uint32_t tchar_num)
 {
     const TCHAR *entry_path = get_registry_entry_path(entry);
     if (entry_path == NULL) {
         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Cannot find registry entry path\n");
         return MP_UNEXPECTED_ERROR;
     }
-    return aesm_read_registry_value(entry_path, name, value, tchar_num);
+    return mpa_read_registry_value(entry_path, name, value, tchar_num);
 }
 
-/*
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_NAME 16383
-
-MpResult aesm_query_install_path(const TCHAR *base_path, const TCHAR *target_component, const TCHAR *sub_path,
-    const TCHAR *name, TCHAR value[], uint32_t tchar_num, const TCHAR *file_name)
-{
-    MpResult ret = MP_UNEXPECTED_ERROR;
-    HKEY key;
-    DWORD subkey_count = 0;
-
-    if (!base_path || !target_component || !sub_path || !name || !value || !tchar_num || !file_name)
-        return MP_INVALID_PARAMETER;
-
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, base_path, 0, KEY_READ, &key) != ERROR_SUCCESS)
-        return MP_INVALID_PARAMETER;
-
-    // Get the class name and the value count. 
-    if (RegQueryInfoKey(key, NULL, NULL, NULL, &subkey_count, NULL, NULL, NULL, NULL, NULL, NULL, NULL) != ERROR_SUCCESS) {
-        ret = MP_UNEXPECTED_ERROR;
-        goto error_catch;
-    }
-
-    // Enumerate the subkeys, until RegEnumKeyEx fails.
-    if (subkey_count) {
-        TCHAR registry_path[MAX_VALUE_NAME];
-        for (DWORD i = 0; i < subkey_count; i++)
-        {
-            TCHAR buf[MAX_KEY_LENGTH];
-            DWORD buf_size = ARRAY_LENGTH(buf);
-            if (RegEnumKeyEx(key, i, buf, &buf_size, NULL, NULL, NULL, NULL) == ERROR_SUCCESS) {
-                if (_tcsncpy_s(registry_path, ARRAY_LENGTH(registry_path), base_path, _tcslen(base_path))) {
-                    ret = MP_UNEXPECTED_ERROR;
-                    goto error_catch;
-                }
-
-                if (_tcsncat_s(registry_path, _T("\\\n", 1)) {
-                    ret = MP_UNEXPECTED_ERROR;
-                    goto error_catch;
-                }
-                if (_tcsncat_s(registry_path, buf, _tcsnlen(buf, ARRAY_LENGTH(buf)))) {
-                    ret = MP_UNEXPECTED_ERROR;
-                    goto error_catch;
-                }
-                ret = aesm_read_registry_value(registry_path, _T("MatchingDeviceId\n", buf, ARRAY_LENGTH(buf));
-                if (MP_SUCCESS != ret)
-                    continue;
-                else {
-                    if (_tcsnccmp(buf, target_component, ARRAY_LENGTH(buf)))
-                        continue;
-                    else {
-                        if (_tcsncat_s(registry_path, sub_path, _tcslen(sub_path))) {
-                            ret = MP_UNEXPECTED_ERROR;
-                            goto error_catch;
-                        }
-                    }
-                }
-
-                ret = aesm_read_registry_value(registry_path, name, buf, ARRAY_LENGTH(buf));
-                if (MP_SUCCESS != ret) {
-                    goto error_catch;
-                }
-                else {
-                    if (buf[_tcslen(buf) - 1] != _T('\\')) {
-                        if (_tcsncat_s(buf, _T("\\\n", 1)) {
-                            ret = MP_UNEXPECTED_ERROR;
-                            goto error_catch;
-                        }
-                    }
-                    if (_tcsncat_s(buf, file_name, _tcslen(file_name))) {
-                        ret = MP_UNEXPECTED_ERROR;
-                        goto error_catch;
-                    }
-                    if (_tcsncpy_s(value, tchar_num, buf, _tcsnlen(buf, ARRAY_LENGTH(buf)))) {
-                        ret = MP_UNEXPECTED_ERROR;
-                        goto error_catch;
-                    }
-                    ret = MP_SUCCESS;
-                    goto error_catch;
-                }
-            }
-        }
-    }
-
-error_catch:
-    RegCloseKey(key);
-    return ret;
-}*/
 
 bool AgentConfiguration::read(MPConfigurations& conf)
 {
@@ -237,15 +204,18 @@ bool AgentConfiguration::read(MPConfigurations& conf)
     memset(&conf, 0, sizeof(MPConfigurations));
     conf.log_level = MP_REG_LOG_LEVEL_ERROR;//default log level
 
-    res = aesm_read_registry_dword(MP_PROXY_CONF, "type", &value);
+    res = mpa_read_registry_dword(MP_PROXY_CONF, _T("type"), &value);
     if (MP_SUCCESS == res) {
         conf.proxy.proxy_type = (ProxyType)value;
         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Found proxy type reg key: %d\n", value);
     } else {
-        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Using deafult proxy type settings.\n", value);
+        uint32_t proxy_type = MP_REG_PROXY_TYPE_DEFAULT_PROXY;
+        conf.proxy.proxy_type = (ProxyType) proxy_type;
+        mpa_create_registry_and_set_default_value_dword(MP_PROXY_CONF, _T("type"), proxy_type);
+        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Using deafult proxy type settings: %d.\n", value);
     }
 
-    res = aesm_read_registry_string(MP_PROXY_CONF, "url", valueStr, (uint32_t)sizeof(valueStr));
+    res = mpa_read_registry_string(MP_PROXY_CONF, _T("url"), valueStr, (uint32_t)sizeof(valueStr));
     if (MP_SUCCESS == res) {
         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Found proxy url reg key: %s\n", valueStr);
         memcpy(conf.proxy.proxy_url, valueStr, strnlen_s(valueStr, sizeof(valueStr)));
@@ -254,18 +224,30 @@ bool AgentConfiguration::read(MPConfigurations& conf)
             agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Found manual proxy type reg key without url. Using deafult proxy configuration.\n");
             conf.proxy.proxy_type = MP_REG_PROXY_TYPE_DEFAULT_PROXY;
         }
+        mpa_create_registry_string_proxy_url(MP_PROXY_CONF);
     }
 
-    res = aesm_read_registry_dword(MP_LOG_LEVEL_CONF, "level", &value);
+    res = mpa_read_registry_dword(MP_LOG_LEVEL_CONF, _T("level"), &value);
     if (MP_SUCCESS == res) {
         conf.log_level = (LogLevel)value;
         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Found log level reg key: %d\n", value);
+    } else {
+        uint32_t log_level = MP_REG_LOG_LEVEL_ERROR;
+        conf.log_level = (LogLevel)log_level;
+        mpa_create_registry_and_set_default_value_dword(MP_LOG_LEVEL_CONF, _T("level"), log_level);
+        agent_log_message(MP_REG_LOG_LEVEL_INFO, "Using deafult log level settings: %d.\n", log_level);
     }
 
-    res = aesm_read_registry_string(MP_SUBSCRIPTION_KEY_CONF, "token", valueStr, (uint32_t)sizeof(valueStr));
+    res = mpa_read_registry_string(MP_SUBSCRIPTION_KEY_CONF, _T("token"), valueStr, (uint32_t)sizeof(valueStr));
     if (MP_SUCCESS == res) {
-        memcpy(conf.server_add_package_subscription_key, valueStr, strnlen_s(valueStr, sizeof(valueStr)));
+        memcpy_s(conf.server_add_package_subscription_key, SUBSCRIPTION_KEY_SIZE, valueStr, strnlen_s(valueStr, sizeof(valueStr)));
+        conf.server_add_package_subscription_key[SUBSCRIPTION_KEY_SIZE] = _T('\0');
         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Found subscription token reg key: %s\n", valueStr);
+    }
+    else {
+        //the sub scription key should be applied from Inte's registration server, user need provide this key
+        //https://api.portal.trustedservices.intel.com/registration
+        mpa_create_registry_string_subscriptionkey(MP_SUBSCRIPTION_KEY_CONF);
     }
     return true;
 }

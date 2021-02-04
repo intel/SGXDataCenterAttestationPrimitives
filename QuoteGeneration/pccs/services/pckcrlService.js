@@ -28,58 +28,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import PccsError from '../utils/PccsError.js';
-import PccsStatus from '../constants/pccs_status_code.js';
-import Config from 'config';
 import Constants from '../constants/index.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
-import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
-import * as pcsClient from '../pcs_client/pcs_client.js';
-import { sequelize } from '../dao/models/index.js';
-
-export async function getPckCrlFromPCS(ca) {
-  const pck_server_res = await pcsClient.getPckCrl(ca);
-
-  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  let result = {};
-  result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] =
-    pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN];
-  let crl_hex = Buffer.from(pck_server_res.rawBody, 'utf8').toString('hex');
-  result['pckcrl'] = crl_hex;
-
-  await sequelize.transaction(async (t) => {
-    // update or insert PCK CRL
-    await pckcrlDao.upsertPckCrl(ca, crl_hex);
-    // update or insert certificate chain
-    await pcsCertificatesDao.upsertPckCrlCertchain(
-      ca,
-      pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]
-    );
-  });
-  return result;
-}
+import { cachingModeManager } from './caching_modes/cachingModeManager';
 
 export async function getPckCrl(ca) {
   // query pck crl from local database first
   const pckcrl = await pckcrlDao.getPckCrl(ca);
   let result = {};
   if (pckcrl == null) {
-    if (
-      Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
-      Constants.CACHE_FILL_MODE_LAZY
-    ) {
-      result = await this.getPckCrlFromPCS(ca);
-    } else {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-    }
+    result = await cachingModeManager.getPckCrlFromPCS(ca);
   } else {
     result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] =
       pckcrl.intmd_cert + pckcrl.root_cert;
     result['pckcrl'] = pckcrl.pck_crl;
   }
+
+  // To keep backward compatibility. 
+  // TODO : for PCS alignment, need to remove this conversion
+  result['pckcrl'] = Buffer.from(result['pckcrl'], 'utf8').toString('hex');
 
   return result;
 }

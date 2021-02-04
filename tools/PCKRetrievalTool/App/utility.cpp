@@ -320,10 +320,12 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
     mp_uefi_init_func_t p_mp_uefi_init = (mp_uefi_init_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_init");
     mp_uefi_get_request_type_func_t p_mp_uefi_get_request_type = (mp_uefi_get_request_type_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_get_request_type");
     mp_uefi_get_request_func_t p_mp_uefi_get_request = (mp_uefi_get_request_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_get_request");
+    mp_uefi_get_registration_status_func_t p_mp_uefi_get_registration_status = (mp_uefi_get_registration_status_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_get_registration_status");
     mp_uefi_terminate_func_t p_mp_uefi_terminate = (mp_uefi_terminate_func_t)FINDFUNCTIONSYM(uefi_lib_handle, "mp_uefi_terminate");
     if (p_mp_uefi_init == NULL ||
         p_mp_uefi_get_request_type == NULL ||
         p_mp_uefi_get_request == NULL ||
+        p_mp_uefi_get_registration_status == NULL ||
         p_mp_uefi_terminate == NULL) {
         printf("Error: cound't find uefi function interface(s) in the UEFI shared library.\n");
         CLOSELIBRARYHANDLE(uefi_lib_handle);
@@ -332,7 +334,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
 
     MpResult mpResult = MP_SUCCESS;
     MpRequestType type = MP_REQ_NONE;
-    mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_ERROR);
+    mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_NONE);
     if (mpResult != MP_SUCCESS) {
         printf("Error: couldn't init UEFI shared library.\n");
         return ret;
@@ -360,8 +362,21 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
             }
         }
         else {
-            printf("Error: get UEFI request type error, and the error code is: %d.\n", mpResult);
-            break;
+            MpRegistrationStatus status;
+            MpResult mpResult_registration_status = p_mp_uefi_get_registration_status(&status);
+            if (mpResult != MP_SUCCESS) {
+                printf("Warning: error happens when get registration status, the error code is: %d \n", mpResult_registration_status);
+                break;
+            }
+            if(status.registrationStatus == MP_TASK_COMPLETED){
+                printf("Warning: registration has completed, so platform manifest has been removed. \n");
+                ret = UEFI_OPERATION_VARIABLE_NOT_AVAILABLE;
+                break;
+            }
+            else {
+                printf("Error: get UEFI request type error, and the error code is: %d.\n", mpResult);
+                break;
+            }
         }
         ret = UEFI_OPERATION_SUCCESS;
     } while (0);
@@ -416,7 +431,7 @@ uefi_status_t set_registration_status()
 
     MpResult mpResult = MP_SUCCESS;
     MpRegistrationStatus status;
-    mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_ERROR);
+    mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_NONE);
     if (mpResult != MP_SUCCESS) {
         printf("Error: couldn't init uefi shared library.\n");
         CLOSELIBRARYHANDLE(uefi_lib_handle);

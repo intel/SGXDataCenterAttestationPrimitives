@@ -48,5 +48,20 @@ typedef struct sgx_launch_request
 } sgx_launch_request_t;
 
 extern void *entry;
-void *start_launch_enclave(void);
-void sgx_get_token(struct sgx_launch_request *req, void *entry);
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    // Load the LE and return its address
+    void* start_launch_enclave(void);
+    
+    // Given an LE address in the parameter entry,
+    // this function will obtain a launch token 
+    // and fill in that field of the output variable req.
+    void sgx_get_token(struct sgx_launch_request* req, void* entry);
+
+#ifdef __cplusplus
+}
+#endif

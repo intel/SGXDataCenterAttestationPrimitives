@@ -186,7 +186,8 @@
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>"C:\Program Files (x86)\Windows Kits\10\bin\$(PlatformTarget)\apivalidator.exe"  -driverpackagepath:"$(TargetPath)" -SupportedApiXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\UniversalDDIs.xml" -ModuleWhiteListXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\ModuleWhiteList.xml" &gt;"$(OutDir)api_validator_log.txt"  2&gt;&amp;1</Command>
+      <Command>"C:\Program Files (x86)\Windows Kits\10\bin\$(PlatformTarget)\apivalidator.exe"  -driverpackagepath:"$(TargetPath)" -SupportedApiXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\UniversalDDIs.xml" -ModuleWhiteListXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\ModuleWhiteList.xml" &gt;"$(OutDir)api_validator_log.txt"  2&gt;&amp;1
+      xcopy /FY "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)..\..\PSW_installer\InstallBinaries\$(Platform)\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

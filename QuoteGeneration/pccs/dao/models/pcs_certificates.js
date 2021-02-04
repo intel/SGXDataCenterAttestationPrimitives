@@ -35,12 +35,7 @@ export default class PcsCertificates extends Sequelize.Model {
   static init(sequelize) {
     super.init(
       {
-        cert: {
-          type: Sequelize.DataTypes.BLOB,
-          get() {
-            return this.getDataValue('cert').toString('utf8');
-          },
-        },
+        cert: { type: Sequelize.DataTypes.BLOB },
         crl: { type: Sequelize.DataTypes.BLOB },
       },
       {
@@ -48,7 +43,7 @@ export default class PcsCertificates extends Sequelize.Model {
         timestamps: true,
         createdAt: 'created_time',
         updatedAt: 'updated_time',
-        sequelize
+        sequelize,
       }
     );
   }

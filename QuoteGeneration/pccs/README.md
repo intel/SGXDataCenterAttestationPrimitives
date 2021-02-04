@@ -90,7 +90,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **CachingFillMode** - The method used to fill the cache DB. Can be one of the following: LAZY/REQ/OFFLINE. For more details see section [Caching Fill Mode](#CachingMode).
 - **LogLevel** - Log level. Use the same levels as npm: error, warn, info, http, verbose, debug, silly. Default is info.
 - **DB_CONFIG** - You can choose sqlite or mysql and many other DBMSes. For sqlite, you don't need to change anything. For other DBMSes, you need to set database connection options correctly. Normally you need to change database, username, password, host and dialect to connect to your DBMS.
-  <br/>**NOTE: It's recommended to delete old database first if you have installed a different version of PCCS before because the database may be not compatible.**
+  <br/>**NOTE: It's recommended to delete the cache database first if you have installed a version older than 1.9 because the database is not compatible.**
 
 ## <h3 id="CachingMode">Caching Fill Mode</h3>
 

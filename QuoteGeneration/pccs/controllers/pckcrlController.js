@@ -53,6 +53,7 @@ export async function getPckCrl(req, res, next) {
         Constants.SGX_PCK_CRL_ISSUER_CHAIN,
         pckcrlJson[Constants.SGX_PCK_CRL_ISSUER_CHAIN]
       )
+      .header('Content-Type', 'application/pkix-crl')
       .send(pckcrlJson.pckcrl);
   } catch (err) {
     next(err);

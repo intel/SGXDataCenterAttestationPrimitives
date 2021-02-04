@@ -41,17 +41,19 @@ export default class PlatformsRegistered extends Sequelize.Model {
         enc_ppid: {
           type: Sequelize.DataTypes.BLOB,
           get() {
-            let enc_ppid = this.getDataValue('enc_ppid');
-            if (enc_ppid) return enc_ppid.toString('utf8');
-            else return '';
+            return (this.getDataValue('enc_ppid') || '').toString('hex');
+          },
+          set(value) {
+            this.setDataValue('enc_ppid', Buffer.from(value, 'hex'));
           },
         },
         platform_manifest: {
           type: Sequelize.DataTypes.BLOB,
           get() {
-            let platform_manifest = this.getDataValue('platform_manifest');
-            if (platform_manifest) return platform_manifest.toString('utf8');
-            else return '';
+            return (this.getDataValue('platform_manifest') || '').toString('hex');
+          },
+          set(value) {
+            this.setDataValue('platform_manifest', Buffer.from(value, 'hex'));
           },
         },
         state: { type: Sequelize.DataTypes.INTEGER },

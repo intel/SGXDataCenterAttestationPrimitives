@@ -46,6 +46,26 @@ const cpu_svn_t = Struct({
 });
 const cpu_svn_ptr = ref.refType(cpu_svn_t);
 
+////////////// Load library ////////////////////////////////
+let dllpath = 'PCKCertSelectionLib.dll';
+if (process.platform === 'linux') {
+  dllpath = path.join(__dirname, '../lib/libPCKCertSelection.so');
+}
+const pcklib = ffi.Library(dllpath, {
+  pck_cert_select: [
+    'int',
+    [
+      cpu_svn_ptr,
+      'uint16',
+      'uint16',
+      'string',
+      StringArray,
+      'uint32',
+      intPtr,
+    ],
+  ],
+});
+
 export function pck_cert_select(
   cpu_svn,
   pce_svn,
@@ -54,24 +74,6 @@ export function pck_cert_select(
   pem_certs,
   ncerts
 ) {
-  let dllpath = 'PCKCertSelectionLib.dll';
-  if (process.platform === 'linux') {
-    dllpath = path.join(__dirname, '../lib/libPCKCertSelection.so');
-  }
-  let pcklib = ffi.Library(dllpath, {
-    pck_cert_select: [
-      'int',
-      [
-        cpu_svn_ptr,
-        'uint16',
-        'uint16',
-        'string',
-        StringArray,
-        'uint32',
-        intPtr,
-      ],
-    ],
-  });
   let my_cpu_svn = new cpu_svn_t();
   let buf = Buffer.from(cpu_svn, 'hex');
   my_cpu_svn.bytes = new ByteArray();

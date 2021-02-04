@@ -35,12 +35,7 @@ export default class PckCrl extends Sequelize.Model {
     super.init(
       {
         ca: { type: Sequelize.DataTypes.STRING, primaryKey: true },
-        pck_crl: {
-          type: Sequelize.DataTypes.BLOB,
-          get() {
-            return this.getDataValue('pck_crl').toString('utf8');
-          },
-        },
+        pck_crl: { type: Sequelize.DataTypes.BLOB },
         root_cert_id: { type: Sequelize.DataTypes.INTEGER },
         intmd_cert_id: { type: Sequelize.DataTypes.INTEGER },
       },

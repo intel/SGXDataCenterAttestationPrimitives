@@ -38,6 +38,9 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/lib_wrapper/pcklib_wrapper.js	<installdir>/lib_wrapper/pcklib_wrapper.js	0	main	STP
 <deliverydir>/pccs/middleware/auth.js	<installdir>/middleware/auth.js	0	main	STP
 <deliverydir>/pccs/middleware/error.js	<installdir>/middleware/error.js	0	main	STP
+<deliverydir>/pccs/middleware/addRequestId.js	<installdir>/middleware/addRequestId.js	0	main	STP
+<deliverydir>/pccs/migrations/00_db_initialize.up.sql	<installdir>/migrations/00_db_initialize.up.sql	0	main	STP
+<deliverydir>/pccs/migrations/01_db_version_1.js	<installdir>/migrations/01_db_version_1.js	0	main	STP
 <deliverydir>/pccs/pcs_client/pcs_client.js	<installdir>/pcs_client/pcs_client.js	0	main	STP
 <deliverydir>/pccs/routes/index.js	<installdir>/routes/index.js	0	main	STP
 <deliverydir>/pccs/services/identityService.js	<installdir>/services/identityService.js	0	main	STP
@@ -51,6 +54,10 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/services/refreshService.js	<installdir>/services/refreshService.js	0	main	STP
 <deliverydir>/pccs/services/rootcacrlService.js	<installdir>/services/rootcacrlService.js	0	main	STP
 <deliverydir>/pccs/services/tcbinfoService.js	<installdir>/services/tcbinfoService.js	0	main	STP
+<deliverydir>/pccs/services/caching_modes/cachingMode.js	<installdir>/services/caching_modes/cachingMode.js	0	main	STP
+<deliverydir>/pccs/services/caching_modes/cachingModeManager.js	<installdir>/services/caching_modes/cachingModeManager.js	0	main	STP
+<deliverydir>/pccs/services/logic/commonCacheLogic.js	<installdir>/services/logic/commonCacheLogic.js	0	main	STP
+<deliverydir>/pccs/services/logic/qvCollateralLogic.js	<installdir>/services/logic/qvCollateralLogic.js	0	main	STP
 <deliverydir>/pccs/utils/Logger.js	<installdir>/utils/Logger.js	0	main	STP
 <deliverydir>/pccs/utils/PccsError.js	<installdir>/utils/PccsError.js	0	main	STP
 <deliverydir>/pccs/utils/apputil.js	<installdir>/utils/apputil.js	0	main	STP
@@ -61,7 +68,3 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/pccs_server.js	<installdir>/pccs_server.js	0	main	STP
 <deliverydir>/pccs/pccs.service	<installdir>/pccs.service	0	main	STP
 <deliverydir>/pccs/README.md	<installdir>/README.md	0	main	STP
-<deliverydir>/installer/linux/common/sgx-dcap-pccs/installConfig	<installdir>/installConfig	0	main	STP
-<deliverydir>/installer/linux/common/sgx-dcap-pccs/Makefile	<installdir>/Makefile	0	main	STP
-
-

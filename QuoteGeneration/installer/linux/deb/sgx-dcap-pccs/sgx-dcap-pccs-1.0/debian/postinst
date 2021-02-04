@@ -22,7 +22,9 @@ case "$1" in
     configure)
         PCCS_USER=pccs
         PCCS_HOME=/opt/intel/sgx-dcap-pccs
-        adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
+        if ! id "$PCCS_USER" &>/dev/null; then
+            adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
+        fi
         chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
         if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
         then
@@ -43,6 +45,7 @@ case "$1" in
             chmod 0644 $PCCS_DEST
             systemctl daemon-reload
             systemctl enable pccs
+            systemctl start pccs
         elif [ -d /etc/init/ ]; then
             PCCS_NAME=pccs.service
             PCCS_TEMP=$PCCS_HOME/$PCCS_NAME

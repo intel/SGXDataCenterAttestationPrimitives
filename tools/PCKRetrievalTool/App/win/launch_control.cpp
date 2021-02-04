@@ -40,7 +40,7 @@
 #include <utility.h>
 #include <sgx_launch_public.h>
 #include <metadata.h>
-#include <sgx_arch.h>
+#include <FLC_LE.h>
 #include <sgx_enclave_common.h>
 
 #ifndef SGX_SHA256_HASH_SIZE
@@ -58,15 +58,6 @@ typedef uint8_t sgx_css_key_modulus_t[SGX_CSS_KEY_MOD_SIZE];
 #else
 #define PRINT_MESSAGE(...)
 #endif
-
-// Load LE and return its address
-extern "C" void* start_launch_enclave(void);
-
-// Declaration for the function written in assembly 
-// that given a pointer to a sgx_launch_request and an LE address 
-// will fill in the token field of the request.
-extern "C"
-void sgx_get_token(struct sgx_launch_request* req, void* entry);
 
 static BOOL WINAPI calMRSigner(sgx_css_key_modulus_t buffer_in, sgx_sha256_hash_t* value)
 /*caculate the MRSigner*/
@@ -242,17 +233,21 @@ uint32_t COMM_API sgx_tool_get_launch_token(COMM_IN const enclave_init_sgx_t* p_
 	// Ask the LE to get a launch token
 	__try
 	{
+		req.output.result = -1;
 		sgx_get_token(&req, launch_enclave);
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER)
 	{
 		return ENCLAVE_UNEXPECTED;
 	}
-
+	if (req.output.result)
+	{
+		PRINT_MESSAGE("Assembly function sgx_get_token() failed\n");
+	}
 
 	memset(p_token, 0, sizeof(*p_token));
-	se_static_assert(sizeof(*p_token) >= sizeof(req.token));
-	memcpy_s(p_token, sizeof(*p_token), &req.token, sizeof(req.token));
+	se_static_assert(sizeof(*p_token) >= sizeof(req.output.token));
+	memcpy_s(p_token, sizeof(*p_token), &req.output.token, sizeof(req.output.token));
 	return ENCLAVE_ERROR_SUCCESS;
 }
 

@@ -94,6 +94,8 @@ static sgx_qcnl_error_t pccs_status_to_qcnl_error(DWORD pccs_status_code)
             return SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
         case 461:   // PCCS_STATUS_PLATFORM_UNKNOWN
             return SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN;
+        case 462:   // PCCS_STATUS_CERTS_UNAVAILABLE
+            return SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE;
         default:
             return SGX_QCNL_ERROR_STATUS_UNEXPECTED;
     }
@@ -191,6 +193,14 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
                 ret = windows_last_error_to_qcnl_error();
                 break;
             }
+        }
+
+
+        // Enable the certificate revocation check
+        DWORD dwEnableSSLRevocOpt = WINHTTP_ENABLE_SSL_REVOCATION;
+        if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_ENABLE_FEATURE, &dwEnableSSLRevocOpt, sizeof(dwEnableSSLRevocOpt))) {
+            ret = windows_last_error_to_qcnl_error();
+            break;
         }
 
         // Send a request.

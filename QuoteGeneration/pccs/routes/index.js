@@ -64,6 +64,9 @@ router.route('/qve/identity').get(identityController.getQveIdentity);
 
 router.route('/rootcacrl').get(rootcacrlController.getRootCaCrl);
 
-router.route('/refresh').get(refreshController.refreshCache);
+router
+  .route('/refresh')
+  .post(refreshController.refreshCache)
+  .get(refreshController.refreshCache);
 
 export default router;

@@ -148,6 +148,7 @@ int performGetPlatformManifest(const char *fileName) {
     
     ret = writeBufferToFile(fileName, buffer, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to write to file:  \"%s\"\n", fileName);
         goto out;
     }
     
@@ -176,6 +177,7 @@ int performGetKeyBlob(const char *fileName) {
     
     ret = writeBufferToFile(fileName, buffer, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to write to file:  \"%s\"\n", fileName);
         goto out;
     }
     
@@ -247,6 +249,7 @@ int performSetServerInfo(const char *fileName) {
 
     ret = readFileToBuffer(fileName, (uint8_t*)&serverId, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to read the server id file: \"%s\"\n", fileName);
         goto out;
     }
 
@@ -381,6 +384,7 @@ int main(int argc, char * argv[]) {
         if (cmdOptionExists(argv + 1, argv + argc, MANAGMENT_TOOL_VERBOSE_LOG)) {
             foundCommands++;
             setVerboseLog();
+            gargc--; // "-v" has been processed, so remove it.
         }
 
         // Iterate over all options without arguments

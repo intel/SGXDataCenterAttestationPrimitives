@@ -72,7 +72,8 @@ export async function updatePlatform(
 
 export async function getCachedPlatformsByFmspc(fmspc_arr) {
   let sql =
-    'select a.qe_id, a.pce_id, b.cpu_svn, b.pce_svn, a.enc_ppid, a.platform_manifest ' +
+    'select a.qe_id, a.pce_id, b.cpu_svn, b.pce_svn, hex(a.enc_ppid) as enc_ppid,' +
+    ' hex(a.platform_manifest) as platform_manifest' +
     ' from platforms a, platform_tcbs b ' +
     ' where a.qe_id=b.qe_id and a.pce_id = b.pce_id ';
   if (fmspc_arr.length > 0) {

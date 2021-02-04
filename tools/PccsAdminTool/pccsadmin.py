@@ -8,7 +8,7 @@ import csv
 import json
 import urllib
 from lib.intelsgx.pckcert import SgxPckCertificateExtensions
-from lib.intelsgx.pcs import PCS
+from lib.intelsgx.pcs import PCS, CertNotAvailableException
 from urllib.parse import unquote
 import sys, traceback
 
@@ -24,6 +24,7 @@ def main():
     parser_get.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
     parser_get.add_argument("-s", "--source", help=
               "reg - Get platforms from registration table.(default)\n"
+              "reg_na - Get platforms whose PCK certs are currently not available from registration table.\n"
             + "[FMSPC1,FMSPC2,...] - Get platforms from cache based on the fmspc values. [] to get all cached platforms.")
     # add mandatory arguments for get
     parser_get.add_argument("-t", "--token", required=True, help="Administrator token")
@@ -55,6 +56,15 @@ def main():
     parser_collect.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
     parser_collect.set_defaults(func=pcs_collect)
 
+    #  subparser for refresh
+    parser_refresh = subparsers.add_parser('refresh')
+    # add optional arguments for refresh
+    parser_refresh.add_argument("-u", "--url", help="The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v3/refresh")
+    parser_refresh.add_argument("-f", "--fmspc", help="Only refresh certificates for specified FMSPCs. Format: [FMSPC1, FMSPC2, ..., FMSPCn]")
+    # add mandatory arguments for refresh
+    parser_refresh.add_argument("-t", "--token", required=True, help="Administrator token")
+    parser_refresh.set_defaults(func=pccs_refresh)
+
     args = parser.parse_args()
     if len(args.__dict__) <= 1:
         # No arguments or subcommands were given.
@@ -84,8 +94,8 @@ def pccs_get(args):
         output_file = "platform_list.json"
         if args.output_file:
             output_file = args.output_file
-        if args.source and args.source != "reg":
-            url += '?fmspc=' + args.source
+        if args.source:
+            url += '?source=' + args.source
 
         HEADERS = {'user-agent': 'pccsadmin/0.1', 'admin-token': token}
         PARAMS = {}
@@ -173,9 +183,9 @@ def pcs_fetch(args):
             "qeidentity" : "",
             "qveidentity" : "",
             "certificates" : {
-                "sgx-pck-certificate-issuer-chain": {},
-                "sgx-tcb-info-issuer-chain": "",
-                "sgx-enclave-identity-issuer-chain" : ""
+                "SGX-PCK-Certificate-Issuer-Chain": {},
+                "SGX-TCB-Info-Issuer-Chain": "",
+                "SGX-Enclave-Identity-Issuer-Chain" : ""
             },
             "rootcacrl": ""
         }
@@ -186,41 +196,66 @@ def pcs_fetch(args):
         for platform in plaformlist:
             platform_dict[(platform["qe_id"], platform["pce_id"])] = {"enc_ppid" : platform["enc_ppid"], 
                                                                       "platform_manifest" : platform["platform_manifest"]}
+        certs_not_available = []
         for platform_id in platform_dict:
-            enc_ppid = platform_dict[platform_id]["enc_ppid"]
-            platform_manifest = platform_dict[platform_id]["platform_manifest"]
-            pce_id = platform_id[1]
+            try :
+                enc_ppid = platform_dict[platform_id]["enc_ppid"]
+                platform_manifest = platform_dict[platform_id]["platform_manifest"]
+                pce_id = platform_id[1]
 
-            # get pckcerts from Intel PCS, return value is [certs, chain]
-            pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
-            if pckcerts == None:
-                print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
-                return
-            # Get the first property
-            pckcerts_json = pckcerts[0]
+                # get pckcerts from Intel PCS, return value is [certs, chain]
+                pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
+                if pckcerts == None:
+                    print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
+                    return
 
-            # parse the first cert to get FMSPC value and put it into a set
-            cert = pckcerts_json[0]["cert"]
-            sgxext.parse_pem_certificate(unquote(cert).encode('utf-8'))
-            fmspc_set.add(sgxext.get_fmspc())
+                # Get the first property
+                pckcerts_json = pckcerts[0]
 
-            # set pck-certificate-issuer-chain
-            ca = sgxext.get_ca()
-            if ca is None:
-                print("Wrong certificate format!")
-                return
+                # parse the first cert to get FMSPC value and put it into a set
+                cert = pckcerts_json[0]["cert"]
+                sgxext.parse_pem_certificate(unquote(cert).encode('utf-8'))
+                fmspc_set.add(sgxext.get_fmspc())
 
-            pckchain = output_json["collaterals"]["certificates"]["sgx-pck-certificate-issuer-chain"]
-            if not hasattr(pckchain, ca) or pckchain[ca] == '':
-                pckchain[ca] = pckcerts[1]
+                # set pck-certificate-issuer-chain
+                ca = sgxext.get_ca()
+                if ca is None:
+                    print("Wrong certificate format!")
+                    return
 
-            output_json["collaterals"]["pck_certs"].append({
-                "qe_id" : platform_id[0],
-                "pce_id" : pce_id,
-                "enc_ppid": enc_ppid,
-                "platform_manifest": platform_dict[platform_id]["platform_manifest"],
-                "certs": pckcerts_json
-            })
+                pckchain = output_json["collaterals"]["certificates"]["SGX-PCK-Certificate-Issuer-Chain"]
+                if not hasattr(pckchain, ca) or pckchain[ca] == '':
+                    pckchain[ca] = pckcerts[1]
+
+                output_json["collaterals"]["pck_certs"].append({
+                    "qe_id" : platform_id[0],
+                    "pce_id" : pce_id,
+                    "enc_ppid": enc_ppid,
+                    "platform_manifest": platform_dict[platform_id]["platform_manifest"],
+                    "certs": pckcerts_json
+                })
+            except CertNotAvailableException as e:
+                certs_not_available.extend(e.data)
+        if len(certs_not_available) > 0:
+            # Found 'Not available' platforms
+            while True:
+                save_to_file = input("Some certificates are 'Not available'. Do you want to save the list?(y/n)")
+                if save_to_file.lower() == "y":
+                    file_na = input("Please input file name (Press enter to use default name not_available.json):")
+                    if file_na.strip() == '' :
+                        file_na = 'not_available.json'
+                    # write output file
+                    if is_file_writable(file_na):
+                        with open(file_na, "w") as ofile:
+                            json.dump(certs_not_available, ofile)
+                        print("Please check " + file_na + " for 'Not available' certificates. Operation aborted.")
+                    else:
+                        print('Unable to save file. Operation aborted.')
+                    
+                    return False
+                if save_to_file.lower() == "n":
+                    print("Operation aborted.")
+                    return False
 
         # output.collaterals.tcbinfos
         for fmspc in fmspc_set:
@@ -233,8 +268,8 @@ def pcs_fetch(args):
                 "fmspc" : fmspc,
                 "tcbinfo" : json.loads(tcbinfo[0])
             })
-            if output_json["collaterals"]["certificates"]["sgx-tcb-info-issuer-chain"] == '':
-                output_json["collaterals"]["certificates"]["sgx-tcb-info-issuer-chain"] = tcbinfo[1]
+            if output_json["collaterals"]["certificates"]["SGX-TCB-Info-Issuer-Chain"] == '':
+                output_json["collaterals"]["certificates"]["SGX-TCB-Info-Issuer-Chain"] = tcbinfo[1]
             
 
         # output.collaterals.pckcacrl
@@ -257,7 +292,7 @@ def pcs_fetch(args):
             print("Failed to get QE identity")
             return
         output_json["collaterals"]["qeidentity"] = qe_identity[0]
-        output_json["collaterals"]["certificates"]["sgx-enclave-identity-issuer-chain"] = qe_identity[1]
+        output_json["collaterals"]["certificates"]["SGX-Enclave-Identity-Issuer-Chain"] = qe_identity[1]
 
         # output.collaterals.qveidentity
         qve_identity = pcsclient.get_qve_id('ascii')
@@ -312,5 +347,35 @@ def pcs_collect(args):
     except Exception as e:
         print(e)
         traceback.print_exc()
+
+def pccs_refresh(args):
+    try :
+        token = args.token
+        url = "https://localhost:8081/sgx/certification/v3/refresh"
+        if args.url:
+            url = args.url
+        fmspc = None 
+        if args.fmspc:
+            fmspc = args.fmspc
+
+        HEADERS = {'user-agent': 'pccsadmin/0.1', 
+                'admin-token': token}
+        PARAMS = {}
+        if fmspc == 'all':
+            PARAMS = {'type': 'certs',
+                      'fmspc':''}
+        elif fmspc != None:
+            PARAMS = {'type': 'certs',
+                      'fmspc': fmspc}
+        r = requests.post(url = url, headers=HEADERS, params = PARAMS, verify=False)
+        if r.status_code == 200:
+            print("Cache data successfully refreshed.")
+        else:
+            # print error
+            print("Failed to refresh the cache database.")
+            print("\tStatus code is : %d" % r.status_code)
+            print("\tMessage : " , r.text)
+    except Exception as e:
+        print(e)
 
 main()

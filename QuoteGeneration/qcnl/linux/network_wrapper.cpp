@@ -121,10 +121,14 @@ static sgx_qcnl_error_t pccs_status_to_qcnl_error(long pccs_status_code)
     switch(pccs_status_code){
         case 200:   // PCCS_STATUS_SUCCESS
             return SGX_QCNL_SUCCESS;
+        case 403:
+            return SGX_QCNL_NETWORK_ERROR;
         case 404:   // PCCS_STATUS_NO_CACHE_DATA
             return SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
         case 461:   // PCCS_STATUS_PLATFORM_UNKNOWN
             return SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN;
+        case 462:   // PCCS_STATUS_CERTS_UNAVAILABLE
+            return SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE;
         default:
             return SGX_QCNL_ERROR_STATUS_UNEXPECTED;
     }

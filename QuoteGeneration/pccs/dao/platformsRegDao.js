@@ -45,7 +45,7 @@ export async function findRegisteredPlatform(regDataJson) {
   });
 }
 
-export async function findRegisteredPlatforms() {
+export async function findRegisteredPlatforms(state) {
   return await PlatformsRegistered.findAll({
     attributes: [
       'qe_id',
@@ -55,7 +55,7 @@ export async function findRegisteredPlatforms() {
       'platform_manifest',
       'enc_ppid',
     ],
-    where: { state: Constants.PLATF_REG_NEW },
+    where: { state: state },
   });
 }
 
@@ -71,9 +71,9 @@ export async function registerPlatform(regDataJson, state) {
   });
 }
 
-export async function deleteRegisteredPlatforms() {
+export async function deleteRegisteredPlatforms(state) {
   await PlatformsRegistered.update(
     { state: Constants.PLATF_REG_DELETED },
-    { where: { state: Constants.PLATF_REG_NEW } }
+    { where: { state: state } }
   );
 }

@@ -28,72 +28,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import PccsError from '../utils/PccsError.js';
-import PccsStatus from '../constants/pccs_status_code.js';
-import Config from 'config';
 import Constants from '../constants/index.js';
-import X509 from '../x509/x509.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
-import * as pcsClient from '../pcs_client/pcs_client.js';
-import { sequelize } from '../dao/models/index.js';
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
-export async function getRootCACrlFromPCS(rootca) {
-  return await sequelize.transaction(async (t) => {
-    if (rootca == null) {
-      // Root Cert not cached
-      const pck_server_res = await pcsClient.getQeIdentity();
-      if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-        // update certificates
-        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-          pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
-        );
-        // Root cert should be cached now, query DB again
-        rootca = await pcsCertificatesDao.getCertificateById(
-          Constants.PROCESSOR_ROOT_CERT_ID
-        );
-        if (rootca == null) {
-          return null;
-        }
-      } else {
-        return null;
-      }
-    }
 
-    const x509 = new X509();
-    if (!x509.parseCert(unescape(rootca.cert)) || !x509.cdp_uri) {
-      // Certificate is invalid
-      throw new Error('Invalid PCS certificate!');
-    }
-
-    let crl_bin = await pcsClient.getFileFromUrl(x509.cdp_uri);
-    rootca.crl = Buffer.from(crl_bin, 'utf8').toString('hex');
-
-    await pcsCertificatesDao.upsertPcsCertificates({
-      id: rootca.id,
-      cert: rootca.cert,
-      crl: rootca.crl,
-    });
-
-    return rootca.crl;
-  });
-}
 
 export async function getRootCaCrl() {
   let rootca = await pcsCertificatesDao.getCertificateById(
     Constants.PROCESSOR_ROOT_CERT_ID
   );
 
+  let crl;
   if (rootca != null && rootca.crl != null) {
-    return rootca.crl;
+    crl = rootca.crl;
+  }
+  else {
+    crl = await cachingModeManager.getRootCACrlFromPCS(rootca);
   }
 
-  if (
-    Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) ==
-    Constants.CACHE_FILL_MODE_LAZY
-  ) {
-    let crl_hex = await this.getRootCACrlFromPCS(rootca);
-    return crl_hex;
-  } else {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
+  // To keep backward compatibility. 
+  // TODO : for PCS alignment, need to remove this conversion
+  crl = Buffer.from(crl, 'utf8').toString('hex');
+  
+  return crl;
 }

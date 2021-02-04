@@ -1,7 +1,7 @@
 {
   "name": "PCCS",
   "description": "Provisioning Certificate Caching Service",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "dependencies": {
     "@fidm/x509": "^1.2.1",
     "ajv": "^6.12.4",
@@ -20,6 +20,7 @@
     "ref-napi": "^3.0.1",
     "ref-struct-napi": "^1.1.1",
     "sequelize": "^6.3.5",
+    "umzug": "2.3.0",
     "sqlite3": "^5.0.0",
     "winston": "^3.3.3"
   },

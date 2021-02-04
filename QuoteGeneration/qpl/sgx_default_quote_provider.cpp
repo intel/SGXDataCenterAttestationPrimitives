@@ -76,6 +76,8 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret)
             return SGX_QL_NO_QUOTE_COLLATERAL_DATA;
         case SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN:
             return SGX_QL_PLATFORM_UNKNOWN;
+        case SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE:
+            return SGX_QL_CERTS_UNAVAILABLE;
         case SGX_QCNL_ERROR_STATUS_UNEXPECTED:
             return SGX_QL_UNKNOWN_MESSAGE_RESPONSE;
         default:

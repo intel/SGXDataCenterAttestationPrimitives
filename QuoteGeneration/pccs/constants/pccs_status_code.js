@@ -51,6 +51,10 @@ define('PCCS_STATUS_PLATFORM_UNKNOWN', [
   461,
   'The platform was not found in the cache.',
 ]);
+define('PCCS_STATUS_CERTS_UNAVAILABLE', [
+  462,
+  'Certificates are not available for certain TCBs.',
+]);
 define('PCCS_STATUS_INTERNAL_ERROR', [500, 'Internal server error occurred.']);
 define('PCCS_STATUS_SERVICE_UNAVAILABLE', [
   503,

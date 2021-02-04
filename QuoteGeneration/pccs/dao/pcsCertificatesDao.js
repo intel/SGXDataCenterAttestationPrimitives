@@ -70,6 +70,9 @@ async function upsertPcsCertchain(certchain, first_cert_id, second_cert_id) {
 
 // Update or insert pck-certificate-issuer-chain
 export async function upsertPckCertificateIssuerChain(ca, pck_certchain) {
+  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
   return await upsertPcsCertchain(
     pck_certchain,
     ca == Constants.CA_PROCESSOR
@@ -81,6 +84,9 @@ export async function upsertPckCertificateIssuerChain(ca, pck_certchain) {
 
 // Update or insert pck-crl-issuer-chain
 export async function upsertPckCrlCertchain(ca, pck_crl_certchain) {
+  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
   return await upsertPcsCertchain(
     pck_crl_certchain,
     ca == Constants.CA_PROCESSOR

@@ -74,6 +74,7 @@ call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mpa.exe
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mpa_manage.exe
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mp_network.dll
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mp_uefi.dll
+call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\events.dll
 
 echo:
 echo *** SGX MPRA INF Installer Build Succesful. Bye bye.***

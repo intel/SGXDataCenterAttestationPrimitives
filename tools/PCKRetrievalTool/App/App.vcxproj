@@ -58,7 +58,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SolutionDir)\..\SGXPlatformRegistration\include;$(SGXSDKInstallPath)\include;inc;$(SolutionDir)..\..\driver\win;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF\FLC_Enclave;$(SolutionDir)..\..\\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\SGXPlatformRegistration\include;$(SGXSDKInstallPath)\include;inc;$(SolutionDir)..\..\driver\win;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF\FLC_Enclave;$(SolutionDir)..\..\\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -87,7 +87,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\common\inc;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\..\QuoteGeneration\pce_wrapper\inc;$(SolutionDir)\..\SGXPlatformRegistration\include;$(SGXSDKInstallPath)\include;inc;$(SolutionDir)..\..\driver\win;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF\FLC_Enclave;$(SolutionDir)..\..\\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\QuoteGeneration\common\inc\internal;$(SolutionDir)\..\..\QuoteGeneration\quote_wrapper\ql\inc;$(SolutionDir)\..\SGXPlatformRegistration\include;$(SGXSDKInstallPath)\include;inc;$(SolutionDir)..\..\driver\win;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF;$(SolutionDir)..\..\driver\win\WinLeProxyUMDF\FLC_Enclave;$(SolutionDir)..\..\\QuoteGeneration\common\inc\internal\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -142,6 +142,12 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ml64.exe /I$(SolutionDir)..\..\driver\win\WinLeProxyUMDF\FLC_Enclave /I$(SolutionDir)..\..\driver\win\WinLeProxyUMDF /Fo "$(ProjectDir)$(IntDir)%(Filename).obj" /c /nologo /W3 /Zi /DX64 /errorReport:prompt /Ta "%(Fullpath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(IntDir)%(Filename).obj</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="win\app.rc">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

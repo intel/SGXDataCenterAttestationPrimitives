@@ -45,7 +45,8 @@ export async function getQeIdentity(req, res, next) {
         Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
         qeIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
       )
-      .json(qeIdJson.qeid);
+      .header('Content-Type', 'application/json')
+      .send(qeIdJson.qeid);
   } catch (err) {
     next(err);
   }
@@ -63,7 +64,8 @@ export async function getQveIdentity(req, res, next) {
         Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
         qveIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
       )
-      .json(qveIdJson.qveid);
+      .header('Content-Type', 'application/json')
+      .send(qveIdJson.qveid);
   } catch (err) {
     next(err);
   }

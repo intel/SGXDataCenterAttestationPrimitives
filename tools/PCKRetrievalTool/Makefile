@@ -146,6 +146,7 @@ Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefau
 
 Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
 ENCLAVE_LIBRARY_PATH := Enclave/
+ENCLAVE_SIGNING_KEY := $(ENCLAVE_LIBRARY_PATH)test_enclave_signing_key.pem
 
 
 Enclave_Name := pck_id_retrieval_tool_enclave.so
@@ -206,29 +207,37 @@ $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
 
 ######## Enclave Objects ########
 
-Enclave/Enclave_t.c:
-	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl
+$(ENCLAVE_SIGNING_KEY):
+	@openssl genrsa -3 -out $@ 3072
 	@echo "GEN  =>  $@"
 
+
+Enclave/Enclave_t.h: $(SGX_EDGER8R) Enclave/Enclave.edl
+	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl 
+	@echo "GEN  =>  $@"
+
+Enclave/Enclave_t.c: Enclave/Enclave_t.h
+
 Enclave/Enclave_t.o: Enclave/Enclave_t.c
-	@$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-Enclave/%.o: Enclave/%.cpp
-	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
+Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
 	$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	echo "LINK =>  $@"
 
-$(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/test_enclave_signing_key.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+
+$(Signed_Enclave_Name): $(Enclave_Name) $(ENCLAVE_SIGNING_KEY)
+	@$(SGX_ENCLAVE_SIGNER) sign -key $(ENCLAVE_SIGNING_KEY) -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@rm -f $(Enclave_Name)
 	@echo "SIGN =>  $@"
 
 .PHONY: clean
 
 clean:
-	@rm -f $(App_Name)  $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* libdcap_quoteprov.so.1
+	@rm -f $(App_Name)  $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) $(ENCLAVE_SIGNING_KEY) Enclave/Enclave_t.* libdcap_quoteprov.so.1
 	make -C Qpl/linux clean

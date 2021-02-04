@@ -49,7 +49,7 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives
 %package devel
 Summary:        Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers
 Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release} libsgx-headers >= 2.12
+Requires:       %{name} = %{version}-%{release} libsgx-headers >= 2.13
 
 %description devel
 Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers

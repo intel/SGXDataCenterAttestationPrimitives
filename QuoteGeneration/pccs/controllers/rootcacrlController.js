@@ -38,7 +38,10 @@ export async function getRootCaCrl(req, res, next) {
     let rootcacrl = await rootcacrlService.getRootCaCrl();
 
     // send response
-    res.status(PccsStatus.PCCS_STATUS_SUCCESS[0]).send(rootcacrl);
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header('Content-Type', 'application/pkix-crl')
+      .send(rootcacrl);
   } catch (err) {
     next(err);
   }

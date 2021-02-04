@@ -31,6 +31,7 @@
  */
 
 import Config from 'config';
+import Constants from './constants/index.js';
 import morgan from 'morgan';
 import express from 'express';
 import logger from './utils/Logger.js';
@@ -41,8 +42,19 @@ import * as fs from 'fs';
 import * as https from 'https';
 import * as auth from './middleware/auth.js';
 import * as error from './middleware/error.js';
+import addRequestId from './middleware/addRequestId.js';
 import * as refreshService from './services/refreshService.js';
 import * as appUtil from './utils/apputil.js';
+import { cachingModeManager } from './services/caching_modes/cachingModeManager';
+import {
+  LazyCachingMode,
+  ReqCachingMode,
+  OfflineCachingMode,
+} from './services/caching_modes/cachingMode.js';
+
+process.on('uncaughtException', function (exception) {
+  logger.error(exception);
+});
 
 // Create ./logs if it doesn't exist
 fs.mkdir('./logs', (err) => {
@@ -53,11 +65,8 @@ const app = express();
 const { urlencoded, json } = body_parser;
 const { scheduleJob } = node_schedule;
 
-// logger
-app.use(morgan('combined', { stream: logger.stream }));
-
 // startup check
-if (!appUtil.startup_check()){
+if (!appUtil.startup_check()) {
   logger.endAndExitProcess();
 }
 
@@ -65,6 +74,12 @@ appUtil.database_check().then((db_init_ok) => {
   if (!db_init_ok) {
     logger.endAndExitProcess();
   }
+
+  // logger
+  app.use(morgan('combined', { stream: logger.stream }));
+
+  // Add Request-ID
+  app.use(addRequestId);
 
   // body parser middleware, this will let us get the data from a POST
   app.use(urlencoded({ extended: true }));
@@ -82,6 +97,19 @@ appUtil.database_check().then((db_init_ok) => {
   // error handling middleware
   app.use(error.errorHandling);
 
+  // set caching mode
+  let cacheMode = Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE);
+  if (cacheMode == Constants.CACHE_FILL_MODE_LAZY) {
+    cachingModeManager.cachingMode = new LazyCachingMode();
+  } else if (cacheMode == Constants.CACHE_FILL_MODE_REQ) {
+    cachingModeManager.cachingMode = new ReqCachingMode();
+  } else if (cacheMode == Constants.CACHE_FILL_MODE_OFFLINE) {
+    cachingModeManager.cachingMode = new OfflineCachingMode();
+  } else {
+    logger.error('Unknown caching mode. Please check your configuration file.');
+    logger.endAndExitProcess();
+  }
+
   // Start HTTPS server
   let privateKey;
   let certificate;
@@ -90,6 +118,7 @@ appUtil.database_check().then((db_init_ok) => {
     certificate = fs.readFileSync('./ssl_key/file.crt', 'utf8');
   } catch (err) {
     logger.error('The private key or certificate for HTTPS server is missing.');
+    logger.endAndExitProcess();
   }
   const credentials = { key: privateKey, cert: certificate };
   const httpsServer = https.createServer(credentials, app);
@@ -101,6 +130,7 @@ appUtil.database_check().then((db_init_ok) => {
         'HTTPS Server is running on: https://localhost:' +
           Config.get('HTTPS_PORT')
       );
+      app.emit('app_started');  // test app need to wait on this event
     }
   );
 

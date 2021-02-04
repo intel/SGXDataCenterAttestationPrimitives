@@ -38,12 +38,7 @@ export default class PckCert extends Sequelize.Model {
         qe_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
         pce_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
         tcbm: { type: Sequelize.DataTypes.STRING, primaryKey: true },
-        pck_cert: {
-          type: Sequelize.DataTypes.BLOB,
-          get() {
-            return this.getDataValue('pck_cert').toString('utf8');
-          },
-        },
+        pck_cert: { type: Sequelize.DataTypes.BLOB },
       },
       {
         tableName: 'pck_cert',
