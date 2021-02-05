@@ -15,7 +15,7 @@ Requirements:
 * g++
 * bash shell
 
-Prerequisite:
+Pre-requisets:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
@@ -34,7 +34,6 @@ Use below command to add the user running the process to `sgx_prv` group, then r
 ```
     $ sudo usermod -a -G sgx_prv <user name>
 ```
-Note that you need to `open another terminal to make above command take effect`.
 
 Details please refer to driver [README](https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver/linux#launching-an-enclave-with-provision-bit-set).
 
@@ -64,7 +63,7 @@ Supported operating systems:
 Requirements:
 * Microsoft Visual Studio 2019 or newer.
 
-Prerequisite:
+Pre-requisets:
 * Intel(R) SGX DCAP Driver
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages

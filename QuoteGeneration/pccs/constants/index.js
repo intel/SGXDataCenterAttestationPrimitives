@@ -39,7 +39,6 @@ function define(name, value) {
 }
 
 define('API_VERSION', 3);
-define('DB_VERSION', 1);
 
 define('PLATF_REG_NEW', 0);
 define('PLATF_REG_NOT_AVAILABLE', 1);

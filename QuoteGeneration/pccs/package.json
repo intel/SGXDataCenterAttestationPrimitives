@@ -20,7 +20,6 @@
     "ref-napi": "^3.0.1",
     "ref-struct-napi": "^1.1.1",
     "sequelize": "^6.3.5",
-    "umzug": "2.3.0",
     "sqlite3": "^5.0.0",
     "winston": "^3.3.3"
   },

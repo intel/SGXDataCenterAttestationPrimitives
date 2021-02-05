@@ -87,10 +87,10 @@ export async function getPckCertFromPCS(
   }
 
   // PCK certificate issuer chain in response header
-  const pck_certchain = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN
-  );
+  const pck_certchain =
+    pck_server_res.headers[
+      Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN.toLowerCase()
+    ];
 
   // Parse the response body
   let pckcerts = null;
@@ -123,15 +123,12 @@ export async function getPckCertFromPCS(
   }
 
   // Get fmspc and ca type from response header
-  const fmspc = pcsClient
-    .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
-    .toUpperCase();
-  const ca_type = pcsClient
-    .getHeaderValue(
-      pck_server_res.headers,
-      Constants.SGX_PCK_CERTIFICATE_CA_TYPE
-    )
-    .toUpperCase();
+  const fmspc = pck_server_res.headers[
+    Constants.SGX_FMSPC.toLowerCase()
+  ];
+  const ca_type = pck_server_res.headers[
+    Constants.SGX_PCK_CERTIFICATE_CA_TYPE.toLowerCase()
+  ];
 
   if (fmspc == null || ca_type == null) {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
@@ -144,10 +141,8 @@ export async function getPckCertFromPCS(
   }
   const tcbinfo = pck_server_res.rawBody;
   const tcbinfo_str = pck_server_res.body;
-  const tcbinfo_issuer_chain = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_TCB_INFO_ISSUER_CHAIN
-  );
+  const tcbinfo_issuer_chain =
+    pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN.toLowerCase()];
 
   // Before we flush the caching database, get current raw TCBs that are already cached
   // We need to re-run PCK cert selection tool for existing raw TCB levels due to certs change
@@ -258,10 +253,8 @@ export async function getPckCrlFromPCS(ca) {
   }
 
   let result = {};
-  result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_PCK_CRL_ISSUER_CHAIN
-  );
+  result[Constants.SGX_PCK_CRL_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN.toLowerCase()];
   let crl = pck_server_res.rawBody;
   result['pckcrl'] = crl;
 
@@ -271,10 +264,7 @@ export async function getPckCrlFromPCS(ca) {
     // update or insert certificate chain
     await pcsCertificatesDao.upsertPckCrlCertchain(
       ca,
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_PCK_CRL_ISSUER_CHAIN
-      )
+      pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN.toLowerCase()]
     );
   });
   return result;
@@ -288,10 +278,8 @@ export async function getTcbInfoFromPCS(fmspc) {
   }
 
   let result = {};
-  result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_TCB_INFO_ISSUER_CHAIN
-  );
+  result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] =
+    pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN.toLowerCase()];
   result['tcbinfo'] = pck_server_res.rawBody;
 
   await sequelize.transaction(async (t) => {
@@ -302,10 +290,7 @@ export async function getTcbInfoFromPCS(fmspc) {
     });
     // update or insert certificate chain
     await pcsCertificatesDao.upsertTcbInfoIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_TCB_INFO_ISSUER_CHAIN
-      )
+      pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN.toLowerCase()]
     );
   });
 
@@ -320,12 +305,10 @@ export async function getQeIdentityFromPCS() {
   }
 
   let result = {};
-  result[
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  ] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  );
+  result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+    pck_server_res.headers[
+      Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+    ];
   result['qeid'] = pck_server_res.rawBody;
 
   await sequelize.transaction(async (t) => {
@@ -333,10 +316,9 @@ export async function getQeIdentityFromPCS() {
     await qeidentityDao.upsertQeIdentity(pck_server_res.rawBody);
     // update or insert certificate chain
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+      pck_server_res.headers[
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+      ]
     );
   });
 
@@ -351,12 +333,10 @@ export async function getQveIdentityFromPCS() {
   }
 
   let result = {};
-  result[
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  ] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  );
+  result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+    pck_server_res.headers[
+      Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+    ];
   result['qveid'] = pck_server_res.rawBody;
 
   await sequelize.transaction(async (t) => {
@@ -364,10 +344,9 @@ export async function getQveIdentityFromPCS() {
     await qveidentityDao.upsertQveIdentity(pck_server_res.rawBody);
     // update or insert certificate chain
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+      pck_server_res.headers[
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+      ]
     );
   });
 
@@ -382,10 +361,9 @@ export async function getRootCACrlFromPCS(rootca) {
       if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
         // update certificates
         await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-          pcsClient.getHeaderValue(
-            pck_server_res.headers,
-            Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-          )
+          pck_server_res.headers[
+            Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+          ]
         );
         // Root cert should be cached now, query DB again
         rootca = await pcsCertificatesDao.getCertificateById(

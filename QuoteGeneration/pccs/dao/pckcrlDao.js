@@ -68,10 +68,6 @@ export async function getAllPckCrls() {
 
 //Update or Insert a PCK CRL
 export async function upsertPckCrl(ca, crl) {
-  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
-
   return await PckCrl.upsert({
     ca: ca,
     pck_crl: crl,

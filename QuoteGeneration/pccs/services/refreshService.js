@@ -53,10 +53,9 @@ async function refresh_qe_identity() {
     // Then refresh cache DB
     await qeidentityDao.upsertQeIdentity(pck_server_res.rawBody);
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+      pck_server_res.headers[
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+      ]
     );
   } else {
     throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
@@ -70,10 +69,9 @@ async function refresh_qve_identity() {
     // Then refresh cache DB
     await qveidentityDao.upsertQveIdentity(pck_server_res.rawBody);
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+      pck_server_res.headers[
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN.toLowerCase()
+      ]
     );
   } else {
     throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
@@ -116,7 +114,7 @@ async function refresh_all_pckcerts(fmspc_array) {
       if (platform.platform_manifest) {
         pck_server_res = await pcsClient.getCertsWithManifest(
           platform.platform_manifest,
-          platformTcb.pce_id
+          platformTcb.pceid
         );
       } else {
         pck_server_res = await pcsClient.getCerts(
@@ -130,10 +128,10 @@ async function refresh_all_pckcerts(fmspc_array) {
         throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
       }
 
-      pck_certchain = pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN
-      );
+      pck_certchain =
+        pck_server_res.headers[
+          Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN.toLowerCase()
+        ];
 
       // Parse the response body
       pckcerts = JSON.parse(pck_server_res.body);
@@ -142,15 +140,12 @@ async function refresh_all_pckcerts(fmspc_array) {
       }
 
       // Get fmspc and ca type from response header
-      fmspc = pcsClient
-        .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
-        .toUpperCase();
-      ca_type = pcsClient
-        .getHeaderValue(
-          pck_server_res.headers,
-          Constants.SGX_PCK_CERTIFICATE_CA_TYPE
-        )
-        .toUpperCase();
+      fmspc = pck_server_res.headers[
+        Constants.SGX_FMSPC.toLowerCase()
+      ];
+      ca_type = pck_server_res.headers[
+        Constants.SGX_PCK_CERTIFICATE_CA_TYPE.toLowerCase()
+      ];
 
       if (fmspc == null || ca_type == null) {
         throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
@@ -221,10 +216,7 @@ async function refresh_one_crl(ca) {
     await pckcrlDao.upsertPckCrl(ca, pck_server_res.rawBody);
     await pcsCertificatesDao.upsertPckCrlCertchain(
       ca,
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_PCK_CRL_ISSUER_CHAIN
-      )
+      pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN.toLowerCase()]
     );
   } else {
     throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
@@ -251,10 +243,7 @@ async function refresh_one_tcb(fmspc) {
     });
     // update or insert certificate chain
     await pcsCertificatesDao.upsertTcbInfoIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_TCB_INFO_ISSUER_CHAIN
-      )
+      pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN.toLowerCase()]
     );
   } else {
     throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
@@ -303,7 +292,8 @@ export async function refreshCache(type, fmspc) {
 
 export async function scheduledRefresh() {
   try {
-    if (!cachingModeManager.isRefreshable()) return;
+    if (!cachingModeManager.isRefreshable())
+      return;
 
     await sequelize.transaction(async (t) => {
       await refresh_all_crls();

@@ -32,8 +32,6 @@ import logger from './Logger.js';
 import Config from 'config';
 import Constants from '../constants/index.js';
 import { sequelize, db_sync, PcsVersion } from '../dao/models/index.js';
-import Umzug from 'umzug';
-import * as fs from 'fs';
 
 // Check the version of PCS service currently configured
 export function startup_check() {
@@ -77,56 +75,6 @@ async function test_db_status() {
   }
 }
 
-async function db_migration() {
-  const umzug = new Umzug({
-    storage: 'sequelize',
-    storageOptions: {
-      sequelize: sequelize,
-      tableName: 'umzug',
-    },
-    migrations: {
-      pattern: /\.js|\.up\.sql$/,
-      customResolver: (path) => {
-        return {
-          up: async (sequelize) => {
-            if (path.endsWith('.up.sql')) {
-              const sqls = fs.readFileSync(path, 'utf-8').split(';');
-              let queries = [];
-              for (const sql of sqls) {
-                queries.push(sequelize.query(sql));
-              }
-              return Promise.all(queries);
-            } else {
-              const migration = await import(path);
-              return migration.default.up(sequelize);
-            }
-          },
-          down: async (sequelize) => {
-            if (path.endsWith('.up.sql')) {
-              const downPath = path.replace('.up.sql', '.down.sql');
-              if (fs.existsSync(downPath)) {
-                const sqls = fs.readFileSync(downPath, 'utf-8').split(';');
-                let queries = [];
-                for (const sql of sqls) {
-                  queries.push(sequelize.query(sql));
-                }
-                return Promise.all(queries);
-              }
-            } else {
-              const migration = await import(path);
-              return migration.default.down(sequelize);
-            }
-          },
-        };
-      },
-      params: [sequelize],
-    },
-    logger: console,
-  });
-  // Auto migration from previous databases
-  await umzug.up();
-}
-
 export async function database_check() {
   try {
     await test_connection();
@@ -135,8 +83,6 @@ export async function database_check() {
 
     let db_initialized = await test_db_status();
     if (!db_initialized) {
-      // auto-migration
-      await db_migration();
       // sync database models
       await db_sync();
       // update pcs_version
@@ -144,7 +90,6 @@ export async function database_check() {
         id: 1,
         api_version: Constants.API_VERSION,
         server_addr: url.hostname,
-        db_version: Constants.DB_VERSION,
       });
       return true;
     } else {
@@ -179,8 +124,6 @@ export async function database_check() {
         );
         return false;
       }
-      // auto-migration
-      await db_migration();
       // sync database models
       await db_sync();
       return true;

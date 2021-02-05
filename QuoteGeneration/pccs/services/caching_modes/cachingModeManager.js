@@ -29,6 +29,8 @@
  *
  */
 class CachingModeManager {
+  static instance;
+
   constructor() {
     this._mode = null;
     if (this.instance) {

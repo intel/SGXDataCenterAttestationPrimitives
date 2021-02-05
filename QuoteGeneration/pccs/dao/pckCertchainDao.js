@@ -38,9 +38,6 @@ export async function upsertPckCertchain(ca) {
   if (typeof ca == 'undefined') {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
-  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
 
   return await PckCertchain.upsert({
     ca: ca,

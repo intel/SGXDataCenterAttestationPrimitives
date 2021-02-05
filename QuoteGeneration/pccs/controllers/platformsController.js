@@ -37,7 +37,7 @@ import Constants from '../constants/index.js';
 export async function postPlatforms(req, res, next) {
   try {
     // call registration service
-    await platformsRegService.registerPlatforms(req.body);
+    let platf = await platformsRegService.registerPlatforms(req.body);
 
     // send response
     res
@@ -54,15 +54,11 @@ export async function getPlatforms(req, res, next) {
     if (!req.query.source || req.query.source == 'reg') {
       // call registration service to get registered platforms
       platformsJson = await platformsRegService.getRegisteredPlatforms();
-      await platformsRegService.deleteRegisteredPlatforms(
-        Constants.PLATF_REG_NEW
-      );
+      await platformsRegService.deleteRegisteredPlatforms(Constants.PLATF_REG_NEW);
     } else if (req.query.source == 'reg_na') {
       // call registration service to get registered 'Not available' platforms
       platformsJson = await platformsRegService.getRegisteredNaPlatforms();
-      await platformsRegService.deleteRegisteredPlatforms(
-        Constants.PLATF_REG_NOT_AVAILABLE
-      );
+      await platformsRegService.deleteRegisteredPlatforms(Constants.PLATF_REG_NOT_AVAILABLE);
     } else {
       let fmspc = req.query.source;
       if (fmspc.length < 2 || fmspc[0] != '[' || fmspc[fmspc.length - 1] != ']')

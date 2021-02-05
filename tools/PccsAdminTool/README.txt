@@ -7,10 +7,10 @@ Prerequisites
     pip3 install -r requirements.txt
 
 
-Usage: ./pccsadmin.py [-h] {get,put,fetch,collect,refresh} ...
+Usage: ./pccsadmin.py [-h] {get,put,fetch} ...
 
 positional arguments:
-  {get,put,fetch,collect,refresh}
+  {get,put,fetch}
 
 optional arguments:
   -h, --help       show this help message and exit
@@ -26,7 +26,6 @@ optional arguments:
                                 The output file name for platform list; default: platform_list.json
           -s SOURCE, --source SOURCE
                                 reg - Get platforms from registration table.(default)
-                                reg_na - Get platforms whose PCK certs are currently not available from registration table.
                                 [FMSPC1,FMSPC2,...] - Get platforms from cache based on the fmspc values. [] to get all cached platforms.
           -t TOKEN, --token TOKEN
                                 Administrator token for PCCS
@@ -66,15 +65,3 @@ optional arguments:
           -o OUTPUT_FILE, --output_file OUTPUT_FILE
                                 The output json file name; default: platform_list.json
 
-5. Request PCCS to refresh certificates or collateral in cache database
-  ./pccsadmin.py refresh [-h] [-u URL] [-f fmspc] -t TOKEN
-
-  optional arguments:
-          -h, --help            show this help message and exit
-          -u URL, --url URL     The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v3/refresh
-          -f FMSPCs, --fmspc FMSPCs
-                                If this argument is not provided, then it will require PCCS to refresh quote verification collateral.
-                                all - Refresh all cached certificates.
-                                FMSPC1,FMSPC2,... - Refresh certificates of specified fmspc values.
-          -t TOKEN, --token TOKEN
-                                Administrator token for PCCS

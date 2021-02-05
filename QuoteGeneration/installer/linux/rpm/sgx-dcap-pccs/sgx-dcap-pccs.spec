@@ -99,32 +99,30 @@ echo "finished."
 echo "Installation completed successfully."
 
 %postun
-if [ $1 == 0 ]; then
-    echo -n "Uninstalling PCCS service ..."
-    if [ -d /run/systemd/system ]; then
-        PCCS_NAME=pccs.service
-        if [ -d /lib/systemd/system ]; then
-            PCCS_DEST=/lib/systemd/system/$PCCS_NAME
-        else
-            PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
-        fi
-        systemctl stop pccs || true
-        systemctl disable pccs || true
-        rm $PCCS_DEST || true
-        systemctl daemon-reload
-    elif [ -d /etc/init/ ]; then
-        PCCS_NAME=pccs.service
-        PCCS_DEST=/etc/init/$PCCS_NAME
-        rm $PCCS_DEST || true
-        /sbin/initctl reload-configuration
+echo -n "Uninstalling PCCS service ..."
+if [ -d /run/systemd/system ]; then
+    PCCS_NAME=pccs.service
+    if [ -d /lib/systemd/system ]; then
+        PCCS_DEST=/lib/systemd/system/$PCCS_NAME
+    else
+        PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
     fi
-    echo "finished."
+    systemctl stop pccs || true
+    systemctl disable pccs || true
+    rm $PCCS_DEST || true
+    systemctl daemon-reload
+elif [ -d /etc/init/ ]; then
+    PCCS_NAME=pccs.service
+    PCCS_DEST=/etc/init/$PCCS_NAME
+    rm $PCCS_DEST || true
+    /sbin/initctl reload-configuration
+fi
+echo "finished."
 
-    if [ -d %{_install_path} ]; then
-        pushd %{_install_path} &> /dev/null
-        rm -rf node_modules || true
-        popd &> /dev/null
-    fi
+if [ -d %{_install_path} ]; then
+    pushd %{_install_path} &> /dev/null
+    rm -rf node_modules || true
+    popd &> /dev/null
 fi
 
 %changelog

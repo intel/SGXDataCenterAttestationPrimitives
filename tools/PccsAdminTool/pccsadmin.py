@@ -56,15 +56,6 @@ def main():
     parser_collect.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
     parser_collect.set_defaults(func=pcs_collect)
 
-    #  subparser for refresh
-    parser_refresh = subparsers.add_parser('refresh')
-    # add optional arguments for refresh
-    parser_refresh.add_argument("-u", "--url", help="The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v3/refresh")
-    parser_refresh.add_argument("-f", "--fmspc", help="Only refresh certificates for specified FMSPCs. Format: [FMSPC1, FMSPC2, ..., FMSPCn]")
-    # add mandatory arguments for refresh
-    parser_refresh.add_argument("-t", "--token", required=True, help="Administrator token")
-    parser_refresh.set_defaults(func=pccs_refresh)
-
     args = parser.parse_args()
     if len(args.__dict__) <= 1:
         # No arguments or subcommands were given.
@@ -347,35 +338,5 @@ def pcs_collect(args):
     except Exception as e:
         print(e)
         traceback.print_exc()
-
-def pccs_refresh(args):
-    try :
-        token = args.token
-        url = "https://localhost:8081/sgx/certification/v3/refresh"
-        if args.url:
-            url = args.url
-        fmspc = None 
-        if args.fmspc:
-            fmspc = args.fmspc
-
-        HEADERS = {'user-agent': 'pccsadmin/0.1', 
-                'admin-token': token}
-        PARAMS = {}
-        if fmspc == 'all':
-            PARAMS = {'type': 'certs',
-                      'fmspc':''}
-        elif fmspc != None:
-            PARAMS = {'type': 'certs',
-                      'fmspc': fmspc}
-        r = requests.post(url = url, headers=HEADERS, params = PARAMS, verify=False)
-        if r.status_code == 200:
-            print("Cache data successfully refreshed.")
-        else:
-            # print error
-            print("Failed to refresh the cache database.")
-            print("\tStatus code is : %d" % r.status_code)
-            print("\tMessage : " , r.text)
-    except Exception as e:
-        print(e)
 
 main()

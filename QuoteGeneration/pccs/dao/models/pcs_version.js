@@ -29,7 +29,6 @@
  *
  */
 import Sequelize from 'sequelize';
-import Constants from '../../constants/index.js';
 
 export default class PcsVersion extends Sequelize.Model {
   static init(sequelize) {
@@ -38,7 +37,6 @@ export default class PcsVersion extends Sequelize.Model {
         id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
         api_version: { type: Sequelize.DataTypes.INTEGER },
         server_addr: { type: Sequelize.DataTypes.STRING },
-        db_version: { type: Sequelize.DataTypes.INTEGER, defaultValue: Constants.DB_VERSION },
       },
       {
         tableName: 'pcs_version',

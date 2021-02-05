@@ -50,7 +50,7 @@ export async function upsertPlatformTcbs(
 // Query all platform TCBs that has the same fmspc
 export async function getPlatformTcbs(fmspc) {
   let sql;
-  if (fmspc == null || fmspc == '') {
+  if (fmspc == null) {
     sql =
       'select a.*,b.enc_ppid as enc_ppid from platform_tcbs a, platforms b ' +
       ' where a.qe_id=b.qe_id and a.pce_id=b.pce_id';
@@ -61,7 +61,7 @@ export async function getPlatformTcbs(fmspc) {
       ' where a.qe_id=b.qe_id and a.pce_id=b.pce_id and b.fmspc in(:FMSPC)';
     return await sequelize.query(sql, {
       type: sequelize.QueryTypes.SELECT,
-      replacements: { FMSPC: fmspc.toUpperCase().split(',') },
+      replacements: { FMSPC: fmspc.split(',') },
     });
   }
 }

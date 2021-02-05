@@ -24,8 +24,8 @@ case "$1" in
         PCCS_HOME=/opt/intel/sgx-dcap-pccs
         if ! id "$PCCS_USER" &>/dev/null; then
             adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
+            chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
         fi
-        chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
         if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
         then
             /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh" $PCCS_USER

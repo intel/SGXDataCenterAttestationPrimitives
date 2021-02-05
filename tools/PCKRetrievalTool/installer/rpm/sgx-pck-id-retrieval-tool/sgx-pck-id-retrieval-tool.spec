@@ -68,7 +68,7 @@ sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
 ################################################################################
 
 # Install the SGX_PCK_ID_RETRIEVE_TOOL 
-ln -s -f /opt/intel/sgx-pck-id-retrieval-tool/PCKIDRetrievalTool /usr/local/bin/PCKIDRetrievalTool
+ln -s /opt/intel/sgx-pck-id-retrieval-tool/PCKIDRetrievalTool /usr/local/bin/PCKIDRetrievalTool
 retval=$?
 
 if test $retval -ne 0; then
