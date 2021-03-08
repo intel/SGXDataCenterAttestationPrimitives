@@ -26,8 +26,11 @@ default:
 else
 
 PWD  := $(shell pwd)
+EXTRA_CFLAGS += -I$(PWD) -I$(PWD)/include -D_FORTIFY_SOURCE=2 -Wl,-z,relro,-z,now
+EXTRA_LDFLAGS := -z noexecstack
+
 default:
-	$(MAKE) -C $(KDIR) M=$(PWD) CFLAGS_MODULE="-I$(PWD) -I$(PWD)/include $(EXTRA_CFLAGS)" modules
+	$(MAKE) -C $(KDIR) M=$(PWD) LDFLAGS_MODULE="$(EXTRA_LDFLAGS)" CFLAGS_MODULE="$(EXTRA_CFLAGS)" modules
 
 endif
 endif
