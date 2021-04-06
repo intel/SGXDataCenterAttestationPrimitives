@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>DCAP Components</description>
     <dependencies>
-      <dependency id="SgxHeaders" version="2.12.101.2" />
+      <dependency id="SgxHeaders" version="2.12.100.4" />
     </dependencies>
   </metadata>
   <files>
