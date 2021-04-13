@@ -330,12 +330,12 @@ int SGX_CDECL main(int argc, char *argv[])
 
     if (argv[1] && argv[2]) {
         if (!strcmp(argv[1], "-quote")) {
-            strncpy(quote_path, argv[2], PATHSIZE);
+            strncpy(quote_path, argv[2], PATHSIZE - 1);
         }
     }
 
     if (*quote_path == '\0') {
-        strncpy(quote_path, DEFAULT_QUOTE, PATHSIZE);
+        strncpy(quote_path, DEFAULT_QUOTE, PATHSIZE - 1);
     }
 
     //read quote from file
