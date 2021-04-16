@@ -69,7 +69,7 @@ endif
 
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -l$(Uae_Library_Name) -ldl -lpthread
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -l$(Uae_Library_Name) -ldl -lpthread
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
