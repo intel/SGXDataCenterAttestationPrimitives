@@ -1,6 +1,6 @@
 
 Rem
-Rem Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+Rem Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 Rem
 Rem Redistribution and use in source and binary forms, with or without
 Rem modification, are permitted provided that the following conditions
