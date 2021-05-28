@@ -8,6 +8,10 @@ Introduction
 ------------
 This Intel(R) SGX driver package is for Intel(R) SGX DCAP and is derived from the upstream version of the SGX driver.
 
+**Note:** As of the Kernel release 5.11, the SGX patches are merged into the mainline kernel. To avoid future
+incompatibilities, it is recommended that existing solutions using this driver be transitioned to directly using
+kernel 5.11 or higher. Guidelines for the transition can be found [here](./README.kernel.md).  
+
 
 Documentation
 -------------
@@ -151,7 +155,7 @@ An enclave may set the provision bit in its attributes to be able to request pro
 
 For applications loading provisioning enclaves, the platform owner (administrator) must grant provisioning access to the app process as described below.
 
-**Note for Intel Signed Provisioning Enclaves:** The Intel(R) SGX driver before V1.41 allows Intel(R)’s provisioning enclaves to be launched without any additional permissions. But the special treatment for Intel signed enclaves is removed in the driver starting from V1.41 release to be aligned with upstream kernel changes. If you upgrade driver from versions older than 1.41 or switch to future mainline kernel with SGX support, please make sure apps loading Intel signed provisioning enclaves have the right permissions as described below. 
+**Note for Intel Signed Provisioning Enclaves:** The Intel(R) SGX driver before V1.41 allows Intel(R)’s provisioning enclaves to be launched without any additional permissions. But the special treatment for Intel signed enclaves is removed in the driver starting from V1.41 release to be aligned with the upstream kernel changes. If you upgrade driver from versions older than V1.41 or switch to the mainline kernel (5.11 or above), please make sure apps loading Intel signed provisioning enclaves have the right permissions as described below. 
 
 
 
@@ -197,6 +201,6 @@ This table lists the equivalent upstream kernel patch for each version of the dr
 | 1.34           | V29                     | NO      | NO      | NO            | YES          | YES     |
 | 1.35           | V32                     | NO      | NO      | NO            | YES          | YES     |
 | 1.36           | V36                     | NO      | NO      | NO            | YES          | YES     |
-| 1.41           | V41                     | NO      | NO      | NO            | YES\*        | YES     |
+| 1.41           | V41, kernel 5.11        | NO      | NO      | NO            | YES\*        | YES     |
 
 \* Requires updated [udev rules](./10-sgx.rules)
