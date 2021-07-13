@@ -122,9 +122,6 @@ export async function getPckCertFromPCS(
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
-  // Make PEM certificates array
-  let pem_certs = pckcerts_valid.map((o) => unescape(o.cert));
-
   // Get fmspc and ca type from response header
   const fmspc = pcsClient
     .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
@@ -199,6 +196,7 @@ export async function getPckCertFromPCS(
     await pcsCertificatesDao.upsertTcbInfoIssuerChain(tcbinfo_issuer_chain);
 
     // For all cached TCB levels, re-run PCK cert selection tool
+    let pem_certs = pckcerts_valid.map((o) => unescape(o.cert));
     for (const platform_tcb of cached_platform_tcbs) {
       let cert_index = pckLibWrapper.pck_cert_select(
         platform_tcb.cpu_svn,
@@ -219,34 +217,33 @@ export async function getPckCertFromPCS(
         pckcerts_valid[cert_index].tcbm
       );
     }
-  });
-
-  if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
-  // get the best cert with PCKCertSelectionTool for this raw TCB
-  let cert_index = pckLibWrapper.pck_cert_select(
-    cpusvn,
-    pcesvn,
-    pceid,
-    tcbinfo_str,
-    pem_certs,
-    pem_certs.length
-  );
-  if (cert_index == -1) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  // create an entry for the new TCB level unless it's LAZY mode and
-  // there are 'Not available' certificates for some TCB levels
-  let hasNotAvailableCerts = pckcerts_not_available.length > 0;
-  if (cachingModeManager.needUpdatePlatformTcbs(hasNotAvailableCerts)) {
-    await platformTcbsDao.upsertPlatformTcbs(
-      qeid,
-      pceid,
+    if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
+    // get the best cert with PCKCertSelectionTool for this raw TCB
+    let cert_index = pckLibWrapper.pck_cert_select(
       cpusvn,
       pcesvn,
-      pckcerts_valid[cert_index].tcbm
-    );  
-  }
+      pceid,
+      tcbinfo_str,
+      pem_certs,
+      pem_certs.length
+    );
+    if (cert_index == -1) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+    }
+
+    // create an entry for the new TCB level unless it's LAZY mode and
+    // there are 'Not available' certificates for some TCB levels
+    let hasNotAvailableCerts = pckcerts_not_available.length > 0;
+    if (cachingModeManager.needUpdatePlatformTcbs(hasNotAvailableCerts)) {
+      await platformTcbsDao.upsertPlatformTcbs(
+        qeid,
+        pceid,
+        cpusvn,
+        pcesvn,
+        pckcerts_valid[cert_index].tcbm
+      );  
+    }
+  });
 
   result[Constants.SGX_TCBM] = pckcerts_valid[cert_index].tcbm;
   result[Constants.SGX_FMSPC] = fmspc;
