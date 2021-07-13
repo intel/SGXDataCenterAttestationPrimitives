@@ -78,7 +78,8 @@ RELEASE_FLAGS := -m64 -O2
 C_FLAGS	:= -DLINUX -fPIC -Werror $(APP_INCLUDE_PATHS) 
 
 # link flags, link CPUSVNCompare library
-LINK_FLAGS := -L$(BIN_DIR) -l$(LIB_NAME)
+LINK_FLAGS := -Wl,-rpath,${ORIGIN} -L$(BIN_DIR) -l$(LIB_NAME)
+LINK_FLAGS := -Wl,-rpath=. -L$(BIN_DIR) -l$(LIB_NAME)
 
 # debug/release switch
 ifeq ($(DEBUG), 1)

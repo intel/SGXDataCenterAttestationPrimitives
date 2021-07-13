@@ -30,6 +30,8 @@ Rem OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Rem
 Rem
 
+setlocal enabledelayedexpansion
+
 set PFM=%1
 set CFG=%2
 
@@ -37,15 +39,17 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1i
+set openssl_ver_name=openssl-1.1.1k
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.12_1.1.1i
-set sgxssl_ver=win_2.12_1.1.1i
+set sgxssl_ver_name=win_2.13_1.1.1k
+set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
+
 set server_url_path=https://www.openssl.org/source/
+
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=09813f1d31fa0a7a6412925f4c1c88f8f530e05d5bf6bd23fd90b102958135cf
-set openssl_chksum=ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46
+set sgxssl_chksum=9DA2BBEEDA00F5F65A1D624F55F96E222EA84AE483411264ABC2DB73E1ABE704
+set openssl_chksum=892a0875b9872acd04a9fde79b1f943075d5ea162415de3047c327df33fbaee5
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -53,14 +57,29 @@ if not exist %sgxssl_dir% (
 
 if not exist %build_script% (
 	call powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;Invoke-WebRequest -URI %sgxssl_github_archive%/%sgxssl_ver_name%.zip -OutFile %sgxssl_dir%\%sgxssl_ver_name%.zip"
-	7z.exe x -y %sgxssl_dir%\%sgxssl_ver_name%.zip -o%sgxssl_dir%
+	call powershell -Command "$sgxsslfilehash = Get-FileHash %sgxssl_dir%\%sgxssl_ver_name%.zip; Write-Output $sgxsslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_sgxssl.txt -encoding ascii"
+	findstr /i %sgxssl_chksum% %sgxssl_dir%\check_sum_sgxssl.txt>nul
+	if !errorlevel! NEQ 0  (
+	echo "File %sgxssl_dir%\%sgxssl_ver_name%.zip checksum failure"
+	del /f /q %sgxssl_dir%\%sgxssl_ver_name%.zip
+	exit /b 1
+	)
+	call powershell -Command "Expand-Archive -LiteralPath '%sgxssl_dir%\%sgxssl_ver_name%.zip' -DestinationPath %sgxssl_dir%"
     xcopy /y "%sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%" %sgxssl_dir% /e
 	del /f /q %sgxssl_dir%\%sgxssl_ver_name%.zip
 	rmdir /s /q %sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%
 )
 
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
-	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+@Rem	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+	call powershell -Command " [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}; (New-Object Net.WebClient).DownloadFile('%full_openssl_url%', '%openssl_out_dir%\%openssl_ver_name%.tar.gz'); exit" > nul
+)
+call powershell -Command " $opensslfilehash = Get-FileHash %openssl_out_dir%\%openssl_ver_name%.tar.gz; Write-Output $opensslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_openssl.txt -encoding ascii"
+findstr /i %openssl_chksum% %sgxssl_dir%\check_sum_openssl.txt>nul
+if !errorlevel! NEQ 0  (
+	echo "File %openssl_out_dir%\%openssl_ver_name%.tar.gz checksum failure"
+	del /f /q %openssl_out_dir%\%openssl_ver_name%.tar.gz
+	exit /b 1
 )
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (

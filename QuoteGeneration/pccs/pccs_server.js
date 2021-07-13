@@ -75,6 +75,11 @@ appUtil.database_check().then((db_init_ok) => {
     logger.endAndExitProcess();
   }
 
+  // Change storage file permission if DB is sqlite
+  if (Config.get('DB_CONFIG') == 'sqlite') {
+    fs.chmod(Config.get('sqlite').options.storage, 0o640, ()=>{});
+  }
+
   // logger
   app.use(morgan('combined', { stream: logger.stream }));
 

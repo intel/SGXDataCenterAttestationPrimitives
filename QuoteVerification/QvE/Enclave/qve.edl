@@ -37,9 +37,10 @@ enclave {
 #define __QL_QV_COLLATERAL_T
 struct _sgx_ql_qve_collateral_t
 {
-    uint32_t version;                       ///< version = 1.  PCK Cert chain is in
-                                            ///< the Quote thus there is no need to
-                                            ///< provide it in the collateral.
+    uint32_t version;                       ///< The version of PCCS/PCS API used to retrieve verification collateral.
+                                            ///< For V1 and V2 APIs, the ‘version’ field with have a value of 1.
+                                            ///< For V3 APIs, the ‘version’ field will have the value of 3
+
     [size = pck_crl_issuer_chain_size] char *pck_crl_issuer_chain;             ///< concatenated PEM format - the order
                                             ///< as it is returned from PCS (root ca +
                                             ///< signing cert)
@@ -76,6 +77,11 @@ struct _sgx_ql_qve_collateral_t
 	include "sgx_qve_def.h"
 
     from "sgx_tstdc.edl" import *;
+
+#ifdef __GNUC__
+    from "sgx_pthread.edl" import *;
+#endif
+
     /* Import ECALL/OCALL from sub-directory EDLs.
      *  [from]: specifies the location of EDL file.
      *  [import]: specifies the functions to import,

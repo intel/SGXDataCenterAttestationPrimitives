@@ -239,6 +239,26 @@ quote3_error_t sgx_set_qpl_path(const char* p_path)
     return SGX_QL_SUCCESS;
 }
 
+void sgx_ql_logging_callback(sgx_ql_log_level_t level, const char* message)
+{
+#ifndef _MSC_VER
+    if (level == SGX_QL_LOG_ERROR) {
+        sgx_proc_log_report(1, message);
+    }
+    else if (level == SGX_QL_LOG_INFO) {
+        sgx_proc_log_report(3, message);
+    }
+#else
+    if (level == SGX_QL_LOG_ERROR) {
+        sgx_proc_log_report(1, 1, message);
+    }
+    else if (level == SGX_QL_LOG_INFO) {
+        sgx_proc_log_report(1, 3, message);
+    }
+#endif
+}
+
+
 #ifndef _MSC_VER
 void * get_qpl_handle()
 {
@@ -262,6 +282,17 @@ void * get_qpl_handle()
                 SE_PROD_LOG("Cannot open Quote Provider Library %s and %s\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
                         SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
             }
+        }
+    }
+    if (handle != NULL) {
+        char *error;
+        sgx_ql_set_logging_callback_t ql_set_logging_callback = (sgx_ql_set_logging_callback_t)dlsym(handle, "sgx_ql_set_logging_callback");
+        if ((error = dlerror()) == NULL && ql_set_logging_callback != NULL)  {
+            // Set logging function detected
+            ql_set_logging_callback(sgx_ql_logging_callback);
+        }
+        else {
+            SE_PROD_LOG("Failed to set logging callback for the quote provider library.");
         }
     }
     return handle;
@@ -408,6 +439,14 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
     if (handle != NULL) {
+        sgx_ql_set_logging_callback_t ql_set_logging_callback = (sgx_ql_set_logging_callback_t)GetProcAddress(handle, "sgx_ql_set_logging_callback");
+        if (NULL != ql_set_logging_callback) {
+            ql_set_logging_callback(sgx_ql_logging_callback);
+        }
+        else {
+            SE_PROD_LOG("Failed to set logging callback for the quote provider library.");
+        }
+
         SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_get_quote_config = (sgx_get_quote_config_func_t)GetProcAddress(handle, "sgx_ql_get_quote_config");
         p_sgx_free_quote_config = (sgx_free_quote_config_func_t)GetProcAddress(handle, "sgx_ql_free_quote_config");

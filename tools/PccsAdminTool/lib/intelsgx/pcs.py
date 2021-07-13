@@ -9,6 +9,7 @@ from cryptography.x509.oid import ExtensionOID
 from OpenSSL import crypto
 from pypac import PACSession
 from platform import system
+from lib.intelsgx.credential import Credentials
 
 certBegin= '-----BEGIN CERTIFICATE-----'
 certEnd= '-----END CERTIFICATE-----'
@@ -321,6 +322,8 @@ class PCS:
         response= self._get_request(url, True)
         if response.status_code != 200:
             print(str(response.content, 'utf-8'))
+            if response.status_code == 401:
+                Credentials().set_pcs_api_key('')   #reset ApiKey
             return None
 
         # Verify expected headers
@@ -394,6 +397,8 @@ class PCS:
 
         if response.status_code != 200:
             print(str(response.content, 'utf-8'))
+            if response.status_code == 401:
+                Credentials().set_pcs_api_key('')   #reset ApiKey
             return None
 
         # Verify expected headers

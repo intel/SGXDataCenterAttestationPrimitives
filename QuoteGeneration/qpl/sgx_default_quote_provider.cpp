@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <cstdarg>
 #include "se_memcpy.h"
 #include "sgx_default_quote_provider.h"
 #include "sgx_default_qcnl_wrapper.h"
@@ -48,8 +49,31 @@ using namespace std;
 #define __unaligned
 #endif
 
+static sgx_ql_logging_callback_t logger_callback = nullptr;
+
+void log(sgx_ql_log_level_t level, const char* fmt, ...)
+{
+    if (logger_callback != nullptr)
+    {
+        char message[512];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(message, sizeof(message), fmt, args);
+        va_end(args);
+
+        // ensure buf is always null-terminated
+        message[sizeof(message) - 1] = 0;
+
+        logger_callback(level, message);
+    }
+}
+
 static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret)
 {
+    if (ret != SGX_QCNL_SUCCESS) {
+        log(SGX_QL_LOG_ERROR, "[QPL] QCNL returns failure. Error code is 0x%04x\n", ret);
+    }
+
     switch (ret){
         case SGX_QCNL_SUCCESS:
             return SGX_QL_SUCCESS;
@@ -89,8 +113,10 @@ quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_cert_id, sg
 {
     sgx_qcnl_error_t ret = sgx_qcnl_get_pck_cert_chain(p_cert_id, pp_quote_config);
 
-    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA)
+    if (ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA) {
+        log(SGX_QL_LOG_ERROR, "[QPL] No certificate data for this platform.\n");
         return SGX_QL_NO_PLATFORM_CERT_DATA;
+    }
     else
         return qcnl_error_to_ql_error(ret);
 }
@@ -110,15 +136,18 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
     string s0((char*)in_buf, in_buf_size);
     size_t pos = s0.find(delimiter);
     if (pos == string::npos) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Invalid certificate chain.\n");
         return SGX_QL_MESSAGE_ERROR;
     }
 
     *out_buf1_size = (uint32_t)(pos+1);   // one extra byte for NULL terminator
     *out_buf1 = reinterpret_cast<char*>(malloc(*out_buf1_size));
     if (!(*out_buf1)) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
     if (memcpy_s(*out_buf1, pos, s0.c_str(), pos) != 0) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
         free(*out_buf1);
         *out_buf1 = NULL;
         return SGX_QL_ERROR_UNEXPECTED;
@@ -128,11 +157,13 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
     *out_buf2_size = (uint32_t)(in_buf_size - pos +1);   // one extra byte for NULL terminator
     *out_buf2 = reinterpret_cast<char*>(malloc(*out_buf2_size));
     if (!(*out_buf2)) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
         free(*out_buf1);
         *out_buf1 = NULL;
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
     if (memcpy_s(*out_buf2, *out_buf2_size - 1, s0.substr(pos).c_str(), in_buf_size - pos)  != 0) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
         free(*out_buf1);
         free(*out_buf2);
         *out_buf1 = NULL;
@@ -147,12 +178,15 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
 quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
                           sgx_ql_qve_collateral_t **pp_quote_collateral)
 {
-    if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL)
+    if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Invalid parameter.\n");
         return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
 
     // Allocate buffer
     *pp_quote_collateral = (sgx_ql_qve_collateral_t*)malloc(sizeof(sgx_ql_qve_collateral_t));
     if (!(*pp_quote_collateral)) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
     memset(*pp_quote_collateral, 0, sizeof(sgx_ql_qve_collateral_t));
@@ -173,6 +207,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         // Set version
         int api_version = sgx_qcnl_get_api_version();
         if (api_version == 0) {
+            log(SGX_QL_LOG_ERROR, "[QPL] The URL configured for QCNL has an unknown API version.\n");
             return SGX_QL_UNKNOWN_API_VERSION;
         }
         else if (api_version == 2) {
@@ -186,6 +221,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         // Set PCK CRL and certchain
         qcnl_ret = sgx_qcnl_get_pck_crl_chain(pck_ca, (uint16_t)strnlen(pck_ca, USHRT_MAX), &p_pck_crl_chain, &pck_crl_chain_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get PCK CRL and certchain : %04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
@@ -193,12 +229,14 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         ret = split_buffer(p_pck_crl_chain, pck_crl_chain_size, &(*pp_quote_collateral)->pck_crl, &(*pp_quote_collateral)->pck_crl_size,
              &(*pp_quote_collateral)->pck_crl_issuer_chain, &(*pp_quote_collateral)->pck_crl_issuer_chain_size);
         if (ret != SGX_QL_SUCCESS){
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to process PCK CRL.\n");
             break;
         }
 
         // Set TCBInfo and certchain
         qcnl_ret = sgx_qcnl_get_tcbinfo(reinterpret_cast<const char*>(fmspc), fmspc_size, &p_tcbinfo, &tcbinfo_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get TCBInfo : %04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
@@ -206,12 +244,14 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         ret = split_buffer(p_tcbinfo, tcbinfo_size, &(*pp_quote_collateral)->tcb_info, &(*pp_quote_collateral)->tcb_info_size,
              &(*pp_quote_collateral)->tcb_info_issuer_chain, &(*pp_quote_collateral)->tcb_info_issuer_chain_size);
         if (ret != SGX_QL_SUCCESS){
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to process TCBInfo.\n");
             break;
         }
 
         // Set QEIdentity and certchain
         qcnl_ret = sgx_qcnl_get_qe_identity(0, &p_qe_identity, &qe_identity_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : %04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
@@ -219,23 +259,27 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
         ret = split_buffer(p_qe_identity, qe_identity_size, &(*pp_quote_collateral)->qe_identity, &(*pp_quote_collateral)->qe_identity_size,
              &(*pp_quote_collateral)->qe_identity_issuer_chain, &(*pp_quote_collateral)->qe_identity_issuer_chain_size);
         if (ret != SGX_QL_SUCCESS){
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to process QE identity.\n");
             break;
         }
 
         // Set Root CA CRL
         qcnl_ret = sgx_qcnl_get_root_ca_crl(&p_root_ca_crl, &root_ca_crl_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root CA CRL : %04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
         (*pp_quote_collateral)->root_ca_crl_size = root_ca_crl_size + 1;
         (*pp_quote_collateral)->root_ca_crl = reinterpret_cast<char*>(malloc((*pp_quote_collateral)->root_ca_crl_size));
         if (!(*pp_quote_collateral)->root_ca_crl) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
             ret = SGX_QL_ERROR_OUT_OF_MEMORY;
             break;
         }
         if (memcpy_s((*pp_quote_collateral)->root_ca_crl, (*pp_quote_collateral)->root_ca_crl_size,
                      p_root_ca_crl, root_ca_crl_size) != 0) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
             ret = SGX_QL_ERROR_UNEXPECTED;
             break;
         }
@@ -326,5 +370,11 @@ quote3_error_t sgx_ql_free_root_ca_crl (uint8_t *p_root_ca_crl)
 {
     sgx_qcnl_free_root_ca_crl(p_root_ca_crl);
 
+    return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger)
+{
+    logger_callback = logger;
     return SGX_QL_SUCCESS;
 }

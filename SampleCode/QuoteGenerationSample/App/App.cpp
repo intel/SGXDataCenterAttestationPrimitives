@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
     }
     printf("succeed!");
 
-    p_quote = (_sgx_quote3_t*)p_quote_buffer;
+    p_quote = (sgx_quote3_t*)p_quote_buffer;
     p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
     p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
     p_cert_data = (sgx_ql_certification_data_t *)((uint8_t *)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);

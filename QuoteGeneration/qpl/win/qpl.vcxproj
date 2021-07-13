@@ -98,6 +98,8 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../qcnl/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -119,6 +121,8 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../qcnl/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -142,6 +146,7 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../qcnl/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -167,6 +172,7 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../qcnl/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

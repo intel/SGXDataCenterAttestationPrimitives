@@ -33,6 +33,7 @@
 #include "ByteOperands.h"
 
 #include <algorithm>
+#include <iterator>
 #include "QuoteConstants.h"
 
 namespace intel { namespace sgx { namespace dcap {

@@ -50,14 +50,26 @@
 
 using namespace std;
 
-#define MAX_URL_LENGTH  2083
-#define QE3_ID_SIZE     16
-#define ENC_PPID_SIZE   384
-#define CPUSVN_SIZE     16
-#define PCESVN_SIZE     2
-#define PCEID_SIZE      2
-#define FMSPC_SIZE      6
-#define PLATFORM_MANIFEST_SIZE 53000
+static constexpr char CA_PLATFORM[] = "platform";
+static constexpr char CA_PROCESSOR[] = "processor";
+static constexpr int MAX_URL_LENGTH = 2083;
+static constexpr int QE3_ID_SIZE = 16;
+static constexpr int ENC_PPID_SIZE = 384;
+static constexpr int CPUSVN_SIZE = 16;
+static constexpr int PCESVN_SIZE = 2;
+static constexpr int PCEID_SIZE = 2;
+static constexpr int FMSPC_SIZE = 6;
+static constexpr int PLATFORM_MANIFEST_SIZE = 53000;
+
+namespace headers {
+    constexpr char PCK_CERT_ISSUER_CHAIN[] = "sgx-pck-certificate-issuer-chain";
+    constexpr char CRL_ISSUER_CHAIN[] = "sgx-pck-crl-issuer-chain";
+    constexpr char SGX_TCB_INFO_ISSUER_CHAIN[] = "sgx-tcb-info-issuer-chain";
+    constexpr char TCB_INFO_ISSUER_CHAIN[] = "tcb-info-issuer-chain";
+    constexpr char SGX_TCBM[] = "sgx-tcbm";
+    constexpr char ENCLAVE_ID_ISSUER_CHAIN[] = "sgx-enclave-identity-issuer-chain";
+    constexpr char REQUEST_ID[] = "request-id";
+}
 
 // Default URL for PCCS server if configuration file doesn't exist
 extern char server_url[MAX_URL_LENGTH];
@@ -335,13 +347,13 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-tcbm");
+        it = header_map.find(headers::SGX_TCBM);
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
         }
         string tcbm = it->second;
-        it = header_map.find("sgx-pck-certificate-issuer-chain");
+        it = header_map.find(headers::PCK_CERT_ISSUER_CHAIN);
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
@@ -451,16 +463,11 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
                                           uint16_t *p_crl_chain_size)
 {
     // Check input parameters
+    (void)ca_size; // UNUSED
     if (p_crl_chain == NULL || p_crl_chain_size == NULL) {
         return SGX_QCNL_INVALID_PARAMETER;
     }
-    if (ca == NULL || (ca_size != 8 && ca_size != 9)) {
-        return SGX_QCNL_INVALID_PARAMETER;
-    }
-    if (ca_size == 8 && strncmp(ca, "platform", ca_size) != 0) {
-        return SGX_QCNL_INVALID_PARAMETER;
-    }
-    if (ca_size == 9 && strncmp(ca, "processor", ca_size) != 0) {
+    if (ca == NULL || (strcmp(ca, CA_PLATFORM) != 0 && strcmp(ca, CA_PROCESSOR) != 0)) {
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
@@ -485,7 +492,7 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char* ca,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-pck-crl-issuer-chain");
+        it = header_map.find(headers::CRL_ISSUER_CHAIN);
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
@@ -594,10 +601,13 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char* fmspc,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-tcb-info-issuer-chain");
+        it = header_map.find(headers::SGX_TCB_INFO_ISSUER_CHAIN);
         if (it == header_map.end()) {
-            ret = SGX_QCNL_MSG_ERROR;
-            break;
+            it = header_map.find(headers::TCB_INFO_ISSUER_CHAIN);
+            if (it == header_map.end()) {
+                ret = SGX_QCNL_MSG_ERROR;
+                break;
+            }
         }
         string certchain = it->second;
         certchain = unescape(certchain);
@@ -693,7 +703,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-enclave-identity-issuer-chain");
+        it = header_map.find(headers::ENCLAVE_ID_ISSUER_CHAIN);
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;
@@ -798,7 +808,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity,
         map<string,string> header_map;
         map<string, string>::const_iterator it;
         http_header_to_map(resp_header, header_size, header_map);
-        it = header_map.find("sgx-enclave-identity-issuer-chain");
+        it = header_map.find(headers::ENCLAVE_ID_ISSUER_CHAIN);
         if (it == header_map.end()) {
             ret = SGX_QCNL_MSG_ERROR;
             break;

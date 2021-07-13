@@ -67,8 +67,9 @@ if [ ! $(getent group $PCCS_USER) ]; then
 fi
 if ! id "$PCCS_USER" &>/dev/null; then
     adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
-    chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
 fi
+chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
+chmod 640 $PCCS_HOME/config/default.json
 #Install PCCS as system service
 echo -n "Installing PCCS service ..."
 if [ -d /run/systemd/system ]; then

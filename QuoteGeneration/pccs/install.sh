@@ -178,6 +178,15 @@ do
         read -s -p "Set PCCS server administrator password:" admintoken1
         printf "\n"
     done
+    
+    # check password strength
+    result="$(cracklib-check <<<"$admintoken1")"
+    okay="$(awk -F': ' '{ print $NF}' <<<"$result")"
+    if [[ "$okay" != "OK" ]]; then
+        echo -e "${RED}The password is too weak. Please try again.${NC}"
+        admintoken1=""
+        continue
+    fi
 
     while test "$admintoken2" == ""
     do
@@ -208,6 +217,15 @@ do
         read -s -p "Set PCCS server user password:" usertoken1
         printf "\n"
     done
+
+    # check password strength
+    result="$(cracklib-check <<<"$usertoken1")"
+    okay="$(awk -F': ' '{ print $NF}' <<<"$result")"
+    if [[ "$okay" != "OK" ]]; then
+        echo -e "${RED}The password is too weak. Please try again.${NC}"
+        usertoken1=""
+        continue
+    fi
 
     while test "$usertoken2" == ""
     do

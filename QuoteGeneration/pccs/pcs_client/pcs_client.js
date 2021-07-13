@@ -53,7 +53,16 @@ if (Config.has('proxy') && Config.get('proxy')) {
 async function do_request(url, options) {
   try {
     logger.debug(url);
+    // hide API KEY from log
+    let temp_key = null;
+    if (('headers' in options) && ('Ocp-Apim-Subscription-Key' in options.headers)) {
+      temp_key = options.headers['Ocp-Apim-Subscription-Key'];
+      options.headers['Ocp-Apim-Subscription-Key'] = temp_key.substr(0, 5) + '***';
+    }
     logger.debug(JSON.stringify(options));
+    if (temp_key) {
+      options.headers['Ocp-Apim-Subscription-Key'] = temp_key;
+    }
 
     // global opitons ( proxy, timeout, etc)
     options.timeout = HTTP_TIMEOUT;

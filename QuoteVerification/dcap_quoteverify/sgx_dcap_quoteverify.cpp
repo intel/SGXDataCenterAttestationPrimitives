@@ -194,6 +194,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
             }
             return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
         }
+
         do
         {
             SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QvE. %s\n", qve_enclave_path);
@@ -204,9 +205,9 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
                     &launch_token_updated,
                     p_qve_eid,
                     p_qve_attributes);
-                if (SGX_SUCCESS != sgx_status)
+                if (SGX_SUCCESS == sgx_status)
                 {
-                    SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                    break;
                 }
             }
             else
@@ -214,18 +215,17 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
 
             // Retry in case there was a power transition that resulted is losing the enclave.
         } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
+
         if (sgx_status != SGX_SUCCESS)
         {
             rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
             if (rc != 1)
             {
                 SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
-                return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
+                return SGX_ERROR_UNEXPECTED;
             }
-            if (sgx_status == SGX_ERROR_OUT_OF_EPC)
-                return SGX_ERROR_OUT_OF_EPC;
-            else
-                return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
+
+            return sgx_status;
         }
         g_qve_status.m_qve_eid = *p_qve_eid;
         memcpy_s(&g_qve_status.m_qve_attributes, sizeof(sgx_misc_attribute_t), p_qve_attributes, sizeof(sgx_misc_attribute_t));
@@ -370,10 +370,11 @@ quote3_error_t sgx_qv_verify_quote(
             load_ret = initialize_enclave(&qve_eid);
             if (load_ret != SGX_SUCCESS) {
                 if (load_ret == SGX_ERROR_FEATURE_NOT_SUPPORTED) {
+                    SE_TRACE(SE_TRACE_ERROR, "Error, cannot load SGX PSW libs in [%s], SGX error:%04x.\n", __FUNCTION__, load_ret);
                     qve_ret = SGX_QL_PSW_NOT_AVAILABLE;
                 }
                 else {
-                    SE_TRACE(SE_TRACE_ERROR, "Error, failed to load QvE.\n");
+                    SE_TRACE(SE_TRACE_ERROR, "Error, failed to load QvE in [%s], SGX error:%04x.\n", __FUNCTION__, load_ret);
                     qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
                 }
                 break;
@@ -521,10 +522,13 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
         load_ret = initialize_enclave(&qve_eid);
         if (load_ret != SGX_SUCCESS) {
             if (load_ret == SGX_ERROR_FEATURE_NOT_SUPPORTED) {
+                SE_TRACE(SE_TRACE_DEBUG, "Cannot load SGX PSW libs in [%s], SGX error:%04x.\n", __FUNCTION__, load_ret);
                 qve_ret = SGX_QL_PSW_NOT_AVAILABLE;
             }
             else {
-                SE_TRACE(SE_TRACE_ERROR, "Error, failed to load QvE.\n");
+                //user may execute quote verfication on non sgx capable system
+                //failed to load QvE is not a critical error in this case
+                SE_TRACE(SE_TRACE_DEBUG, "Failed to load QvE in [%s], SGX error:%04x. It's not a critial error in non-SGX environment.\n", __FUNCTION__, load_ret);
                 qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
             }
             break;
@@ -541,7 +545,7 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
             SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_qve_get_quote_supplemental_data_version successfully returned.\n");
         }
         else {
-            SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_version failed: 0x%04x\n", qve_ret);
+            SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_version ecall return: 0x%04x, function return: 0x%04x\n", ecall_ret, qve_ret);
             trusted_version = 0;
             break;
         }
@@ -551,7 +555,7 @@ quote3_error_t sgx_qv_get_quote_supplemental_data_size(
             SE_TRACE(SE_TRACE_DEBUG, "Info: sgx_qve_get_quote_supplemental_data_size successfully returned.\n");
         }
         else {
-            SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_size failed: 0x%04x\n", qve_ret);
+            SE_TRACE(SE_TRACE_DEBUG, "Error: sgx_qve_get_quote_supplemental_data_size ecall return: 0x%04x, function return: 0x%04x\n", ecall_ret, qve_ret);
             trusted_size = 0;
             break;
         }

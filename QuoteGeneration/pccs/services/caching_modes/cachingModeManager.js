@@ -104,6 +104,10 @@ class CachingModeManager {
       pckcerts_not_available
     );
   }
+
+  needUpdatePlatformTcbs(hasNotAvailableCerts) {
+    return this._mode.needUpdatePlatformTcbs(hasNotAvailableCerts);
+  }
 }
 
 export const cachingModeManager = new CachingModeManager();

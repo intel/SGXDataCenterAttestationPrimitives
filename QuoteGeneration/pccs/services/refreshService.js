@@ -45,6 +45,7 @@ import * as pcsClient from '../pcs_client/pcs_client.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
 import { sequelize } from '../dao/models/index.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
+import X509 from '../x509/x509.js';
 
 // Refresh the QE IDENTITY table
 async function refresh_qe_identity() {
@@ -231,13 +232,35 @@ async function refresh_one_crl(ca) {
   }
 }
 
-// Refresh all CRLs in the table
-async function refresh_all_crls() {
+// Refresh all PCK CRLs
+async function refresh_pck_crls() {
   const pckcrls = await pckcrlDao.getAllPckCrls();
   for (let pckcrl of pckcrls) {
     // refresh each crl
     await refresh_one_crl(pckcrl.ca);
   }
+}
+
+// Refresh root CA CRL
+async function refresh_rootca_crl() {
+  let rootca = await pcsCertificatesDao.getCertificateById(
+    Constants.PROCESSOR_ROOT_CERT_ID
+  );
+  if (!rootca)
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+
+  const x509 = new X509();
+  if (!x509.parseCert(unescape(rootca.cert)) || !x509.cdp_uri) {
+    // Certificate is invalid
+    throw new Error('Invalid PCS certificate!');
+  }
+
+  rootca.crl = await pcsClient.getFileFromUrl(x509.cdp_uri);
+
+  await pcsCertificatesDao.upsertPcsCertificates({
+    id: rootca.id,
+    crl: rootca.crl,
+  });
 }
 
 // Refresh the TCB info for the specified fmspc value
@@ -281,10 +304,11 @@ export async function refreshCache(type, fmspc) {
     });
   } else {
     await sequelize.transaction(async (t) => {
-      await refresh_all_crls();
+      await refresh_pck_crls();
       await refresh_all_tcbs();
       await refresh_qe_identity();
       await refresh_qve_identity();
+      await refresh_rootca_crl();
     });
   }
 }
@@ -306,10 +330,11 @@ export async function scheduledRefresh() {
     if (!cachingModeManager.isRefreshable()) return;
 
     await sequelize.transaction(async (t) => {
-      await refresh_all_crls();
+      await refresh_pck_crls();
       await refresh_all_tcbs();
       await refresh_qe_identity();
       await refresh_qve_identity();
+      await refresh_rootca_crl();
     });
 
     logger.info('Scheduled cache refresh is completed successfully.');

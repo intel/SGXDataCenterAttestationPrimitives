@@ -29,7 +29,6 @@
 #
 #
 
-
 CPP_SRCS := $(wildcard src/*.cpp src/c_wrapper/*.cpp src/3rdParty/base64.cpp)
 TARGET_LIB := libmpa_network
 include ../buildenv.mk

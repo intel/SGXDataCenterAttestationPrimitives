@@ -15,5 +15,5 @@ Description: Intel(R) Software Guard Extensions Data Center Attestation Primitiv
 Package: libsgx-dcap-quote-verify-dev
 Section: devel
 Architecture: amd64
-Depends: libsgx-dcap-quote-verify (= @dep_version@), libsgx-headers (>= 2.13)
+Depends: libsgx-dcap-quote-verify (= @dep_version@), libsgx-headers (>= 2.14)
 Description: Intel(R) Software Guard Extensions Data Center Attestation Primitives For Developers

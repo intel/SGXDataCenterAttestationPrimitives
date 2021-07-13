@@ -107,6 +107,10 @@ class CachingMode {
   ) {
     // OFFLINE mode won't reach here
   }
+
+  needUpdatePlatformTcbs(hasNotAvailableCerts) {
+    // OFFLINE mode won't reach here
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -175,11 +179,11 @@ export class LazyCachingMode extends CachingMode {
     enc_ppid,
     platform_manifest,
     pckcerts_not_available
-  ) {
-    if (pckcerts_not_available.length > 0) {
-      // terminate here without updating RAW TCB to TCBm mapping
-      throw new PccsError(PccsStatus.PCCS_STATUS_CERTS_UNAVAILABLE);
-    }
+  ) {}
+
+  needUpdatePlatformTcbs(hasNotAvailableCerts) {
+    if (hasNotAvailableCerts) return false;
+    else return true;
   }
 }
 
@@ -238,6 +242,10 @@ export class ReqCachingMode extends CachingMode {
         Constants.PLATF_REG_NOT_AVAILABLE
       );
     }
+  }
+
+  needUpdatePlatformTcbs(hasNotAvailableCerts) {
+    return true;
   }
 }
 

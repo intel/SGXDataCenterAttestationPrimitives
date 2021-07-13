@@ -8,6 +8,7 @@ global:
     sgx_ql_free_qve_identity;
     sgx_ql_get_root_ca_crl;
     sgx_ql_free_root_ca_crl;
+    sgx_ql_set_logging_callback;
 local:
     *;
 };

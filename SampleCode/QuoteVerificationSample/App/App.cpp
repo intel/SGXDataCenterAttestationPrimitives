@@ -243,7 +243,12 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             p_supplemental_data = (uint8_t*)malloc(supplemental_data_size);
         }
         else {
-            printf("\tError: sgx_qv_get_quote_supplemental_data_size failed: 0x%04x\n", dcap_ret);
+            if (dcap_ret != SGX_QL_SUCCESS)
+                printf("\tError: sgx_qv_get_quote_supplemental_data_size failed: 0x%04x\n", dcap_ret);
+
+            if (supplemental_data_size != sizeof(sgx_ql_qv_supplemental_t))
+                printf("\tWarning: sgx_qv_get_quote_supplemental_data_size returned size is not same with header definition in SGX SDK, please make sure you are using same version of SGX SDK and DCAP QVL.\n");
+
             supplemental_data_size = 0;
         }
 

@@ -6,11 +6,12 @@ import requests
 import os
 import csv
 import json
-import urllib
+import re
 from lib.intelsgx.pckcert import SgxPckCertificateExtensions
-from lib.intelsgx.pcs import PCS, CertNotAvailableException
+from lib.intelsgx.pcs import PCS
+from lib.intelsgx.credential import Credentials
 from urllib.parse import unquote
-import sys, traceback
+import traceback
 
 def main():
     parser = argparse.ArgumentParser(description="Administrator tool for PCCS")
@@ -26,8 +27,6 @@ def main():
               "reg - Get platforms from registration table.(default)\n"
               "reg_na - Get platforms whose PCK certs are currently not available from registration table.\n"
             + "[FMSPC1,FMSPC2,...] - Get platforms from cache based on the fmspc values. [] to get all cached platforms.")
-    # add mandatory arguments for get
-    parser_get.add_argument("-t", "--token", required=True, help="Administrator token")
     parser_get.set_defaults(func=pccs_get)
 
     #  subparser for put
@@ -35,8 +34,6 @@ def main():
     # add optional arguments for put
     parser_put.add_argument("-u", "--url", help="The URL of the PCCS's PUT collateral API; default: https://localhost:8081/sgx/certification/v3/platformcollateral")
     parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals; default: platform_collaterals.json")
-    # add mandatory arguments for put
-    parser_put.add_argument("-t", "--token", required=True, help="Administrator token")
     parser_put.set_defaults(func=pccs_put)
 
     #  subparser for fetch
@@ -45,8 +42,6 @@ def main():
     parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v3/")
     parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.json")
     parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals; default: platform_collaterals.json")
-    # add mandatory arguments for fetch
-    parser_fetch.add_argument("-k", "--key", required=True, help="Your Intel PCS API key")
     parser_fetch.set_defaults(func=pcs_fetch)
 
     #  subparser for collect 
@@ -61,8 +56,6 @@ def main():
     # add optional arguments for refresh
     parser_refresh.add_argument("-u", "--url", help="The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v3/refresh")
     parser_refresh.add_argument("-f", "--fmspc", help="Only refresh certificates for specified FMSPCs. Format: [FMSPC1, FMSPC2, ..., FMSPCn]")
-    # add mandatory arguments for refresh
-    parser_refresh.add_argument("-t", "--token", required=True, help="Administrator token")
     parser_refresh.set_defaults(func=pccs_refresh)
 
     args = parser.parse_args()
@@ -87,7 +80,6 @@ def is_file_writable(filename):
 
 def pccs_get(args):
     try :
-        token = args.token
         url = "https://localhost:8081/sgx/certification/v3/platforms"
         if args.url:
             url = args.url
@@ -96,6 +88,10 @@ def pccs_get(args):
             output_file = args.output_file
         if args.source:
             url += '?source=' + args.source
+
+        # Get administrator token from keyring
+        credential = Credentials()
+        token = credential.get_admin_token()
 
         HEADERS = {'user-agent': 'pccsadmin/0.1', 'admin-token': token}
         PARAMS = {}
@@ -106,6 +102,9 @@ def pccs_get(args):
                 with open(output_file, "w") as ofile:
                     json.dump(r.json(), ofile)
                 print(output_file, " saved successfully.")
+        elif r.status_code == 401: #Authentication error
+            credential.set_admin_token('')
+            print("Authentication failed.")
         else:
             # print error
             print("Failed to get platforms list from the PCCS.")
@@ -116,13 +115,16 @@ def pccs_get(args):
 
 def pccs_put(args):
     try :
-        token = args.token
         url = "https://localhost:8081/sgx/certification/v3/platformcollateral"
         if args.url:
             url = args.url
         input_file = "platform_collaterals.json"
         if args.input_file:
             input_file = args.input_file
+
+        # Get administrator token from keyring
+        credential = Credentials()
+        token = credential.get_admin_token()
 
         HEADERS = {'user-agent': 'pccsadmin/0.1', 
                 'Content-Type': 'application/json', 
@@ -134,6 +136,9 @@ def pccs_put(args):
         r = requests.put(url = url, data=data, headers=HEADERS, params = PARAMS, verify=False)
         if r.status_code == 200:
             print("Collaterals uploaded successfully.")
+        elif r.status_code == 401: #Authentication error
+            credential.set_admin_token('')
+            print("Authentication failed.")
         else:
             # print error
             print("Failed to put platform collaterals to the PCCS.")
@@ -142,6 +147,16 @@ def pccs_put(args):
     except Exception as e:
         print(e)
 
+def get_api_version_from_url(url):
+    version = 4
+    regex = re.compile(r"\/v([1-9][0-9]*)\/")
+    match = regex.match(url)
+    if match is not None:
+        verstr = match.group()
+        if len(verstr) >= 4:
+            version = int(verstr[1:-2])
+    return version  
+
 def pcs_fetch(args):
     try :
         url = 'https://api.trustedservices.intel.com/sgx/certification/v3/'
@@ -149,16 +164,17 @@ def pcs_fetch(args):
 
         if args.url:
             url = args.url
-        if url.find('/v2/')!=-1 :
-            ApiVersion = 2 
-
-        apikey = args.key
+        ApiVersion = get_api_version_from_url(url)
         input_file = "platform_list.json"
         if args.input_file:
             input_file = args.input_file
         output_file = "platform_collaterals.json"
         if args.output_file:
             output_file = args.output_file
+
+        # Get PCS ApiKey from keyring
+        credential = Credentials()
+        apikey = credential.get_pcs_api_key()
 
         # prompt for overwriting output file
         if not is_file_writable(output_file):
@@ -350,13 +366,16 @@ def pcs_collect(args):
 
 def pccs_refresh(args):
     try :
-        token = args.token
         url = "https://localhost:8081/sgx/certification/v3/refresh"
         if args.url:
             url = args.url
         fmspc = None 
         if args.fmspc:
             fmspc = args.fmspc
+
+        # Get administrator token from keyring
+        credential = Credentials()
+        token = credential.get_admin_token()
 
         HEADERS = {'user-agent': 'pccsadmin/0.1', 
                 'admin-token': token}
@@ -369,7 +388,10 @@ def pccs_refresh(args):
                       'fmspc': fmspc}
         r = requests.post(url = url, headers=HEADERS, params = PARAMS, verify=False)
         if r.status_code == 200:
-            print("Cache data successfully refreshed.")
+            print("The cache database was refreshed successfully.")
+        elif r.status_code == 401: #Authentication error
+            credential.set_admin_token('')
+            print("Authentication failed.")
         else:
             # print error
             print("Failed to refresh the cache database.")
