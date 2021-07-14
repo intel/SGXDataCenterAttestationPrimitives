@@ -3,11 +3,11 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) 
 
 ## Linux
 Supported operating systems:
-* Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
-* Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
 * Ubuntu* 18.04 LTS Desktop 64bits
 * Ubuntu* 18.04 LTS Server 64bits
+* Ubuntu\* 20.04 LTS Server 64bits
 * Red Hat Enterprise Linux Server release 8.2 64bits
+* CentOS 8.2 64bits
 
 Requirements:
 * make
