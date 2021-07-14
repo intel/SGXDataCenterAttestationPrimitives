@@ -44,8 +44,6 @@ For Linux* OS
 -----------------
 ## Prerequisites
 - Ensure that you have the following required operating systems:
-  * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
-  * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
   * Ubuntu* 18.04 LTS Desktop 64bits
   * Ubuntu* 18.04 LTS Server 64bits
   * Ubuntu* 20.04 LTS Server 64bits
@@ -56,7 +54,7 @@ For Linux* OS
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.
 - Use the following command(s) to install the required tools to build the Intel(R) SGX software:
-  * On Ubuntu 16.04 and Ubuntu 18.04
+  * On Ubuntu 18.04
   ```
     $ sudo apt-get install build-essential wget python debhelper zip libcurl4-openssl-dev
   ```
@@ -114,15 +112,12 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   $ make DEBUG=1
 ```
 - To build the Intel(R) SGX DCAP Quote Generation Library and the Intel(R) SGX Default Quote Provider Library installers, enter the following command:
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ make deb_pkg
   ```
   You can find the generated installers located under `linux/installer/deb/`.
-  **Note**: On Ubuntu 18.04 and Ubuntu 20.04, the above command also generates another debug symbol package with extension name of `.ddeb` for debug purpose. On Ubuntu 16.04, if you want to keep debug symbols, you need to export an environment variable to ensure the debug symbols not stripped:
-   ```
-   $ export DEB_BUILD_OPTIONS="nostrip"
-   ```
+  **Note**: On Ubuntu 18.04 and Ubuntu 20.04, the above command also generates another debug symbol package with extension name of `.ddeb` for debug purpose.  
   **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
   ```
   $ make deb_pkg DEBUG=1
@@ -139,7 +134,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
 
 ## Install the Intel(R) SGX DCAP Quote Generation Library Package
 - Install prebuilt Intel(R) SGX common loader and other prerequisites from [01.org](https://01.org/intel-software-guard-extensions/downloads)
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ sudo dpkg -i --force-overwrite libsgx-ae-pce_*.deb libsgx-ae-qe3_*.deb libsgx-ae-qve_*.deb libsgx-enclave-common_*.deb libsgx-urts_*.deb
   ```
@@ -152,7 +147,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   **NOTE**: If you're not doing a fresh install, please replace option `-i` to `-U` to avoid some conflict errors.
 
 - For production systems, package should be installed by the following command:
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ sudo dpkg -i libsgx-dcap-ql_*.deb
   ```
@@ -162,7 +157,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
 
 - For development systems, another two packages should be installed by the following commands:
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ sudo dpkg -i libsgx-dcap-ql-dev_*.deb
     $ sudo dpkg -i libsgx-dcap-ql-dbgsym_*.deb
@@ -175,7 +170,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
 
 ## Install the Intel(R) SGX Default Quote Provider Library Package
 - For production systems, package should be installed by the following commands:
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ sudo dpkg -i libsgx-dcap-default-qpl_*.deb
     $ sudo dpkg -i sgx-dcap-pccs_*.deb
@@ -187,7 +182,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
   Please refer to /opt/intel/sgx-dcap-pccs/README.md for more details about the installation of sgx-dcap-pccs.
 - For development systems, another two packages should be installed by the following commands:
-  * On Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04:
+  * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
     $ sudo dpkg -i libsgx-dcap-default-qpl-dev*.deb libsgx-headers*.deb
     $ sudo dpkg -i libsgx-dcap-default-qpl-dbgsym*.deb
