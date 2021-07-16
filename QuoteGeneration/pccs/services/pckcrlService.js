@@ -46,7 +46,14 @@ export async function getPckCrl(ca) {
 
   // To keep backward compatibility. 
   // TODO : for PCS alignment, need to remove this conversion
-  result['pckcrl'] = Buffer.from(result['pckcrl'], 'utf8').toString('hex');
+  result['pckcrl'] = derToPem(Buffer.from(result['pckcrl'], 'utf8'))
 
   return result;
 }
+
+function derToPem(der) {
+    var prefix = '-----BEGIN X509 CRL-----\n';
+    var postfix = '-----END X509 CRL-----';
+    return prefix + der.toString('base64').match(/.{0,64}/g).join('\n') + postfix;
+}
+
