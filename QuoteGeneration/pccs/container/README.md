@@ -34,9 +34,9 @@ Fill other required fields accordingly.
 ```
 docker run \
 --user "65333:0" \
--v ~/pccs_tls/private.pem:/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/ssl_key/private.pem \
--v ~/pccs_tls/file.crt:/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/ssl_key/file.crt \
--v ./config/default.json:/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json
+-v ~/pccs_tls/private.pem:/opt/intel/pccs/ssl_key/private.pem \
+-v ~/pccs_tls/file.crt:/opt/intel/pccs/ssl_key/file.crt \
+-v ./config/default.json:/opt/intel/pccs/config/default.json
 -p 8081:8081  --name pccs -d pccs:my_tag
 ```
 

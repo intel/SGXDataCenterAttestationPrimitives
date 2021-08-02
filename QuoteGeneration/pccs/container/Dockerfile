@@ -1,10 +1,7 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04 AS builder
 
 # DCAP version (github repo branch, tag or commit hash)
 ARG DCAP_VERSION=DCAP_1.10.3
-
-ARG USER=pccs
-ARG UID=65333
 
 # update and install packages
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -46,9 +43,19 @@ RUN npm config set proxy $http_proxy && \
     npm config set engine-strict true && \
     npm ci
 
+# build final image
+FROM ubuntu:20.04
+
+ARG USER=pccs
+ARG UID=65333
+
 # create user and a group
 RUN useradd -M -U ${USER} --uid=${UID} -s /bin/false
-RUN chown -R ${USER}:${USER} /SGXDataCenterAttestationPrimitives
+
+COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=builder --chown=${USER}:${USER} /SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/ /opt/intel/pccs/
+
+WORKDIR /opt/intel/pccs/
 USER ${USER}
 
 # entrypoint to start pccs
