@@ -1,0 +1,52 @@
+{
+    "HTTPS_PORT" : "8081",
+    "hosts" : "0.0.0.0",
+    "uri": "https://api.trustedservices.intel.com/sgx/certification/v3/",
+    "ApiKey": "ffffffffffffffffffffffffffffffff",
+    "proxy" : "",
+    "RefreshSchedule": "0 0 1 * * *",
+    "UserTokenHash" : "b14361404c078ffd549c03db443c3fede2f3e534d73f78f77301ed97d4a436a9fd9db05ee8b325c0ad36438b43fec8510c204fc1c1edb21d0941c00e9e2c1ce2",
+    "AdminTokenHash" : "c7ad44cbad762a5da0a452f9e854fdc1e0e7a52a38015f23f3eab1d80b931dd472634dfac71cd34ebc35d16ab7fb8a90c81f975113d6c7538dc69dd8de9077ec",
+    "CachingFillMode" : "LAZY",
+    "LogLevel" : "debug",
+    "DB_CONFIG" : "sqlite",
+    "sqlite" : {
+        "database" : "database",
+        "username" : "username",
+        "password" : "password",
+        "options" : {
+            "host": "localhost",
+            "dialect": "sqlite",
+            "pool": {
+                "max": 5,
+                "min": 0,
+                "acquire": 30000,
+                "idle": 10000
+            },
+            "define": {
+                "freezeTableName": true
+            },
+            "logging" : false,
+            "storage": "pckcache.db"
+        }
+    },
+    "mysql" : {
+        "database" : "pckcache",
+        "username" : "root",
+        "password" : "mypass",
+        "options" : {
+            "host": "localhost",
+            "dialect": "mysql",
+            "pool": {
+                "max": 5,
+                "min": 0,
+                "acquire": 30000,
+                "idle": 10000
+            },
+            "define": {
+                "freezeTableName": true
+            },
+            "logging" : false
+        }
+    }
+}
