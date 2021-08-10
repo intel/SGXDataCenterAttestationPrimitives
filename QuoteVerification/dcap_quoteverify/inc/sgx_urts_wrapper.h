@@ -78,6 +78,14 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const char* file_name,
     sgx_enclave_id_t* enclave_id,
     sgx_misc_attribute_t* misc_attr);
 
+#define SGX_URTS_API_OCALL_PTHREAD_CREATE "pthread_create_ocall"
+#define SGX_URTS_API_OCALL_PTHREAD_TIMEOUT "pthread_wait_timeout_ocall"
+#define SGX_URTS_API_OCALL_PTHREAD_WAKEUP "pthread_wakeup_ocall"
+
+typedef int (*pthread_create_ocall_func_t)(unsigned long long self);
+typedef int (*pthread_wait_timeout_ocall_func_t)(unsigned long long waiter, unsigned long long timeout);
+typedef int (*pthread_wakeup_ocall_func_t)(unsigned long long waiter);
+
 #endif
 
 #define SGX_URTS_API_DESTROY_ENCLAVE "sgx_destroy_enclave"
@@ -89,10 +97,9 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const char* file_name,
 #define SGX_URTS_API_OCALL_SET_MULTIPLE_EVENT "sgx_thread_set_multiple_untrusted_events_ocall"
 
 
-
 typedef sgx_status_t (SGXAPI* sgx_destroy_enclave_func_t)(const sgx_enclave_id_t enclave_id);
 
-typedef sgx_status_t(SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid, const int index, const void* ocall_table, void* ms);
+typedef sgx_status_t (SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid, const int index, const void* ocall_table, void* ms);
 
 typedef void (*sgx_oc_cpuidex_func_t)(int cpuinfo[4], int leaf, int subleaf);
 
@@ -113,5 +120,3 @@ bool sgx_dcap_load_urts();
 #endif
 
 #endif /* !_SGX_URTS_WRAPPER_H_*/
-
-
