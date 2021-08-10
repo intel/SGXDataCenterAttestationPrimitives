@@ -38,18 +38,23 @@
 #include "sgx_dcap_pcs_com.h"
 #include "sgx_dcap_qv_internal.h"
 #include "sgx_qve_def.h"
-#ifndef _MSC_VER
-#include "linux/qve_u.h"
-#else //_MSC_VER
-#include "win/qve_u.h"
-#endif //_MSC_VER
 #include <stdlib.h>
 #include <stdio.h>
-#include <sgx_urts.h>
 #include "se_trace.h"
 #include "se_thread.h"
 #include "se_memcpy.h"
 #include "sgx_urts_wrapper.h"
+
+#if defined(_MSC_VER)
+#include <tchar.h>
+#include "win/qve_u.h"
+bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
+#else
+#include <limits.h>
+#include "linux/qve_u.h"
+#define MAX_PATH PATH_MAX
+bool get_qve_path(char *p_file_path, size_t buf_size);
+#endif
 
 
 sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
@@ -122,14 +127,38 @@ int sgx_thread_set_multiple_untrusted_events_ocall(const void **waiters, size_t 
 }
 
 
-#if defined(_MSC_VER)
-#include <tchar.h>
-bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
-#else
-#include <limits.h>
-#define MAX_PATH PATH_MAX
-bool get_qve_path(char *p_file_path, size_t buf_size);
+#ifdef __GNUC__
 
+pthread_create_ocall_func_t p_pthread_create_ocall = NULL;
+pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall = NULL;
+pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func = NULL;
+
+int pthread_create_ocall(unsigned long long self)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_create_ocall(self);
+}
+
+int pthread_wait_timeout_ocall(unsigned long long waiter, unsigned long long timeout)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_wait_timeout_ocall(waiter, timeout);
+}
+
+int pthread_wakeup_ocall(unsigned long long waiter)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_wakeup_ocall_func(waiter);
+}
 #endif
 
 struct QvE_status {
