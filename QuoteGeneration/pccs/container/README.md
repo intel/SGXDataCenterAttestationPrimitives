@@ -3,7 +3,7 @@
 docker build -t pccs:my_tag .
 ```
 
-## 2. generate certificates to use with PCCS
+## 2. Generate certificates to use with PCCS
 ```
 mkdir -p ~/pccs_tls
 cd ~/pccs_tls
@@ -17,7 +17,16 @@ and give read access to the certificate/key in order they're to be readable insi
 chmod 644 ~/pccs_tls/*
 ```
 
-## 3. Fill up config/default.json
+## 3. Fill up configuration file
+Create directory for storing configuration file:
+```
+mkdir -p ./config
+```
+Copy `<path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json`
+to this directory:
+```
+cp <path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json ./config/
+```
 Generate UserTokenHash:
 ```
 echo "user_password" | sha512sum | tr -d '[:space:]-'

@@ -21,8 +21,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends n
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # clone DCAP repo
-RUN git clone https://github.com/intel/SGXDataCenterAttestationPrimitives.git -b ${DCAP_VERSION} && \
-    rm -rf /SGXDataCenterAttestationPrimitives/.git/
+RUN git clone https://github.com/intel/SGXDataCenterAttestationPrimitives.git -b ${DCAP_VERSION} --depth 1
 
 # set PWD to PCKCertSelection dir
 WORKDIR /SGXDataCenterAttestationPrimitives/tools/PCKCertSelection/
