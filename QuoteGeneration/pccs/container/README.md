@@ -29,11 +29,11 @@ cp <path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config
 ```
 Generate UserTokenHash:
 ```
-echo "user_password" | sha512sum | tr -d '[:space:]-'
+echo -n "user_password" | sha512sum | tr -d '[:space:]-'
 ```
 and AdminTokenHash:
 ```
-echo "admin_password" | sha512sum | tr -d '[:space:]-'
+echo -n "admin_password" | sha512sum | tr -d '[:space:]-'
 ```
 and paste generated values into the `config/default.json`
 
