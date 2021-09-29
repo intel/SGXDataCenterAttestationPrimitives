@@ -11,6 +11,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/controllers/refreshController.js	<installdir>/controllers/refreshController.js	0	main	STP
 <deliverydir>/pccs/controllers/rootcacrlController.js	<installdir>/controllers/rootcacrlController.js	0	main	STP
 <deliverydir>/pccs/controllers/tcbinfoController.js	<installdir>/controllers/tcbinfoController.js	0	main	STP
+<deliverydir>/pccs/controllers/crlController.js	<installdir>/controllers/crlController.js	0	main	STP
 <deliverydir>/pccs/dao/models/fmspc_tcbs.js	<installdir>/dao/models/fmspc_tcbs.js	0	main	STP
 <deliverydir>/pccs/dao/models/index.js	<installdir>/dao/models/index.js	0	main	STP
 <deliverydir>/pccs/dao/models/pck_cert.js	<installdir>/dao/models/pck_cert.js	0	main	STP
@@ -21,8 +22,8 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/dao/models/platform_tcbs.js	<installdir>/dao/models/platform_tcbs.js	0	main	STP
 <deliverydir>/pccs/dao/models/platforms_registered.js	<installdir>/dao/models/platforms_registered.js	0	main	STP
 <deliverydir>/pccs/dao/models/platforms.js	<installdir>/dao/models/platforms.js	0	main	STP
-<deliverydir>/pccs/dao/models/qe_identities.js	<installdir>/dao/models/qe_identities.js	0	main	STP
-<deliverydir>/pccs/dao/models/qve_identities.js	<installdir>/dao/models/qve_identities.js	0	main	STP
+<deliverydir>/pccs/dao/models/enclave_identities.js	<installdir>/dao/models/enclave_identities.js	0	main	STP
+<deliverydir>/pccs/dao/models/crl_cache.js	<installdir>/dao/models/crl_cache.js	0	main	STP
 <deliverydir>/pccs/dao/fmspcTcbDao.js	<installdir>/dao/fmspcTcbDao.js	0	main	STP
 <deliverydir>/pccs/dao/pckCertchainDao.js	<installdir>/dao/pckCertchainDao.js	0	main	STP
 <deliverydir>/pccs/dao/pckcertDao.js	<installdir>/dao/pckcertDao.js	0	main	STP
@@ -32,8 +33,8 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/dao/platformsDao.js	<installdir>/dao/platformsDao.js	0	main	STP
 <deliverydir>/pccs/dao/platformsRegDao.js	<installdir>/dao/platformsRegDao.js	0	main	STP
 <deliverydir>/pccs/dao/platformTcbsDao.js	<installdir>/dao/platformTcbsDao.js	0	main	STP
-<deliverydir>/pccs/dao/qeidentityDao.js	<installdir>/dao/qeidentityDao.js	0	main	STP
-<deliverydir>/pccs/dao/qveidentityDao.js	<installdir>/dao/qveidentityDao.js	0	main	STP
+<deliverydir>/pccs/dao/enclaveIdentityDao.js	<installdir>/dao/enclaveIdentityDao.js	0	main	STP
+<deliverydir>/pccs/dao/crlCacheDao.js	<installdir>/dao/crlCacheDao.js	0	main	STP
 <deliverydir>/pccs/lib/libPCKCertSelection.so	<installdir>/lib/libPCKCertSelection.so	0	main	STP
 <deliverydir>/pccs/lib_wrapper/pcklib_wrapper.js	<installdir>/lib_wrapper/pcklib_wrapper.js	0	main	STP
 <deliverydir>/pccs/middleware/auth.js	<installdir>/middleware/auth.js	0	main	STP
@@ -41,6 +42,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/middleware/addRequestId.js	<installdir>/middleware/addRequestId.js	0	main	STP
 <deliverydir>/pccs/migrations/00_db_initialize.up.sql	<installdir>/migrations/00_db_initialize.up.sql	0	main	STP
 <deliverydir>/pccs/migrations/01_db_version_1.js	<installdir>/migrations/01_db_version_1.js	0	main	STP
+<deliverydir>/pccs/migrations/02_db_version_2.js	<installdir>/migrations/02_db_version_2.js	0	main	STP
 <deliverydir>/pccs/pcs_client/pcs_client.js	<installdir>/pcs_client/pcs_client.js	0	main	STP
 <deliverydir>/pccs/routes/index.js	<installdir>/routes/index.js	0	main	STP
 <deliverydir>/pccs/services/identityService.js	<installdir>/services/identityService.js	0	main	STP
@@ -54,6 +56,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/services/refreshService.js	<installdir>/services/refreshService.js	0	main	STP
 <deliverydir>/pccs/services/rootcacrlService.js	<installdir>/services/rootcacrlService.js	0	main	STP
 <deliverydir>/pccs/services/tcbinfoService.js	<installdir>/services/tcbinfoService.js	0	main	STP
+<deliverydir>/pccs/services/crlService.js	<installdir>/services/crlService.js	0	main	STP
 <deliverydir>/pccs/services/caching_modes/cachingMode.js	<installdir>/services/caching_modes/cachingMode.js	0	main	STP
 <deliverydir>/pccs/services/caching_modes/cachingModeManager.js	<installdir>/services/caching_modes/cachingModeManager.js	0	main	STP
 <deliverydir>/pccs/services/logic/commonCacheLogic.js	<installdir>/services/logic/commonCacheLogic.js	0	main	STP

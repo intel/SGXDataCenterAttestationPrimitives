@@ -56,7 +56,6 @@ bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
 bool get_qve_path(char *p_file_path, size_t buf_size);
 #endif
 
-
 sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
 sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
 sgx_ecall_func_t p_sgx_urts_ecall = NULL;
@@ -126,12 +125,12 @@ int sgx_thread_set_multiple_untrusted_events_ocall(const void **waiters, size_t 
     return p_sgx_thread_set_multiple_untrusted_events_ocall(waiters, total);
 }
 
-
 #ifdef __GNUC__
 
 pthread_create_ocall_func_t p_pthread_create_ocall = NULL;
 pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall = NULL;
 pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func = NULL;
+
 
 int pthread_create_ocall(unsigned long long self)
 {
@@ -160,6 +159,7 @@ int pthread_wakeup_ocall(unsigned long long waiter)
     return p_pthread_wakeup_ocall_func(waiter);
 }
 #endif
+
 
 struct QvE_status {
     se_mutex_t m_qve_mutex;
@@ -234,8 +234,10 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
                     &launch_token_updated,
                     p_qve_eid,
                     p_qve_attributes);
-                if (SGX_SUCCESS == sgx_status)
-                {
+                if (SGX_SUCCESS != sgx_status) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                }
+                else {
                     break;
                 }
             }

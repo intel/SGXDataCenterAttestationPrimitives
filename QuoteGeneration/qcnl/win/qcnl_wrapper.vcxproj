@@ -189,6 +189,7 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="network_wrapper.cpp" />
     <ClCompile Include="os_version.cpp" />
+    <ClCompile Include="qcnl_config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="qcnl_wrapper.def" />

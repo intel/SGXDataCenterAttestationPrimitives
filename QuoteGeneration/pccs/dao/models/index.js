@@ -42,13 +42,11 @@ import PcsVersion from './pcs_version.js';
 import PlatformTcbs from './platform_tcbs.js';
 import PlatformsRegistered from './platforms_registered.js';
 import Platforms from './platforms.js';
-import QeIdentities from './qe_identities.js';
-import QveIdentities from './qve_identities.js';
+import EnclaveIdentities from './enclave_identities.js';
+import CrlCache from './crl_cache.js';
 
 const pccs_namespace = clshooked.createNamespace('pccs-namespace');
 Sequelize.useCLS(pccs_namespace);
-
-const initialize_db = false;
 
 // initialize sequelize instance
 let db_conf = Config.get(Config.get('DB_CONFIG'));
@@ -73,24 +71,8 @@ PcsVersion.init(sequelize);
 PlatformTcbs.init(sequelize);
 PlatformsRegistered.init(sequelize);
 Platforms.init(sequelize);
-QeIdentities.init(sequelize);
-QeIdentities.init(sequelize);
-QveIdentities.init(sequelize);
-
-async function db_sync() {
-  await FmspcTcbs.sync({ force: initialize_db });
-  await PckCert.sync({ force: initialize_db });
-  await PckCertchain.sync({ force: initialize_db });
-  await PckCrl.sync({ force: initialize_db });
-  await PcsCertificates.sync({ force: initialize_db });
-  await PcsVersion.sync({ force: initialize_db });
-  await PlatformTcbs.sync({ force: initialize_db });
-  await PlatformsRegistered.sync({ force: initialize_db });
-  await Platforms.sync({ force: initialize_db });
-  await QeIdentities.sync({ force: initialize_db });
-  await QeIdentities.sync({ force: initialize_db });
-  return await QveIdentities.sync({ force: initialize_db });
-}
+EnclaveIdentities.init(sequelize);
+CrlCache.init(sequelize);
 
 export {
   Sequelize,
@@ -104,7 +86,6 @@ export {
   PlatformTcbs,
   PlatformsRegistered,
   Platforms,
-  QeIdentities,
-  QveIdentities,
-  db_sync,
+  EnclaveIdentities,
+  CrlCache,
 };

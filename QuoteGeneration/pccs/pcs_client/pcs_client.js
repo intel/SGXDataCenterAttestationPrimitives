@@ -35,8 +35,10 @@ import caw from 'caw';
 import logger from '../utils/Logger.js';
 import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-const HTTP_TIMEOUT = 60000; // 60 seconds
+const HTTP_TIMEOUT = 120000; // 120 seconds
+const MAX_RETRY_COUNT = 6;   // Max retry 6 times, approximate 64 seconds in total
 let HttpsAgent;
 if (Config.has('proxy') && Config.get('proxy')) {
   // use proxy settings in config file
@@ -52,14 +54,12 @@ if (Config.has('proxy') && Config.get('proxy')) {
 
 async function do_request(url, options) {
   try {
-    logger.debug(url);
     // hide API KEY from log
     let temp_key = null;
     if (('headers' in options) && ('Ocp-Apim-Subscription-Key' in options.headers)) {
       temp_key = options.headers['Ocp-Apim-Subscription-Key'];
       options.headers['Ocp-Apim-Subscription-Key'] = temp_key.substr(0, 5) + '***';
     }
-    logger.debug(JSON.stringify(options));
     if (temp_key) {
       options.headers['Ocp-Apim-Subscription-Key'] = temp_key;
     }
@@ -67,6 +67,8 @@ async function do_request(url, options) {
     // global opitons ( proxy, timeout, etc)
     options.timeout = HTTP_TIMEOUT;
     options.agent = HttpsAgent;
+    options.retry = {limit: MAX_RETRY_COUNT};
+    options.throwHttpErrors = false;
 
     let response = await got(url, options);
     logger.info('Request-ID is : ' + response.headers['request-id']);
@@ -115,7 +117,10 @@ export async function getCertsWithManifest(platform_manifest, pceid) {
       pceid: pceid,
     },
     method: 'POST',
-    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+    headers: {
+      'Ocp-Apim-Subscription-Key': Config.get('ApiKey'),
+      'Content-Type': 'application/json'
+    },
   };
 
   return do_request(Config.get('uri') + 'pckcerts', options);
@@ -133,7 +138,11 @@ export async function getPckCrl(ca) {
   return do_request(Config.get('uri') + 'pckcrl', options);
 }
 
-export async function getTcb(fmspc) {
+export async function getTcb(type, fmspc) {
+  if (type != Constants.PROD_TYPE_SGX) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+
   const options = {
     searchParams: {
       fmspc: fmspc,
@@ -141,25 +150,30 @@ export async function getTcb(fmspc) {
     method: 'GET',
   };
 
-  return do_request(Config.get('uri') + 'tcb', options);
+  let uri = Config.get('uri') + 'tcb';
+
+  return do_request(uri, options);
 }
 
-export async function getQeIdentity() {
+export async function getEnclaveIdentity(enclave_id) {
+  if (
+    enclave_id != Constants.QE_IDENTITY_ID &&
+    enclave_id != Constants.QVE_IDENTITY_ID
+  ) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+
   const options = {
     searchParams: {},
     method: 'GET',
   };
 
-  return do_request(Config.get('uri') + 'qe/identity', options);
-}
+  let uri = Config.get('uri') + 'qe/identity';
+  if (enclave_id == Constants.QVE_IDENTITY_ID) {
+    uri = Config.get('uri') + 'qve/identity';
+  }
 
-export async function getQveIdentity() {
-  const options = {
-    searchParams: {},
-    method: 'GET',
-  };
-
-  return do_request(Config.get('uri') + 'qve/identity', options);
+  return do_request(uri, options);
 }
 
 export async function getFileFromUrl(uri) {

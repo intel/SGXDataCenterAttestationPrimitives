@@ -68,7 +68,7 @@ sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
 ################################################################################
 
 # Generate the script to setup environment variables
-MPA_DST_PATH=%{_instal_path}
+MPA_DST_PATH=%{_install_path}
 
 # Install the MPA service
 
@@ -119,7 +119,7 @@ systemctl start mpa_registration_tool.service
 
 %postun
 # Generate the script to setup environment variables
-MPA_DST_PATH=%{_instal_path}
+MPA_DST_PATH=%{_install_path}
 
 # Disable service
 if [ -d /run/systemd/system ]; then

@@ -59,7 +59,8 @@ export async function pckCertSelection(
     pem_certs.push(pck_certs[i].pck_cert.toString('utf8'));
   }
 
-  let tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
+  // Always use SGX tcb info for PCK cert selection
+  let tcbinfo = await fmspcTcbDao.getTcbInfo(Constants.PROD_TYPE_SGX, fmspc);
   if (tcbinfo == null || tcbinfo.tcbinfo == null)
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
 

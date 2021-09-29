@@ -37,6 +37,7 @@ import { FmspcTcbs, sequelize } from './models/index.js';
 // Update or insert a record in JSON format
 export async function upsertFmspcTcb(tcbinfoJson) {
   return await FmspcTcbs.upsert({
+    type: tcbinfoJson.type,
     fmspc: tcbinfoJson.fmspc,
     tcbinfo: tcbinfoJson.tcbinfo,
     root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
@@ -45,16 +46,24 @@ export async function upsertFmspcTcb(tcbinfoJson) {
 }
 
 //Query TCBInfo by fmspc
-export async function getTcbInfo(fmspc) {
+export async function getTcbInfo(type, fmspc) {
+  if (typeof type == 'undefined') {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+
   const sql =
     'select a.*,' +
     ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
     ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
     ' from fmspc_tcbs a ' +
-    ' where a.fmspc=$fmspc';
+    ' where a.type=$type' +
+    ' and a.fmspc=$fmspc';
   const tcbinfo = await sequelize.query(sql, {
     type: sequelize.QueryTypes.SELECT,
-    bind: { fmspc: fmspc },
+    bind: {
+      type: type,
+      fmspc: fmspc,
+    },
   });
   if (tcbinfo.length == 0) return null;
   else if (tcbinfo.length == 1) {

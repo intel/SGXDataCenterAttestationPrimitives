@@ -47,7 +47,7 @@ optional arguments:
           -i INPUT_FILE, --input_file INPUT_FILE
                                 The input file name for platform collaterals; default: platform_collaterals.json
 
-4. Collect platform data that was retrieved by PCK ID retrieval tool into one json file. This file can be used as input of "get" command.
+4. Collect platform data that was retrieved by PCK ID retrieval tool into one json file. This file can be used as input of "fetch" command.
   ./pccsadmin.py collect [-h] [-d DIRECTORY] [-o OUTPUT_FILE]
 
   optional arguments:

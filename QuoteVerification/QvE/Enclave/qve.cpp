@@ -40,7 +40,7 @@
 #define sgx_qve_get_quote_supplemental_data_size sgx_qvl_get_quote_supplemental_data_size
 #define sgx_qve_get_quote_supplemental_data_version sgx_qvl_get_quote_supplemental_data_version
 #include "sgx_dcap_qv_internal.h"
-#define memset_s(a,b,c,d) memset(a,b,d)
+#define memset_s(a,b,c,d) memset(a,c,d)
 #define memcpy_s(a,b,c,d) (memcpy(a,c,b) && 0)
 #define sgx_is_within_enclave(a,b) (1)
 #else //SGX_TRUSTED
@@ -56,6 +56,7 @@
 #include <cstring>
 #include <array>
 #include <algorithm>
+#include <vector>
 #include "Verifiers/EnclaveIdentityParser.h"
 #include "Verifiers/EnclaveIdentity.h"
 #include "Verifiers/EnclaveIdentityV2.h"
@@ -70,6 +71,16 @@
 
 using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::parser;
+
+//Intel Root Public Key
+//
+const uint8_t INTEL_ROOT_PUB_KEY[] = {
+    0x04, 0x0b, 0xa9, 0xc4, 0xc0, 0xc0, 0xc8, 0x61, 0x93, 0xa3, 0xfe, 0x23, 0xd6, 0xb0, 0x2c,
+    0xda, 0x10, 0xa8, 0xbb, 0xd4, 0xe8, 0x8e, 0x48, 0xb4, 0x45, 0x85, 0x61, 0xa3, 0x6e, 0x70,
+    0x55, 0x25, 0xf5, 0x67, 0x91, 0x8e, 0x2e, 0xdc, 0x88, 0xe4, 0x0d, 0x86, 0x0b, 0xd0, 0xcc,
+    0x4e, 0xe2, 0x6a, 0xac, 0xc9, 0x88, 0xe5, 0x05, 0xa9, 0x53, 0x55, 0x8c, 0x45, 0x3f, 0x6b,
+    0x09, 0x04, 0xae, 0x73, 0x94
+};
 
 /**
  * Check if a given status code is an expiration error or not.
@@ -226,7 +237,7 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
  * @param status_err[IN] - Status error code.
  *
  * @return sgx_ql_qv_result_t that matches status_err.
-*
+ *
  **/
 static sgx_ql_qv_result_t status_error_to_ql_qve_result(Status status_err) {
     switch (status_err)
@@ -264,7 +275,65 @@ static sgx_ql_qv_result_t status_error_to_ql_qve_result(Status status_err) {
     }
 }
 
+/**
+ * Check the CRL is PEM encoding or not
+ *
+ **/
+static bool check_pem_crl(char *crl, uint32_t size)
+{
+    if (crl == NULL || size < CRL_MIN_SIZE)
+        return false;
 
+    if (strncmp(crl, PEM_CRL_PREFIX, PEM_CRL_PREFIX_SIZE) == 0)
+        return true;
+
+    return false;
+}
+
+/**
+ * Check the CRL is hex string or not
+ *
+ **/
+static bool check_hex_crl(char *crl, uint32_t size)
+{
+    if (crl == NULL || size < CRL_MIN_SIZE)
+        return false;
+
+    //only check length = size-1, as the last item may be nul terminator
+    for (uint32_t i = 0; i < size - 1; i++) {
+        if (!isxdigit(crl[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Convert char to hex string
+ *
+ **/
+static std::string bin2hex(char *in, uint32_t size)
+{
+    std::string result;
+
+    if (in == NULL || size == 0)
+        return result;
+
+    const std::vector<uint8_t> crl(in, std::next(in, size));
+
+    result.reserve(crl.size() * 2);
+
+    static constexpr char hex[] = "0123456789ABCDEF";
+
+    for (const uint8_t c : crl)
+    {
+        result.push_back(hex[c / 16]);
+        result.push_back(hex[c % 16]);
+    }
+
+    return result;
+}
 
 #define SGX_TCB_LEVEL_LOWER false
 #define SGX_TCB_LEVEL_EQUAL_OR_HIGHER true
@@ -444,7 +513,7 @@ quote3_error_t get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_si
         //compare to nullptr (C++ way of comparing pointers to NULL), otherwise gcc will report a compilation warning
         //
         if (topmost_cert == nullptr) {
-            ret = SGX_QL_PCK_CERT_UNSUPPORTED_FORMAT;
+            ret = SGX_QL_PCK_CERT_CHAIN_ERROR;
             break;
         }
         try {
@@ -569,7 +638,7 @@ static time_t getLatestExpirationDate(const CertificateChain* chain) {
  *      - SGX_QL_ERROR_UNEXPECTED
  **/
 static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_chain_obj, const json::TcbInfo* p_tcb_info_obj,
-    const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
+    const struct _sgx_ql_qve_collateral_t *p_quote_collateral, const char *crls[],
     time_t* p_earliest_issue_date, time_t* p_earliest_expiration_date,
     time_t* p_latest_issue_date, time_t* p_latest_expiration_date) {
 
@@ -630,13 +699,13 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
         }
 
         pckparser::CrlStore root_ca_crl;
-        if (root_ca_crl.parse(p_quote_collateral->root_ca_crl) != true) {
+        if (root_ca_crl.parse(crls[0]) != true) {
             ret = SGX_QL_CRL_UNSUPPORTED_FORMAT;
             break;
         }
 
         pckparser::CrlStore pck_crl;
-        if (pck_crl.parse(p_quote_collateral->pck_crl) != true) {
+        if (pck_crl.parse(crls[1]) != true) {
             ret = SGX_QL_CRL_UNSUPPORTED_FORMAT;
             break;
         }
@@ -734,10 +803,11 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
  *      - SGX_QL_ERROR_UNEXPECTED
  **/
 static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *chain, const json::TcbInfo *tcb_info_obj,
-    uint16_t qe_report_isvsvn, const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
+    uint16_t qe_report_isvsvn, const struct _sgx_ql_qve_collateral_t *p_quote_collateral, const char *crls[],
     time_t earliest_issue_date, time_t latest_issue_date, time_t earliest_expiration_date,
     uint8_t *p_supplemental_data) {
-    if (chain == NULL || tcb_info_obj == NULL || p_quote_collateral == NULL || p_supplemental_data == NULL) {
+    if (chain == NULL || tcb_info_obj == NULL || p_quote_collateral == NULL ||
+        crls == NULL || crls[0] == NULL || crls[1] == NULL || p_supplemental_data == NULL) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
@@ -793,13 +863,13 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
         }
 
         pckparser::CrlStore root_ca_crl;
-        if (root_ca_crl.parse(p_quote_collateral->root_ca_crl) != true) {
+        if (root_ca_crl.parse(crls[0]) != true) {
             ret = SGX_QL_ERROR_INVALID_PARAMETER;
             break;
         }
 
         pckparser::CrlStore pck_crl;
-        if (pck_crl.parse(p_quote_collateral->pck_crl) != true) {
+        if (pck_crl.parse(crls[1]) != true) {
             ret = SGX_QL_ERROR_INVALID_PARAMETER;
             break;
         }
@@ -1155,14 +1225,15 @@ static quote3_error_t sgx_qve_generate_report(
 
 #define IS_IN_ENCLAVE_POINTER(p, size) (p && (strnlen(p, size) == size - 1) && sgx_is_within_enclave(p, size))
 
+//CRL may DER encoding, so don't use to strnlen to check the length
 static bool is_collateral_deep_copied(const struct _sgx_ql_qve_collateral_t *p_quote_collateral) {
     if (IS_IN_ENCLAVE_POINTER(p_quote_collateral->pck_crl_issuer_chain, p_quote_collateral->pck_crl_issuer_chain_size) &&
-        IS_IN_ENCLAVE_POINTER(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size) &&
-        IS_IN_ENCLAVE_POINTER(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size) &&
         IS_IN_ENCLAVE_POINTER(p_quote_collateral->tcb_info_issuer_chain, p_quote_collateral->tcb_info_issuer_chain_size) &&
         IS_IN_ENCLAVE_POINTER(p_quote_collateral->tcb_info, p_quote_collateral->tcb_info_size) &&
         IS_IN_ENCLAVE_POINTER(p_quote_collateral->qe_identity_issuer_chain, p_quote_collateral->qe_identity_issuer_chain_size) &&
-        IS_IN_ENCLAVE_POINTER(p_quote_collateral->qe_identity, p_quote_collateral->qe_identity_size)) {
+        IS_IN_ENCLAVE_POINTER(p_quote_collateral->qe_identity, p_quote_collateral->qe_identity_size) &&
+        sgx_is_within_enclave(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size) &&
+        sgx_is_within_enclave(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size)) {
         return true;
     }
     else {
@@ -1238,6 +1309,15 @@ quote3_error_t sgx_qve_verify_quote(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+    //validate collateral version
+    //
+    if (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31) {
+
+        return SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED;
+    }
+
     //validate parameters
     //
     if (p_quote == NULL ||
@@ -1246,8 +1326,6 @@ quote3_error_t sgx_qve_verify_quote(
         p_quote_collateral == NULL ||
         !sgx_is_within_enclave(p_quote_collateral, sizeof(*p_quote_collateral)) ||
         !is_collateral_deep_copied(p_quote_collateral) ||
-        (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSION3) ||
         expiration_check_date <= 0 ||
         (p_qve_report_info != NULL && !sgx_is_within_enclave(p_qve_report_info, sizeof(*p_qve_report_info))) ||
         (p_supplemental_data == NULL && supplemental_data_size != 0)) {
@@ -1269,7 +1347,10 @@ quote3_error_t sgx_qve_verify_quote(
     time_t set_time = 0;
     CertificateChain chain;
     json::TcbInfo tcb_info_obj;
-    const char* quote_trusted_root_ca_cert;
+    std::vector<uint8_t> hardcode_root_pub_key;
+    std::string root_cert_str;
+    std::string root_crl;
+    std::string pck_crl;
 
     //start the verification operation
     //
@@ -1314,25 +1395,84 @@ quote3_error_t sgx_qve_verify_quote(
             break;
         }
 
+        //if user provide DER encoding Root CA CRL, try to convert it to hex encoding
+        //
+        if (!check_pem_crl(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size)) {
+            if (!check_hex_crl(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size)) {
+
+                root_crl = bin2hex(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size);
+
+                if (root_crl.empty())
+                    break;
+            }
+        }
+
+        //if user provide DER encoding PCK CRL, try to convert it to hex encoding
+        //
+        if (!check_pem_crl(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size)) {
+            if (!check_hex_crl(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size)) {
+
+                pck_crl = bin2hex(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size);
+
+                if (pck_crl.empty())
+                    break;
+            }
+        }
+
         //create CRLs combined array
         //
-        const std::array<const char*, 2> crls{ p_quote_collateral->root_ca_crl, p_quote_collateral->pck_crl };
+        std::array<const char*, 2> crls;
 
-        //collateral version 1 will use v1 root CA
-        //collateral version 3 will use v3 root CA
-        //all other collateral versions are not supported
-        if (p_quote_collateral->version == QVE_COLLATERAL_VERSION1)
-            quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT;
-        else if (p_quote_collateral->version == QVE_COLLATERAL_VERSION3)
-            quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT_V3;
-        else {
-            //defense in depth
-            //only collateral version 1 and 3 are supported
-            ret = SGX_QL_ERROR_INVALID_PARAMETER;
+        if (!root_crl.empty())
+            crls[0] = root_crl.c_str();
+        else
+            crls[0] = p_quote_collateral->root_ca_crl;
+
+        if (!pck_crl.empty())
+            crls[1] = pck_crl.c_str();
+        else
+            crls[1] = p_quote_collateral->pck_crl;
+
+        //extract root CA from cert chain
+        auto root_cert = chain.getRootCert();
+        x509::Certificate root_cert_x509;
+
+        //compare to nullptr (C++ way of comparing pointers to NULL), otherwise gcc will report a compilation warning
+        //
+        if (root_cert == nullptr) {
+            ret = SGX_QL_PCK_CERT_CHAIN_ERROR;
             break;
         }
 
-        ret = qve_get_collateral_dates(&chain, &tcb_info_obj, p_quote_collateral,
+        try {
+            root_cert_x509 = x509::Certificate(*root_cert);
+        }
+        catch (...) {
+            ret = SGX_QL_PCK_CERT_UNSUPPORTED_FORMAT;
+            break;
+        }
+
+        auto root_pub_key_from_cert = root_cert_x509.getPubKey();
+
+        //check root public key
+        //
+        std::copy(std::begin(INTEL_ROOT_PUB_KEY), std::end(INTEL_ROOT_PUB_KEY), std::back_inserter(hardcode_root_pub_key));
+
+        if (hardcode_root_pub_key != root_pub_key_from_cert) {
+            ret = SGX_QL_PCK_CERT_CHAIN_ERROR;
+            break;
+        }
+
+        //convert root cert to string
+        //
+        root_cert_str = root_cert_x509.getPem();
+        if (root_cert_str.empty()) {
+            ret = SGX_QL_PCK_CERT_CHAIN_ERROR;
+            break;
+        }
+
+        ret = qve_get_collateral_dates(&chain, &tcb_info_obj,
+            p_quote_collateral, crls.data(),
             &earliest_issue_date, &earliest_expiration_date,
             &latest_issue_date, &latest_expiration_date);
         if (ret != SGX_QL_SUCCESS) {
@@ -1350,7 +1490,7 @@ quote3_error_t sgx_qve_verify_quote(
 
         //parse and verify PCK certificate chain
         //
-        collateral_verification_res = sgxAttestationVerifyPCKCertificate((const char*)p_pck_cert_chain, crls.data(), quote_trusted_root_ca_cert, &expiration_check_date);
+        collateral_verification_res = sgxAttestationVerifyPCKCertificate((const char*)p_pck_cert_chain, crls.data(), root_cert_str.c_str(), &expiration_check_date);
         if (collateral_verification_res != STATUS_OK) {
             if (is_expiration_error(collateral_verification_res)) {
                 *p_collateral_expiration_status = 1;
@@ -1363,7 +1503,7 @@ quote3_error_t sgx_qve_verify_quote(
 
         //parse and verify TCB info
         //
-        collateral_verification_res = sgxAttestationVerifyTCBInfo(p_quote_collateral->tcb_info, p_quote_collateral->tcb_info_issuer_chain, p_quote_collateral->root_ca_crl, quote_trusted_root_ca_cert, &expiration_check_date);
+        collateral_verification_res = sgxAttestationVerifyTCBInfo(p_quote_collateral->tcb_info, p_quote_collateral->tcb_info_issuer_chain, crls[0], root_cert_str.c_str(), &expiration_check_date);
         if (collateral_verification_res != STATUS_OK) {
             if (is_expiration_error(collateral_verification_res)) {
                 *p_collateral_expiration_status = 1;
@@ -1376,7 +1516,7 @@ quote3_error_t sgx_qve_verify_quote(
 
         //parse and verify QE identity
         //
-        collateral_verification_res = sgxAttestationVerifyEnclaveIdentity(p_quote_collateral->qe_identity, p_quote_collateral->qe_identity_issuer_chain, p_quote_collateral->root_ca_crl, quote_trusted_root_ca_cert, &expiration_check_date);
+        collateral_verification_res = sgxAttestationVerifyEnclaveIdentity(p_quote_collateral->qe_identity, p_quote_collateral->qe_identity_issuer_chain, crls[0], root_cert_str.c_str(), &expiration_check_date);
         if (collateral_verification_res != STATUS_OK) {
             if (is_expiration_error(collateral_verification_res)) {
                 *p_collateral_expiration_status = 1;
@@ -1389,7 +1529,7 @@ quote3_error_t sgx_qve_verify_quote(
 
         //parse and verify the quote, update verification results
         //
-        collateral_verification_res = sgxAttestationVerifyQuote(p_quote, quote_size, chain.getPckCert()->getPem().c_str(), p_quote_collateral->pck_crl, p_quote_collateral->tcb_info, p_quote_collateral->qe_identity);
+        collateral_verification_res = sgxAttestationVerifyQuote(p_quote, quote_size, chain.getPckCert()->getPem().c_str(), crls[1], p_quote_collateral->tcb_info, p_quote_collateral->qe_identity);
         *p_quote_verification_result = status_error_to_ql_qve_result(collateral_verification_res);
 
         if (is_nonterminal_error(collateral_verification_res)) {
@@ -1412,7 +1552,7 @@ quote3_error_t sgx_qve_verify_quote(
                 ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
             }
             auto qe_report_isvsvn = quote.getQuoteAuthData().qeReport.isvSvn;
-            ret = qve_set_quote_supplemental_data(&chain, &tcb_info_obj, qe_report_isvsvn, p_quote_collateral, earliest_issue_date, latest_issue_date, earliest_expiration_date, p_supplemental_data);
+            ret = qve_set_quote_supplemental_data(&chain, &tcb_info_obj, qe_report_isvsvn, p_quote_collateral, crls.data(), earliest_issue_date, latest_issue_date, earliest_expiration_date, p_supplemental_data);
             if (ret != SGX_QL_SUCCESS) {
                 break;
             }

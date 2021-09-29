@@ -35,7 +35,7 @@ CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
 
 all: QuoteGeneration QuoteVerification PCKCertSelection PCKRetrievalTool
 
-QuoteGeneration:
+QuoteGeneration: QuoteVerification
 	$(MAKE) -C QuoteGeneration
 
 QuoteVerification:

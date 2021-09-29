@@ -59,6 +59,9 @@ typedef enum _sgx_qcnl_error_t{
     SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN = SGX_QCNL_MK_ERROR(0x0010), ///< Platform unknown
     SGX_QCNL_ERROR_STATUS_UNEXPECTED = SGX_QCNL_MK_ERROR(0x0011),       ///< Unexpected cache error
     SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE = SGX_QCNL_MK_ERROR(0x0012),///< Certs not available
+    SGX_QCNL_ERROR_STATUS_SERVICE_UNAVAILABLE = SGX_QCNL_MK_ERROR(0x0013), ///< Service is currently not available
+
+    SGX_QCNL_INVALID_CONFIG = SGX_QCNL_MK_ERROR(0x0030),                ///< Error in configuration file
 } sgx_qcnl_error_t;
 
 
@@ -98,7 +101,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qve_identity(char **pp_qve_identity,
 
 void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
 
-sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (uint8_t **p_root_ca_crl, uint16_t *p_root_ca_cal_size);
+sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl (const char* root_ca_cdp_url, uint8_t **p_root_ca_crl, uint16_t *p_root_ca_crl_size);
 
 void sgx_qcnl_free_root_ca_crl (uint8_t *p_root_ca_crl);
 
@@ -108,8 +111,8 @@ sgx_qcnl_error_t sgx_qcnl_register_platform (const sgx_ql_pck_cert_id_t *p_pck_c
                                             const uint8_t *user_token,
                                             uint16_t user_token_size);
 
-int sgx_qcnl_get_api_version();
-                                            
+uint32_t sgx_qcnl_get_api_version();                                            
+
 #if defined(__cplusplus)
 }
 #endif

@@ -168,5 +168,3 @@ quote3_error_t sgx_qv_set_path(sgx_qv_path_type_t path_type,
 #endif
 
 #endif /* !_SGX_DCAP_QV_H_*/
-
-

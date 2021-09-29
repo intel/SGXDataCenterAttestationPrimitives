@@ -61,12 +61,8 @@ class CachingModeManager {
     );
   }
 
-  async getQeIdentityFromPCS() {
-    return this._mode.getQeIdentityFromPCS();
-  }
-
-  async getQveIdentityFromPCS() {
-    return this._mode.getQveIdentityFromPCS();
+  async getEnclaveIdentityFromPCS(enclave_id) {
+    return this._mode.getEnclaveIdentityFromPCS(enclave_id);
   }
 
   async getPckCrlFromPCS(ca) {
@@ -77,8 +73,8 @@ class CachingModeManager {
     return this._mode.getRootCACrlFromPCS(rootca);
   }
 
-  async getTcbInfoFromPCS(fmspc) {
-    return this._mode.getTcbInfoFromPCS(fmspc);
+  async getTcbInfoFromPCS(type, fmspc) {
+    return this._mode.getTcbInfoFromPCS(type, fmspc);
   }
 
   isRefreshable() {
@@ -107,6 +103,10 @@ class CachingModeManager {
 
   needUpdatePlatformTcbs(hasNotAvailableCerts) {
     return this._mode.needUpdatePlatformTcbs(hasNotAvailableCerts);
+  }
+
+  async getCrlFromPCS(uri) {
+    return this._mode.getCrlFromPCS(uri);
   }
 }
 

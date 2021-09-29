@@ -33,12 +33,12 @@ import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
 
-export async function getTcbInfo(fmspc) {
+export async function getTcbInfo(type, fmspc) {
   // query tcbinfo from local database first
-  const tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
+  const tcbinfo = await fmspcTcbDao.getTcbInfo(type, fmspc);
   let result = {};
   if (tcbinfo == null) {
-    result = await cachingModeManager.getTcbInfoFromPCS(fmspc);
+    result = await cachingModeManager.getTcbInfoFromPCS(type, fmspc);
   } else {
     result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] =
       tcbinfo.signing_cert + tcbinfo.root_cert;

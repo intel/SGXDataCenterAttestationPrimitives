@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import argparse,textwrap
+import argparse
 import requests
 import os
 import csv
@@ -148,14 +148,14 @@ def pccs_put(args):
         print(e)
 
 def get_api_version_from_url(url):
-    version = 4
-    regex = re.compile(r"\/v([1-9][0-9]*)\/")
-    match = regex.match(url)
+    version = 3
+    regex = re.compile('/v[1-9][0-9]*/')
+    match = regex.search(url)
     if match is not None:
-        verstr = match.group()
+        verstr = match[0]
         if len(verstr) >= 4:
-            version = int(verstr[1:-2])
-    return version  
+            version = int(verstr[2:-1])
+    return version           
 
 def pcs_fetch(args):
     try :
@@ -199,9 +199,9 @@ def pcs_fetch(args):
             "qeidentity" : "",
             "qveidentity" : "",
             "certificates" : {
-                "SGX-PCK-Certificate-Issuer-Chain": {},
-                "SGX-TCB-Info-Issuer-Chain": "",
-                "SGX-Enclave-Identity-Issuer-Chain" : ""
+                PCS.HDR_PCK_Certificate_Issuer_Chain: {},
+                PCS.HDR_TCB_INFO_ISSUER_CHAIN: "",
+                PCS.HDR_Enclave_Identity_Issuer_Chain : ""
             },
             "rootcacrl": ""
         }
@@ -214,44 +214,43 @@ def pcs_fetch(args):
                                                                       "platform_manifest" : platform["platform_manifest"]}
         certs_not_available = []
         for platform_id in platform_dict:
-            try :
-                enc_ppid = platform_dict[platform_id]["enc_ppid"]
-                platform_manifest = platform_dict[platform_id]["platform_manifest"]
-                pce_id = platform_id[1]
+            enc_ppid = platform_dict[platform_id]["enc_ppid"]
+            platform_manifest = platform_dict[platform_id]["platform_manifest"]
+            pce_id = platform_id[1]
 
-                # get pckcerts from Intel PCS, return value is [certs, chain]
-                pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
-                if pckcerts == None:
-                    print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
-                    return
+            # get pckcerts from Intel PCS, return value is [certs, chain]
+            pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
+            if pckcerts == None:
+                print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
+                return
 
-                # Get the first property
-                pckcerts_json = pckcerts[0]
+            # Get the first property
+            pckcerts_json = pckcerts[0]
 
-                # parse the first cert to get FMSPC value and put it into a set
-                cert = pckcerts_json[0]["cert"]
-                sgxext.parse_pem_certificate(unquote(cert).encode('utf-8'))
-                fmspc_set.add(sgxext.get_fmspc())
+            # parse the first cert to get FMSPC value and put it into a set
+            cert = pckcerts_json[0]["cert"]
+            sgxext.parse_pem_certificate(unquote(cert).encode('utf-8'))
+            fmspc_set.add(sgxext.get_fmspc())
 
-                # set pck-certificate-issuer-chain
-                ca = sgxext.get_ca()
-                if ca is None:
-                    print("Wrong certificate format!")
-                    return
+            # set pck-certificate-issuer-chain
+            ca = sgxext.get_ca()
+            if ca is None:
+                print("Wrong certificate format!")
+                return
 
-                pckchain = output_json["collaterals"]["certificates"]["SGX-PCK-Certificate-Issuer-Chain"]
-                if not hasattr(pckchain, ca) or pckchain[ca] == '':
-                    pckchain[ca] = pckcerts[1]
+            pckchain = output_json["collaterals"]["certificates"][PCS.HDR_PCK_Certificate_Issuer_Chain]
+            if not hasattr(pckchain, ca) or pckchain[ca] == '':
+                pckchain[ca] = pckcerts[2]
 
-                output_json["collaterals"]["pck_certs"].append({
-                    "qe_id" : platform_id[0],
-                    "pce_id" : pce_id,
-                    "enc_ppid": enc_ppid,
-                    "platform_manifest": platform_dict[platform_id]["platform_manifest"],
-                    "certs": pckcerts_json
-                })
-            except CertNotAvailableException as e:
-                certs_not_available.extend(e.data)
+            output_json["collaterals"]["pck_certs"].append({
+                "qe_id" : platform_id[0],
+                "pce_id" : pce_id,
+                "enc_ppid": enc_ppid,
+                "platform_manifest": platform_dict[platform_id]["platform_manifest"],
+                "certs": pckcerts_json
+            })
+            certs_not_available.extend(pckcerts[1])
+
         if len(certs_not_available) > 0:
             # Found 'Not available' platforms
             while True:
@@ -264,30 +263,28 @@ def pcs_fetch(args):
                     if is_file_writable(file_na):
                         with open(file_na, "w") as ofile:
                             json.dump(certs_not_available, ofile)
-                        print("Please check " + file_na + " for 'Not available' certificates. Operation aborted.")
+                        print("Please check " + file_na + " for 'Not available' certificates.")
                     else:
-                        print('Unable to save file. Operation aborted.')
-                    
-                    return False
+                        print('Unable to save file. ')
+
+                    break
                 if save_to_file.lower() == "n":
-                    print("Operation aborted.")
-                    return False
+                    break
 
         # output.collaterals.tcbinfos
         for fmspc in fmspc_set:
             # tcbinfo : [tcbinfo, chain]
-            tcbinfo = pcsclient.get_tcb_info(fmspc, 'ascii')
-            if tcbinfo == None:
-                print("Failed to get tcbinfo for FMSPC:%s" %(fmspc))
+            sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', 'ascii')
+            tcbinfoJson = {"fmspc" : fmspc}
+            if sgx_tcbinfo != None:
+                tcbinfoJson['tcbinfo'] = json.loads(sgx_tcbinfo[0])
+            else:
+                print("Failed to get SGXtcbinfo for FMSPC:%s" %(fmspc))
                 return
-            output_json["collaterals"]["tcbinfos"].append({
-                "fmspc" : fmspc,
-                "tcbinfo" : json.loads(tcbinfo[0])
-            })
-            if output_json["collaterals"]["certificates"]["SGX-TCB-Info-Issuer-Chain"] == '':
-                output_json["collaterals"]["certificates"]["SGX-TCB-Info-Issuer-Chain"] = tcbinfo[1]
+            output_json["collaterals"]["tcbinfos"].append(tcbinfoJson)
+            if output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] == '':
+                output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] = sgx_tcbinfo[1]
             
-
         # output.collaterals.pckcacrl
         processorCrl = pcsclient.get_pck_crl('processor', 'ascii')
         if processorCrl == None:
@@ -303,15 +300,15 @@ def pcs_fetch(args):
             output_json["collaterals"]["pckcacrl"]["platformCrl"] = platformCrl[0]
 
         # output.collaterals.qeidentity
-        qe_identity = pcsclient.get_qe_id('ascii')
+        qe_identity = pcsclient.get_enclave_identity('qe', 'ascii')
         if qe_identity == None:
             print("Failed to get QE identity")
             return
         output_json["collaterals"]["qeidentity"] = qe_identity[0]
-        output_json["collaterals"]["certificates"]["SGX-Enclave-Identity-Issuer-Chain"] = qe_identity[1]
+        output_json["collaterals"]["certificates"][PCS.HDR_Enclave_Identity_Issuer_Chain] = qe_identity[1]
 
         # output.collaterals.qveidentity
-        qve_identity = pcsclient.get_qve_id('ascii')
+        qve_identity = pcsclient.get_enclave_identity('qve', 'ascii')
         if qve_identity == None:
             print("Failed to get QvE identity")
             return

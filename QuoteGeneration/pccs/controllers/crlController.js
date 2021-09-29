@@ -28,24 +28,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import Sequelize from 'sequelize';
 
-export default class QveIdentities extends Sequelize.Model {
-  static init(sequelize) {
-    super.init(
-      {
-        id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
-        qve_identity: { type: Sequelize.DataTypes.BLOB },
-        root_cert_id: { type: Sequelize.DataTypes.INTEGER },
-        signing_cert_id: { type: Sequelize.DataTypes.INTEGER },
-      },
-      {
-        tableName: 'qve_identities',
-        timestamps: true,
-        createdAt: 'created_time',
-        updatedAt: 'updated_time',
-        sequelize,
-      }
-    );
+import { crlService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+
+export async function getCrl(req, res, next) {
+  const MAX_URL_LENGTH = 2048;
+
+  try {
+    // validate request parameters
+    let uri = req.query.uri;
+    if (!uri || uri.length > MAX_URL_LENGTH) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
+
+    // call service
+    let crl = await crlService.getCrl(uri);
+
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header('Content-Type', 'application/pkix-crl')
+      .send(crl);
+  } catch (err) {
+    next(err);
   }
 }

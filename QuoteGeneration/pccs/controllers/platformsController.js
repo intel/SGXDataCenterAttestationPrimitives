@@ -49,6 +49,8 @@ export async function postPlatforms(req, res, next) {
 }
 
 export async function getPlatforms(req, res, next) {
+  const HTTP_HEADER_PLATFORM_COUNT = 'platform-count';
+
   try {
     let platformsJson;
     if (!req.query.source || req.query.source == 'reg') {
@@ -80,7 +82,7 @@ export async function getPlatforms(req, res, next) {
     // send response
     res
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
-      .header(Constants.HTTP_HEADER_PLATFORM_COUNT, platformsJson.length)
+      .header(HTTP_HEADER_PLATFORM_COUNT, platformsJson.length)
       .send(platformsJson);
   } catch (err) {
     next(err);

@@ -37,6 +37,7 @@ import * as tcbinfoController from './tcbinfoController.js';
 import * as identityController from './identityController.js';
 import * as rootcacrlController from './rootcacrlController.js';
 import * as refreshController from './refreshController.js';
+import * as crlController from './crlController.js';
 
 export {
   platformsController,
@@ -47,4 +48,5 @@ export {
   identityController,
   rootcacrlController,
   refreshController,
+  crlController,
 };

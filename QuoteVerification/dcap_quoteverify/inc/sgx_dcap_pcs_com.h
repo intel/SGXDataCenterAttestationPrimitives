@@ -108,5 +108,3 @@ bool sgx_qv_set_qve_path(const char* p_path);
 #endif
 
 #endif /* !_SGX_DCAP_PCS_COM_H_*/
-
-

@@ -43,8 +43,10 @@ export async function getPckCrl(req, res, next) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
 
+    let encoding = req.query.encoding;
+
     // call service
-    let pckcrlJson = await pckcrlService.getPckCrl(ca);
+    let pckcrlJson = await pckcrlService.getPckCrl(ca, encoding);
 
     // send response
     res
@@ -53,8 +55,8 @@ export async function getPckCrl(req, res, next) {
         Constants.SGX_PCK_CRL_ISSUER_CHAIN,
         pckcrlJson[Constants.SGX_PCK_CRL_ISSUER_CHAIN]
       )
-      .header('Content-Type', 'application/pkix-crl')
-      .send(pckcrlJson.pckcrl);
+      .header('Content-Type', (!encoding || encoding.toUpperCase() != 'DER')? 'application/x-pem-file' : 'application/pkix-crl')
+      .send(pckcrlJson['pckcrl']);
   } catch (err) {
     next(err);
   }

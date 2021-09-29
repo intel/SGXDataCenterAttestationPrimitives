@@ -36,7 +36,7 @@ Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions PCE logic
 Group:          Development/Libraries
-Requires:       libsgx-urts >= 2.14 libsgx-ae-pce >= 2.14
+Requires:       libsgx-urts >= 2.15 libsgx-ae-pce >= 2.15
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives

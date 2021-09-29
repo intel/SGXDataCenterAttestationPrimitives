@@ -32,13 +32,15 @@ import logger from '../utils/Logger.js';
 
 async function up(sequelize) {
   await sequelize.transaction(async (t) => {
+    logger.info('DB Migration (Ver.0 -> 1) -- Start');
+
     // update pcs_version table
-    logger.info('DB Migration -- Update pcs_version table');
+    logger.debug('DB Migration -- Update pcs_version table');
     let sql = 'ALTER TABLE pcs_version ADD COLUMN db_version INT DEFAULT 1';
     await sequelize.query(sql);
 
     // update pck_crl.pck_crl from HEX string to BINARY
-    logger.info('DB Migration -- update pck_crl.pck_crl from HEX string to BINARY');
+    logger.debug('DB Migration -- update pck_crl.pck_crl from HEX string to BINARY');
     sql = 'SELECT ca, pck_crl FROM pck_crl';
     let resultSet = await sequelize.query(sql, {
       type: sequelize.QueryTypes.SELECT,
@@ -56,7 +58,7 @@ async function up(sequelize) {
     }
 
     // update pcs_certificates.crl from HEX string to BINARY
-    logger.info('DB Migration -- update pcs_certificates.crl from HEX string to BINARY');
+    logger.debug('DB Migration -- update pcs_certificates.crl from HEX string to BINARY');
     sql = 'SELECT * FROM pcs_certificates WHERE id=1';
     resultSet = await sequelize.query(sql, {
       type: sequelize.QueryTypes.SELECT,
@@ -74,7 +76,7 @@ async function up(sequelize) {
     }
 
     // update platforms(platform_manifest,enc_ppid) from HEX string to BINARY
-    logger.info('DB Migration -- update platforms(platform_manifest,enc_ppid) from HEX string to BINARY');
+    logger.debug('DB Migration -- update platforms(platform_manifest,enc_ppid) from HEX string to BINARY');
     sql = 'SELECT * FROM platforms';
     resultSet = await sequelize.query(sql, {
       type: sequelize.QueryTypes.SELECT,
@@ -107,7 +109,7 @@ async function up(sequelize) {
     }
 
     // update platforms_registered(platform_manifest,enc_ppid) from HEX string to BINARY
-    logger.info('DB Migration -- update platforms_registered(platform_manifest,enc_ppid) from HEX string to BINARY');
+    logger.debug('DB Migration -- update platforms_registered(platform_manifest,enc_ppid) from HEX string to BINARY');
     sql = 'SELECT * FROM platforms_registered';
     resultSet = await sequelize.query(sql, {
       type: sequelize.QueryTypes.SELECT,

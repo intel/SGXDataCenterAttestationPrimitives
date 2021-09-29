@@ -28,26 +28,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: network_wrapper.h 
- *  
- * Description: Definitions of network access interfaces
- *
- */
-#ifndef _NETWORK_WRAPPER_H_
-#define _NETWORK_WRAPPER_H_
 
-#include "sgx_ql_lib_common.h"
+import { CrlCache } from './models/index.js';
 
-sgx_qcnl_error_t qcnl_https_request(const char* url,
-    const char *req_body, 
-    uint32_t req_body_size, 
-    const uint8_t *user_token,
-    uint16_t user_token_size,
-    char **resp_msg,
-    uint32_t& resp_size,
-    char **resp_header,
-    uint32_t& header_size);
+// Query the CRL by primary key 'cdp_url'
+export async function getCrl(cdp_url) {
+  let crl_cache = await CrlCache.findByPk(cdp_url);
+  if (crl_cache) {
+    return crl_cache.crl;
+  } else return null;
+}
 
+// Update or insert a record
+export async function upsertCrl(cdp_url, crl) {
+  return await CrlCache.upsert({
+    cdp_url: cdp_url,
+    crl: crl,
+  });
+}
 
-#endif /* !_NETWORK_WRAPPER_H_ */
-
+// Get all cached CRLs
+export async function getAllCrls() {
+  return await CrlCache.findAll();
+}

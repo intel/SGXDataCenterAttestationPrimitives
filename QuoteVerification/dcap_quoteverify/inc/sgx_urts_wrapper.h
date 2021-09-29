@@ -120,4 +120,3 @@ bool sgx_dcap_load_urts();
 #endif
 
 #endif /* !_SGX_URTS_WRAPPER_H_*/
-

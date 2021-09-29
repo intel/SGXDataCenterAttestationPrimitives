@@ -38,35 +38,40 @@ import {
   identityController,
   rootcacrlController,
   refreshController,
+  crlController,
 } from '../controllers/index.js';
 
 // express routes for our API
-const router = Router();
+const sgxRouter = Router();
 
-router
+//---------------- Routes for SGX APIs-------------------------------
+sgxRouter
   .route('/platforms')
   .post(platformsController.postPlatforms)
   .get(platformsController.getPlatforms);
 
-router
+sgxRouter
   .route('/platformcollateral')
   .put(platformCollateralController.putPlatformCollateral);
 
-router.route('/pckcert').get(pckcertController.getPckCert);
+sgxRouter.route('/pckcert').get(pckcertController.getPckCert);
 
-router.route('/pckcrl').get(pckcrlController.getPckCrl);
+sgxRouter.route('/pckcrl').get(pckcrlController.getPckCrl);
 
-router.route('/tcb').get(tcbinfoController.getTcbInfo);
+sgxRouter.route('/tcb').get(tcbinfoController.getSgxTcbInfo);
 
-router.route('/qe/identity').get(identityController.getQeIdentity);
+sgxRouter.route('/qe/identity').get(identityController.getEcdsaQeIdentity);
 
-router.route('/qve/identity').get(identityController.getQveIdentity);
+sgxRouter.route('/qve/identity').get(identityController.getQveIdentity);
 
-router.route('/rootcacrl').get(rootcacrlController.getRootCaCrl);
+sgxRouter.route('/rootcacrl').get(rootcacrlController.getRootCaCrl);
 
-router
+sgxRouter.route('/crl').get(crlController.getCrl);
+
+sgxRouter
   .route('/refresh')
   .post(refreshController.refreshCache)
   .get(refreshController.refreshCache);
 
-export default router;
+
+export { sgxRouter };

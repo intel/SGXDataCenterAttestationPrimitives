@@ -28,36 +28,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/** File: x509.h 
+ *  
+ * Description: Definitions of X.509 parser's interfaces
+ *
+ */
+#ifndef _X509_H_
+#define _X509_H_
 
-import Constants from '../constants/index.js';
-import PccsError from '../utils/PccsError.js';
-import PccsStatus from '../constants/pccs_status_code.js';
-import { QeIdentities, sequelize } from './models/index.js';
+#include "sgx_ql_lib_common.h"
 
-export async function upsertQeIdentity(qe_identity) {
-  return await QeIdentities.upsert({
-    id: 1,
-    qe_identity: qe_identity,
-    root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-    signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
-  });
-}
+std::string get_cdp_url_from_pem_cert(const char *p_cert);
 
-//Query QEIdentity
-export async function getQeIdentity() {
-  const sql =
-    'select a.*,' +
-    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-    ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
-    ' from qe_identities a ' +
-    ' where a.id=1';
-  const qe_identity = await sequelize.query(sql, {
-    type: sequelize.QueryTypes.SELECT,
-  });
-  if (qe_identity.length == 0) return null;
-  else if (qe_identity.length == 1) {
-    if (qe_identity[0].root_cert != null && qe_identity[0].signing_cert != null)
-      return qe_identity[0];
-    else return null;
-  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-}
+#endif /* !_X509_H_ */
+

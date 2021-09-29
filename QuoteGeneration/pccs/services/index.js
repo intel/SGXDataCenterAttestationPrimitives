@@ -37,6 +37,7 @@ import * as identityService from './identityService.js';
 import * as rootcacrlService from './rootcacrlService.js';
 import * as refreshService from './refreshService.js';
 import * as platformsService from './platformsService.js';
+import * as crlService from './crlService.js';
 
 export {
   platformsRegService,
@@ -48,4 +49,5 @@ export {
   rootcacrlService,
   refreshService,
   platformsService,
+  crlService
 };

@@ -30,8 +30,7 @@
  */
 import Constants from '../../constants/index.js';
 import * as pcsCertificatesDao from '../../dao/pcsCertificatesDao.js';
-import * as qeidentityDao from '../../dao/qeidentityDao.js';
-import * as qveidentityDao from '../../dao/qveidentityDao.js';
+import * as enclaveIdentityDao from '../../dao/enclaveIdentityDao.js';
 import * as pckcrlDao from '../../dao/pckcrlDao.js';
 import * as CommonCacheLogic from './commonCacheLogic.js';
 
@@ -47,14 +46,18 @@ export async function checkQuoteVerificationCollateral() {
   }
 
   // QE identity
-  const qeid = await qeidentityDao.getQeIdentity();
+  const qeid = await enclaveIdentityDao.getEnclaveIdentity(
+    Constants.QE_IDENTITY_ID
+  );
   if (qeid == null) {
-    await CommonCacheLogic.getQeIdentityFromPCS();
+    await CommonCacheLogic.getEnclaveIdentityFromPCS(Constants.QE_IDENTITY_ID);
   }
   // QVE identity
-  const qveid = await qveidentityDao.getQveIdentity();
+  const qveid = await enclaveIdentityDao.getEnclaveIdentity(
+    Constants.QVE_IDENTITY_ID
+  );
   if (qveid == null) {
-    await CommonCacheLogic.getQveIdentityFromPCS();
+    await CommonCacheLogic.getEnclaveIdentityFromPCS(Constants.QVE_IDENTITY_ID);
   }
   // Root CA crl
   let rootca = await pcsCertificatesDao.getCertificateById(

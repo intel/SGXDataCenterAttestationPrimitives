@@ -35,6 +35,7 @@ export default class FmspcTcbs extends Sequelize.Model {
     super.init(
       {
         fmspc: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        type: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
         tcbinfo: { type: Sequelize.DataTypes.BLOB },
         root_cert_id: { type: Sequelize.DataTypes.INTEGER },
         signing_cert_id: { type: Sequelize.DataTypes.INTEGER },
