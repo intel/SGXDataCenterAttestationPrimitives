@@ -35,6 +35,9 @@
     <ClCompile Include="os_version.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="qcnl_config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="qcnl_wrapper.def">

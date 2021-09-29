@@ -146,7 +146,6 @@ namespace standard
         }
         std::tm time{};
         std::istringstream input(timeString);
-        input.imbue (std::locale(setlocale(LC_ALL, nullptr)));
         input >> std::get_time(&time, "%Y-%m-%dT%H:%M:%SZ");
         return !input.fail();
     }
@@ -155,7 +154,6 @@ namespace standard
     {
         struct tm date_c{};
         std::istringstream input(date);
-        input.imbue (std::locale(setlocale(LC_ALL, "")));
         input >> std::get_time(&date_c, "%Y-%m-%dT%H:%M:%SZ");
         return date_c;
     }

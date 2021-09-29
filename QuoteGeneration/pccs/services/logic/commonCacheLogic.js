@@ -35,11 +35,11 @@ import * as pckcertDao from '../../dao/pckcertDao.js';
 import * as pckCertchainDao from '../../dao/pckCertchainDao.js';
 import * as platformTcbsDao from '../../dao/platformTcbsDao.js';
 import * as pcsCertificatesDao from '../../dao/pcsCertificatesDao.js';
-import * as qeidentityDao from '../../dao/qeidentityDao.js';
-import * as qveidentityDao from '../../dao/qveidentityDao.js';
+import * as enclaveIdentityDao from '../../dao/enclaveIdentityDao.js';
 import * as pckcrlDao from '../../dao/pckcrlDao.js';
 import * as fmspcTcbDao from '../../dao/fmspcTcbDao.js';
 import * as platformsDao from '../../dao/platformsDao.js';
+import * as crlCacheDao from '../../dao/crlCacheDao.js';
 import * as pcsClient from '../../pcs_client/pcs_client.js';
 import * as pckLibWrapper from '../../lib_wrapper/pcklib_wrapper.js';
 import { sequelize } from '../../dao/models/index.js';
@@ -122,6 +122,9 @@ export async function getPckCertFromPCS(
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
+  // Make PEM certificates array
+  let pem_certs = pckcerts_valid.map((o) => unescape(o.cert));
+
   // Get fmspc and ca type from response header
   const fmspc = pcsClient
     .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
@@ -138,7 +141,7 @@ export async function getPckCertFromPCS(
   }
 
   // get tcbinfo for this fmspc
-  pck_server_res = await pcsClient.getTcb(fmspc);
+  pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
@@ -183,6 +186,7 @@ export async function getPckCertFromPCS(
 
     // Update or insert fmspc_tcbs
     await fmspcTcbDao.upsertFmspcTcb({
+      type: Constants.PROD_TYPE_SGX,
       fmspc: fmspc,
       tcbinfo: tcbinfo,
     });
@@ -196,7 +200,6 @@ export async function getPckCertFromPCS(
     await pcsCertificatesDao.upsertTcbInfoIssuerChain(tcbinfo_issuer_chain);
 
     // For all cached TCB levels, re-run PCK cert selection tool
-    let pem_certs = pckcerts_valid.map((o) => unescape(o.cert));
     for (const platform_tcb of cached_platform_tcbs) {
       let cert_index = pckLibWrapper.pck_cert_select(
         platform_tcb.cpu_svn,
@@ -217,33 +220,34 @@ export async function getPckCertFromPCS(
         pckcerts_valid[cert_index].tcbm
       );
     }
-    if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
-    // get the best cert with PCKCertSelectionTool for this raw TCB
-    let cert_index = pckLibWrapper.pck_cert_select(
+  });
+
+  if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
+  // get the best cert with PCKCertSelectionTool for this raw TCB
+  let cert_index = pckLibWrapper.pck_cert_select(
+    cpusvn,
+    pcesvn,
+    pceid,
+    tcbinfo_str,
+    pem_certs,
+    pem_certs.length
+  );
+  if (cert_index == -1) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
+
+  // create an entry for the new TCB level unless it's LAZY mode and
+  // there are 'Not available' certificates for some TCB levels
+  let hasNotAvailableCerts = pckcerts_not_available.length > 0;
+  if (cachingModeManager.needUpdatePlatformTcbs(hasNotAvailableCerts)) {
+    await platformTcbsDao.upsertPlatformTcbs(
+      qeid,
+      pceid,
       cpusvn,
       pcesvn,
-      pceid,
-      tcbinfo_str,
-      pem_certs,
-      pem_certs.length
+      pckcerts_valid[cert_index].tcbm
     );
-    if (cert_index == -1) {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-    }
-
-    // create an entry for the new TCB level unless it's LAZY mode and
-    // there are 'Not available' certificates for some TCB levels
-    let hasNotAvailableCerts = pckcerts_not_available.length > 0;
-    if (cachingModeManager.needUpdatePlatformTcbs(hasNotAvailableCerts)) {
-      await platformTcbsDao.upsertPlatformTcbs(
-        qeid,
-        pceid,
-        cpusvn,
-        pcesvn,
-        pckcerts_valid[cert_index].tcbm
-      );  
-    }
-  });
+  }
 
   result[Constants.SGX_TCBM] = pckcerts_valid[cert_index].tcbm;
   result[Constants.SGX_FMSPC] = fmspc;
@@ -284,8 +288,8 @@ export async function getPckCrlFromPCS(ca) {
   return result;
 }
 
-export async function getTcbInfoFromPCS(fmspc) {
-  const pck_server_res = await pcsClient.getTcb(fmspc);
+export async function getTcbInfoFromPCS(type, fmspc) {
+  const pck_server_res = await pcsClient.getTcb(type, fmspc);
 
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
@@ -301,6 +305,7 @@ export async function getTcbInfoFromPCS(fmspc) {
   await sequelize.transaction(async (t) => {
     // update or insert TCB Info
     await fmspcTcbDao.upsertFmspcTcb({
+      type: type,
       fmspc: fmspc,
       tcbinfo: result['tcbinfo'],
     });
@@ -316,8 +321,8 @@ export async function getTcbInfoFromPCS(fmspc) {
   return result;
 }
 
-export async function getQeIdentityFromPCS() {
-  const pck_server_res = await pcsClient.getQeIdentity();
+export async function getEnclaveIdentityFromPCS(enclave_id) {
+  const pck_server_res = await pcsClient.getEnclaveIdentity(enclave_id);
 
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
@@ -330,42 +335,14 @@ export async function getQeIdentityFromPCS() {
     pck_server_res.headers,
     Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
   );
-  result['qeid'] = pck_server_res.rawBody;
+  result['identity'] = pck_server_res.rawBody;
 
   await sequelize.transaction(async (t) => {
     // update or insert QE Identity
-    await qeidentityDao.upsertQeIdentity(pck_server_res.rawBody);
-    // update or insert certificate chain
-    await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+    await enclaveIdentityDao.upsertEnclaveIdentity(
+      enclave_id,
+      pck_server_res.rawBody
     );
-  });
-
-  return result;
-}
-
-export async function getQveIdentityFromPCS() {
-  const pck_server_res = await pcsClient.getQveIdentity();
-
-  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  let result = {};
-  result[
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  ] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  );
-  result['qveid'] = pck_server_res.rawBody;
-
-  await sequelize.transaction(async (t) => {
-    // update or insert QvE Identity
-    await qveidentityDao.upsertQveIdentity(pck_server_res.rawBody);
     // update or insert certificate chain
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
       pcsClient.getHeaderValue(
@@ -382,7 +359,7 @@ export async function getRootCACrlFromPCS(rootca) {
   return await sequelize.transaction(async (t) => {
     if (rootca == null) {
       // Root Cert not cached
-      const pck_server_res = await pcsClient.getQeIdentity();
+      const pck_server_res = await pcsClient.getEnclaveIdentity(Constants.QE_IDENTITY_ID);
       if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
         // update certificates
         await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
@@ -419,4 +396,12 @@ export async function getRootCACrlFromPCS(rootca) {
 
     return rootca.crl;
   });
+}
+
+export async function getCrlFromPCS(uri) {
+  let crl = await pcsClient.getFileFromUrl(uri);
+
+  await crlCacheDao.upsertCrl(uri, crl);
+
+  return crl;
 }

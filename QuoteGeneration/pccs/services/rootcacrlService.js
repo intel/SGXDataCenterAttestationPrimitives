@@ -48,7 +48,6 @@ export async function getRootCaCrl() {
   }
 
   // To keep backward compatibility. 
-  // TODO : for PCS alignment, need to remove this conversion
   crl = Buffer.from(crl, 'utf8').toString('hex');
   
   return crl;

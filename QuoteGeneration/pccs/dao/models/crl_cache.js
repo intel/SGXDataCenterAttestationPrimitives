@@ -28,26 +28,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: network_wrapper.h 
- *  
- * Description: Definitions of network access interfaces
- *
- */
-#ifndef _NETWORK_WRAPPER_H_
-#define _NETWORK_WRAPPER_H_
+import Sequelize from 'sequelize';
 
-#include "sgx_ql_lib_common.h"
-
-sgx_qcnl_error_t qcnl_https_request(const char* url,
-    const char *req_body, 
-    uint32_t req_body_size, 
-    const uint8_t *user_token,
-    uint16_t user_token_size,
-    char **resp_msg,
-    uint32_t& resp_size,
-    char **resp_header,
-    uint32_t& header_size);
-
-
-#endif /* !_NETWORK_WRAPPER_H_ */
-
+export default class CrlCache extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        cdp_url: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        crl: { type: Sequelize.DataTypes.BLOB },
+      },
+      {
+        tableName: 'crl_cache',
+        timestamps: true,
+        createdAt: 'created_time',
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

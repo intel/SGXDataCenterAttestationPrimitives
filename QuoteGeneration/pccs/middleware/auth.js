@@ -34,7 +34,8 @@ import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 
 export function validateUser(req, res, next) {
-  const token = req.headers[Constants.HTTP_HEADER_USER_TOKEN];
+  const HTTP_HEADER_USER_TOKEN = 'user-token';
+  const token = req.headers[HTTP_HEADER_USER_TOKEN];
   if (token) {
     let hash = Crypto.createHash('sha512');
     hash.update(token);
@@ -55,7 +56,8 @@ export function validateUser(req, res, next) {
 }
 
 export function validateAdmin(req, res, next) {
-  const token = req.headers[Constants.HTTP_HEADER_ADMIN_TOKEN];
+  const HTTP_HEADER_ADMIN_TOKEN = 'admin-token';
+  const token = req.headers[HTTP_HEADER_ADMIN_TOKEN];
   if (token) {
     let hash = Crypto.createHash('sha512');
     hash.update(token);

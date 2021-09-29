@@ -32,7 +32,7 @@ import Constants from '../constants/index.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager';
 
-export async function getPckCrl(ca) {
+export async function getPckCrl(ca, encoding) {
   // query pck crl from local database first
   const pckcrl = await pckcrlDao.getPckCrl(ca);
   let result = {};
@@ -44,9 +44,9 @@ export async function getPckCrl(ca) {
     result['pckcrl'] = pckcrl.pck_crl;
   }
 
-  // To keep backward compatibility. 
-  // TODO : for PCS alignment, need to remove this conversion
-  result['pckcrl'] = Buffer.from(result['pckcrl'], 'utf8').toString('hex');
+  if (!encoding || encoding.toUpperCase() != 'DER') {
+    result['pckcrl'] = Buffer.from(result['pckcrl'], 'utf8').toString('hex');
+  }
 
   return result;
 }

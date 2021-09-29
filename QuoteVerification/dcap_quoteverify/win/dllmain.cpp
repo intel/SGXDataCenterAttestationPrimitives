@@ -163,7 +163,7 @@ bool sgx_dcap_load_urts()
         //
 		g_urts_handle = LoadLibrary(TEXT(SGX_URTS_LIB_FILE_NAME));
         if (g_urts_handle == NULL) {
-            SE_TRACE(SE_TRACE_ERROR, "Couldn't load urts library %s.\n", SGX_URTS_LIB_FILE_NAME);
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't load urts library %s.\n", SGX_URTS_LIB_FILE_NAME);
             break;
         }
 

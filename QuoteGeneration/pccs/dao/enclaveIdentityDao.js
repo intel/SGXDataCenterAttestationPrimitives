@@ -32,35 +32,36 @@
 import Constants from '../constants/index.js';
 import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
-import { QveIdentities, sequelize } from './models/index.js';
+import { EnclaveIdentities, sequelize } from './models/index.js';
 
-export async function upsertQveIdentity(qve_identity) {
-  return await QveIdentities.upsert({
-    id: 1,
-    qve_identity: qve_identity,
+export async function upsertEnclaveIdentity(id, identity) {
+  return await EnclaveIdentities.upsert({
+    id: id,
+    identity: identity,
     root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
     signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
   });
 }
 
-//Query QvEIdentity
-export async function getQveIdentity() {
+//Query EnclaveIdentity
+export async function getEnclaveIdentity(id) {
   const sql =
     'select a.*,' +
     ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
     ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
-    ' from qve_identities a ' +
-    ' where a.id=1';
-  const qve_identity = await sequelize.query(sql, {
+    ' from enclave_identities a ' +
+    ' where a.id=$id';
+  const enclave_identity = await sequelize.query(sql, {
     type: sequelize.QueryTypes.SELECT,
+    bind: { id: id },
   });
-  if (qve_identity.length == 0) return null;
-  else if (qve_identity.length == 1) {
+  if (enclave_identity.length == 0) return null;
+  else if (enclave_identity.length == 1) {
     if (
-      qve_identity[0].root_cert != null &&
-      qve_identity[0].signing_cert != null
+      enclave_identity[0].root_cert != null &&
+      enclave_identity[0].signing_cert != null
     )
-      return qve_identity[0];
+      return enclave_identity[0];
     else return null;
   } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }

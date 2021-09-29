@@ -31,7 +31,7 @@
 import logger from './Logger.js';
 import Config from 'config';
 import Constants from '../constants/index.js';
-import { sequelize, db_sync, PcsVersion } from '../dao/models/index.js';
+import { sequelize, PcsVersion } from '../dao/models/index.js';
 import Umzug from 'umzug';
 import * as fs from 'fs';
 
@@ -137,8 +137,6 @@ export async function database_check() {
     if (!db_initialized) {
       // auto-migration
       await db_migration();
-      // sync database models
-      await db_sync();
       // update pcs_version
       await PcsVersion.upsert({
         id: 1,
@@ -161,16 +159,6 @@ export async function database_check() {
         );
         return false;
       }
-      if (result[0].api_version != Constants.API_VERSION) {
-        // If API version changes, the database won't be valid any more
-        logger.error(
-          `The caching database can't be loaded. Current version is ` +
-            result[0].api_version +
-            '. Required : ' +
-            Constants.API_VERSION
-        );
-        return false;
-      }
       if (result[0].server_addr != url.hostname) {
         // If PCS server address changes, the database won't be valid any more
         logger.error(
@@ -181,8 +169,7 @@ export async function database_check() {
       }
       // auto-migration
       await db_migration();
-      // sync database models
-      await db_sync();
+
       return true;
     }
   } catch (err) {

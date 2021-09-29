@@ -33,40 +33,32 @@ import { identityService } from '../services/index.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 
-export async function getQeIdentity(req, res, next) {
+async function getEnclaveIdentity(req, res, next, enclave_id) {
   try {
     // call service
-    let qeIdJson = await identityService.getQeIdentity();
+    let enclaveIdentityJson = await identityService.getEnclaveIdentity(
+      enclave_id
+    );
 
     // send response
     res
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
       .header(
         Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
-        qeIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+        enclaveIdentityJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
       )
       .header('Content-Type', 'application/json')
-      .send(qeIdJson.qeid);
+      .send(enclaveIdentityJson['identity']);
   } catch (err) {
     next(err);
   }
+}
+
+export async function getEcdsaQeIdentity(req, res, next) {
+  return getEnclaveIdentity(req, res, next, Constants.QE_IDENTITY_ID);
 }
 
 export async function getQveIdentity(req, res, next) {
-  try {
-    // call service
-    let qveIdJson = await identityService.getQveIdentity();
-
-    // send response
-    res
-      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
-      .header(
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
-        qveIdJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
-      )
-      .header('Content-Type', 'application/json')
-      .send(qveIdJson.qveid);
-  } catch (err) {
-    next(err);
-  }
+  return getEnclaveIdentity(req, res, next, Constants.QVE_IDENTITY_ID);
 }
+

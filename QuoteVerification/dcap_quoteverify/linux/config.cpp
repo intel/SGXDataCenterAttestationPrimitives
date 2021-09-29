@@ -72,7 +72,9 @@ extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_
 extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
 extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
 extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
-
+extern pthread_create_ocall_func_t p_pthread_create_ocall;
+extern pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall;
+extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
 
 
 #ifndef MAX_PATH
@@ -252,7 +254,7 @@ bool sgx_dcap_load_urts()
 
             if (g_urts_handle == NULL) {
                 fputs(dlerror(), stderr);
-                SE_TRACE(SE_TRACE_ERROR, "Couldn't find urts library: %s\n", SGX_URTS_LIB_FILE_NAME);
+                SE_TRACE(SE_TRACE_DEBUG, "Couldn't find urts library: %s\n", SGX_URTS_LIB_FILE_NAME);
                 break;
             }
 
@@ -329,6 +331,32 @@ bool sgx_dcap_load_urts()
                 break;
             }
 
+            //search for pthread_create_ocall symbol in urts library
+            //
+            p_pthread_create_ocall = (pthread_create_ocall_func_t)dlsym(g_urts_handle, SGX_URTS_API_OCALL_PTHREAD_CREATE);
+            err = dlerror();
+            if (p_pthread_create_ocall == NULL || err != NULL) {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in urts library %s.\n", SGX_URTS_API_OCALL_PTHREAD_CREATE, SGX_URTS_LIB_FILE_NAME);
+                break;
+            }
+
+            //search for pthread_wait_timeout_ocall symbol in urts library
+            //
+            p_pthread_wait_timeout_ocall = (pthread_wait_timeout_ocall_func_t)dlsym(g_urts_handle, SGX_URTS_API_OCALL_PTHREAD_TIMEOUT);
+            err = dlerror();
+            if (p_pthread_wait_timeout_ocall == NULL || err != NULL) {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in urts library %s.\n", SGX_URTS_API_OCALL_PTHREAD_TIMEOUT, SGX_URTS_LIB_FILE_NAME);
+                break;
+            }
+
+            //search for pthread_wakeup_ocall symbol in urts library
+            //
+            p_pthread_wakeup_ocall_func = (pthread_wakeup_ocall_func_t)dlsym(g_urts_handle, SGX_URTS_API_OCALL_PTHREAD_WAKEUP);
+            err = dlerror();
+            if (p_pthread_wakeup_ocall_func == NULL || err != NULL) {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in urts library %s.\n", SGX_URTS_API_OCALL_PTHREAD_WAKEUP, SGX_URTS_LIB_FILE_NAME);
+                break;
+            }
 
             ret = true;
 
@@ -434,6 +462,15 @@ __attribute__((destructor)) void _qv_global_destructor()
 
     if (p_sgx_thread_set_multiple_untrusted_events_ocall)
         p_sgx_thread_set_multiple_untrusted_events_ocall = NULL;
+
+    if (p_pthread_create_ocall)
+        p_pthread_create_ocall = NULL;
+
+    if (p_pthread_wait_timeout_ocall)
+        p_pthread_wait_timeout_ocall = NULL;
+
+    if (p_pthread_wakeup_ocall_func)
+        p_pthread_wakeup_ocall_func = NULL;
 
     if (g_urts_handle) {
         dlclose(g_urts_handle);

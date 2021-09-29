@@ -39,9 +39,11 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <cstdarg>
+#include <string.h>
 #include "se_memcpy.h"
 #include "sgx_default_quote_provider.h"
 #include "sgx_default_qcnl_wrapper.h"
+#include "x509.h"
 
 using namespace std;
 
@@ -49,6 +51,7 @@ using namespace std;
 #define __unaligned
 #endif
 
+static const char* X509_DELIMITER = "-----BEGIN CERTIFICATE-----";
 static sgx_ql_logging_callback_t logger_callback = nullptr;
 
 void log(sgx_ql_log_level_t level, const char* fmt, ...)
@@ -104,6 +107,8 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret)
             return SGX_QL_CERTS_UNAVAILABLE;
         case SGX_QCNL_ERROR_STATUS_UNEXPECTED:
             return SGX_QL_UNKNOWN_MESSAGE_RESPONSE;
+        case SGX_QCNL_ERROR_STATUS_SERVICE_UNAVAILABLE:
+            return SGX_QL_SERVICE_UNAVAILABLE;
         default:
             return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -131,16 +136,14 @@ quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config)
 static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char** __unaligned out_buf1, uint32_t* __unaligned out_buf1_size,
                                    char** __unaligned out_buf2, uint32_t* __unaligned out_buf2_size)
 {
-    const string delimiter = "-----BEGIN CERTIFICATE-----";
-
     string s0((char*)in_buf, in_buf_size);
-    size_t pos = s0.find(delimiter);
+    size_t pos = s0.find(X509_DELIMITER);
     if (pos == string::npos) {
         log(SGX_QL_LOG_ERROR, "[QPL] Invalid certificate chain.\n");
         return SGX_QL_MESSAGE_ERROR;
     }
 
-    *out_buf1_size = (uint32_t)(pos+1);   // one extra byte for NULL terminator
+    *out_buf1_size = (uint32_t)(pos);
     *out_buf1 = reinterpret_cast<char*>(malloc(*out_buf1_size));
     if (!(*out_buf1)) {
         log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
@@ -152,9 +155,8 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
         *out_buf1 = NULL;
         return SGX_QL_ERROR_UNEXPECTED;
     }
-    (*out_buf1)[pos] = 0;  // add NULL terminator
 
-    *out_buf2_size = (uint32_t)(in_buf_size - pos +1);   // one extra byte for NULL terminator
+    *out_buf2_size = (uint32_t)(in_buf_size - pos);
     *out_buf2 = reinterpret_cast<char*>(malloc(*out_buf2_size));
     if (!(*out_buf2)) {
         log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
@@ -162,7 +164,7 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
         *out_buf1 = NULL;
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
-    if (memcpy_s(*out_buf2, *out_buf2_size - 1, s0.substr(pos).c_str(), in_buf_size - pos)  != 0) {
+    if (memcpy_s(*out_buf2, *out_buf2_size, s0.substr(pos).c_str(), in_buf_size - pos)  != 0) {
         log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
         free(*out_buf1);
         free(*out_buf2);
@@ -170,7 +172,6 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char**
         *out_buf2 = NULL;
         return SGX_QL_ERROR_UNEXPECTED;
     }
-    (*out_buf2)[*out_buf2_size - 1] = 0;  // add NULL terminator
 
     return SGX_QL_SUCCESS;
 }
@@ -197,25 +198,17 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
     uint16_t tcbinfo_size = 0;
     uint8_t *p_qe_identity = NULL;
     uint16_t qe_identity_size = 0;
-    uint8_t *p_root_ca_crl = NULL;
-    uint16_t root_ca_crl_size = 0;
 
     sgx_qcnl_error_t qcnl_ret = SGX_QCNL_UNEXPECTED_ERROR;
     quote3_error_t ret = SGX_QL_ERROR_UNEXPECTED;
 
     do {
         // Set version
-        int api_version = sgx_qcnl_get_api_version();
-        if (api_version == 0) {
-            log(SGX_QL_LOG_ERROR, "[QPL] The URL configured for QCNL has an unknown API version.\n");
-            return SGX_QL_UNKNOWN_API_VERSION;
-        }
-        else if (api_version == 2) {
-            // Keep it consistent with old releases
-            (*pp_quote_collateral)->version = 1;
-        }
-        else {
-            (*pp_quote_collateral)->version = api_version;
+        (*pp_quote_collateral)->version = sgx_qcnl_get_api_version();
+        if ((*pp_quote_collateral)->version == 0xFFFFFFFF) {
+            log(SGX_QL_LOG_ERROR, "[QPL] QCNL returned an unexpected API version.\n");
+            ret = SGX_QL_ERROR_UNEXPECTED;
+            break;
         }
 
         // Set PCK CRL and certchain
@@ -263,27 +256,27 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
             break;
         }
 
+        // The second certificate in the chain is root CA, so we skip the first cert
+        string str_issuer_chain = (*pp_quote_collateral)->qe_identity_issuer_chain;
+        size_t pos = str_issuer_chain.find(X509_DELIMITER, 1);
+        if (pos == string::npos) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root certificate.\n");
+            break;
+        }
+        string root_ca_cdp_url = get_cdp_url_from_pem_cert(str_issuer_chain.substr(pos).c_str());
+        if (root_ca_cdp_url.empty()) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root CA CDP Point.\n");
+            break;
+        }
+
         // Set Root CA CRL
-        qcnl_ret = sgx_qcnl_get_root_ca_crl(&p_root_ca_crl, &root_ca_crl_size);
+        qcnl_ret = sgx_qcnl_get_root_ca_crl(root_ca_cdp_url.c_str(), reinterpret_cast<uint8_t**>(&(*pp_quote_collateral)->root_ca_crl), 
+                        reinterpret_cast<uint16_t*>(&(*pp_quote_collateral)->root_ca_crl_size));
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root CA CRL : %04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
-        (*pp_quote_collateral)->root_ca_crl_size = root_ca_crl_size + 1;
-        (*pp_quote_collateral)->root_ca_crl = reinterpret_cast<char*>(malloc((*pp_quote_collateral)->root_ca_crl_size));
-        if (!(*pp_quote_collateral)->root_ca_crl) {
-            log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
-            ret = SGX_QL_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-        if (memcpy_s((*pp_quote_collateral)->root_ca_crl, (*pp_quote_collateral)->root_ca_crl_size,
-                     p_root_ca_crl, root_ca_crl_size) != 0) {
-            log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
-            ret = SGX_QL_ERROR_UNEXPECTED;
-            break;
-        }
-        (*pp_quote_collateral)->root_ca_crl[root_ca_crl_size] = 0; // Add NULL terminator
 
         ret = SGX_QL_SUCCESS;
     }
@@ -292,7 +285,6 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
     sgx_qcnl_free_pck_crl_chain(p_pck_crl_chain);
     sgx_qcnl_free_tcbinfo(p_tcbinfo);
     sgx_qcnl_free_qe_identity(p_qe_identity);
-    sgx_qcnl_free_root_ca_crl(p_root_ca_crl);
 
     if (ret != SGX_QL_SUCCESS) {
         sgx_ql_free_quote_verification_collateral(*pp_quote_collateral);
@@ -359,11 +351,55 @@ quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identi
     return SGX_QL_SUCCESS;
 }
 
-quote3_error_t sgx_ql_get_root_ca_crl (uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_cal_size)
+quote3_error_t sgx_ql_get_root_ca_crl (uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_crl_size)
 {
-    sgx_qcnl_error_t ret = sgx_qcnl_get_root_ca_crl(pp_root_ca_crl, p_root_ca_cal_size);
+    uint8_t *p_qe_identity = NULL;
+    uint16_t qe_identity_size = 0;
+    quote3_error_t ret = SGX_QL_ERROR_UNEXPECTED;
 
-    return qcnl_error_to_ql_error(ret);
+    // Get QEIdentity and certchain
+    sgx_qcnl_error_t qcnl_ret = sgx_qcnl_get_qe_identity(0, &p_qe_identity, &qe_identity_size);
+    if (qcnl_ret != SGX_QCNL_SUCCESS) {
+        log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : %04x\n", qcnl_ret);
+        return qcnl_error_to_ql_error(qcnl_ret);
+    }
+
+    do {
+        size_t pos;
+        string str_qe_identity(reinterpret_cast<const char*>(p_qe_identity), qe_identity_size);
+        pos = str_qe_identity.find(X509_DELIMITER);
+        if (pos == string::npos) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Invalid QE identity.");
+            break;
+        }
+
+        pos = str_qe_identity.find(X509_DELIMITER, pos+1);
+        if (pos == string::npos) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Invalid QE identity.");
+            break;
+        }
+
+        string root_ca_cdp_url = get_cdp_url_from_pem_cert(str_qe_identity.substr(pos).c_str());
+        if (root_ca_cdp_url.empty()) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root CA CDP Point.\n");
+            break;
+        }
+
+        // Set Root CA CRL
+        qcnl_ret = sgx_qcnl_get_root_ca_crl(root_ca_cdp_url.c_str(), pp_root_ca_crl, p_root_ca_crl_size);
+        if (qcnl_ret != SGX_QCNL_SUCCESS) {
+            log(SGX_QL_LOG_ERROR, "[QPL] Failed to get root CA CRL : %04x\n", qcnl_ret);
+            ret = qcnl_error_to_ql_error(qcnl_ret);
+            break;
+        }
+
+        ret = SGX_QL_SUCCESS;
+    }
+    while(0);
+
+    sgx_qcnl_free_qe_identity(p_qe_identity);
+
+    return ret;
 }
 
 quote3_error_t sgx_ql_free_root_ca_crl (uint8_t *p_root_ca_crl)

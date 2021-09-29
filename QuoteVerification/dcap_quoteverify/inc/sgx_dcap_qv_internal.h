@@ -72,5 +72,3 @@ quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
 #endif
 
 #endif /* !_SGX_DCAP_QV_INTERNAL_H_*/
-
-

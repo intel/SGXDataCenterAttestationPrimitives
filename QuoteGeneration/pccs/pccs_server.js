@@ -37,7 +37,7 @@ import express from 'express';
 import logger from './utils/Logger.js';
 import node_schedule from 'node-schedule';
 import body_parser from 'body-parser';
-import routes from './routes/index.js';
+import { sgxRouter } from './routes/index.js';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as auth from './middleware/auth.js';
@@ -91,24 +91,43 @@ appUtil.database_check().then((db_init_ok) => {
   app.use(json({ limit: '200000kb' }));
 
   // authentication middleware
-  app.get('/sgx/certification/v3/platforms', auth.validateAdmin);
-  app.post('/sgx/certification/v3/platforms', auth.validateUser);
-  app.use('/sgx/certification/v3/platformcollateral', auth.validateAdmin);
-  app.use('/sgx/certification/v3/refresh', auth.validateAdmin);
+  app.get(
+    '/sgx/certification/v' + Constants.API_VERSION + '/platforms',
+    auth.validateAdmin
+  );
+  app.post(
+    '/sgx/certification/v' + Constants.API_VERSION + '/platforms',
+    auth.validateUser
+  );
+  app.use(
+    '/sgx/certification/v' + Constants.API_VERSION + '/platformcollateral',
+    auth.validateAdmin
+  );
+  app.use(
+    '/sgx/certification/v' + Constants.API_VERSION + '/refresh',
+    auth.validateAdmin
+  );
 
   // router
-  app.use('/sgx/certification/v3', routes);
+  app.use('/sgx/certification/v' + Constants.API_VERSION, sgxRouter);
 
   // error handling middleware
   app.use(error.errorHandling);
 
+  //Config Options
+  const CONFIG_OPTION_CACHE_FILL_MODE = 'CachingFillMode';
+  //Config values
+  const CACHE_FILL_MODE_LAZY = 'LAZY';
+  const CACHE_FILL_MODE_REQ = 'REQ';
+  const CACHE_FILL_MODE_OFFLINE = 'OFFLINE';
+
   // set caching mode
-  let cacheMode = Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE);
-  if (cacheMode == Constants.CACHE_FILL_MODE_LAZY) {
+  let cacheMode = Config.get(CONFIG_OPTION_CACHE_FILL_MODE);
+  if (cacheMode == CACHE_FILL_MODE_LAZY) {
     cachingModeManager.cachingMode = new LazyCachingMode();
-  } else if (cacheMode == Constants.CACHE_FILL_MODE_REQ) {
+  } else if (cacheMode == CACHE_FILL_MODE_REQ) {
     cachingModeManager.cachingMode = new ReqCachingMode();
-  } else if (cacheMode == Constants.CACHE_FILL_MODE_OFFLINE) {
+  } else if (cacheMode == CACHE_FILL_MODE_OFFLINE) {
     cachingModeManager.cachingMode = new OfflineCachingMode();
   } else {
     logger.error('Unknown caching mode. Please check your configuration file.');
@@ -135,7 +154,7 @@ appUtil.database_check().then((db_init_ok) => {
         'HTTPS Server is running on: https://localhost:' +
           Config.get('HTTPS_PORT')
       );
-      app.emit('app_started');  // test app need to wait on this event
+      app.emit('app_started'); // test app need to wait on this event
     }
   );
 

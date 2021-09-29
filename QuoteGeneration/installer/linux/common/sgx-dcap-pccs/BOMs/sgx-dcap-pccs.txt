@@ -21,8 +21,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/dao/models/platform_tcbs.js	<installdir>/dao/models/platform_tcbs.js	0	main	STP
 <deliverydir>/pccs/dao/models/platforms_registered.js	<installdir>/dao/models/platforms_registered.js	0	main	STP
 <deliverydir>/pccs/dao/models/platforms.js	<installdir>/dao/models/platforms.js	0	main	STP
-<deliverydir>/pccs/dao/models/qe_identities.js	<installdir>/dao/models/qe_identities.js	0	main	STP
-<deliverydir>/pccs/dao/models/qve_identities.js	<installdir>/dao/models/qve_identities.js	0	main	STP
+<deliverydir>/pccs/dao/models/enclave_identities.js	<installdir>/dao/models/enclave_identities.js	0	main	STP
 <deliverydir>/pccs/dao/fmspcTcbDao.js	<installdir>/dao/fmspcTcbDao.js	0	main	STP
 <deliverydir>/pccs/dao/pckCertchainDao.js	<installdir>/dao/pckCertchainDao.js	0	main	STP
 <deliverydir>/pccs/dao/pckcertDao.js	<installdir>/dao/pckcertDao.js	0	main	STP
@@ -32,8 +31,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/dao/platformsDao.js	<installdir>/dao/platformsDao.js	0	main	STP
 <deliverydir>/pccs/dao/platformsRegDao.js	<installdir>/dao/platformsRegDao.js	0	main	STP
 <deliverydir>/pccs/dao/platformTcbsDao.js	<installdir>/dao/platformTcbsDao.js	0	main	STP
-<deliverydir>/pccs/dao/qeidentityDao.js	<installdir>/dao/qeidentityDao.js	0	main	STP
-<deliverydir>/pccs/dao/qveidentityDao.js	<installdir>/dao/qveidentityDao.js	0	main	STP
+<deliverydir>/pccs/dao/enclaveIdentityDao.js	<installdir>/dao/enclaveIdentityDao.js	0	main	STP
 <deliverydir>/pccs/lib/libPCKCertSelection.so	<installdir>/lib/libPCKCertSelection.so	0	main	STP
 <deliverydir>/pccs/lib_wrapper/pcklib_wrapper.js	<installdir>/lib_wrapper/pcklib_wrapper.js	0	main	STP
 <deliverydir>/pccs/middleware/auth.js	<installdir>/middleware/auth.js	0	main	STP

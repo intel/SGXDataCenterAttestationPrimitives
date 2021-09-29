@@ -28,24 +28,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import Sequelize from 'sequelize';
+import * as crlCacheDao from '../dao/crlCacheDao';
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
-export default class QeIdentities extends Sequelize.Model {
-  static init(sequelize) {
-    super.init(
-      {
-        id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
-        qe_identity: { type: Sequelize.DataTypes.BLOB },
-        root_cert_id: { type: Sequelize.DataTypes.INTEGER },
-        signing_cert_id: { type: Sequelize.DataTypes.INTEGER },
-      },
-      {
-        tableName: 'qe_identities',
-        timestamps: true,
-        createdAt: 'created_time',
-        updatedAt: 'updated_time',
-        sequelize,
-      }
-    );
+export async function getCrl(uri) {
+  let crl = await crlCacheDao.getCrl(uri);
+
+  if (!crl) {
+    crl = await cachingModeManager.getCrlFromPCS(uri);
   }
+
+  return crl;
 }

@@ -73,6 +73,6 @@ And the retrieved data can also be uploaded to cache server if user provide the 
   1. If you are using DCAP driver 1.41 or higher version to drive SGX, 
      you need run this tool with root permission or add your account to sgx_prv group like: 
        $ sudo usermod -a -G sgx_prv <user name>
-  2. If you are using Linux Kernel 5.11 or higher version to to drive SGX, 
+  2. If you are using Linux Kernel 5.11 or higher version to drive SGX, 
      you need run this tool with root permission or add your account to sgx_prv group like:
        $ sudo usermod -a -G sgx_prv <user name>

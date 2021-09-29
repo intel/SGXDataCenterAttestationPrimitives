@@ -1541,6 +1541,8 @@ uint32_t gen_quote(uint8_t *p_blob,
     sgx_sha_state_handle_t sha_quote_context = NULL;
     sgx_report_data_t qe_report_data;
     sgx_key_128bit_t qe_id = { 0 };
+    sgx_ec256_public_t le_att_pub_key;
+    uint8_t verify_result = SGX_EC_INVALID_SIGNATURE;
 
     memset(&plaintext, 0, sizeof(plaintext));
 
@@ -1737,6 +1739,26 @@ uint32_t gen_quote(uint8_t *p_blob,
         ret = REFQE3_ERROR_UNEXPECTED;
         goto ret_point;
     }
+
+    memcpy(&le_att_pub_key, &plaintext.ecdsa_att_public_key, sizeof(le_att_pub_key));
+    //big endian to little endian
+    SWAP_ENDIAN_32B(le_att_pub_key.gx);
+    SWAP_ENDIAN_32B(le_att_pub_key.gy);
+
+    sgx_status = sgx_ecdsa_verify(reinterpret_cast<const uint8_t *>(p_quote),
+        sizeof(*p_quote) - sizeof(p_quote->signature_data_len),
+        &le_att_pub_key,
+        reinterpret_cast<sgx_ec256_signature_t *>(p_quote_sig->sig),
+        &verify_result,
+        handle);
+    if (SGX_SUCCESS != sgx_status || SGX_EC_VALID != verify_result) {
+        if(SGX_SUCCESS != sgx_read_rand((unsigned char*)p_quote_sig->sig,
+                                     sizeof(sgx_ec256_signature_t)))
+            memset(p_quote_sig->sig, 0, sizeof(sgx_ec256_signature_t));
+        ret = REFQE3_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+
     // Swap signature x and y from little endian used in sgx_crypto to big endian used in quote byte order
     {
         size_t i;

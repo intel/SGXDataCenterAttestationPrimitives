@@ -33,43 +33,29 @@ import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 import logger from '../utils/Logger.js';
 import * as pckcertDao from '../dao/pckcertDao.js';
-import * as qeidentityDao from '../dao/qeidentityDao.js';
-import * as qveidentityDao from '../dao/qveidentityDao.js';
+import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
 import * as platformTcbsDao from '../dao/platformTcbsDao.js';
 import * as platformsDao from '../dao/platformsDao.js';
 import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
 import * as pckCertchainDao from '../dao/pckCertchainDao.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as crlCacheDao from '../dao/crlCacheDao.js';
 import * as pcsClient from '../pcs_client/pcs_client.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
 import { sequelize } from '../dao/models/index.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 import X509 from '../x509/x509.js';
 
-// Refresh the QE IDENTITY table
-async function refresh_qe_identity() {
-  const pck_server_res = await pcsClient.getQeIdentity();
+// Refresh the enclave_identities table
+async function refresh_enclave_identity(enclave_id) {
+  const pck_server_res = await pcsClient.getEnclaveIdentity(enclave_id);
   if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
     // Then refresh cache DB
-    await qeidentityDao.upsertQeIdentity(pck_server_res.rawBody);
-    await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
+    await enclaveIdentityDao.upsertEnclaveIdentity(
+      enclave_id,
+      pck_server_res.rawBody
     );
-  } else {
-    throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
-  }
-}
-
-// Refresh the QVE IDENTITY table
-async function refresh_qve_identity() {
-  const pck_server_res = await pcsClient.getQveIdentity();
-  if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-    // Then refresh cache DB
-    await qveidentityDao.upsertQveIdentity(pck_server_res.rawBody);
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
       pcsClient.getHeaderValue(
         pck_server_res.headers,
@@ -158,7 +144,7 @@ async function refresh_all_pckcerts(fmspc_array) {
       }
 
       // get tcbinfo for this fmspc
-      pck_server_res = await pcsClient.getTcb(fmspc);
+      pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
       if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
         throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
       }
@@ -263,9 +249,19 @@ async function refresh_rootca_crl() {
   });
 }
 
+// Refresh crl_cache table
+async function refresh_cached_crls() {
+  const crl_caches = await crlCacheDao.getAllCrls();
+  for (let crl_cache of crl_caches) {
+    // refresh each crl
+    const crl = await pcsClient.getFileFromUrl(crl_cache.cdp_url);
+    await crlCacheDao.upsertCrl(crl_cache.cdp_url, crl);
+  }
+}
+
 // Refresh the TCB info for the specified fmspc value
 async function refresh_one_tcb(fmspc) {
-  const pck_server_res = await pcsClient.getTcb(fmspc);
+  const pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
   if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
     // Then refresh cache DB
     await fmspcTcbDao.upsertFmspcTcb({
@@ -306,9 +302,10 @@ export async function refreshCache(type, fmspc) {
     await sequelize.transaction(async (t) => {
       await refresh_pck_crls();
       await refresh_all_tcbs();
-      await refresh_qe_identity();
-      await refresh_qve_identity();
+      await refresh_enclave_identity(Constants.QE_IDENTITY_ID);
+      await refresh_enclave_identity(Constants.QVE_IDENTITY_ID);
       await refresh_rootca_crl();
+      await refresh_cached_crls();
     });
   }
 }
@@ -332,9 +329,10 @@ export async function scheduledRefresh() {
     await sequelize.transaction(async (t) => {
       await refresh_pck_crls();
       await refresh_all_tcbs();
-      await refresh_qe_identity();
-      await refresh_qve_identity();
+      await refresh_enclave_identity(Constants.QE_IDENTITY_ID);
+      await refresh_enclave_identity(Constants.QVE_IDENTITY_ID);
       await refresh_rootca_crl();
+      await refresh_cached_crls();
     });
 
     logger.info('Scheduled cache refresh is completed successfully.');

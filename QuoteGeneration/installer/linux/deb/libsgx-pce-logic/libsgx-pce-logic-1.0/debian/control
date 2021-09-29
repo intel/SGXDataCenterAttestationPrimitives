@@ -8,5 +8,5 @@ Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
 
 Package: libsgx-pce-logic
 Architecture: amd64
-Depends: libsgx-urts (>= 2.14), libsgx-ae-pce(>= 2.14), ${shlibs:Depends}, ${misc:Depends}
+Depends: libsgx-urts (>= 2.15), libsgx-ae-pce(>= 2.15), ${shlibs:Depends}, ${misc:Depends}
 Description: Intel(R) Software Guard Extensions Data Center Attestation Primitives

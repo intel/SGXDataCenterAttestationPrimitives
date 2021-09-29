@@ -35,6 +35,12 @@ import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 
 export async function getPckCert(req, res, next) {
+  const QEID_MAX_SIZE = 260;
+  const CPUSVN_SIZE = 32;
+  const PCESVN_SIZE = 4;
+  const PCEID_SIZE = 4;
+  const ENC_PPID_SIZE = 768;
+
   try {
     let qeid = req.query.qeid;
     let cpusvn = req.query.cpusvn;
@@ -47,14 +53,14 @@ export async function getPckCert(req, res, next) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
     if (
-      qeid.length > Constants.QEID_MAX_SIZE ||
-      cpusvn.length != Constants.CPUSVN_SIZE ||
-      pcesvn.length != Constants.PCESVN_SIZE ||
-      pceid.length != Constants.PCEID_SIZE
+      qeid.length > QEID_MAX_SIZE ||
+      cpusvn.length != CPUSVN_SIZE ||
+      pcesvn.length != PCESVN_SIZE ||
+      pceid.length != PCEID_SIZE
     ) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-    if (enc_ppid != null && enc_ppid.length != Constants.ENC_PPID_SIZE) {
+    if (enc_ppid != null && enc_ppid.length != ENC_PPID_SIZE) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
 
@@ -90,7 +96,7 @@ export async function getPckCert(req, res, next) {
         pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN]
       )
       .header('Content-Type', 'application/x-pem-file')
-      .send(pckcertJson.cert);
+      .send(pckcertJson['cert']);
   } catch (err) {
     next(err);
   }

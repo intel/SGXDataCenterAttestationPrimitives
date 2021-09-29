@@ -41,10 +41,10 @@
 #include <curl/curl.h>
 #include <map>
 #include <fstream>
+#include <unistd.h>
 #include "sgx_default_qcnl_wrapper.h"
 #include "se_memcpy.h"
-
-extern bool g_use_secure_cert;
+#include "qcnl_config.h"
 
 typedef struct _network_malloc_info_t{
     char *base;
@@ -129,109 +129,21 @@ static sgx_qcnl_error_t pccs_status_to_qcnl_error(long pccs_status_code)
             return SGX_QCNL_ERROR_STATUS_PLATFORM_UNKNOWN;
         case 462:   // PCCS_STATUS_CERTS_UNAVAILABLE
             return SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE;
+        case 503:   // PCCS_STATUS_SERVICE_UNAVAILABLE
+            return SGX_QCNL_ERROR_STATUS_SERVICE_UNAVAILABLE;
         default:
             return SGX_QCNL_ERROR_STATUS_UNEXPECTED;
     }
 }
 
 /**
-* This method calls curl library to perform https GET request and returns response body and header
-*
-* @param url HTTPS Get URL 
-* @param resp_msg Output buffer of response body
-* @param resp_size Size of response body
-* @param resp_header Output buffer of response header
-* @param header_size Size of response header
-*
-* @return SGX_QCNL_SUCCESS Call https get successfully. Other return codes indicate an error occured.
-*/
-sgx_qcnl_error_t qcnl_https_get(const char* url, 
-                                      char **resp_msg, 
-                                      uint32_t& resp_size, 
-                                      char **resp_header, 
-                                      uint32_t& header_size) 
-{
-    CURL *curl = NULL;
-    CURLcode curl_ret;
-    sgx_qcnl_error_t ret = SGX_QCNL_NETWORK_ERROR;
-    network_malloc_info_t res_header = {0,0};
-    network_malloc_info_t res_body = {0,0};
-
-    do {
-        curl = curl_easy_init();
-        if (!curl)
-            break;
-
-        if (curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK)
-            break;;
-
-        if (!g_use_secure_cert) {
-            // if not set this option, the below error code will be returned for self signed cert
-            // CURLE_SSL_CACERT (60) Peer certificate cannot be authenticated with known CA certificates.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK)
-                break;
-            // if not set this option, the below error code will be returned for self signed cert
-            // // CURLE_PEER_FAILED_VERIFICATION (51) The remote server's SSL certificate or SSH md5 fingerprint was deemed not OK.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L) != CURLE_OK)
-                break;
-        }
-
-        // Set write callback functions
-        if(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback)!=CURLE_OK)
-            break;
-        if(curl_easy_setopt(curl, CURLOPT_WRITEDATA, reinterpret_cast<void *>(&res_body))!=CURLE_OK)
-            break;
-
-        // Set header callback functions
-        if(curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_callback)!=CURLE_OK)
-            break;
-        if(curl_easy_setopt(curl, CURLOPT_HEADERDATA, reinterpret_cast<void *>(&res_header))!=CURLE_OK)
-            break;
-
-        // Perform request
-        if((curl_ret = curl_easy_perform(curl))!=CURLE_OK) {
-            ret = curl_error_to_qcnl_error(curl_ret);
-            break;
-        }
-        long http_code = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        if (http_code != 200) {
-            ret = pccs_status_to_qcnl_error(http_code);
-            break;
-        }
-
-        *resp_msg = res_body.base;
-        resp_size = res_body.size;
-        *resp_header = res_header.base;
-        header_size = res_header.size;
-
-        ret = SGX_QCNL_SUCCESS;
-
-    } while(0);
-
-    if (curl) {
-        curl_easy_cleanup(curl);
-    }
-    if (ret != SGX_QCNL_SUCCESS) {
-        if(res_body.base){
-            free(res_body.base);
-        }
-        if(res_header.base){
-            free(res_header.base);
-        }
-    }
-
-    return ret;
-}
-
-/**
 * This method calls curl library to perform https POST request with raw body in JSON format and returns response body and header
 *
-* @param url HTTPS POST URL 
-* @param req_body Request body in raw JSON format
-* @param req_body_size Size of request body
-* @param user_token user token to access PCCS v3/platforms API
-* @param user_token_size Size of user token
+* @param url HTTPS GET/POST URL 
+* @param req_body Request body in raw JSON format. For GET request it should be NULL.
+* @param req_body_size Size of request body. For GET request it should be 0.
+* @param user_token user token to access PCCS v3/platforms API. For GET request it should be NULL.
+* @param user_token_size Size of user token. For GET request it should be 0.
 * @param resp_msg Output buffer of response body
 * @param resp_size Size of response body
 * @param resp_header Output buffer of response header
@@ -239,7 +151,7 @@ sgx_qcnl_error_t qcnl_https_get(const char* url,
 *
 * @return SGX_QCNL_SUCCESS Call https post successfully. Other return codes indicate an error occured.
 */
-sgx_qcnl_error_t qcnl_https_post(const char* url, 
+sgx_qcnl_error_t qcnl_https_request(const char* url, 
                                       const char *req_body, 
                                       uint32_t req_body_size, 
                                       const uint8_t *user_token,
@@ -264,27 +176,31 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
         if (curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK)
             break;
 
-        if ((headers = curl_slist_append(headers, "Content-Type: application/json")) == NULL)
-            break;
+        if (user_token && user_token_size > 0) {
+            if ((headers = curl_slist_append(headers, "Content-Type: application/json")) == NULL)
+                break;
 
-        std::string user_token_header("user-token: ");
-        user_token_header.append(reinterpret_cast<const char*>(user_token), user_token_size);
-        if ((headers = curl_slist_append(headers, user_token_header.c_str())) == NULL)
-            break;
-        if (curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers) != CURLE_OK)
-            break;
+            std::string user_token_header("user-token: ");
+            user_token_header.append(reinterpret_cast<const char*>(user_token), user_token_size);
+            if ((headers = curl_slist_append(headers, user_token_header.c_str())) == NULL)
+                break;
+            if (curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers) != CURLE_OK)
+                break;
+        }
         
-        // using CURLOPT_POSTFIELDS implies setting CURLOPT_POST to 1.
-        if (curl_easy_setopt(curl, CURLOPT_POST, 1) != CURLE_OK)
-            break;
-        // size of the POST data
-        if (curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)req_body_size) != CURLE_OK)
-            break;
-        // pass in a pointer to the data - libcurl will not copy
-        if (curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body) != CURLE_OK)
-            break;
+        if (req_body && req_body_size > 0) {
+            // using CURLOPT_POSTFIELDS implies setting CURLOPT_POST to 1.
+            if (curl_easy_setopt(curl, CURLOPT_POST, 1) != CURLE_OK)
+                break;
+            // size of the POST data
+            if (curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)req_body_size) != CURLE_OK)
+                break;
+            // pass in a pointer to the data - libcurl will not copy
+            if (curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body) != CURLE_OK)
+                break;
+        }
 
-        if (!g_use_secure_cert) {
+        if (!QcnlConfig::Instance().is_server_secure()) {
             // if not set this option, the below error code will be returned for self signed cert
             // CURLE_SSL_CACERT (60) Peer certificate cannot be authenticated with known CA certificates.
             if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK)
@@ -307,21 +223,55 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
         if(curl_easy_setopt(curl, CURLOPT_HEADERDATA, reinterpret_cast<void *>(&res_header))!=CURLE_OK)
             break;
 
-        // Perform request
-        if((curl_ret = curl_easy_perform(curl))!=CURLE_OK) {
-            ret = curl_error_to_qcnl_error(curl_ret);
-            break;
-        }
-        long http_code = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        if (http_code == 404) {
-            ret = SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
-            break;
-        }
-        else if (http_code != 200) {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
-            break;
-        }
+        uint32_t retry_times = QcnlConfig::Instance().getRetryTimes() + 1;
+        uint32_t retry_delay = QcnlConfig::Instance().getRetryDelay();
+        uint32_t current_delay_time = 1; // wait 1 second before first retry
+        do {
+            // Perform request
+            bool need_retry = false;
+            long http_code = 0;
+            curl_ret = curl_easy_perform(curl);
+
+            if (curl_ret == CURLE_OK) {
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if (http_code == 404) {
+                    ret = SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
+                    goto cleanup;
+                }
+                else if (http_code == 503) {    // SERVICE_UNAVAILABLE
+                    need_retry = true;
+                }
+                else if (http_code != 200) {
+                    ret = pccs_status_to_qcnl_error(http_code);
+                    goto cleanup;
+                }
+            }
+            else if (curl_ret == CURLE_OPERATION_TIMEDOUT 
+                || curl_ret == CURLE_COULDNT_RESOLVE_HOST
+                || curl_ret == CURLE_COULDNT_RESOLVE_PROXY
+                || curl_ret == CURLE_COULDNT_CONNECT
+                || curl_ret == CURLE_HTTP_RETURNED_ERROR) {
+                need_retry = true;
+            }
+            else {
+                ret = curl_error_to_qcnl_error(curl_ret);
+                goto cleanup;
+            }
+
+            retry_times--;
+            if (need_retry && retry_times > 0) {
+                if (retry_delay != 0) 
+                    sleep(retry_delay);
+                else {
+                    sleep(current_delay_time);
+                    current_delay_time *= 2;
+                }
+                continue;
+            }
+            else {
+                break;
+            }
+        } while (retry_times > 0);
 
         *resp_msg = res_body.base;
         resp_size = res_body.size;
@@ -332,6 +282,7 @@ sgx_qcnl_error_t qcnl_https_post(const char* url,
 
     } while(0);
 
+cleanup:
     if (curl) {
         curl_easy_cleanup(curl);
         curl_slist_free_all(headers);

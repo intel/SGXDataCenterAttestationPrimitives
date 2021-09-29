@@ -29,35 +29,21 @@
  *
  */
 import Constants from '../constants/index.js';
-import * as qeidentityDao from '../dao/qeidentityDao.js';
-import * as qveidentityDao from '../dao/qveidentityDao.js';
+import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
-export async function getQeIdentity() {
-  // query qeid from local database first
-  const qeid = await qeidentityDao.getQeIdentity();
+export async function getEnclaveIdentity(enclave_id) {
+  // query enclave identity from local database first
+  const enclaveIdentity = await enclaveIdentityDao.getEnclaveIdentity(
+    enclave_id
+  );
   let result = {};
-  if (qeid == null) {
-    result = await cachingModeManager.getQeIdentityFromPCS();
+  if (enclaveIdentity == null) {
+    result = await cachingModeManager.getEnclaveIdentityFromPCS(enclave_id);
   } else {
     result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
-      qeid.signing_cert + qeid.root_cert;
-    result['qeid'] = qeid.qe_identity;
-  }
-
-  return result;
-}
-
-export async function getQveIdentity() {
-  // query qveid from local database first
-  const qveid = await qveidentityDao.getQveIdentity();
-  let result = {};
-  if (qveid == null) {
-    result = await cachingModeManager.getQveIdentityFromPCS();
-  } else {
-    result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
-      qveid.signing_cert + qveid.root_cert;
-    result['qveid'] = qveid.qve_identity;
+      enclaveIdentity.signing_cert + enclaveIdentity.root_cert;
+    result['identity'] = enclaveIdentity.identity;
   }
 
   return result;

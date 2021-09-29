@@ -1,11 +1,8 @@
 import urllib
 import requests
-import os
 import json
-import hashlib
 import binascii
 from urllib import parse
-from cryptography.x509.oid import ExtensionOID
 from OpenSSL import crypto
 from pypac import PACSession
 from platform import system
@@ -15,14 +12,6 @@ certBegin= '-----BEGIN CERTIFICATE-----'
 certEnd= '-----END CERTIFICATE-----'
 certEndOffset= len(certEnd)
 
-class CertNotAvailableException(Exception):
-    def __init__(self,data):
-        super().__init__(self)
-        self.msg = 'Certificates not available'
-        self.data = data
-    def __str__(self):
-        return self.msg
-
 class PCS:
     BaseUrl= ''
     ApiVersion= 3
@@ -31,16 +20,26 @@ class PCS:
     Errors= []
     Verbose= True
 
+    # HTTP header name
+    HDR_TCB_INFO_ISSUER_CHAIN = 'SGX-TCB-Info-Issuer-Chain'
+    HDR_PCK_Certificate_Issuer_Chain = 'SGX-PCK-Certificate-Issuer-Chain'
+    HDR_Enclave_Identity_Issuer_Chain = 'SGX-Enclave-Identity-Issuer-Chain'
+
     def __init__(self, url, apiVersion,key):
         self.BaseUrl = url
         self.ApiVersion = apiVersion
         self.Key= key
+        if apiVersion >= 4:
+            PCS.HDR_TCB_INFO_ISSUER_CHAIN = 'TCB-Info-Issuer-Chain'
 
     def api_version(self):
         return self.ApiVersion
 
-    def _geturl(self, func):
-        return urllib.parse.urljoin(self.BaseUrl, func)
+    def _geturl(self, func, type='sgx'):
+        if type == 'sgx':
+            return urllib.parse.urljoin(self.BaseUrl, func)
+        else:
+            raise Exception('Internal error!')
 
     def _get_request(self, url, needKey):
         if self.Verbose:
@@ -331,7 +330,7 @@ class PCS:
         if not response.headers['Request-ID']:
             self.error("Response missing Request-ID header")
             return None
-        if not response.headers['SGX-PCK-Certificate-Issuer-Chain']:
+        if not response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]:
             self.error("Response missing SGX-PCK-Certificate-Issuer-Chain header")
             return None
 
@@ -342,7 +341,7 @@ class PCS:
         # Validate certificate with signer
 
         chain= parse.unquote(
-            response.headers['SGX-PCK-Certificate-Issuer-Chain']
+            response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]
         )
 
         chain_pems= self.parse_chain_pem(chain)
@@ -361,7 +360,7 @@ class PCS:
         if dec is not None:
             cert_pem = str(cert_pem, dec)
 
-        return [cert_pem, response.getheader('SGX-PCK-Certificate-Issuer-Chain')]
+        return [cert_pem, response.getheader(PCS.HDR_PCK_Certificate_Issuer_Chain)]
 
     def get_cpusvn_from_tcb(self, tcb):
         return ("%0.2X" % tcb['sgxtcbcomp01svn'] + 
@@ -405,7 +404,7 @@ class PCS:
         if not response.headers['Request-ID']:
             self.error("Response missing Request-ID header")
             return None
-        if not response.headers['SGX-PCK-Certificate-Issuer-Chain']:
+        if not response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]:
             self.error("Response missing SGX-PCK-Certificate-Issuer-Chain header")
             return None
 
@@ -416,7 +415,7 @@ class PCS:
         # Validate the certificates with signer
 
         chain= parse.unquote(
-            response.headers['SGX-PCK-Certificate-Issuer-Chain']
+            response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]
         )
         chain_pems= self.parse_chain_pem(chain)
         pychain= self.pems_to_pycerts(chain_pems)
@@ -424,25 +423,24 @@ class PCS:
         if pychain is None:
             return None
 
+        certs_available = []
+        certs_not_available = []
         data= response.content
         tcbcerts = json.loads(data)
         tcbcerts_na = list(filter(lambda x: x["cert"] == 'Not available', tcbcerts))
-        if len(tcbcerts_na) > 0:
-            not_available_list = []
-            for tcbcert in tcbcerts_na:
-                not_available_list.append({
-                    "enc_ppid":eppid,
-                    "platform_manifest":platform_manifest,
-                    "qe_id":"",
-                    "pce_id":pceid,
-                    "cpu_svn":self.get_cpusvn_from_tcb(tcbcert['tcb']),
-                    "pce_svn":str(tcbcert['tcb']['pcesvn'])
-                })
-            raise CertNotAvailableException(not_available_list)
+        tcbcerts_valid = list(filter(lambda x: x["cert"] != 'Not available', tcbcerts))
+        for tcbcert in tcbcerts_na:
+            certs_not_available.append({
+                "enc_ppid":eppid,
+                "platform_manifest":platform_manifest,
+                "qe_id":"",
+                "pce_id":pceid,
+                "cpu_svn":self.get_cpusvn_from_tcb(tcbcert['tcb']),
+                "pce_svn":str(tcbcert['tcb']['pcesvn'])
+            })
 
-        certs_filtered = []
-        for tcbcert in tcbcerts:
-            certs_filtered.append(tcbcert)
+        for tcbcert in tcbcerts_valid:
+            certs_available.append(tcbcert)
             cert_pem= parse.unquote(tcbcert['cert'])
             certs_pem.append(cert_pem)
 
@@ -451,7 +449,7 @@ class PCS:
             self.error("Could not validate certificate using trust chain")
             return None
 
-        return [certs_filtered, response.headers['SGX-PCK-Certificate-Issuer-Chain']]
+        return [certs_available, certs_not_available, response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]]
 
 
 #----------------------------------------------------------------------------
@@ -512,9 +510,9 @@ class PCS:
 # PCS: Get TCB Info
 #----------------------------------------------------------------------------
 
-    def get_tcb_info(self, fmspc, dec=None):
+    def get_tcb_info(self, fmspc, type, dec=None):
         self.clear_errors()
-        url= self._geturl('tcb')
+        url= self._geturl('tcb', type)
         url+= "?fmspc={:s}".format(fmspc)
 
         response= self._get_request(url, False)
@@ -527,8 +525,8 @@ class PCS:
         if not response.headers['Request-ID']:
             self.error("Response missing Request-ID header")
             return None
-        if not response.headers['SGX-TCB-Info-Issuer-Chain']:
-            self.error("Response missing SGX-TCB-Info-Issuer-Chain header")
+        if not response.headers[PCS.HDR_TCB_INFO_ISSUER_CHAIN]:
+            self.error("Response missing TCB_INFO_ISSUER_CHAIN header")
             return None
 
         if response.headers['Content-Type'] != 'application/json':
@@ -537,7 +535,7 @@ class PCS:
 
         # Extract the certificate chain
         chain= parse.unquote(
-            response.headers['SGX-TCB-Info-Issuer-Chain']
+            response.headers[PCS.HDR_TCB_INFO_ISSUER_CHAIN]
         )
 
         chain_pems= self.parse_chain_pem(chain)
@@ -583,16 +581,16 @@ class PCS:
         if dec is not None:
             data = str(data, dec)
         
-        return [data, response.headers['SGX-TCB-Info-Issuer-Chain']]
+        return [data, response.headers[PCS.HDR_TCB_INFO_ISSUER_CHAIN]]
 
 #----------------------------------------------------------------------------
-# PCS: Get Quoting Enclave Identity
+# PCS: Get QE/QVE/TD_QE Identity
 #----------------------------------------------------------------------------
 
-    def get_qe_id(self, dec=None):
+    def get_enclave_identity(self, name, dec=None):
         self.clear_errors()
 
-        url= self._geturl('qe/identity')
+        url= self._geturl(name + '/identity', 'sgx')
 
         response= self._get_request(url, False)
         if response.status_code != 200:
@@ -604,7 +602,7 @@ class PCS:
         if not response.headers['Request-ID']:
             self.error("Response missing Request-ID header")
             return None
-        if not response.headers['SGX-Enclave-Identity-Issuer-Chain']:
+        if not response.headers[PCS.HDR_Enclave_Identity_Issuer_Chain]:
             self.error("Response missing SGX-Enclave-Identity-Issuer-Chain header")
             return None
 
@@ -615,7 +613,7 @@ class PCS:
         # Extract the certificate chain
 
         chain= parse.unquote(
-            response.headers['SGX-Enclave-Identity-Issuer-Chain']
+            response.headers[PCS.HDR_Enclave_Identity_Issuer_Chain]
         )
         chain_pems= self.parse_chain_pem(chain)
         pychain= self.pems_to_pycerts(chain_pems)
@@ -639,7 +637,7 @@ class PCS:
 
         spos= datastr.find('"enclaveIdentity":{')
         if spos == -1:
-            self.error("Could not extract qe_identity from JSON")
+            self.error("Could not extract enclave identity from JSON")
             return None
         spos+= len('"enclaveIdentity":')
         epos= datastr.find('},"signature":')
@@ -660,84 +658,7 @@ class PCS:
         if dec is not None:
             data = str(data, dec)
 
-        return [data, response.headers['SGX-Enclave-Identity-Issuer-Chain']]
-
-#----------------------------------------------------------------------------
-# PCS: Get Quoting Verification Enclave Identity
-#----------------------------------------------------------------------------
-
-    def get_qve_id(self, dec=None):
-        self.clear_errors()
-
-        url= self._geturl('qve/identity')
-
-        response= self._get_request(url, False)
-        if response.status_code != 200:
-            print(str(response.content, 'utf-8'))
-            return None
-
-        # Verify required headers
-
-        if not response.headers['Request-ID']:
-            self.error("Response missing Request-ID header")
-            return None
-        if not response.headers['SGX-Enclave-Identity-Issuer-Chain']:
-            self.error("Response missing SGX-Enclave-Identity-Issuer-Chain header")
-            return None
-
-        if response.headers['Content-Type'] != 'application/json':
-            self.error("Content-Type should be application/json")
-            return None
-
-        # Extract the certificate chain
-
-        chain= parse.unquote(
-            response.headers['SGX-Enclave-Identity-Issuer-Chain']
-        )
-        chain_pems= self.parse_chain_pem(chain)
-        pychain= self.pems_to_pycerts(chain_pems)
-        pychain= self.sort_pycert_chain(pychain)
-        if pychain is None:
-            return None
-
-        # Verify the signing cert
-        signcert= pychain.pop()
-        if not self.verify_cert_trust(pychain, [signcert]):
-            self.error("Could not validate certificate using trust chain")
-            return None
-
-        # Verify the ECDSA signature. This is calculated over the JSON
-        # string of the tcbInfo parameter, which is itself in the
-        # JSON of the output. To do this, extract the substring for
-        # the tcbInfo parameter from the string and discard the rest.
-
-        data= response.content
-        datastr= str(data, 'ascii')
-
-        spos= datastr.find('"enclaveIdentity":{')
-        if spos == -1:
-            self.error("Could not extract qve_identity from JSON")
-            return None
-        spos+= len('"enclaveIdentity":')
-        epos= datastr.find('},"signature":')
-        msg= bytes(datastr[spos:epos+1], 'ascii')
-
-        # Now get the signature. Just parse the response as JSON and
-        # extract it.
-
-        qeid= json.loads(datastr)
-        signature_hex= qeid['signature']
-        signature= bytes.fromhex(signature_hex)
-        
-        # Now verify the signature
-
-        if not self.verify_signature(signcert, signature, msg):
-            return None
-
-        if dec is not None:
-            data = str(data, dec)
-
-        return [data, response.headers['SGX-Enclave-Identity-Issuer-Chain']]
+        return [data, response.headers[PCS.HDR_Enclave_Identity_Issuer_Chain]]
 
     def getFileFromUrl(self, url):
         self.clear_errors()

@@ -39,8 +39,7 @@ import * as pckcertDao from '../dao/pckcertDao.js';
 import * as platformTcbsDao from '../dao/platformTcbsDao.js';
 import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
-import * as qeidentityDao from '../dao/qeidentityDao.js';
-import * as qveidentityDao from '../dao/qveidentityDao.js';
+import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import * as pckCertchainDao from '../dao/pckCertchainDao.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
@@ -195,8 +194,11 @@ export async function addPlatformCollateral(collateralJson) {
     // loop through tcbinfos
     for (const tcbinfo of tcbinfos) {
       tcbinfo.fmspc = toUpper(tcbinfo.fmspc);
-      tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.tcbinfo));
-      await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
+      if (tcbinfo.tcbinfo) {
+        tcbinfo.type = Constants.PROD_TYPE_SGX;
+        tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.tcbinfo));
+        await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
+      }
     }
 
     // Update or insert PCK CRL
@@ -215,12 +217,17 @@ export async function addPlatformCollateral(collateralJson) {
 
     // Update or insert QE Identity
     if (collaterals.qeidentity) {
-      await qeidentityDao.upsertQeIdentity(collaterals.qeidentity);
+      await enclaveIdentityDao.upsertEnclaveIdentity(
+        Constants.QE_IDENTITY_ID,
+        collaterals.qeidentity
+      );
     }
-
     // Update or insert QvE Identity
     if (collaterals.qveidentity) {
-      await qveidentityDao.upsertQveIdentity(collaterals.qveidentity);
+      await enclaveIdentityDao.upsertEnclaveIdentity(
+        Constants.QVE_IDENTITY_ID,
+        collaterals.qveidentity
+      );
     }
 
     // Update or insert PCK Certchain

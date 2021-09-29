@@ -28,10 +28,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#define STRFILEVER    "1.11.100.1"
-#define COPYRIGHT      "Copyright (C) 2021 Intel Corporation"
-#define FILEVER        1,11,100,1
-#define PRODUCTVER     1,11,100,1
-#define STRPRODUCTVER  "1.11.100.1"
+#define STRFILEVER    "1.12.100.1"
+#define COPYRIGHT      "Copyright (C) 2020 Intel Corporation"
+#define FILEVER        1,12,100,1
+#define PRODUCTVER     1,12,100,1
+#define STRPRODUCTVER  "1.12.100.1"
 #define COMPANYNAME    "Intel Corporation"
 #define PRODUCTNAME    "Intel® Software Guard Extensions"
+
+#define DEFAULT_QPL_VERSION          "1.11.101.1"
+#define QUOTE_VERIFIER_VERSION       "1.11.101.1"
+#define QUOTE_LOADER_VERSION         "1.11.101.1"

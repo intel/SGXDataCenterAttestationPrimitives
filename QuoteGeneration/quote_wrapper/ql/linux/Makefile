@@ -63,6 +63,8 @@ QL_Lib_Cpp_Objects := $(QL_Lib_Cpp_Files:.cpp=.o)
 QL_Lib_C_Objects := $(QL_Lib_C_Files:.c=.o)
 
 QL_Lib_Name_Dynamic  := libsgx_dcap_ql.so
+QL_VERSION:= $(shell awk '$$2 ~ /QUOTE_LOADER_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
+QL_SO_VERSION:= $(shell echo $(QL_VERSION) |awk -F. '{print $$1}') 
 
 .PHONY: all run
 
@@ -84,7 +86,7 @@ $(QL_Lib_Cpp_Objects): %.o: %.cpp
 	@echo "CXX  <=  $<"
 
 $(QL_Lib_Name_Dynamic): $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) $(PCE_Library) $(Quote_Library)
-	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
+	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) -shared -Wl,-soname=$@.$(QL_SO_VERSION) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
 
 $(Quote_Library): force_look
 	@make -C $(Quote_Library_Dir)

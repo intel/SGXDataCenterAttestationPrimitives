@@ -38,19 +38,23 @@
 #include "sgx_dcap_pcs_com.h"
 #include "sgx_dcap_qv_internal.h"
 #include "sgx_qve_def.h"
-#ifndef _MSC_VER
-#include "linux/qve_u.h"
-#else //_MSC_VER
-#include "win/qve_u.h"
-#endif //_MSC_VER
 #include <stdlib.h>
 #include <stdio.h>
-#include <sgx_urts.h>
 #include "se_trace.h"
 #include "se_thread.h"
 #include "se_memcpy.h"
 #include "sgx_urts_wrapper.h"
 
+#if defined(_MSC_VER)
+#include <tchar.h>
+#include "win/qve_u.h"
+bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
+#else
+#include <limits.h>
+#include "linux/qve_u.h"
+#define MAX_PATH PATH_MAX
+bool get_qve_path(char *p_file_path, size_t buf_size);
+#endif
 
 sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
 sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
@@ -121,16 +125,41 @@ int sgx_thread_set_multiple_untrusted_events_ocall(const void **waiters, size_t 
     return p_sgx_thread_set_multiple_untrusted_events_ocall(waiters, total);
 }
 
+#ifdef __GNUC__
 
-#if defined(_MSC_VER)
-#include <tchar.h>
-bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
-#else
-#include <limits.h>
-#define MAX_PATH PATH_MAX
-bool get_qve_path(char *p_file_path, size_t buf_size);
+pthread_create_ocall_func_t p_pthread_create_ocall = NULL;
+pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall = NULL;
+pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func = NULL;
 
+
+int pthread_create_ocall(unsigned long long self)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_create_ocall(self);
+}
+
+int pthread_wait_timeout_ocall(unsigned long long waiter, unsigned long long timeout)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_wait_timeout_ocall(waiter, timeout);
+}
+
+int pthread_wakeup_ocall(unsigned long long waiter)
+{
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    return p_pthread_wakeup_ocall_func(waiter);
+}
 #endif
+
 
 struct QvE_status {
     se_mutex_t m_qve_mutex;
@@ -205,8 +234,10 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
                     &launch_token_updated,
                     p_qve_eid,
                     p_qve_attributes);
-                if (SGX_SUCCESS == sgx_status)
-                {
+                if (SGX_SUCCESS != sgx_status) {
+                    SE_TRACE(SE_TRACE_DEBUG, "Info, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                }
+                else {
                     break;
                 }
             }

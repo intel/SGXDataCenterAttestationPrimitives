@@ -4,8 +4,6 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) 
 ## Build QvE and dcap_quoteverify libraries, non-production only (for debug purposes). For production you must use Intel(R) signed QvE.
 ## Linux
 Supported operating systems:
-* Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
-* Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
 * Ubuntu* 18.04 LTS Desktop 64bits
 * Ubuntu* 18.04 LTS Server 64bits
 * Ubuntu* 20.04 LTS Server 64bits

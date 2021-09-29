@@ -33,7 +33,7 @@ import { PcsVersion } from './models/index.js';
 
 // Query the version record
 export async function getPcsVersion() {
-  return PcsVersion.findOne({});
+  return await PcsVersion.findOne({});
 }
 
 // Update or insert a record

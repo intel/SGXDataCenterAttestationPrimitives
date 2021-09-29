@@ -72,11 +72,7 @@ class CachingMode {
     throw new PccsError(PccsStatus.PCCS_STATUS_PLATFORM_UNKNOWN);
   }
 
-  async getQeIdentityFromPCS() {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-
-  async getQveIdentityFromPCS() {
+  async getEnclaveIdentityFromPCS(enclave_id) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
@@ -88,7 +84,7 @@ class CachingMode {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
-  async getTcbInfoFromPCS(fmspc) {
+  async getTcbInfoFromPCS(type, fmspc) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
@@ -110,6 +106,10 @@ class CachingMode {
 
   needUpdatePlatformTcbs(hasNotAvailableCerts) {
     // OFFLINE mode won't reach here
+  }
+
+  async getCrlFromPCS(uri) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 }
 
@@ -133,12 +133,8 @@ export class LazyCachingMode extends CachingMode {
     );
   }
 
-  async getQeIdentityFromPCS() {
-    return await CommonCacheLogic.getQeIdentityFromPCS();
-  }
-
-  async getQveIdentityFromPCS() {
-    return await CommonCacheLogic.getQveIdentityFromPCS();
+  async getEnclaveIdentityFromPCS(enclave_id) {
+    return await CommonCacheLogic.getEnclaveIdentityFromPCS(enclave_id);
   }
 
   async getPckCrlFromPCS(ca) {
@@ -149,8 +145,12 @@ export class LazyCachingMode extends CachingMode {
     return await CommonCacheLogic.getRootCACrlFromPCS(rootca);
   }
 
-  async getTcbInfoFromPCS(fmspc) {
-    return await CommonCacheLogic.getTcbInfoFromPCS(fmspc);
+  async getCrlFromPCS(uri) {
+    return await CommonCacheLogic.getCrlFromPCS(uri);
+  }
+
+  async getTcbInfoFromPCS(type, fmspc) {
+    return await CommonCacheLogic.getTcbInfoFromPCS(type, fmspc);
   }
 
   isRefreshable() {
