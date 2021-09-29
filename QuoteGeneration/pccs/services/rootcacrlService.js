@@ -47,8 +47,5 @@ export async function getRootCaCrl() {
     crl = await cachingModeManager.getRootCACrlFromPCS(rootca);
   }
 
-  // To keep backward compatibility. 
-  crl = Buffer.from(crl, 'utf8').toString('hex');
-  
   return crl;
 }
