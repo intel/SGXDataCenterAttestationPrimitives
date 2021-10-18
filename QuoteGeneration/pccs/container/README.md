@@ -20,12 +20,12 @@ chmod 644 ~/pccs_tls/*
 ## 3. Fill up configuration file
 Create directory for storing configuration file:
 ```
-mkdir -p ./config
+mkdir -p ~/config
 ```
 Copy `<path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json`
 to this directory:
 ```
-cp <path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json ./config/
+cp <path_to_repo>/SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/config/default.json ~/config/
 ```
 Generate UserTokenHash:
 ```
@@ -35,17 +35,18 @@ and AdminTokenHash:
 ```
 echo -n "admin_password" | sha512sum | tr -d '[:space:]-'
 ```
-and paste generated values into the `config/default.json`
+and paste generated values into the `~/config/default.json`
 
 Fill other required fields accordingly.
 
 ## 4. Run container
 ```
+cd && \
 docker run \
 --user "65333:0" \
--v ~/pccs_tls/private.pem:/opt/intel/pccs/ssl_key/private.pem \
--v ~/pccs_tls/file.crt:/opt/intel/pccs/ssl_key/file.crt \
--v ./config/default.json:/opt/intel/pccs/config/default.json
+-v $PWD/pccs_tls/private.pem:/opt/intel/pccs/ssl_key/private.pem \
+-v $PWD/pccs_tls/file.crt:/opt/intel/pccs/ssl_key/file.crt \
+-v $PWD/config/default.json:/opt/intel/pccs/config/default.json \
 -p 8081:8081  --name pccs -d pccs:my_tag
 ```
 
