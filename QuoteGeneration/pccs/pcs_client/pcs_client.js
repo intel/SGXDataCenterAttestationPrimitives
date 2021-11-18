@@ -68,6 +68,7 @@ async function do_request(url, options) {
     options.timeout = HTTP_TIMEOUT;
     options.agent = HttpsAgent;
     options.retry = {limit: MAX_RETRY_COUNT};
+    options.throwHttpErrors = false;
 
     let response = await got(url, options);
     logger.info('Request-ID is : ' + response.headers['request-id']);

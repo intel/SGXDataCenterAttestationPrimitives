@@ -61,7 +61,7 @@ define('PCCS_STATUS_SERVICE_UNAVAILABLE', [
   'Server is currently unable to process the request.',
 ]);
 define('PCCS_STATUS_PCS_ACCESS_FAILURE', [
-  504,
+  502,
   'Unable to retrieve the collateral from the Intel SGX PCS.',
 ]);
 

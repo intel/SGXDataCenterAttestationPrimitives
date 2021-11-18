@@ -277,6 +277,15 @@ quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
+        // Add NULL terminator to Root CA CRL
+        (*pp_quote_collateral)->root_ca_crl_size++;
+        char* p_root_ca_crl = (char*)realloc((*pp_quote_collateral)->root_ca_crl, (*pp_quote_collateral)->root_ca_crl_size);
+        if (p_root_ca_crl == NULL) {
+            ret = SGX_QL_ERROR_OUT_OF_MEMORY;
+            break;
+        }
+        (*pp_quote_collateral)->root_ca_crl = p_root_ca_crl;
+        (*pp_quote_collateral)->root_ca_crl[(*pp_quote_collateral)->root_ca_crl_size-1] = 0;
 
         ret = SGX_QL_SUCCESS;
     }

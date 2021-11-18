@@ -151,7 +151,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             supplemental_data_size = 0;
         }
 
-        //set current time. This is only for sample purposes, in production mode a trusted time should be used.
+        //set current time. This is only for sample use, please use trusted time in product.
         //
         current_time = time(NULL);
 
@@ -210,8 +210,18 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         switch (quote_verification_result)
         {
         case SGX_QL_QV_RESULT_OK:
-            printf("\tInfo: App: Verification completed successfully.\n");
-            ret = 0;
+            //check verification collateral expiration status
+            //this value should be considered in your own attestation/verification policy
+            //
+            if (collateral_expiration_status == 0) {
+                printf("\tInfo: App: Verification completed successfully.\n");
+                ret = 0;
+            }
+            else {
+                printf("\tWarning: App: Verification completed, but collateral is out of date based on 'expiration_check_date' you provided.\n");
+                ret = 1;
+            }
+
             break;
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
@@ -229,6 +239,18 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             ret = -1;
             break;
         }
+
+        //check supplemental data if necessary
+        //
+        if (p_supplemental_data != NULL && supplemental_data_size > 0) {
+            sgx_ql_qv_supplemental_t *p = (sgx_ql_qv_supplemental_t*)p_supplemental_data;
+
+            //you can check supplemental data based on your own attestation/verification policy
+            //here we only print supplemental data version for demo usage
+            //
+            printf("\tInfo: Supplemental data version: %d\n", p->version);
+        }
+
     }
 
 
@@ -282,8 +304,17 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         switch (quote_verification_result)
         {
         case SGX_QL_QV_RESULT_OK:
-            printf("\tInfo: App: Verification completed successfully.\n");
-            ret = 0;
+            //check verification collateral expiration status
+            //this value should be considered in your own attestation/verification policy
+            //
+            if (collateral_expiration_status == 0) {
+                printf("\tInfo: App: Verification completed successfully.\n");
+                ret = 0;
+            }
+            else {
+                printf("\tWarning: App: Verification completed, but collateral is out of date based on 'expiration_check_date' you provided.\n");
+                ret = 1;
+            }
             break;
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
@@ -300,6 +331,17 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             printf("\tError: App: Verification completed with Terminal result: %x\n", quote_verification_result);
             ret = -1;
             break;
+        }
+
+        //check supplemental data if necessary
+        //
+        if (p_supplemental_data != NULL && supplemental_data_size > 0) {
+            sgx_ql_qv_supplemental_t *p = (sgx_ql_qv_supplemental_t*)p_supplemental_data;
+
+            //you can check supplemental data based on your own attestation/verification policy
+            //here we only print supplemental data version for demo usage
+            //
+            printf("\tInfo: Supplemental data version: %d\n", p->version);
         }
 
     }

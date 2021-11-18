@@ -12,7 +12,7 @@ NC='\033[0m'
 function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
 
 # check nodejs version
-function checkNodeJs() {
+function checkDependencies() {
     echo "Checking nodejs version ..."
     expected_node_v="v10.20.0"
     if which node > /dev/null
@@ -26,6 +26,13 @@ function checkNodeJs() {
         fi
     else
         echo -e "${RED}Node.js not installed. Please install Node.js version ${expected_node_v} or later. ${NC} "
+        exit 1
+    fi
+
+    echo "Checking cracklib-runtime ..."
+    if ! which cracklib-check > /dev/null
+    then
+        echo -e "${RED}cracklib-runtime not installed. Please install cracklib-runtime first and then retry. ${NC} "
         exit 1
     fi
 }
@@ -56,7 +63,7 @@ function promptDbMigration() {
     done
 }
 
-checkNodeJs
+checkDependencies
 promptDbMigration
 
 #Ask for proxy server
@@ -171,6 +178,7 @@ done
 admintoken1=""
 admintoken2=""
 admin_pass_set=false
+cracklib_limit=4
 while [ "$admin_pass_set" == false ]
 do
     while test "$admintoken1" == ""
@@ -183,9 +191,15 @@ do
     result="$(cracklib-check <<<"$admintoken1")"
     okay="$(awk -F': ' '{ print $NF}' <<<"$result")"
     if [[ "$okay" != "OK" ]]; then
-        echo -e "${RED}The password is too weak. Please try again.${NC}"
-        admintoken1=""
-        continue
+        if [ "$cracklib_limit" -gt 0 ]; then
+            echo -e "${RED}The password is too weak. Please try again($cracklib_limit opportunities left).${NC}"
+            admintoken1=""
+            cracklib_limit=$(expr $cracklib_limit - 1)
+            continue
+        else
+            echo "Installation aborted. Please try again."
+            exit 1
+        fi
     fi
 
     while test "$admintoken2" == ""
@@ -199,6 +213,7 @@ do
         echo "Passwords don't match."
         admintoken1=""
         admintoken2=""
+        cracklib_limit=4
     else
         HASH="$(echo -n "$admintoken1" | sha512sum | tr -d '[:space:]-')"
         sed "/\"AdminTokenHash\"*/c\ \ \ \ \"AdminTokenHash\" \: \"${HASH}\"," -i ${configFile}
@@ -207,6 +222,7 @@ do
 done
 
 #Ask for user password
+cracklib_limit=4
 usertoken1=""
 usertoken2=""
 user_pass_set=false
@@ -222,9 +238,15 @@ do
     result="$(cracklib-check <<<"$usertoken1")"
     okay="$(awk -F': ' '{ print $NF}' <<<"$result")"
     if [[ "$okay" != "OK" ]]; then
-        echo -e "${RED}The password is too weak. Please try again.${NC}"
-        usertoken1=""
-        continue
+        if [ "$cracklib_limit" -gt 0 ]; then
+            echo -e "${RED}The password is too weak. Please try again($cracklib_limit opportunities left).${NC}"
+            usertoken1=""
+            cracklib_limit=$(expr $cracklib_limit - 1)
+            continue
+        else
+            echo "Installation aborted. Please try again."
+            exit 1
+        fi
     fi
 
     while test "$usertoken2" == ""
@@ -238,6 +260,7 @@ do
         echo "Passwords don't match."
         usertoken1=""
         usertoken2=""
+        cracklib_limit=4
     else
         HASH="$(echo -n "$usertoken1" | sha512sum | tr -d '[:space:]-')"
         sed "/\"UserTokenHash\"*/c\ \ \ \ \"UserTokenHash\" \: \"${HASH}\"," -i ${configFile}

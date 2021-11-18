@@ -13,6 +13,9 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
     $ sudo apt-get install -y nodejs
   - To download and install, goto https://nodejs.org/en/download/
 
+  Install cracklib-runtime if it's not installed
+    $ sudo apt-get install cracklib-runtime
+
 - **Install via Linux Debian package installer**
 
   $ dpkg -i sgx-dcap-pccs*${version}-${os}*\${arch}.deb
@@ -34,7 +37,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
   1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a
      web service.
   2. Install dependencies if they are not already installed
-     nodejs build-essential(gcc gcc-c++ make) python
+     nodejs build-essential(gcc gcc-c++ make) python cracklib-runtime
   3. Goto ../../tools/PCKCertSelection/ and build libPCKCertSelection.so, copy it to ./lib/
   4. From the root directory of your installation folder, run ./install.sh
 
