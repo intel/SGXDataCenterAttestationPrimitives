@@ -205,6 +205,7 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
     case STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED:
         return SGX_QL_SGX_ENCLAVE_IDENTITY_EXPIRED;
     case STATUS_PCK_REVOKED:
+    case STATUS_SGX_PCK_REVOKED:
     case STATUS_SGX_INTERMEDIATE_CA_REVOKED:
     case STATUS_SGX_TCB_SIGNING_CERT_REVOKED:
         return SGX_QL_PCK_REVOKED;
@@ -252,9 +253,9 @@ static sgx_ql_qv_result_t status_error_to_ql_qve_result(Status status_err) {
     case STATUS_TCB_INFO_INVALID_SIGNATURE:
         return SGX_QL_QV_RESULT_INVALID_SIGNATURE;
     case STATUS_PCK_REVOKED:
+    case STATUS_SGX_PCK_REVOKED:
     case STATUS_TCB_REVOKED:
     case STATUS_SGX_TCB_SIGNING_CERT_REVOKED:
-    case STATUS_SGX_PCK_REVOKED:
     case STATUS_SGX_INTERMEDIATE_CA_REVOKED:
         return SGX_QL_QV_RESULT_REVOKED;
     case STATUS_TCB_CONFIGURATION_NEEDED:

@@ -10,7 +10,7 @@
     <description>DCAP Components</description>
     <copyright>Copyright (C) 2021 Intel Corporation</copyright>
     <dependencies>
-      <dependency id="SgxHeaders" version="2.14.100.3" />
+      <dependency id="SgxHeaders" version="2.14.101.1" />
     </dependencies>
   </metadata>
   <files>

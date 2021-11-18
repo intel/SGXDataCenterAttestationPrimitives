@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 AS builder
 
 # DCAP version (github repo branch, tag or commit hash)
-ARG DCAP_VERSION=DCAP_1.12
+ARG DCAP_VERSION=DCAP_1.12.1
 
 # update and install packages
 RUN DEBIAN_FRONTEND=noninteractive \

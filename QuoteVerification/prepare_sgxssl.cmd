@@ -39,7 +39,7 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1k
+set openssl_ver_name=openssl-1.1.1l
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
 set sgxssl_ver_name=win_2.13_1.1.1k
 set sgxssl_ver=%sgxssl_ver_name%
@@ -49,7 +49,8 @@ set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
 set sgxssl_chksum=9DA2BBEEDA00F5F65A1D624F55F96E222EA84AE483411264ABC2DB73E1ABE704
-set openssl_chksum=892a0875b9872acd04a9fde79b1f943075d5ea162415de3047c327df33fbaee5
+set openssl_chksum=0B7A3E5E59C34827FE0C3A74B7EC8BAEF302B98FA80088D7F9153AA16FA76BD1
+
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%

@@ -53,7 +53,7 @@ CALL :COPY_FILE ..\..\x64\release\sgx_dcap_ql.dll %rel_dir_name%
 CALL :COPY_FILE ..\..\QuoteGeneration\psw\ae\data\prebuilt\win\pce.signed.dll %rel_dir_name%
 CALL :COPY_FILE ..\..\QuoteGeneration\psw\ae\data\prebuilt\win\qe3.signed.dll %rel_dir_name%
 CALL :COPY_FILE network_setting.conf %rel_dir_name%
-CALL :COPY_FILE README.txt %rel_dir_name%
+CALL :COPY_FILE README_standalone.txt %rel_dir_name%\README.txt
 CALL :COPY_FILE License.txt %rel_dir_name%
 
 
