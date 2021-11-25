@@ -29,7 +29,7 @@
 #
 #
 
-CP    := /bin/cp -f
+CP    := cp -f
 MKDIR := mkdir -p
 
 PACKAGE_DIR := package

@@ -37,7 +37,7 @@ LOCAL_COMMON_DIR  := $(ROOT_DIR)/common
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBS_DIR := $(ROOT_DIR)/build/lib64
 BINS_DIR := $(ROOT_DIR)/build/bin
-CP := /bin/cp -f
+CP := cp -f
 
 
 RA_VERSION= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(ROOT_DIR)/../../QuoteGeneration/common/inc/internal/se_version.h)
