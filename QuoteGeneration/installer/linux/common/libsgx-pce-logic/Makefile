@@ -41,7 +41,6 @@ default:
 install: $(PACKAGES)
 
 $(PACKAGES):
-	install -d $(shell readlink -m $(DESTDIR)/$@)
 	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
 		install -d $(shell readlink -m $(DESTDIR)/$(USR_LIB_PATH)) && \
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$(USR_LIB_PATH))
