@@ -52,7 +52,7 @@ SGX_VER:= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2
 SGX_MAJOR_VER:= $(shell echo $(SGX_VER) |awk -F. '{print $$1}')
 SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
-CP    := /bin/cp -f
+CP    := cp -f
 MKDIR := mkdir -p
 STRIP := strip
 OBJCOPY := objcopy
