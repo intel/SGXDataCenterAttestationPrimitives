@@ -107,7 +107,6 @@ const size_t MISCSELECT_BYTE_LEN = 4;
 const size_t ATTRIBUTES_BYTE_LEN = 16;
 const size_t MRSIGNER_BYTE_LEN = 32;
 const size_t MRENCLAVE_BYTE_LEN = 32;
-
 const size_t ECDSA_P256_SIGNATURE_BYTE_LEN = 64;
 
 }}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {

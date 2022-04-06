@@ -173,43 +173,34 @@ std::string getNameEntry(X509_NAME* name, int nid)
     return ret;
 }
 
-// Moves given timePoint forward in time by time difference between <from,to>, example:
-//      if timePoint is the 1st of January, 6:00 AM, the difference between <from> and <to> is 5 days and 2 hours
-//      then the result shall be the 6th of January, 8:00 AM
-std::time_t forwardTimePointWithAsn1TimeDiff(
-        const time_t timePoint,
-        const ASN1_TIME* from,
-        const ASN1_TIME* to)
+// Converts ASN1_TIME to time_t using ASN1_TIME_diff to get number of seconds from 1 Jan 1970
+std::time_t asn1TimeToTimet(
+        const ASN1_TIME* asn1Time)
 {
     static_assert(sizeof(std::time_t) >= sizeof(int64_t), "std::time_t size too small, the dates may overflow");
     static constexpr int64_t SECONDS_IN_A_DAY = 24 * 60 * 60;
 
     int pday;
     int psec;
-    if(1 != ASN1_TIME_diff(&pday, &psec, from, to))
+    auto from = crypto::make_unique(ASN1_TIME_new());
+    time_t resultTime = 0;
+    ASN1_TIME_set(from.get(), resultTime);
+    if(1 != ASN1_TIME_diff(&pday, &psec, from.get(), asn1Time))
     {
         // We're here if the format is invalid, thus
         // validity settings in cert should be considered invalid
         throw FormatException(getLastError());
     }
 
-    // Should you use time_point classes here, the seconds counter may overflow
-    //  - it will for year 9999, unless 64 bits are used, hence early to time_t.
-    return timePoint
-           + pday * SECONDS_IN_A_DAY
-           + psec;
+    return resultTime + pday * SECONDS_IN_A_DAY + psec;
 }
 
 // Converts a pair of ASN1_TIME time points into a struct wrapping standard time points
 // Will throw FormatException on error
 std::tuple<time_t, time_t> asn1TimePeriodToCTime(const ASN1_TIME* validityBegin, const ASN1_TIME* validityEnd)
 {
-    const auto currentTime = getCurrentTime(0);
-    auto ASN1_TIME_CURRENT = crypto::make_unique(ASN1_TIME_new());
-    ASN1_TIME_set(ASN1_TIME_CURRENT.get(), currentTime);
-
-    const auto notBeforeTime = forwardTimePointWithAsn1TimeDiff(currentTime, ASN1_TIME_CURRENT.get(), validityBegin);
-    const auto notAfterTime = forwardTimePointWithAsn1TimeDiff(currentTime, ASN1_TIME_CURRENT.get(), validityEnd);
+    const auto notBeforeTime =  asn1TimeToTimet(validityBegin);
+    const auto notAfterTime = asn1TimeToTimet(validityEnd);
 
     return std::tie(notBeforeTime, notAfterTime);
 }

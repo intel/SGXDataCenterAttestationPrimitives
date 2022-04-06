@@ -39,7 +39,7 @@
 #include <QuoteVerification/Quote.h>
 #include "EnclaveReportVerifier.h"
 #include "BaseVerifier.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -50,11 +50,11 @@ public:
                   const dcap::parser::x509::PckCertificate& pckCert,
                   const pckparser::CrlStore& crl,
                   const dcap::parser::json::TcbInfo& tcbInfoJson,
-                  const EnclaveIdentity *enclaveIdentity,
+                  const EnclaveIdentityV2 *enclaveIdentity,
                   const EnclaveReportVerifier& enclaveReportVerifier);
 
 private:
-    Status verifyQeCertData(const Quote::QeCertData& qeCertData) const;
+    Status verifyCertificationData(const CertificationData& certificationData) const;
     BaseVerifier _baseVerififer;
 };
 

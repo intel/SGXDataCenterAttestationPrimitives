@@ -34,6 +34,32 @@
 
 #include <string>
 #include <array>
+#include <vector>
+
+struct TcbComponent
+{
+    uint8_t svn;
+    std::string category;
+    std::string type;
+};
+
+struct TcbLevelV3
+{
+    std::array<TcbComponent, 16> sgxTcbComponents;
+    std::array<TcbComponent, 16> tdxTcbComponents;
+    int pcesvn;
+    std::string tcbStatus;
+    std::string tcbDate;
+};
+
+struct TdxModule
+{
+    std::vector<uint8_t> mrsigner;
+    std::vector<uint8_t> attributes;
+    std::vector<uint8_t> attributesMask;
+};
+
+std::string bytesToHexString(const std::vector<uint8_t> &vector);
 
 std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
                                  std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status,
@@ -41,13 +67,15 @@ std::string tcbInfoJsonGenerator(int version, std::string issueDate, std::string
 
 std::string tcbInfoJsonGenerator(std::string tcbInfoBody, std::string signature);
 
-std::string tcbInfoJsonV1Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status);
+std::string tcbInfoJsonV2Body(uint32_t version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, uint16_t pcesvn, std::string tcbStatus,
+                              uint32_t tcbType, uint32_t tcbEvaluationDataNumber, std::string tcbDate);
 
-std::string tcbInfoJsonV2Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string tcbStatus,
-                              int tcbType, int tcbEvaluationDataNumber, std::string tcbDate);
+std::string tcbInfoJsonV3Body(std::string id, uint32_t version, std::string issueDate, std::string nextUpdate,
+                              std::string fmspc, std::string pceId, uint32_t tcbType, uint32_t tcbEvaluationDataNumber,
+                              std::vector<TcbLevelV3> tcbLevels, bool includeTdxModule, TdxModule tdxModule);
 
 std::array<int, 16> getRandomTcb();
+std::array<TcbComponent, 16> getRandomTcbComponent();
 
 #endif //SGX_DCAP_PARSERS_TEST_TCB_INFO_JSON_GENERATOR_H

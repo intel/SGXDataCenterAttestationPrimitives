@@ -33,7 +33,7 @@
 #define SGXECDSAATTESTATION_ENCLAVEREPORTVERIFIER_H
 
 #include "QuoteVerification/Quote.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 
 #include <vector>
 #include <memory>
@@ -44,10 +44,9 @@ class EnclaveReportVerifier {
 
 public:
     virtual ~EnclaveReportVerifier() = default;
-    virtual Status verify(const EnclaveIdentity *enclaveIdentity, const Quote::EnclaveReport& enclaveReport) const;
+    virtual Status verify(const EnclaveIdentityV2 *enclaveIdentity, const EnclaveReport& enclaveReport) const;
 
 private:
-    std::vector<uint8_t> applyMask(const std::vector<uint8_t>& base, const std::vector<uint8_t>& mask) const;
     uint32_t vectorToUint32(const std::vector<uint8_t>& input) const;
 };
 

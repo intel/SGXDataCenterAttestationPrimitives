@@ -97,6 +97,7 @@ typedef int (*pthread_wakeup_ocall_func_t)(unsigned long long waiter);
 #define SGX_URTS_API_OCALL_SET_MULTIPLE_EVENT "sgx_thread_set_multiple_untrusted_events_ocall"
 
 
+
 typedef sgx_status_t (SGXAPI* sgx_destroy_enclave_func_t)(const sgx_enclave_id_t enclave_id);
 
 typedef sgx_status_t (SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid, const int index, const void* ocall_table, void* ms);

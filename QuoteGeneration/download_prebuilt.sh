@@ -32,9 +32,9 @@
 
 top_dir=`dirname $0`
 out_dir=$top_dir
-ae_file_name=prebuilt_dcap_1.12.1.tar.gz
-checksum_file=SHA256SUM_prebuilt_dcap_1.12.1.cfg
-server_url_path=https://download.01.org/intel-sgx/sgx-dcap/1.12.1/linux
+ae_file_name=prebuilt_dcap_1.13.tar.gz
+checksum_file=SHA256SUM_prebuilt_dcap_1.13.cfg
+server_url_path=https://download.01.org/intel-sgx/sgx-dcap/1.13/linux
 server_ae_url=$server_url_path/$ae_file_name
 server_checksum_url=$server_url_path/$checksum_file
 

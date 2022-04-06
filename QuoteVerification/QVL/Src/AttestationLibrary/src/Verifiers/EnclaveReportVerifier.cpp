@@ -31,8 +31,7 @@
 
 #include "EnclaveReportVerifier.h"
 #include "QuoteVerification/ByteOperands.h"
-#include "EnclaveIdentity.h"
-#include "EnclaveIdentityV1.h"
+#include "EnclaveIdentityV2.h"
 #include "EnclaveIdentityV2.h"
 #include <algorithm>
 #include <functional>
@@ -43,7 +42,7 @@
 
 namespace intel { namespace sgx { namespace dcap {
 
-Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, const Quote::EnclaveReport& enclaveReport) const
+Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, const EnclaveReport& enclaveReport) const
 {
     const auto miscselectMask = vectorToUint32(enclaveIdentity->getMiscselectMask());
     const auto miscselect = vectorToUint32(enclaveIdentity->getMiscselect());
@@ -64,7 +63,10 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
 
     /// 4.1.2.9.7
     std::vector<uint8_t> mrSigner(enclaveReport.mrSigner.begin(), enclaveReport.mrSigner.end());
-    if(!enclaveIdentity->getMrsigner().empty() && enclaveIdentity->getMrsigner() != mrSigner)
+
+    const std::vector<uint8_t>& enclaveIdentityMrSigner = enclaveIdentity->getMrsigner();
+
+    if(!enclaveIdentityMrSigner.empty() && enclaveIdentityMrSigner != mrSigner)
     {
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
@@ -88,23 +90,6 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
 
     /// 4.1.2.9.11
     return STATUS_OK;
-}
-
-std::vector<uint8_t> EnclaveReportVerifier::applyMask(const std::vector<uint8_t>& base, const std::vector<uint8_t>& mask) const
-{
-    std::vector<uint8_t> result;
-
-    if(base.size() != mask.size())
-    {
-        return result;
-    }
-
-    auto mask_it = mask.cbegin();
-    std::transform(base.cbegin(), base.cend(), std::back_inserter(result), [&mask_it](auto &base_it) {
-        return (uint8_t)((base_it) & (*(mask_it++)));
-    });
-
-    return result;
 }
 
 uint32_t EnclaveReportVerifier::vectorToUint32(const std::vector<uint8_t>& input) const

@@ -6,15 +6,15 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Prerequisites**
 
-  Install node.js (Version <ins>10.20</ins> or later)
+  Install node.js (Version <ins>12.22</ins> or later)
 
   - For Debian and Ubuntu based distributions, you can use the following command:<br/>
-    $ curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - <br/>
+    $ curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - <br/>
     $ sudo apt-get install -y nodejs
   - To download and install, goto https://nodejs.org/en/download/
 
-  Install cracklib-runtime if it's not installed
-    $ sudo apt-get install cracklib-runtime
+  Install dependencies (python3, cracklib-runtime) if they are not installed. Also make sure "python" is linked to "python3"
+    $ sudo apt-get install python3 cracklib-runtime
 
 - **Install via Linux Debian package installer**
 
@@ -36,8 +36,8 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
   1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a
      web service.
-  2. Install dependencies if they are not already installed
-     nodejs build-essential(gcc gcc-c++ make) python cracklib-runtime
+  2. Install dependencies if they are not already installed. Also make sure "python" is linked to "python3"
+     nodejs build-essential(gcc gcc-c++ make) python3 cracklib-runtime
   3. Goto ../../tools/PCKCertSelection/ and build libPCKCertSelection.so, copy it to ./lib/
   4. From the root directory of your installation folder, run ./install.sh
 
@@ -63,8 +63,8 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
   5. Install python if it's not already installed
 
-  6. From the root directory of your installation folder, run install.bat
-     This will install the required npm packages in that directory.
+  6. From the root directory of your installation folder, run install.bat with administrator privilege
+     This will install the required npm packages and install the Window service.
 
   7. PCKCertSelection Library
      You need to compile the PCKCertSelection library in ../../tools/PCKCertSelection, then put the binary files
@@ -141,4 +141,4 @@ In /etc/sgx_default_qcnl.conf, set USE_SECURE_CERT=TRUE (For Windows see ../qpl/
 
     If the PCCS service was installed through Debian/RPM package, you can use Linux package manager to uninstall it.
     If the PCCS service was installed manually, you can run below script to uninstall it:
-        ./uninstall.sh (or uninstall.bat on Windows)
+        ./uninstall.sh (or uninstall.bat with administrator privilege on Windows)

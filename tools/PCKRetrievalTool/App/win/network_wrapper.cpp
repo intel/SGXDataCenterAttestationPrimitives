@@ -43,8 +43,10 @@
 #include <algorithm>
 #include <winhttp.h>
 #include <tchar.h>
-#include "network_wrapper.h"
 #include <assert.h>
+#include "network_wrapper.h"
+#include "utility.h"
+
 using namespace std;
 
 #define DEFAUT_CONNECT_TIME_OUT_VAUE  (5*1000)

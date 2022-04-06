@@ -38,7 +38,7 @@ import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 
 const HTTP_TIMEOUT = 120000; // 120 seconds
-const MAX_RETRY_COUNT = 6;   // Max retry 6 times, approximate 64 seconds in total
+const MAX_RETRY_COUNT = 6; // Max retry 6 times, approximate 64 seconds in total
 let HttpsAgent;
 if (Config.has('proxy') && Config.get('proxy')) {
   // use proxy settings in config file
@@ -56,9 +56,13 @@ async function do_request(url, options) {
   try {
     // hide API KEY from log
     let temp_key = null;
-    if (('headers' in options) && ('Ocp-Apim-Subscription-Key' in options.headers)) {
+    if (
+      'headers' in options &&
+      'Ocp-Apim-Subscription-Key' in options.headers
+    ) {
       temp_key = options.headers['Ocp-Apim-Subscription-Key'];
-      options.headers['Ocp-Apim-Subscription-Key'] = temp_key.substr(0, 5) + '***';
+      options.headers['Ocp-Apim-Subscription-Key'] =
+        temp_key.substr(0, 5) + '***';
     }
     if (temp_key) {
       options.headers['Ocp-Apim-Subscription-Key'] = temp_key;
@@ -67,11 +71,19 @@ async function do_request(url, options) {
     // global opitons ( proxy, timeout, etc)
     options.timeout = HTTP_TIMEOUT;
     options.agent = HttpsAgent;
-    options.retry = {limit: MAX_RETRY_COUNT};
+    options.retry = {
+      limit: MAX_RETRY_COUNT,
+      methods: ['GET', 'PUT', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
+    };
     options.throwHttpErrors = false;
 
     let response = await got(url, options);
     logger.info('Request-ID is : ' + response.headers['request-id']);
+
+    if (response.statusCode != Constants.HTTP_SUCCESS) {
+      logger.error('Intel PCS server returns error. ' + response.body);
+    }
+
     return response;
   } catch (err) {
     logger.debug(err);
@@ -119,7 +131,7 @@ export async function getCertsWithManifest(platform_manifest, pceid) {
     method: 'POST',
     headers: {
       'Ocp-Apim-Subscription-Key': Config.get('ApiKey'),
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
   };
 

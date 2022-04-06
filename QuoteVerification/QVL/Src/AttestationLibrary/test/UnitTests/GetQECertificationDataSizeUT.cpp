@@ -33,7 +33,7 @@
 #include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include "QuoteGenerator.h"
+#include "QuoteV3Generator.h"
 #include <numeric>
 
 using namespace testing;
@@ -75,12 +75,12 @@ TEST_F(GetQECertificationDataSizeTests, invalidQuoteFormatShouldReturnUnsupporte
 TEST_F(GetQECertificationDataSizeTests, positiveValidParametersShouldReturnOkStatusAndUpdateQeCertificationDataSize)
 {
     // GIVEN
-    test::QuoteGenerator generator;
+    test::QuoteV3Generator generator;
     const Bytes pckData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-    generator.withQeCertData(2, pckData)
+    generator.withCertificationData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
 
-    auto quote = generator.buildSgxQuote();
+    auto quote = generator.buildQuote();
 
     // WHEN
     const auto status = sgxAttestationGetQECertificationDataSize(quote.data(), (uint32_t) quote.size(), &qeCertificationDataSize);
@@ -90,14 +90,14 @@ TEST_F(GetQECertificationDataSizeTests, positiveValidParametersShouldReturnOkSta
     EXPECT_EQ(pckData.size(), qeCertificationDataSize) << "'qeCertificationDataSize' extracted from quote differs from expected";
 }
 
-TEST_F(GetQECertificationDataSizeTests, positiveEmptyQeCertDataShouldReturnOkStatusAndUpdateQeCertificationDataSize)
+TEST_F(GetQECertificationDataSizeTests, positiveEmptycertificationDataShouldReturnOkStatusAndUpdateQeCertificationDataSize)
 {
     // GIVEN
-    test::QuoteGenerator generator;
+    test::QuoteV3Generator generator;
     const Bytes pckData; // empty
-    generator.withQeCertData(2, pckData)
+    generator.withCertificationData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
-    const auto quote = generator.buildSgxQuote();
+    const auto quote = generator.buildQuote();
 
     // WHEN
     const auto status = sgxAttestationGetQECertificationDataSize(quote.data(), (uint32_t) quote.size(), &qeCertificationDataSize);

@@ -33,7 +33,7 @@
 
 #include "EcdsaSignatureGenerator.h"
 #include "X509CertGenerator.h"
-#include "QuoteGenerator.h"
+#include "QuoteV3Generator.h"
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <EnclaveIdentityGenerator.h>
@@ -49,7 +49,7 @@ using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyEnclaveReportIT : public Test
 {
-    test::QuoteGenerator::EnclaveReport enclaveReport;
+    test::QuoteV3Generator::EnclaveReport enclaveReport;
     X509CertGenerator certGenerator = X509CertGenerator{};
     crypto::EVP_PKEY_uptr tcbSigningKey;
     VerifyEnclaveReportIT(): tcbSigningKey(certGenerator.generateEcKeypair())
@@ -64,7 +64,7 @@ std::string VerifyEnclaveReportIT::generateEnclaveIdentity(std::string bodyJson)
     std::vector<uint8_t> enclaveIdentityBodyBytes(bodyJson.begin(), bodyJson.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(enclaveIdentityBodyBytes, tcbSigningKey.get());
 
-    return qeIdentityJsonWithSignature(bodyJson, EcdsaSignatureGenerator::signatureToHexString(signature));
+    return enclaveIdentityJsonWithSignature(bodyJson, EcdsaSignatureGenerator::signatureToHexString(signature));
 }
 TEST_F(VerifyEnclaveReportIT, nullptrArgumentsShouldReturnEnclaveReportUnsuportedFormat)
 {
@@ -75,7 +75,7 @@ TEST_F(VerifyEnclaveReportIT, nullptrEnclaveIdentityShouldReturnEnclaveReportUns
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    auto json = model.toJSON();
+    auto json = model.toV2JSON();
     auto identity = generateEnclaveIdentity(json);
     ASSERT_EQ(STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT, sgxAttestationVerifyEnclaveReport(nullptr, identity.c_str()));
 }
@@ -84,7 +84,7 @@ TEST_F(VerifyEnclaveReportIT, nullptrEnclaveReportShouldReturnEnclaveReportUnsup
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    auto json = model.toJSON();
+    auto json = model.toV2JSON();
 
     ASSERT_EQ(STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT, sgxAttestationVerifyEnclaveReport(enclaveReport.bytes().data(), nullptr));
 }
@@ -93,7 +93,7 @@ TEST_F(VerifyEnclaveReportIT, validEncaveReportandEnclaveIdentityShouldReturnSta
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    auto json = model.toJSON();
+    auto json = model.toV2JSON();
     auto identity = generateEnclaveIdentity(json);
 
     ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveReport(enclaveReport.bytes().data(), identity.c_str()));
@@ -104,7 +104,7 @@ TEST_F(VerifyEnclaveReportIT, validDataFormatShouldReturnEnclaveIdentityInvalid)
     EnclaveIdentityVectorModel model;
     model.issueDate = "2018-080:09:10Z";
     model.applyTo(enclaveReport);
-    auto json = model.toJSON();
+    auto json = model.toV2JSON();
     auto identity = generateEnclaveIdentity(json);
     ASSERT_EQ(STATUS_SGX_ENCLAVE_IDENTITY_INVALID,
               sgxAttestationVerifyEnclaveReport(enclaveReport.bytes().data(), identity.c_str()));

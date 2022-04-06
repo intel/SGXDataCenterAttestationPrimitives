@@ -2,13 +2,10 @@
 
 echo Uninstall npm packages ......
 
-call pm2 stop pccs
+call node pccs.service.win-un
 
-call pm2 delete pccs
+@ call rd /s /q node_modules
 
-call npm uninstall pm2 -g
-
-call rd /s /q node_modules
 
 
 

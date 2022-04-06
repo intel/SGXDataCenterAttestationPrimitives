@@ -84,6 +84,7 @@
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\CPUSVNCompare\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>CPUSVNCompareLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -99,6 +100,7 @@
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\PCKCertSelection\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PCKCertSelectionLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -119,6 +121,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\CPUSVNCompare\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>CPUSVNCompareLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,6 +142,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\PCKCertSelection\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PCKCertSelectionLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

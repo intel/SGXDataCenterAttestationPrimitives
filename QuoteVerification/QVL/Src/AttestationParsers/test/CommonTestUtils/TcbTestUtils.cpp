@@ -37,11 +37,11 @@ const std::vector<uint8_t> CPUSVN = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 
                                       0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 };
 const std::vector<uint8_t> CPUSVN_COMPONENTS = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                                                  0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 };
-unsigned int PCESVN = 123456;
+uint32_t PCESVN = 123456;
 
 x509::Tcb createTcb(const std::vector<uint8_t>& cpusvn,
                     const std::vector<uint8_t>& cpusvnComps,
-                    unsigned int pcesvn)
+                    uint32_t pcesvn)
 {
     return x509::Tcb(cpusvn, cpusvnComps, pcesvn);
 }

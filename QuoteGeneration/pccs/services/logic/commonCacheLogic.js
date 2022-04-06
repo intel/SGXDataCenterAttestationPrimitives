@@ -31,6 +31,7 @@
 import PccsError from '../../utils/PccsError.js';
 import PccsStatus from '../../constants/pccs_status_code.js';
 import Constants from '../../constants/index.js';
+import logger from '../../utils/Logger.js';
 import * as pckcertDao from '../../dao/pckcertDao.js';
 import * as pckCertchainDao from '../../dao/pckCertchainDao.js';
 import * as platformTcbsDao from '../../dao/platformTcbsDao.js';
@@ -329,12 +330,11 @@ export async function getEnclaveIdentityFromPCS(enclave_id) {
   }
 
   let result = {};
-  result[
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  ] = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-  );
+  result[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN] =
+    pcsClient.getHeaderValue(
+      pck_server_res.headers,
+      Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
+    );
   result['identity'] = pck_server_res.rawBody;
 
   await sequelize.transaction(async (t) => {
@@ -359,7 +359,9 @@ export async function getRootCACrlFromPCS(rootca) {
   return await sequelize.transaction(async (t) => {
     if (rootca == null) {
       // Root Cert not cached
-      const pck_server_res = await pcsClient.getEnclaveIdentity(Constants.QE_IDENTITY_ID);
+      const pck_server_res = await pcsClient.getEnclaveIdentity(
+        Constants.QE_IDENTITY_ID
+      );
       if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
         // update certificates
         await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(

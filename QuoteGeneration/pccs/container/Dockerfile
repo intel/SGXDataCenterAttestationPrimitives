@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 AS builder
 
 # DCAP version (github repo branch, tag or commit hash)
-ARG DCAP_VERSION=DCAP_1.12.1
+ARG DCAP_VERSION=DCAP_1.13
 
 # update and install packages
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -40,7 +40,7 @@ RUN npm config set proxy $http_proxy && \
     npm config set http-proxy $http_proxy && \
     npm config set https-proxy $https_proxy && \
     npm config set engine-strict true && \
-    npm ci
+    npm install
 
 # build final image
 FROM ubuntu:20.04

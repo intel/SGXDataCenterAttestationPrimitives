@@ -299,3 +299,79 @@ TEST_F(PckCertChainParserTests, emptyString)
     EXPECT_EQ(certChain.getRootCert(), nullptr);
     EXPECT_EQ(certChain.getTopmostCert(), nullptr);
 }
+
+TEST_F(PckCertChainParserTests, parsingOneCertificateWithBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingTwoCertificatesWithFirstBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT
+        + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingTwoCertificatesWithSecondBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingThreeCertificatesWithLastBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingThreeCertificatesWithMiddleBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT
+            + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}

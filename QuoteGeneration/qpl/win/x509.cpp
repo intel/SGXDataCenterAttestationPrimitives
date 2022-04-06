@@ -34,30 +34,25 @@
  * Description: X.509 parser
  *
  */
-#include <iostream>
 #include <Windows.h>
 #include <Wincrypt.h>
-#include <locale>
 #include <codecvt>
+#include <iostream>
+#include <locale>
 
-std::string get_cdp_url_from_pem_cert(const char *p_cert)
-{
-    BYTE        derPubKey[2048];
-    DWORD       derPubKeyLen = 2048;
-    PCERT_INFO  publicKeyInfo;
-    DWORD       keyLength;
+std::string get_cdp_url_from_pem_cert(const char *p_cert) {
+    BYTE derPubKey[2048];
+    DWORD derPubKeyLen = 2048;
+    PCERT_INFO publicKeyInfo;
+    DWORD keyLength;
 
     /*
      * Convert from PEM format to DER format - removes header and footer and decodes from base64
      */
-    if (!CryptStringToBinaryA(p_cert, 0, CRYPT_STRING_ANY, NULL, &derPubKeyLen, NULL, NULL))
-    {
+    if (!CryptStringToBinaryA(p_cert, 0, CRYPT_STRING_ANY, NULL, &derPubKeyLen, NULL, NULL)) {
         return "";
-    }
-    else
-    {
-        if (!CryptStringToBinaryA(p_cert, 0, CRYPT_STRING_ANY, derPubKey, &derPubKeyLen, NULL, NULL))
-        {
+    } else {
+        if (!CryptStringToBinaryA(p_cert, 0, CRYPT_STRING_ANY, derPubKey, &derPubKeyLen, NULL, NULL)) {
             return "";
         }
     }
@@ -66,12 +61,11 @@ std::string get_cdp_url_from_pem_cert(const char *p_cert)
      * Decode from DER format to CERT_PUBLIC_KEY_INFO
      */
     if (!CryptDecodeObjectEx(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, X509_CERT_TO_BE_SIGNED, derPubKey, derPubKeyLen,
-        CRYPT_ENCODE_ALLOC_FLAG, NULL, &publicKeyInfo, &keyLength))
-    {
+                             CRYPT_ENCODE_ALLOC_FLAG, NULL, &publicKeyInfo, &keyLength)) {
         return "";
     }
 
-    const char* OID_CRL_DISTRIBUTION_POINT = "2.5.29.31";
+    const char *OID_CRL_DISTRIBUTION_POINT = "2.5.29.31";
     PCERT_EXTENSION pExtensionCrlCdp = CertFindExtension(OID_CRL_DISTRIBUTION_POINT, publicKeyInfo->cExtension, publicKeyInfo->rgExtension);
     if (!pExtensionCrlCdp) {
         LocalFree(publicKeyInfo);
@@ -81,7 +75,7 @@ std::string get_cdp_url_from_pem_cert(const char *p_cert)
     PCRL_DIST_POINTS_INFO pCrlDistPoints = NULL;
     DWORD dwCrlDistPoints = 0;
     if (!CryptDecodeObjectEx(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, X509_CRL_DIST_POINTS, pExtensionCrlCdp->Value.pbData,
-        pExtensionCrlCdp->Value.cbData, CRYPT_DECODE_ALLOC_FLAG, (PCRYPT_DECODE_PARA)NULL, &pCrlDistPoints, &dwCrlDistPoints)) {
+                             pExtensionCrlCdp->Value.cbData, CRYPT_DECODE_ALLOC_FLAG, (PCRYPT_DECODE_PARA)NULL, &pCrlDistPoints, &dwCrlDistPoints)) {
         LocalFree(publicKeyInfo);
         return "";
     }

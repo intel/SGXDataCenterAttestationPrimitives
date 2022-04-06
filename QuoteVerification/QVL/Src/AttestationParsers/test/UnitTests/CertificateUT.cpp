@@ -35,7 +35,7 @@
 
 #include <gtest/gtest.h>
 
-#include <gmock/gmock-generated-matchers.h>
+#include <gmock/gmock-matchers.h>
 
 using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::parser;

@@ -33,72 +33,127 @@
  * Description: Configurations for QCNL library
  *
  */
-#ifndef QCNLCONFIG_H
-#define QCNLCONFIG_H
+#ifndef QCNLCONFIG_H_
+#define QCNLCONFIG_H_
+#pragma once
+
+#include "document.h"
 #include <string>
 
 using namespace std;
+using namespace rapidjson;
 
-class QcnlConfig
-{
-private:
+#ifndef _MSC_VER
+#define TCHAR char
+#define _T(x) (x)
+#else
+#include <tchar.h>
+#include <windows.h>
+#endif
+
+#define CACHE_MAX_EXPIRY_HOURS  2160
+
+class QcnlConfig {
+protected:
     // Default URL for PCCS server if configuration file doesn't exist
-    string _server_url;
+    string server_url_;
     // Use secure HTTPS certificate or not
-    bool _use_secure_cert;
+    bool use_secure_cert_;
     // If defined in config file, will use this URL to get collateral
-    string _collateral_service_url;
+    string collateral_service_url_;
     // PCCS's API version
-    string _collateral_version;
+    string collateral_version_;
     // Max retry times
-    uint32_t _retry_times;
+    uint32_t retry_times_;
     // Retry delay time in seconds
-    uint32_t _retry_delay;
+    uint32_t retry_delay_;
+    // Local URL address
+    string local_pck_url_;
+    // Cache expire hours
+    uint32_t cache_expire_hour_;
+    // custom request options for Azure
+    Document custom_request_options_;
+
+    QcnlConfig() : server_url_("https://localhost:8081/sgx/certification/v3/"),
+                   use_secure_cert_(true),
+                   collateral_service_url_(server_url_),
+                   collateral_version_("3.0"),
+                   retry_times_(0),
+                   retry_delay_(0),
+                   local_pck_url_(""),
+                   cache_expire_hour_(0) {}
+    // To define the virtual destructor outside the class:
+    virtual ~QcnlConfig() {
+        if (myInstance) {
+            delete myInstance;
+            myInstance = nullptr;
+        }
+    };
 
 public:
-    static QcnlConfig& Instance() {
-        static QcnlConfig myInstance;
-        return myInstance;
+    QcnlConfig(QcnlConfig const &) = delete;
+    QcnlConfig(QcnlConfig &&) = delete;
+    QcnlConfig &operator=(QcnlConfig const &) = delete;
+    QcnlConfig &operator=(QcnlConfig &&) = delete;
+
+    static QcnlConfig *myInstance;
+    static QcnlConfig *Instance();
+
+    string getServerUrl() {
+        return server_url_;
     }
 
-    QcnlConfig(QcnlConfig const&) = delete;
-    QcnlConfig(QcnlConfig&&) = delete;
-    QcnlConfig& operator=(QcnlConfig const&) = delete;
-    QcnlConfig& operator=(QcnlConfig &&) = delete;
-
-    string getServerUrl()
-    {
-        return _server_url;
+    bool is_server_secure() {
+        return use_secure_cert_;
     }
 
-    bool is_server_secure()
-    {
-        return _use_secure_cert;
+    string getCollateralServiceUrl() {
+        return collateral_service_url_;
     }
 
-    string getCollateralServiceUrl()
-    {
-        return _collateral_service_url;
+    string getCollateralVersion() {
+        return collateral_version_;
     }
 
-    string getCollateralVersion()
-    {
-        return _collateral_version;
+    uint32_t getRetryTimes() {
+        return retry_times_;
     }
 
-    uint32_t getRetryTimes()
-    {
-        return _retry_times;
+    uint32_t getRetryDelay() {
+        return retry_delay_;
     }
 
-    uint32_t getRetryDelay()
-    {
-        return _retry_delay;
+    string getLocalPckUrl() {
+        return local_pck_url_;
     }
 
-protected:
-    QcnlConfig();
-    ~QcnlConfig() {}
+    uint32_t getCacheExpireHour() {
+        return cache_expire_hour_;
+    }
+
+    Document &getCustomRequestOptions() {
+        return custom_request_options_;
+    }
+
+    bool load_config_json(const TCHAR *json_file);
 };
 
-#endif //QCNLCONFIG_H
+class QcnlConfigLegacy : public QcnlConfig {
+public:
+    QcnlConfigLegacy() {}
+    ~QcnlConfigLegacy() {}
+
+public:
+    bool load_config();
+};
+
+class QcnlConfigJson : public QcnlConfig {
+public:
+    QcnlConfigJson() {}
+    ~QcnlConfigJson() {}
+
+public:
+    bool load_config();
+};
+
+#endif //QCNLCONFIG_H_

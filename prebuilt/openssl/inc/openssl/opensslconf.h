@@ -27,11 +27,68 @@ extern "C" {
 #ifndef OPENSSL_SYS_WIN64A
 # define OPENSSL_SYS_WIN64A 1
 #endif
+#ifndef OPENSSL_NO_ARIA
+# define OPENSSL_NO_ARIA
+#endif
+#ifndef OPENSSL_NO_BF
+# define OPENSSL_NO_BF
+#endif
+#ifndef OPENSSL_NO_BLAKE2
+# define OPENSSL_NO_BLAKE2
+#endif
+#ifndef OPENSSL_NO_CAMELLIA
+# define OPENSSL_NO_CAMELLIA
+#endif
+#ifndef OPENSSL_NO_CAST
+# define OPENSSL_NO_CAST
+#endif
+#ifndef OPENSSL_NO_CHACHA
+# define OPENSSL_NO_CHACHA
+#endif
+#ifndef OPENSSL_NO_CMS
+# define OPENSSL_NO_CMS
+#endif
+#ifndef OPENSSL_NO_CT
+# define OPENSSL_NO_CT
+#endif
+#ifndef OPENSSL_NO_IDEA
+# define OPENSSL_NO_IDEA
+#endif
 #ifndef OPENSSL_NO_MD2
 # define OPENSSL_NO_MD2
 #endif
+#ifndef OPENSSL_NO_MD4
+# define OPENSSL_NO_MD4
+#endif
+#ifndef OPENSSL_NO_MDC2
+# define OPENSSL_NO_MDC2
+#endif
+#ifndef OPENSSL_NO_POLY1305
+# define OPENSSL_NO_POLY1305
+#endif
+#ifndef OPENSSL_NO_RC4
+# define OPENSSL_NO_RC4
+#endif
 #ifndef OPENSSL_NO_RC5
 # define OPENSSL_NO_RC5
+#endif
+#ifndef OPENSSL_NO_RMD160
+# define OPENSSL_NO_RMD160
+#endif
+#ifndef OPENSSL_NO_SIPHASH
+# define OPENSSL_NO_SIPHASH
+#endif
+#ifndef OPENSSL_NO_SM2
+# define OPENSSL_NO_SM2
+#endif
+#ifndef OPENSSL_NO_SM3
+# define OPENSSL_NO_SM3
+#endif
+#ifndef OPENSSL_NO_SM4
+# define OPENSSL_NO_SM4
+#endif
+#ifndef OPENSSL_NO_SRP
+# define OPENSSL_NO_SRP
 #endif
 #ifndef OPENSSL_THREADS
 # define OPENSSL_THREADS
@@ -45,6 +102,12 @@ extern "C" {
 #ifndef OPENSSL_NO_ASAN
 # define OPENSSL_NO_ASAN
 #endif
+#ifndef OPENSSL_NO_AUTOERRINIT
+# define OPENSSL_NO_AUTOERRINIT
+#endif
+#ifndef OPENSSL_NO_CAPIENG
+# define OPENSSL_NO_CAPIENG
+#endif
 #ifndef OPENSSL_NO_CRYPTO_MDEBUG
 # define OPENSSL_NO_CRYPTO_MDEBUG
 #endif
@@ -53,6 +116,9 @@ extern "C" {
 #endif
 #ifndef OPENSSL_NO_DEVCRYPTOENG
 # define OPENSSL_NO_DEVCRYPTOENG
+#endif
+#ifndef OPENSSL_NO_DSO
+# define OPENSSL_NO_DSO
 #endif
 #ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
 # define OPENSSL_NO_EC_NISTP_64_GCC_128
@@ -63,17 +129,29 @@ extern "C" {
 #ifndef OPENSSL_NO_EXTERNAL_TESTS
 # define OPENSSL_NO_EXTERNAL_TESTS
 #endif
+#ifndef OPENSSL_NO_FILENAMES
+# define OPENSSL_NO_FILENAMES
+#endif
 #ifndef OPENSSL_NO_FUZZ_AFL
 # define OPENSSL_NO_FUZZ_AFL
 #endif
 #ifndef OPENSSL_NO_FUZZ_LIBFUZZER
 # define OPENSSL_NO_FUZZ_LIBFUZZER
 #endif
+#ifndef OPENSSL_NO_GOST
+# define OPENSSL_NO_GOST
+#endif
 #ifndef OPENSSL_NO_HEARTBEATS
 # define OPENSSL_NO_HEARTBEATS
 #endif
 #ifndef OPENSSL_NO_MSAN
 # define OPENSSL_NO_MSAN
+#endif
+#ifndef OPENSSL_NO_NEXTPROTONEG
+# define OPENSSL_NO_NEXTPROTONEG
+#endif
+#ifndef OPENSSL_NO_PSK
+# define OPENSSL_NO_PSK
 #endif
 #ifndef OPENSSL_NO_SCTP
 # define OPENSSL_NO_SCTP

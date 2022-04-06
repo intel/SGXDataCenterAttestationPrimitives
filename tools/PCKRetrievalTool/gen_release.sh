@@ -40,17 +40,14 @@ rel_dir_base=PCKIDRetrievalTool_v$SGX_VERSION
 rel_dir_name=$rel_dir_base$1
 
 rm -rf $rel_dir_base*
+make clean
+make STANDALONE=1
 
 mkdir $rel_dir_name
-cp pck_id_retrieval_tool_enclave.signed.so $rel_dir_name
-cp libdcap_quoteprov.so.1 $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name
 cp network_setting.conf $rel_dir_name
-cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_pce.signed.so $rel_dir_name
-cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_qe3.signed.so $rel_dir_name
-cp ../../QuoteGeneration/build/linux/libsgx_dcap_ql.so $rel_dir_name/libsgx_dcap_ql.so.1
-cp ../../QuoteGeneration/build/linux/libsgx_qe3_logic.so $rel_dir_name
-cp ../../QuoteGeneration/build/linux/libsgx_pce_logic.so $rel_dir_name
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_pce.signed.so $rel_dir_name/libsgx_pce.signed.so.1
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_id_enclave.signed.so $rel_dir_name/libsgx_id_enclave.signed.so.1
 cp ../SGXPlatformRegistration/build/lib64/libmpa_uefi.so $rel_dir_name/libmpa_uefi.so.1
 cp ../../../../build/linux/libsgx_enclave_common.so $rel_dir_name/libsgx_enclave_common.so.1
 cp ../../../../build/linux/libsgx_urts.so $rel_dir_name/libsgx_urts.so

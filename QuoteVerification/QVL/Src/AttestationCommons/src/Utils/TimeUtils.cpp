@@ -38,6 +38,7 @@
 #include <iomanip>
 #include <regex>
 #include <time.h>
+
 #endif
 
 extern struct tm *
@@ -106,6 +107,10 @@ namespace standard
 {
     struct tm * gmtime(const time_t * timep)
     {
+        if (timep == nullptr) // avoid undefined behaviour
+        {
+            throw std::runtime_error("Timestamp has invalid value");
+        }
         #ifdef _MSC_VER
             #pragma warning(push)
             #pragma warning(disable: 4996)
@@ -147,6 +152,17 @@ namespace standard
         std::tm time{};
         std::istringstream input(timeString);
         input >> std::get_time(&time, "%Y-%m-%dT%H:%M:%SZ");
+
+        //if tm format is incorrect, mktime will modify it. If it's correct time format, it'll keep it.
+        //e.g. giving mktime a date of 32/may/2019, it will change it to 2/june/2019, this way we know if the input time is correct or not.
+        auto validate = time;
+        standard::mktime(&time);
+        if (validate.tm_year != time.tm_year || validate.tm_mon != time.tm_mon ||
+            validate.tm_mday != time.tm_mday || validate.tm_hour != time.tm_hour ||
+            validate.tm_min != time.tm_min || validate.tm_sec != time.tm_sec)
+        {
+            return false;
+        }
         return !input.fail();
     }
 
@@ -164,6 +180,10 @@ namespace enclave
 {
     struct tm * gmtime(const time_t * timep)
     {
+        if (timep == nullptr) // avoid undefined behaviour
+        {
+            throw std::runtime_error("Timestamp has invalid value");
+        }
         return sgxssl__gmtime64(timep);
     }
 
@@ -220,10 +240,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != '-')
+            if (*tmp != '-')
             {
                 break;
             }
+            tmp++;
 
             tmp += qvlStringToNum(tmp, 2, (uint32_t *) &datetime->tm_mon);
             datetime->tm_mon = datetime->tm_mon - 1;
@@ -232,10 +253,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != '-')
+            if (*tmp != '-')
             {
                 break;
             }
+            tmp++;
 
             tmp += qvlStringToNum(tmp, 2, (uint32_t *) &datetime->tm_mday);
             if (datetime->tm_mday < 1 || datetime->tm_mday > 31)
@@ -243,10 +265,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != 'T')
+            if (*tmp != 'T')
             {
                 break;
             }
+            tmp++;
 
             tmp += qvlStringToNum(tmp, 2, (uint32_t *) &datetime->tm_hour);
             if (datetime->tm_hour < 0 || datetime->tm_hour > 23)
@@ -254,10 +277,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != ':')
+            if (*tmp != ':')
             {
                 break;
             }
+            tmp++;
 
             tmp += qvlStringToNum(tmp, 2, (uint32_t *) &datetime->tm_min);
             if (datetime->tm_min < 0 || datetime->tm_min > 59)
@@ -265,10 +289,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != ':')
+            if (*tmp != ':')
             {
                 break;
             }
+            tmp++;
 
             tmp += qvlStringToNum(tmp, 2, (uint32_t *) &datetime->tm_sec);
 
@@ -277,10 +302,11 @@ namespace enclave
                 break;
             }
 
-            if (*tmp++ != 'Z')
+            if (*tmp != 'Z')
             {
                 break;
             }
+            tmp++;
 
             datetime->tm_wday = 0;
             datetime->tm_yday = 0;
@@ -304,14 +330,12 @@ namespace enclave
 
     time_t getCurrentTime(const time_t *in_time)
     {
-        static time_t current_time = 0;
-
-        if (in_time != NULL && *in_time != 0)
+        if (in_time != nullptr && *in_time != 0)
         {
-            current_time = *in_time;
+            return *in_time;
         }
 
-        return current_time;
+        throw std::runtime_error("Timestamp has invalid value");
     }
 
     bool isValidTimeString(const std::string& timeString)

@@ -57,7 +57,7 @@ public:
     std::pair<std::string, ParseStatus> getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const;
     std::pair<tm, ParseStatus> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
     JsonParser::ParseStatus checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<unsigned int, ParseStatus> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<uint32_t, ParseStatus> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
     std::pair<int, ParseStatus> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
 
 private:

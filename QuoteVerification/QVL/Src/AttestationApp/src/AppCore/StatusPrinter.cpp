@@ -37,7 +37,7 @@ namespace {
 
 std::string printStatus(Status s)
 {
-    static constexpr Status MAX_STATUS = STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED;
+    static constexpr Status MAX_STATUS = STATUS_TDX_MODULE_MISMATCH;
     static std::array<std::string, MAX_STATUS + 1> statusStrs = {{
         "STATUS_OK",
         "STATUS_UNSUPPORTED_CERT_FORMAT",
@@ -137,7 +137,8 @@ std::string printStatus(Status s)
         "STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED",
         "STATUS_TCB_SW_HARDENING_NEEDED",
         "STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED",
-        "STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED"
+        "STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED",
+        "STATUS_TDX_MODULE_MISMATCH"
     }};
 
     const auto statusNumberStr = "(" + std::to_string(s) + ")";

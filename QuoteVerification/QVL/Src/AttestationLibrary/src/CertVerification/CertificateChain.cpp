@@ -187,7 +187,7 @@ std::vector<std::string> CertificateChain::splitChain(const std::string &pemChai
     const size_t begPos = pemChain.find(begCert);
     const size_t endPos = pemChain.find(endCert);
 
-    if(begPos == std::string::npos || endPos == std::string::npos)
+    if(begPos == std::string::npos || endPos == std::string::npos || begPos >= endPos)
     {
         return {};
     }
@@ -216,6 +216,11 @@ std::vector<std::string> CertificateChain::splitChain(const std::string &pemChai
 
         newStartPos = newEndPos;
         foundEndPos = pemChain.find(endCert, newStartPos);
+
+        if (foundEndPos <= newStartPos)
+        {
+            return {};
+        }
     }
 
     return ret;

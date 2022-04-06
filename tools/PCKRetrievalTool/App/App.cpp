@@ -258,9 +258,9 @@ int parse_arg(int argc, const char *argv[])
     return 0;
 }
 
-int send_collected_data_to_file(FILE* pFile, uint8_t* p_quote_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
+int send_collected_data_to_file(FILE* pFile, uint8_t* p_data_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
 {
-     if (p_quote_buffer == NULL) {//,PCE_ID,,,PLATFORM_ID[,PLATFORM MANIFEST]
+     if (p_data_buffer == NULL) {//,PCE_ID,,,PLATFORM_ID[,PLATFORM MANIFEST]
         WRITE_COMMA;
 
         // write pceid to file
@@ -276,50 +276,63 @@ int send_collected_data_to_file(FILE* pFile, uint8_t* p_quote_buffer, uint8_t* p
     }
     else {
         // Output PCK Cert Retrieval Data
-        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_quote_buffer);
+#ifdef _MSC_VER
+        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_data_buffer);
         sgx_ql_ecdsa_sig_data_t* p_sig_data = (sgx_ql_ecdsa_sig_data_t*)p_quote->signature_data;
         sgx_ql_auth_data_t* p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
         sgx_ql_certification_data_t* p_temp_cert_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
-        sgx_ql_ppid_rsa3072_encrypted_cert_info_t* p_cert_info = (sgx_ql_ppid_rsa3072_encrypted_cert_info_t*)(p_temp_cert_data->certification_data);
+        p_data_buffer = p_temp_cert_data->certification_data;
+#endif
         uint64_t data_index = 0;
 #ifdef DEBUG
         PRINT_MESSAGE("EncPPID:\n");
-        PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
+        PRINT_BYTE_ARRAY(stdout, p_data_buffer + data_index, ENCRYPTED_PPID_LENGTH);
         PRINT_MESSAGE("\n PCE_ID:\n");
-        data_index = data_index + sizeof(p_cert_info->enc_ppid);
-        PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
+        data_index = data_index + ENCRYPTED_PPID_LENGTH;
+        PRINT_BYTE_ARRAY(stdout, p_data_buffer + data_index, PCE_ID_LENGTH);
         PRINT_MESSAGE("\n TCBr - CPUSVN:\n");
-        data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
-        PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
+        data_index = data_index + PCE_ID_LENGTH;
+        PRINT_BYTE_ARRAY(stdout, p_data_buffer + data_index, CPU_SVN_LENGTH);
         PRINT_MESSAGE("\n TCBr - PCE_ISVSVN:\n");
-        data_index = data_index + sizeof(p_cert_info->cpu_svn);
-        PRINT_BYTE_ARRAY(stdout, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
+        data_index = data_index + CPU_SVN_LENGTH;
+        PRINT_BYTE_ARRAY(stdout, p_data_buffer + data_index, ISV_SVN_LENGTH);
         PRINT_MESSAGE("\n PLATFORM_ID:\n");
+#ifdef _MSC_VER
         PRINT_BYTE_ARRAY(stdout, &p_quote->header.user_data[0], DEFAULT_PLATFORM_ID_LENGTH);
+#else
+        data_index = data_index + ISV_SVN_LENGTH;
+        PRINT_BYTE_ARRAY(stdout, p_data_buffer, DEFAULT_PLATFORM_ID_LENGTH);
+#endif
         PRINT_MESSAGE("\n\n");
 #endif
         data_index = 0;
         //write encrypted PPID to file
-        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->enc_ppid));
+        PRINT_BYTE_ARRAY(pFile, p_data_buffer + data_index, ENCRYPTED_PPID_LENGTH);
         WRITE_COMMA;
 
-        data_index = data_index + sizeof(p_cert_info->enc_ppid);
+        data_index = data_index + ENCRYPTED_PPID_LENGTH;
         // write pceid to file
-        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_id));
+        PRINT_BYTE_ARRAY(pFile, p_data_buffer + data_index, PCE_ID_LENGTH);
         WRITE_COMMA;
 
-        data_index = data_index + sizeof(p_cert_info->pce_info.pce_id);
+        data_index = data_index + PCE_ID_LENGTH;
         //write cpusvn to file
-        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->cpu_svn));
+        PRINT_BYTE_ARRAY(pFile, p_data_buffer + data_index, CPU_SVN_LENGTH);
         WRITE_COMMA;
 
-        data_index = data_index + sizeof(p_cert_info->cpu_svn);
+        data_index = data_index + CPU_SVN_LENGTH;
         //write pce isv_svn to file
-        PRINT_BYTE_ARRAY(pFile, p_temp_cert_data->certification_data + data_index, sizeof(p_cert_info->pce_info.pce_isv_svn));
+        PRINT_BYTE_ARRAY(pFile, p_data_buffer + data_index, ISV_SVN_LENGTH);
         WRITE_COMMA;
 
+#ifdef _MSC_VER
         //write qe_id to file
         PRINT_BYTE_ARRAY(pFile, &p_quote->header.user_data[0], DEFAULT_PLATFORM_ID_LENGTH);
+#else
+        data_index = data_index + ISV_SVN_LENGTH;
+        //write qe_id to file
+        PRINT_BYTE_ARRAY(pFile, p_data_buffer + data_index, DEFAULT_PLATFORM_ID_LENGTH);
+#endif   
     }
     //write platform manifest.
     if (platform_manifest_buffer_size > 0 ) {
@@ -330,13 +343,13 @@ int send_collected_data_to_file(FILE* pFile, uint8_t* p_quote_buffer, uint8_t* p
     return 0;
 }
 
-cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
+cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_data_buffer, uint8_t* p_platform_manifest_buffer, uint16_t platform_manifest_buffer_size, std::string& platform_id)
 {
     network_post_error_t ret_status = POST_SUCCESS;
     uint8_t* raw_data = NULL;
     uint16_t platform_id_length = DEFAULT_PLATFORM_ID_LENGTH;
     cache_server_delivery_status_t delivery_status = DELIVERY_ERROR_MAX;
-
+    uint32_t data_length_except_platform_manifest = ENCRYPTED_PPID_LENGTH + PCE_ID_LENGTH + CPU_SVN_LENGTH + ISV_SVN_LENGTH + DEFAULT_PLATFORM_ID_LENGTH;
 
     // raw_data include: enclave mode(need load enclave) 
     // 1. enc_ppid, pce_svn, pce_id, cpu_svn, the size is sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)
@@ -365,20 +378,26 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_bu
     }
     else {
         // Output PCK Cert Retrieval Data
-        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_quote_buffer);
+#ifdef _MSC_VER
+        sgx_quote3_t* p_quote = (sgx_quote3_t*)(p_data_buffer);
         sgx_ql_ecdsa_sig_data_t* p_sig_data = (sgx_ql_ecdsa_sig_data_t*)p_quote->signature_data;
         sgx_ql_auth_data_t* p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
         sgx_ql_certification_data_t* p_temp_cert_data = (sgx_ql_certification_data_t*)((uint8_t*)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
-        raw_data_size = platform_manifest_buffer_size + static_cast < uint32_t>(sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t)) + DEFAULT_PLATFORM_ID_LENGTH;
+#endif
+        raw_data_size = platform_manifest_buffer_size + data_length_except_platform_manifest;
         raw_data = new (std::nothrow) uint8_t[raw_data_size];
         if (raw_data == NULL) {
             fprintf(stderr,"Error: Memory has been used up.\n");
             return DELIVERY_FAIL;
         }
         memset(raw_data, 0x00, raw_data_size);
+#ifdef _MSC_VER
         memcpy(raw_data, p_temp_cert_data->certification_data, sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + DEFAULT_PLATFORM_ID_LENGTH);
+#else
+        memcpy(raw_data, p_data_buffer, data_length_except_platform_manifest);
+#endif
         if (platform_manifest_buffer_size > 0) { //for multi-package scenario
-            memcpy(raw_data + sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t) + DEFAULT_PLATFORM_ID_LENGTH, p_platform_manifest_buffer, platform_manifest_buffer_size);
+            memcpy(raw_data + data_length_except_platform_manifest, p_platform_manifest_buffer, platform_manifest_buffer_size);
         }
     }
 
@@ -413,8 +432,7 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_quote_bu
 int main(int argc, const char* argv[])
 {
     int ret = -1;
-    uint32_t quote_size = 0;
-    uint8_t* p_quote_buffer = NULL;
+    uint8_t* p_data_buffer = NULL;
     FILE* pFile = NULL;
     uint8_t *p_platform_manifest_buffer = NULL;
     uint16_t platform_manifest_out_buffer_size = UINT16_MAX;
@@ -502,12 +520,16 @@ int main(int argc, const char* argv[])
             // in this mode, if platform manifest is not availabe, just ignore it. 
             platform_manifest_out_buffer_size = 0;
         }
-
-        ret = generate_quote(&p_quote_buffer, quote_size);
+#ifdef _MSC_VER
+        uint32_t quote_size = 0;
+        ret = generate_quote(&p_data_buffer, quote_size);
+#else
+	ret = collect_data(&p_data_buffer);
+#endif
         if (ret != 0) {
-            if (NULL != p_quote_buffer) {
-                free(p_quote_buffer);
-                p_quote_buffer = NULL;
+            if (NULL != p_data_buffer) {
+                free(p_data_buffer);
+                p_data_buffer = NULL;
             }
             if (NULL != p_platform_manifest_buffer) {
                 free(p_platform_manifest_buffer);
@@ -522,11 +544,11 @@ int main(int argc, const char* argv[])
 
     ret = 0;
     if (pFile != NULL) {
-        send_collected_data_to_file(pFile, p_quote_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
+        send_collected_data_to_file(pFile, p_data_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
     }
 
     if (is_server_url_provided) {
-        delivery_status = send_collected_data_to_server(p_quote_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
+        delivery_status = send_collected_data_to_server(p_data_buffer, p_platform_manifest_buffer, platform_manifest_out_buffer_size, platform_id_string);
     }
 
     if (ret_mpa == UEFI_OPERATION_SUCCESS && (pFile != NULL || delivery_status == DELIVERY_SUCCESS)) {
@@ -538,9 +560,9 @@ int main(int argc, const char* argv[])
         }
     }
 
-    if (NULL != p_quote_buffer) {
-        free(p_quote_buffer);
-        p_quote_buffer = NULL;
+    if (NULL != p_data_buffer) {
+        free(p_data_buffer);
+        p_data_buffer = NULL;
     }
     if(NULL != p_platform_manifest_buffer) {
         free(p_platform_manifest_buffer);

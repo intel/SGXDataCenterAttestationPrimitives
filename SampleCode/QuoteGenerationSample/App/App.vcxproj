@@ -68,6 +68,7 @@
       <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -99,6 +100,7 @@
       <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Libraries;$(SGXSDKInstallPath)\bin\x64\Release;$(VC_LibraryPath_VC_x64_OneCore)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>

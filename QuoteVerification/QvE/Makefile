@@ -63,6 +63,8 @@ QVE_NAME := qve.so
 SIGNED_QVE_NAME := libsgx_qve.signed.so
 QVE_CONFIG_FILE := Enclave/linux/config.xml
 
+QVE_VER:= $(shell awk '$$2 ~ /QVE_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(DCAP_QG_DIR)/common/inc/internal/se_version.h)
+
 
 ENCLAVE_INC_PATH := $(COMMON_INCLUDE) -IInclude -IEnclave -I$(DCAP_QG_DIR)/quote_wrapper/common/inc -I$(DCAP_QG_DIR)/pce_wrapper/inc
 
@@ -137,7 +139,7 @@ Enclave/%.o: Enclave/%.cpp Enclave/qve_t.h $(SGXSSL_HEADER_CHECK)
 	@echo "CXX  <=  $<"
 
 $(QVE_NAME): $(QVE_OBJS) Enclave/qve_t.o $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
-	@$(CXX)  $^ -o $@ $(ENCLAVE_LDFLAGS) $(ENCLAVE_CXXFLAGS)
+	@$(CXX)  $^ -o $@ $(ENCLAVE_LDFLAGS) $(ENCLAVE_CXXFLAGS) -Wl,-soname=${SIGNED_QVE_NAME}.$(call SPLIT_VERSION,$(QVE_VER),1)
 	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 	@echo "LINK =>  $@"
 

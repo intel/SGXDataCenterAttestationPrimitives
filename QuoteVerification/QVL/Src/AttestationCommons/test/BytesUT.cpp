@@ -54,8 +54,19 @@ TEST_F(BytesUT, hexStringToBytes)
     ASSERT_NE(intel::sgx::dcap::hexStringToBytes("0001090A0D0f149FAFFf"), val2);
 }
 
+
 TEST_F(BytesUT, bytesToHexString)
 {
     ASSERT_EQ(intel::sgx::dcap::bytesToHexString(val1), "0001090A0D0F149FAFFF");
     ASSERT_NE(intel::sgx::dcap::bytesToHexString(val2), "0001090A0D0F149FAFFF");
+}
+
+TEST_F(BytesUT, OddLengthHexStringToBytes)
+{
+    ASSERT_EQ(intel::sgx::dcap::hexStringToBytes("0001090A0D0f149FAFF"), Bytes {});
+}
+
+TEST_F(BytesUT, NotValidHexStringToBytes)
+{
+    ASSERT_EQ(intel::sgx::dcap::hexStringToBytes("0001090X0D0f149FAFFF"), Bytes {});
 }

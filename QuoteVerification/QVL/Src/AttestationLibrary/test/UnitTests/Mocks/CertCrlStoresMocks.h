@@ -51,7 +51,7 @@ class PckCertificateMock: public virtual dcap::parser::x509::PckCertificate
 public:
     MOCK_METHOD2(parse, PckCertificate(const std::string&, const time_t&));
 
-    MOCK_CONST_METHOD0(getVersion, unsigned int());
+    MOCK_CONST_METHOD0(getVersion, uint32_t());
     MOCK_CONST_METHOD0(getSubject, const dcap::parser::x509::DistinguishedName&());
     MOCK_CONST_METHOD0(getIssuer, const dcap::parser::x509::DistinguishedName&());
     MOCK_CONST_METHOD0(getValidity, const dcap::parser::x509::Validity&());
@@ -109,9 +109,10 @@ public:
 class TcbMock: public dcap::parser::x509::Tcb
 {
 public:
-    MOCK_CONST_METHOD0(getPceSvn, unsigned int());
+    MOCK_CONST_METHOD0(getPceSvn, uint32_t());
     MOCK_CONST_METHOD0(getCpuSvn, const std::vector<uint8_t>&());
-    MOCK_CONST_METHOD1(getSgxTcbComponentSvn, unsigned int(unsigned int));
+    MOCK_CONST_METHOD1(getSgxTcbComponentSvn, uint32_t(uint32_t));
+    MOCK_CONST_METHOD1(getTdxTcbComponentSvn, uint32_t(uint32_t));
 };
 
 }}}} // namespace intel { namespace sgx { namespace dcap { namespace test {

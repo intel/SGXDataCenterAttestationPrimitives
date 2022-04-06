@@ -92,7 +92,8 @@ TEST_P(TimeUtilsUT, mktime)
 
 TEST_F(TimeUtilsUT, mktimeNullAsParam)
 {
-    ASSERT_EQ(standard::gmtime(nullptr), enclave::gmtime(nullptr));
+    EXPECT_THROW(standard::gmtime(nullptr), std::runtime_error);
+    EXPECT_THROW(enclave::gmtime(nullptr), std::runtime_error);
 }
 
 TEST_F(TimeUtilsUT, getTimeFromString)
@@ -111,14 +112,31 @@ TEST_F(TimeUtilsUT, getTimeFromString_empty)
     assertEqualTM(&standard, &enclave);
 }
 
+/*
+ * Asserts both standard and enclave implementation of IsValidTimeString
+ */
+void assertIsValidTimeString(const std::string& date, bool expected)
+{
+    auto standardResult = standard::isValidTimeString(date);
+    auto enclaveResult = enclave::isValidTimeString(date);
+    ASSERT_EQ(standardResult, expected);
+    ASSERT_EQ(enclaveResult, expected);
+}
+
 TEST_F(TimeUtilsUT, isValidTimeString)
 {
     auto date = std::string("2017-10-04T11:10:45Z");
-    ASSERT_EQ(standard::isValidTimeString(date), enclave::isValidTimeString(date));
+    assertIsValidTimeString(date, true);
 }
 
 TEST_F(TimeUtilsUT, isValidTimeString_empty)
 {
     auto date = std::string("");
-    ASSERT_EQ(standard::isValidTimeString(date), enclave::isValidTimeString(date));
+    assertIsValidTimeString(date, false);
+}
+
+TEST_F(TimeUtilsUT, isValidTimeStringIncorrectDate)
+{
+    auto date = std::string("2017-06-31T11:10:45Z");
+    assertIsValidTimeString(date, false);
 }

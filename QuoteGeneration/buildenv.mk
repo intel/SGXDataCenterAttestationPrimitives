@@ -96,6 +96,13 @@ INCLUDE :=
 # this will return the path to the file that included the buildenv.mk file
 CUR_DIR := $(realpath $(call parent-dir,$(lastword $(wordlist 2,$(words $(MAKEFILE_LIST)),x $(MAKEFILE_LIST)))))
 
+CET_FLAGS :=
+CC_VERSION := $(shell $(CC) -dumpversion)
+CC_NO_LESS_THAN_8 := $(shell expr $(CC_VERSION) \>\= "8")
+ifeq ($(CC_NO_LESS_THAN_8), 1)
+    CET_FLAGS += -fcf-protection
+endif
+
 # turn on stack protector for SDK
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)
@@ -130,7 +137,7 @@ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 # additional warnings flags for C++
 CXXFLAGS += -Wnon-virtual-dtor
 
-CXXFLAGS += -std=c++11
+CXXFLAGS += -std=c++14
 
 .DEFAULT_GOAL := all
 # this turns off the RCS / SCCS implicit rules of GNU Make
@@ -175,6 +182,12 @@ else
 COMMON_FLAGS += -DITT_ARCH_IA64
 endif
 
+ifneq ($(MITIGATION-CVE-2020-0551), LOAD)
+    ifneq ($(MITIGATION-CVE-2020-0551), CF)
+        COMMON_FLAGS += $(CET_FLAGS)
+    endif
+endif
+
 CFLAGS   += $(COMMON_FLAGS)
 CXXFLAGS += $(COMMON_FLAGS)
 
@@ -189,7 +202,7 @@ COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 # When `pie' is enabled, the linker (both BFD and Gold) under Ubuntu 14.04
 # will hide all symbols from dynamic symbol table even if they are marked
 # as `global' in the LD version script.
-ENCLAVE_CFLAGS   = -ffreestanding -nostdinc -fvisibility=hidden -fpie $(MITIGATION_CFLAGS)
+ENCLAVE_CFLAGS   = -ffreestanding -nostdinc -fvisibility=hidden -fpie -fno-strict-overflow -fno-delete-null-pointer-checks $(MITIGATION_CFLAGS)
 ENCLAVE_CXXFLAGS = $(ENCLAVE_CFLAGS) -nostdinc++
 ENCLAVE_LDFLAGS  = $(COMMON_LDFLAGS) -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
                    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \

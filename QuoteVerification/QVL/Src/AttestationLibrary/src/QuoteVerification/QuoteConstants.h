@@ -40,7 +40,8 @@
 
 namespace intel { namespace sgx { namespace dcap { namespace constants {
 
-const uint32_t TEE_TYPE_SGX = 0;
+const uint32_t TEE_TYPE_SGX = 0x00000000;
+const uint32_t TEE_TYPE_TDX = 0x00000081;
 const uint16_t QUOTE_VERSION_3 = 3;
 const uint16_t QUOTE_VERSION_4 = 4;
 
@@ -48,17 +49,47 @@ const uint16_t ECDSA_256_WITH_P256_CURVE = 2;
 const uint16_t ECDSA_384_WITH_P384_CURVE = 3;
 constexpr size_t ECDSA_P256_SIGNATURE_BYTE_LEN = 64;
 constexpr size_t ENCLAVE_REPORT_BYTE_LEN = 384;
+constexpr size_t TD_REPORT_BYTE_LEN = 584;
 
 const uint16_t PCK_ID_PLAIN_PPID = 1;
 const uint16_t PCK_ID_ENCRYPTED_PPID_2048 = 2;
 const uint16_t PCK_ID_ENCRYPTED_PPID_3072 = 3;
 const uint16_t PCK_ID_PCK_CERTIFICATE = 4;
 const uint16_t PCK_ID_PCK_CERT_CHAIN = 5;
+const uint16_t PCK_ID_QE_REPORT_CERTIFICATION_DATA = 6;
 
 const std::array<uint16_t, 2> ALLOWED_QUOTE_VERSIONS = {{ QUOTE_VERSION_3, QUOTE_VERSION_4 }};
-const std::array<uint32_t, 2> ALLOWED_TEE_TYPES = {{ TEE_TYPE_SGX }};
+const std::array<uint32_t, 2> ALLOWED_TEE_TYPES = {{ TEE_TYPE_SGX, TEE_TYPE_TDX }};
 const std::array<uint16_t, 1> ALLOWED_ATTESTATION_KEY_TYPES = {{ ECDSA_256_WITH_P256_CURVE }};
 const std::array<uint8_t, 16> INTEL_QE_VENDOR_ID = {{ 0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F, 0x06, 0x07 }};
+
+    constexpr size_t HEADER_BYTE_LEN = 48;
+    constexpr size_t AUTH_DATA_SIZE_BYTE_LEN = 4;
+
+    constexpr size_t ECDSA_SIGNATURE_BYTE_LEN = 64;
+    constexpr size_t ECDSA_PUBKEY_BYTE_LEN = 64;
+    constexpr size_t QE_REPORT_BYTE_LEN = ENCLAVE_REPORT_BYTE_LEN;
+    constexpr size_t QE_REPORT_SIG_BYTE_LEN = ECDSA_SIGNATURE_BYTE_LEN;
+    constexpr size_t CERTIFICATION_DATA_TYPE_BYTE_LEN = 2;
+    constexpr size_t CERTIFICATION_DATA_SIZE_BYTE_LEN = 4;
+    constexpr size_t QE_AUTH_DATA_SIZE_BYTE_LEN = 2;
+    constexpr size_t QE_CERT_DATA_TYPE_BYTE_LEN = 2;
+    constexpr size_t QE_CERT_DATA_SIZE_BYTE_LEN = 4;
+
+    constexpr size_t AUTH_DATA_MIN_BYTE_LEN =
+            ECDSA_SIGNATURE_BYTE_LEN +
+            ECDSA_PUBKEY_BYTE_LEN +
+            QE_REPORT_BYTE_LEN +
+            QE_REPORT_SIG_BYTE_LEN +
+            QE_AUTH_DATA_SIZE_BYTE_LEN +
+            QE_CERT_DATA_TYPE_BYTE_LEN +
+            QE_CERT_DATA_SIZE_BYTE_LEN;
+
+    constexpr size_t QUOTE_MIN_BYTE_LEN = // Actual minimal size is a Quote V3 with Enclave report
+            HEADER_BYTE_LEN +
+            ENCLAVE_REPORT_BYTE_LEN +
+            AUTH_DATA_SIZE_BYTE_LEN +
+            AUTH_DATA_MIN_BYTE_LEN;
 
 }}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {
 

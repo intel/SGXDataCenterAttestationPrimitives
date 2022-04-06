@@ -45,13 +45,13 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 
 Tcb::Tcb(const std::vector<uint8_t>& cpusvn,
          const std::vector<uint8_t>& cpusvnComponents,
-         unsigned int pcesvn):
+         uint32_t pcesvn):
                               _cpuSvn(cpusvn),
                               _cpuSvnComponents(cpusvnComponents),
                               _pceSvn(pcesvn)
 {}
 
-unsigned int Tcb::getSgxTcbComponentSvn(unsigned int componentNumber) const
+uint32_t Tcb::getSgxTcbComponentSvn(uint32_t componentNumber) const
 {
     return _cpuSvnComponents.at(componentNumber);
 }
@@ -66,7 +66,7 @@ const std::vector<uint8_t> &Tcb::getCpuSvn() const
     return _cpuSvn;
 }
 
-unsigned int Tcb::getPceSvn() const
+uint32_t Tcb::getPceSvn() const
 {
     return _pceSvn;
 }

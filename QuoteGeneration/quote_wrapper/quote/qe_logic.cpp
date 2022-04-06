@@ -51,7 +51,6 @@
 #include "qe_logic.h"
 #include "user_types.h"
 #include "qe3.h"
-#include "qe3_u.h"
 #include "sgx_pce.h"
 #ifdef MSFT_COM_WRAPPER
     #include "sgx_provision_certificate.h"
@@ -62,8 +61,12 @@
 #include "sgx_ql_core_wrapper.h"
 #include "se_trace.h"
 
+#include "qe3_u.h"
 #ifndef _MSC_VER
-    #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so"
+    #include "id_enclave_u.h"
+    #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so.1"
+    #define QE3_ENCLAVE_NAME_LEGACY "libsgx_qe3.signed.so"
+    #define ID_ENCLAVE_NAME "libsgx_id_enclave.signed.so.1"
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
     #define TCHAR char
@@ -170,13 +173,16 @@ struct ql_global_data{
     uint8_t m_ecdsa_blob[SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK];
     uint8_t *m_pencryptedppid;
     sgx_pce_info_t m_pce_info;
+    sgx_key_128bit_t* m_qe_id;
     char qe3_path[MAX_PATH];
     char qpl_path[MAX_PATH];
+    char ide_path[MAX_PATH];
 
     ql_global_data():
         m_load_policy(SGX_QL_DEFAULT),
         m_eid(0),
-        m_pencryptedppid(NULL)
+        m_pencryptedppid(NULL),
+        m_qe_id(NULL)
     {
         se_mutex_init(&m_enclave_load_mutex);
         se_mutex_init(&m_ecdsa_blob_mutex);
@@ -186,6 +192,7 @@ struct ql_global_data{
         memset(&m_pce_info, 0, sizeof(m_pce_info));
         memset(qe3_path, 0, sizeof(qe3_path));
         memset(qpl_path, 0, sizeof(qpl_path));
+        memset(ide_path, 0, sizeof(ide_path));
     }
     ql_global_data(const ql_global_data&);
     ql_global_data& operator=(const ql_global_data&);
@@ -197,6 +204,11 @@ struct ql_global_data{
         {
             free(m_pencryptedppid);
             m_pencryptedppid = NULL;
+        }
+        if (m_qe_id)
+        {
+            free(m_qe_id);
+            m_qe_id = NULL;
         }
     }
 };
@@ -218,6 +230,24 @@ quote3_error_t sgx_set_qe3_path(const char* p_path)
     strncpy_s(g_ql_global_data.qe3_path, sizeof(g_ql_global_data.qe3_path), p_path, sizeof(g_ql_global_data.qe3_path));
 #endif
     g_ql_global_data.qe3_path[len] = '\0';
+    return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_set_ide_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_pce_status.pce_path)
+    size_t len = strnlen(p_path, sizeof(g_ql_global_data.ide_path));
+    // Make sure there is enough space for the '\0',
+    // after this line len <= sizeof(g_ql_global_data.ide_path) - 1
+    if(len > sizeof(g_ql_global_data.ide_path) - 1)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+#ifndef _MSC_VER
+    strncpy(g_ql_global_data.ide_path, p_path, sizeof(g_ql_global_data.ide_path) - 1);
+#else
+    strncpy_s(g_ql_global_data.ide_path, sizeof(g_ql_global_data.ide_path), p_path, sizeof(g_ql_global_data.ide_path));
+#endif
+    g_ql_global_data.ide_path[len] = '\0';
     return SGX_QL_SUCCESS;
 }
 
@@ -509,9 +539,15 @@ get_qe_path(const TCHAR *p_file_name,
 
 #ifndef _MSC_VER
     Dl_info dl_info;
-    if(g_ql_global_data.qe3_path[0])
+    if(!strncmp(p_file_name, QE3_ENCLAVE_NAME, sizeof(QE3_ENCLAVE_NAME)) && g_ql_global_data.qe3_path[0])
     {
         strncpy(p_file_path, g_ql_global_data.qe3_path, buf_size -1);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
+        return true;
+    }
+    else if(!strncmp(p_file_name, ID_ENCLAVE_NAME, sizeof(ID_ENCLAVE_NAME)) && g_ql_global_data.ide_path[0])
+    {
+        strncpy(p_file_path, g_ql_global_data.ide_path, buf_size -1);
         p_file_path[buf_size - 1] = '\0';  //null terminate the string
         return true;
     }
@@ -522,6 +558,7 @@ get_qe_path(const TCHAR *p_file_name,
             return false;
         }
         (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
     }
     else //not a dynamic executable
     {
@@ -575,7 +612,7 @@ get_qe_path(const TCHAR *p_file_name,
 
 /**
  *
- * @param p_qe3_id
+ * @param p_qe_eid
  * @param p_qe_attributes
  * @param p_launch_token
  *
@@ -638,6 +675,24 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                                         &launch_token_updated,
                                         p_qe_eid,
                                         p_qe_attributes);
+#ifndef _MSC_VER
+         if (SGX_ERROR_ENCLAVE_FILE_ACCESS == sgx_status) {
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't open QE file %s and will find legecy QE file.\n", qe_enclave_path);
+            memset(qe_enclave_path, 0, sizeof(qe_enclave_path));
+            if (!get_qe_path(QE3_ENCLAVE_NAME_LEGACY, qe_enclave_path, MAX_PATH)) {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't find legecy QE file.\n");
+                ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+                goto CLEANUP;
+            }
+            SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
+            sgx_status = sgx_create_enclave(qe_enclave_path,
+                                            0,
+                                            p_launch_token,
+                                            &launch_token_updated,
+                                            p_qe_eid,
+                                            p_qe_attributes);
+        }
+#endif
         if (SGX_SUCCESS != sgx_status) {
             SE_PROD_LOG("Error, call sgx_create_enclave QE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
             if (sgx_status == SGX_ERROR_OUT_OF_EPC) {
@@ -702,6 +757,88 @@ void unload_qe()
         SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
     }
 }
+
+#ifndef _MSC_VER
+static quote3_error_t load_id_enclave(sgx_enclave_id_t* p_qe_eid)
+{
+    quote3_error_t ret_val = SGX_QL_SUCCESS;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    int launch_token_updated = 0;
+    TCHAR id_enclave_path[MAX_PATH] = _T("");
+
+    sgx_launch_token_t launch_token = { 0 };
+
+    int rc = se_mutex_lock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+        return SGX_QL_ENCLAVE_LOAD_ERROR;
+    }
+
+    // Load the ID ENCLAVE
+        if (!get_qe_path(ID_ENCLAVE_NAME, id_enclave_path, MAX_PATH)) {
+            SE_TRACE(SE_TRACE_ERROR, "Couldn't find ID_ENCLAVE file.\n");
+            ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+            goto CLEANUP;
+        }
+        SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for ID_ENCLAVE. %s\n", id_enclave_path);
+        sgx_status = sgx_create_enclave(id_enclave_path,
+            0,
+            &launch_token,
+            &launch_token_updated,
+            p_qe_eid,
+            NULL);
+        if (SGX_SUCCESS != sgx_status) {
+            SE_PROD_LOG("Error, call sgx_create_enclave ID_ENCLAVE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+            if (sgx_status == SGX_ERROR_OUT_OF_EPC) {
+                ret_val = SGX_QL_OUT_OF_EPC;
+            }
+            else {
+                ret_val = (quote3_error_t)sgx_status;
+            }
+            goto CLEANUP;
+        }
+CLEANUP:
+    rc = se_mutex_unlock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex.\n");
+        ret_val = SGX_QL_ERROR_UNEXPECTED;
+    }
+
+    return ret_val;
+}
+
+static quote3_error_t load_id_enclave_get_id(sgx_key_128bit_t* p_id)
+{
+    quote3_error_t ret_val = SGX_QL_SUCCESS;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_status_t ecall_ret = SGX_SUCCESS;
+    sgx_enclave_id_t id_enclave_eid = 0;
+    ret_val = load_id_enclave(&id_enclave_eid);
+    if (ret_val != SGX_QL_SUCCESS)
+    {
+        return ret_val;
+    }
+    sgx_status = ide_get_id(id_enclave_eid, &ecall_ret, p_id);
+    if (SGX_SUCCESS != sgx_status) {
+        SE_PROD_LOG("Failed call into the ID_ENCLAVE. 0x%04x.\n", sgx_status);
+        ret_val = (quote3_error_t)sgx_status;
+        goto CLEANUP;
+    }
+
+    if (SGX_SUCCESS != ecall_ret) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to get QE_ID. 0x%04x.\n", ecall_ret);
+        ret_val = (quote3_error_t)ecall_ret;
+        goto CLEANUP;
+    }
+
+CLEANUP:
+    if (0 != id_enclave_eid) {
+        sgx_destroy_enclave(id_enclave_eid);
+    }
+
+    return ret_val;
+}
+#endif
 
 /* This function output encrypted PPID which is encrypted with backend server's pub key
  *
@@ -1327,6 +1464,24 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
 
+#ifndef _MSC_VER
+        if (NULL == g_ql_global_data.m_qe_id)
+        {
+
+            g_ql_global_data.m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!g_ql_global_data.m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = SGX_QL_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+
+            refqt_ret = load_id_enclave_get_id(g_ql_global_data.m_qe_id);
+            if (SGX_QL_SUCCESS != refqt_ret) {
+                goto CLEANUP;
+            }
+        }
+#endif
+
         // Determine if the raw-TCB has changed since the blob was last generated or the platform library
         // has a new TCBm. If the raw-TCB was downgraded, the ECDSA blob will not be accessible and fail
         // above.
@@ -1341,8 +1496,13 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         // sgx_ql_get_quote_config(). If it is not available or the API returns SGX_QL_NO_PLATFORM_CERT_DATA, then use
         // the platform's raw TCB to certify the key.
         cert_data_size = 0;
+#ifndef _MSC_VER
+        pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
+        pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
+#else
         pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
         pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+#endif
         pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1388,6 +1548,13 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
+#ifndef _MSC_VER
+                if (0 != memcpy_s(&plaintext_data.qe3_id, sizeof(plaintext_data.qe3_id),
+                    g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
+                    refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+                    goto CLEANUP;
+                }
+#endif
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1434,6 +1601,13 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
+#ifndef _MSC_VER
+                if (0 != memcpy_s(&plaintext_data.qe3_id, sizeof(plaintext_data.qe3_id),
+                    g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
+                    refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+                    goto CLEANUP;
+                }
+#endif
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1449,8 +1623,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                                         &qe3_eid);
             }
         }
-        break;
-    } while (1);
+    } while (0);
 
     if (true == gen_new_key) {
         sgx_report_t qe3_report;
@@ -1504,15 +1677,36 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
+#ifndef _MSC_VER
+        if (NULL == g_ql_global_data.m_qe_id)
+        {
 
+            g_ql_global_data.m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!g_ql_global_data.m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = SGX_QL_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+
+            refqt_ret = load_id_enclave_get_id(g_ql_global_data.m_qe_id);
+            if (SGX_QL_SUCCESS != refqt_ret) {
+                goto CLEANUP;
+            }
+        }
+#endif
         // Certify the key
         // Get the certification data from the platform, if available
         p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
         p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
         cert_data_size = 0;
         memset(&plaintext_data, 0, sizeof(plaintext_data));
+#ifndef _MSC_VER
+        pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
+        pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
+#else
         pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
         pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+#endif
         pck_cert_id.p_platform_cpu_svn = &qe3_report.body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &g_ql_global_data.m_pce_info.pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1832,6 +2026,10 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
     CLEANUP:
     if(0 != blob_mutex_rc ) {
         blob_mutex_rc = se_mutex_unlock(&g_ql_global_data.m_ecdsa_blob_mutex);
+        if (0 == blob_mutex_rc) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        }
     }
 
     unload_qe();
@@ -2105,6 +2303,10 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
 
     if(0 != blob_mutex_rc ) {
         blob_mutex_rc = se_mutex_unlock(&g_ql_global_data.m_ecdsa_blob_mutex);
+        if (0 == blob_mutex_rc) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        }
     }
 
     unload_qe();

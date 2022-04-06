@@ -46,7 +46,8 @@ const uint16_t PCK_ID_ENCRYPTED_PPID_2048 = 2;
 const uint16_t PCK_ID_ENCRYPTED_PPID_3072 = 3;
 const uint16_t PCK_ID_PCK_CERTIFICATE = 4;
 const uint16_t PCK_ID_PCK_CERT_CHAIN = 5;
-const uint16_t UNSUPPORTED_PCK_ID = 6;
+const uint16_t PCK_ID_QE_REPORT_CERTIFICATION_DATA = 6;
+const uint16_t UNSUPPORTED_PCK_ID = 7;
 
 const size_t PPID_BYTE_LEN = 16;
 const size_t CPUSVN_BYTE_LEN = 16;

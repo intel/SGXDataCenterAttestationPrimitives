@@ -37,8 +37,8 @@
 #define _X509_H_
 
 #include "sgx_ql_lib_common.h"
+#include <string>
 
 std::string get_cdp_url_from_pem_cert(const char *p_cert);
 
 #endif /* !_X509_H_ */
-

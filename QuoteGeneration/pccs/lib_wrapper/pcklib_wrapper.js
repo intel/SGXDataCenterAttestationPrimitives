@@ -29,22 +29,25 @@
  *
  */
 
-import ref from 'ref-napi';
+import refNAPI from 'ref-napi';
 import ffi from 'ffi-napi';
-import Struct from 'ref-struct-napi';
-import refArray from 'ref-array-napi';
+import StructType from 'ref-struct-di';
+import ArrayType from 'ref-array-di';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import logger from '../utils/Logger.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const intPtr = ref.refType('int');
-const StringArray = refArray('string');
-const ByteArray = refArray('byte', 16);
-const cpu_svn_t = Struct({
+const NAPIStructType = StructType(refNAPI);
+const NAPIArrayType = ArrayType(refNAPI);
+const intPtr = refNAPI.refType('int');
+const StringArray = NAPIArrayType('string');
+const ByteArray = NAPIArrayType('byte', 16);
+const cpu_svn_t = NAPIStructType({
   bytes: ByteArray,
 });
-const cpu_svn_ptr = ref.refType(cpu_svn_t);
+const cpu_svn_ptr = refNAPI.refType(cpu_svn_t);
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 ////////////// Load library ////////////////////////////////
 let dllpath = 'PCKCertSelectionLib.dll';
@@ -81,7 +84,7 @@ export function pck_cert_select(
 
   let my_pce_svn = Buffer.from(pce_svn, 'hex').readInt16LE();
   let my_pce_id = Buffer.from(pce_id, 'hex').readInt16LE();
-  let best_index_ptr = ref.alloc('int');
+  let best_index_ptr = refNAPI.alloc('int');
   let ret = pcklib.pck_cert_select(
     my_cpu_svn.ref(),
     my_pce_svn,

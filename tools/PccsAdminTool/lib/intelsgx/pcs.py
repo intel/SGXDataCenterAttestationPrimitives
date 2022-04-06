@@ -7,6 +7,8 @@ from OpenSSL import crypto
 from pypac import PACSession
 from platform import system
 from lib.intelsgx.credential import Credentials
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 certBegin= '-----BEGIN CERTIFICATE-----'
 certEnd= '-----END CERTIFICATE-----'
@@ -50,7 +52,9 @@ class PCS:
             headers['Ocp-Apim-Subscription-Key'] = self.Key
         
         PARAMS = {}
-        r = requests.get(url = url, headers=headers, params = PARAMS, verify=True)
+        https = requests.Session()
+        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        r = https.get(url = url, headers=headers, params = PARAMS, verify=True)
 
         return r
 
@@ -63,7 +67,9 @@ class PCS:
             headers['Ocp-Apim-Subscription-Key'] = self.Key
         
         PARAMS = {}
-        r = requests.post(url = url, headers=headers, params = PARAMS, data=json.dumps(data), verify=True)
+        https = requests.Session()
+        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        r = https.post(url = url, headers=headers, params = PARAMS, data=json.dumps(data), verify=True)
 
         return r
 

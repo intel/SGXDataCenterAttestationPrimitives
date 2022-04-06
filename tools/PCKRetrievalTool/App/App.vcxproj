@@ -70,6 +70,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\..\..\$(Platform)\$(configuration);$(SGXSDKInstallPath)\bin\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>bcrypt.lib;winhttp.lib;sgx_enclave_common.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>copy ..\network_setting.conf  $(OutDir)</Command>
@@ -100,6 +101,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\..\..\$(Platform)\$(configuration);$(SGXSDKInstallPath)\bin\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>bcrypt.lib;winhttp.lib;sgx_enclave_common.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TargetMachine>MachineX64</TargetMachine>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>copy ..\network_setting.conf  $(OutDir)</Command>

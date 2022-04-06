@@ -51,7 +51,7 @@ TEST_F(TcbUT, tcbGetters)
 
     for (unsigned long i=0; i < 16; i++)
     {
-        ASSERT_EQ(tcb.getSgxTcbComponentSvn((unsigned int)i), CPUSVN_COMPONENTS[i]);
+        ASSERT_EQ(tcb.getSgxTcbComponentSvn((uint32_t)i), CPUSVN_COMPONENTS[i]);
     }
     ASSERT_EQ(tcb.getPceSvn(), PCESVN);
     ASSERT_EQ(tcb.getCpuSvn(), CPUSVN);

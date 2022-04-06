@@ -35,7 +35,6 @@
  */
 
 #include <string.h>
-//#include <stdio.h>
 #include <stdlib.h>
 #include "sgx_pce.h"
 #include "sgx_quote_provider.h"

@@ -87,6 +87,10 @@ deb_sgx_dcap_pccs_pkg:
 deb_sgx_ae_qe3_pkg: $(CHECK_OPT)
 	./installer/linux/deb/libsgx-ae-qe3/build.sh
 
+.PHONY: deb_sgx_ae_id_enclave_pkg
+deb_sgx_ae_id_enclave_pkg: $(CHECK_OPT)
+	./installer/linux/deb/libsgx-ae-id-enclave/build.sh
+
 .PHONY: deb_sgx_ae_qve_pkg qve_wrapper
 deb_sgx_ae_qve_pkg: $(CHECK_OPT)
 	./installer/linux/deb/libsgx-ae-qve/build.sh
@@ -110,7 +114,7 @@ deb_sgx_ra_service_pkg:
 
 
 .PHONY: deb_pkg
-deb_pkg: deb_sgx_pce_logic_pkg deb_sgx_qe3_logic_pkg deb_sgx_dcap_ql_pkg deb_sgx_dcap_quote_verify_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_qve_pkg deb_sgx_pck_id_retrieval_tool_pkg deb_sgx_ra_service_pkg
+deb_pkg: deb_sgx_pce_logic_pkg deb_sgx_qe3_logic_pkg deb_sgx_dcap_ql_pkg deb_sgx_dcap_quote_verify_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_id_enclave_pkg deb_sgx_ae_qve_pkg deb_sgx_pck_id_retrieval_tool_pkg deb_sgx_ra_service_pkg
 	@$(RM) -f ./installer/linux/deb/*.deb ./installer/linux/deb/*.ddeb
 	cp `find ./installer/linux/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
 	cp `find ../tools/PCKRetrievalTool/installer/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
@@ -134,6 +138,10 @@ rpm_sgx_dcap_pccs_pkg:
 .PHONY: rpm_sgx_ae_qe3_pkg
 rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
 	./installer/linux/rpm/libsgx-ae-qe3/build.sh
+
+.PHONY: rpm_sgx_ae_id_enclave_pkg
+rpm_sgx_ae_id_enclave_pkg: $(CHECK_OPT)
+	./installer/linux/rpm/libsgx-ae-id-enclave/build.sh
 
 .PHONY: rpm_sgx_ae_qve_pkg
 rpm_sgx_ae_qve_pkg: $(CHECK_OPT) qve_wrapper
@@ -161,7 +169,7 @@ rpm_sgx_ra_service_pkg:
 	$(MAKE) -C ../tools/SGXPlatformRegistration/ rpm_pkg
 
 .PHONY: rpm_pkg
-rpm_pkg: rpm_sgx_dcap_ql_pkg rpm_sgx_dcap_default_qpl_pkg rpm_sgx_dcap_pccs_pkg rpm_sgx_ae_qe3_pkg rpm_sgx_ae_qve_pkg rpm_sgx_dcap_quote_verify_pkg rpm_sgx_pce_logic_pkg rpm_sgx_qe3_logic_pkg rpm_sgx_pck_id_retrieval_tool_pkg rpm_sgx_ra_service_pkg
+rpm_pkg: rpm_sgx_dcap_ql_pkg rpm_sgx_dcap_default_qpl_pkg rpm_sgx_dcap_pccs_pkg rpm_sgx_ae_qe3_pkg rpm_sgx_ae_id_enclave_pkg rpm_sgx_ae_qve_pkg rpm_sgx_dcap_quote_verify_pkg rpm_sgx_pce_logic_pkg rpm_sgx_qe3_logic_pkg rpm_sgx_pck_id_retrieval_tool_pkg rpm_sgx_ra_service_pkg
 	@$(RM) -f ./installer/linux/rpm/*.rpm
 	cp `find ./installer/linux/rpm/ -name "*.rpm"` ./installer/linux/rpm/
 	cp `find ../tools/PCKRetrievalTool/installer/rpm/ -name "*.rpm"` ./installer/linux/rpm/
@@ -182,6 +190,7 @@ clean:
 	./installer/linux/deb/libsgx-dcap-ql/clean.sh
 	./installer/linux/deb/libsgx-dcap-quote-verify/clean.sh
 	./installer/linux/deb/libsgx-ae-qe3/clean.sh
+	./installer/linux/deb/libsgx-ae-id-enclave/clean.sh
 	./installer/linux/deb/libsgx-ae-qve/clean.sh
 	./installer/linux/deb/libsgx-pce-logic/clean.sh
 	./installer/linux/deb/libsgx-qe3-logic/clean.sh
@@ -190,6 +199,7 @@ clean:
 	../tools/PCKRetrievalTool/installer/deb/sgx-pck-id-retrieval-tool/clean.sh
 	./installer/linux/rpm/libsgx-dcap-ql/clean.sh
 	./installer/linux/rpm/libsgx-ae-qe3/clean.sh
+	./installer/linux/rpm/libsgx-ae-id-enclave/clean.sh
 	./installer/linux/rpm/libsgx-ae-qve/clean.sh
 	./installer/linux/rpm/libsgx-dcap-quote-verify/clean.sh
 	./installer/linux/rpm/libsgx-pce-logic/clean.sh

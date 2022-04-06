@@ -56,7 +56,6 @@ find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?b
 echo "%{_install_path}" > %{_specdir}/listfiles
 echo %{_docdir}/%{name}/%{_license_file} >> %{_specdir}/listfiles
 echo "%config %{_install_path}/config/default.json" >> %{_specdir}/listfiles
-
 %files -f %{_specdir}/listfiles
 
 %post

@@ -53,9 +53,10 @@ public:
     MOCK_CONST_METHOD0(getFmspc, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getPceId, const std::vector<uint8_t>&());
     MOCK_CONST_METHOD0(getId, std::string());
-    MOCK_CONST_METHOD0(getVersion, unsigned int());
+    MOCK_CONST_METHOD0(getVersion, uint32_t());
     MOCK_CONST_METHOD0(getTcbLevels, const std::set<dcap::parser::json::TcbLevel, std::greater<dcap::parser::json::TcbLevel>>&());
     MOCK_CONST_METHOD0(getNextUpdate, time_t());
+    MOCK_CONST_METHOD0(getTdxModule, const dcap::parser::json::TdxModule&());
 };
 
 
