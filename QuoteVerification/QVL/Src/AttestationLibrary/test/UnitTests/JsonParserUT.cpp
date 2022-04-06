@@ -86,11 +86,11 @@ TEST_F(JsonParserTests, shouldParseObjectWithHexstring)
 
 TEST_F(JsonParserTests, shouldParseObjectWithUint)
 {
-	unsigned int expectedValue = 234;
+	uint32_t expectedValue = 234;
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": 234}})json"));
     const auto& data = *jsonParser.getField("data");
     auto status = dcap::JsonParser::ParseStatus::Missing;
-	unsigned int value = 0;
+	uint32_t value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
     EXPECT_EQ(dcap::JsonParser::ParseStatus::OK, status);
     EXPECT_EQ(expectedValue, value);
@@ -176,7 +176,7 @@ TEST_F(JsonParserTests, shouldFailWhenParsingInvalidUintField)
     ASSERT_TRUE(jsonParser.parse(R"json({"data": {"v": -55555}})json"));
     const auto& data = *jsonParser.getField("data");
     auto status = dcap::JsonParser::ParseStatus::Missing;
-	unsigned int value = 0;
+	uint32_t value = 0;
     std::tie(value, status) = jsonParser.getUintFieldOf(data, "v");
     EXPECT_EQ(dcap::JsonParser::ParseStatus::Invalid, status);
 }

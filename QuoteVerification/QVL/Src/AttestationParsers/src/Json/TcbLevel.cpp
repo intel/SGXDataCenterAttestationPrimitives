@@ -40,35 +40,61 @@
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {
 
+static constexpr size_t SGX_TCB_SVN_COMP_COUNT = 16;
+
 TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
-                   unsigned int pceSvn,
-                   const std::string& status): _cpuSvnComponents(cpuSvnComponents),
+                   uint32_t pceSvn,
+                   const std::string& status): _version(TcbInfo::Version::V2),
+                                               _cpuSvnComponents(cpuSvnComponents),
                                                _pceSvn(pceSvn),
                                                _status(status),
                                                _tcbDate(0)
 {}
 
 TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
-         unsigned int pceSvn,
-         const std::string& status,
-         std::time_t tcbDate,
-         std::vector<std::string> advisoryIDs): _cpuSvnComponents(cpuSvnComponents),
-                                                _pceSvn(pceSvn),
-                                                _status(status),
-                                                _tcbDate(tcbDate),
-                                                _advisoryIDs(advisoryIDs)
+                   const uint32_t pceSvn,
+                   const std::string& status,
+                   const  std::time_t tcbDate,
+                   std::vector<std::string> advisoryIDs): _version(TcbInfo::Version::V2),
+                                                          _cpuSvnComponents(cpuSvnComponents),
+                                                          _pceSvn(pceSvn),
+                                                          _status(status),
+                                                          _tcbDate(tcbDate),
+                                                          _advisoryIDs(std::move(advisoryIDs))
 {}
+
+TcbLevel::TcbLevel(const std::string& id,
+                   const std::vector<TcbComponent>& sgxTcbComponents,
+                   const std::vector<TcbComponent>& tdxTcbComponents,
+                   const uint32_t pceSvn,
+                   const std::string& status): _id(id),
+                                              _version(TcbInfo::Version::V3),
+                                              _sgxTcbComponents(sgxTcbComponents),
+                                              _tdxTcbComponents(tdxTcbComponents),
+                                              _pceSvn(pceSvn),
+                                              _status(status),
+                                              _tcbDate(0)
+{
+    for (uint32_t i = 0; i < sgxTcbComponents.size(); i++)
+    {
+        _cpuSvnComponents.push_back(sgxTcbComponents[i].getSvn());
+    }
+}
 
 bool TcbLevel::operator>(const TcbLevel& other) const
 {
     if(_cpuSvnComponents == other._cpuSvnComponents)
     {
+        if (_version == TcbInfo::Version::V3 && _id == TcbInfo::TDX_ID && _pceSvn == other._pceSvn)
+        {
+            return _tdxTcbComponents > other._tdxTcbComponents;
+        }
         return _pceSvn > other._pceSvn;
     }
     return _cpuSvnComponents > other._cpuSvnComponents;
 }
 
-unsigned int TcbLevel::getSgxTcbComponentSvn(unsigned int componentNumber) const
+uint32_t TcbLevel::getSgxTcbComponentSvn(uint32_t componentNumber) const
 {
     if (componentNumber > constants::CPUSVN_BYTE_LEN)
     {
@@ -79,12 +105,64 @@ unsigned int TcbLevel::getSgxTcbComponentSvn(unsigned int componentNumber) const
     return _cpuSvnComponents[componentNumber];
 }
 
+const TcbComponent& TcbLevel::getSgxTcbComponent(uint32_t componentNumber) const
+{
+    if (componentNumber > constants::CPUSVN_BYTE_LEN)
+    {
+        std::string err = "Invalid component SVN number [" + std::to_string(componentNumber) +
+                          "]. Should be less than " + std::to_string(constants::CPUSVN_BYTE_LEN);
+        throw FormatException(err);
+    }
+    return _sgxTcbComponents[componentNumber];
+}
+
+const std::vector<TcbComponent>& TcbLevel::getSgxTcbComponents() const
+{
+    if (_version < TcbInfo::Version::V3)
+    {
+        throw FormatException("SGX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+    }
+    return _sgxTcbComponents;
+}
+
+const TcbComponent& TcbLevel::getTdxTcbComponent(uint32_t componentNumber) const
+{
+    if (componentNumber > constants::CPUSVN_BYTE_LEN)
+    {
+        std::string err = "Invalid component SVN number [" + std::to_string(componentNumber) +
+                          "]. Should be less than " + std::to_string(constants::CPUSVN_BYTE_LEN);
+        throw FormatException(err);
+    }
+    if (_version < TcbInfo::Version::V3)
+    {
+        throw FormatException("TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+    }
+    if (_id != TcbInfo::TDX_ID)
+    {
+        throw FormatException("TDX TCB Components is not a valid field in SGX TCB Info structure");
+    }
+    return _tdxTcbComponents[componentNumber];
+}
+
+const std::vector<TcbComponent>& TcbLevel::getTdxTcbComponents() const
+{
+    if (_version < TcbInfo::Version::V3)
+    {
+        throw FormatException("TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+    }
+    if (_id != TcbInfo::TDX_ID)
+    {
+        throw FormatException("TDX TCB Components is not a valid field in SGX TCB Info structure");
+    }
+    return _tdxTcbComponents;
+}
+
 const std::vector<uint8_t>& TcbLevel::getCpuSvn() const
 {
     return _cpuSvnComponents;
 }
 
-unsigned int TcbLevel::getPceSvn() const
+uint32_t TcbLevel::getPceSvn() const
 {
     return _pceSvn;
 }
@@ -106,17 +184,18 @@ const std::vector<std::string>& TcbLevel::getAdvisoryIDs() const
 
 // private
 
-TcbLevel::TcbLevel(const ::rapidjson::Value& tcbLevel, unsigned int version)
+TcbLevel::TcbLevel(const ::rapidjson::Value& tcbLevel, const uint32_t version, const std::string& id)
 {
     JsonParser jsonParser;
-
+    _version = (TcbInfo::Version)version;
+    _id = id;
     switch(version)
     {
-        case 1:
-            parseTcbLevelV1(tcbLevel, jsonParser);
-            break;
         case 2:
             parseTcbLevelV2(tcbLevel, jsonParser);
+            break;
+        case 3:
+            parseTcbLevelV3(tcbLevel, jsonParser);
             break;
         default:
             throw InvalidExtensionException("Unsupported version of tcbLevel");
@@ -164,20 +243,7 @@ void TcbLevel::parseSvns(const ::rapidjson::Value &tcbLevel, JsonParser& jsonPar
     }
 }
 
-void TcbLevel::parseTcbLevelV1(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
-{
-    if(!tcbLevel.IsObject() || tcbLevel.MemberCount() != 2)
-    {
-        throw FormatException("TCB level should be a JSON object having 2 members");
-    }
-
-    static const std::vector<std::string> validStatuses = {{"UpToDate", "OutOfDate", "ConfigurationNeeded", "Revoked"}};
-    parseStatus(tcbLevel, validStatuses, "status");
-
-    parseSvns(tcbLevel, jsonParser);
-}
-
-void TcbLevel::parseTcbLevelV2(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
+void TcbLevel::parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser)
 {
     if(!tcbLevel.IsObject())
     {
@@ -210,13 +276,90 @@ void TcbLevel::parseTcbLevelV2(const ::rapidjson::Value &tcbLevel, JsonParser& j
     static const std::vector<std::string> validStatuses =
             {{"UpToDate", "OutOfDate", "ConfigurationNeeded", "Revoked", "OutOfDateConfigurationNeeded", "SWHardeningNeeded", "ConfigurationAndSWHardeningNeeded"}};
     parseStatus(tcbLevel, validStatuses, "tcbStatus");
-
+}
+void TcbLevel::parseTcbLevelV2(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
+{
+    parseTcbLevelCommon(tcbLevel, jsonParser);
     parseSvns(tcbLevel, jsonParser);
+}
+
+void TcbLevel::parseTcbLevelV3(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
+{
+    parseTcbLevelCommon(tcbLevel, jsonParser);
+    if(!tcbLevel.HasMember("tcb"))
+    {
+        throw FormatException("TCB level JSON should has [tcb] field");
+    }
+
+    const ::rapidjson::Value& tcb = tcbLevel["tcb"];
+
+    if(!tcb.IsObject())
+    {
+        throw FormatException("TCB level JSON [tcb] field should be an object");
+    }
+
+    JsonParser::ParseStatus pceSvnValid = JsonParser::Missing;
+    std::tie(_pceSvn, pceSvnValid) = jsonParser.getUintFieldOf(tcb, "pcesvn");
+    if(pceSvnValid != JsonParser::OK)
+    {
+        throw FormatException("Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
+    }
+
+    setTcbComponents(tcb);
+}
+
+void TcbLevel::setTcbComponents(const rapidjson::Value &tcb) {
+    if(!tcb.HasMember("sgxtcbcomponents"))
+    {
+        throw FormatException("TCB level JSON should have [sgxtcbcomponents] field");
+    }
+
+    const auto& sgxComponentsArray = tcb["sgxtcbcomponents"];
+
+    if(!sgxComponentsArray.IsArray())
+    {
+        throw FormatException("TCB level JSON's [sgxtcbcomponents] field should be an array");
+    }
+    if(sgxComponentsArray.Size() != SGX_TCB_SVN_COMP_COUNT)
+    {
+        throw FormatException("TCB level [sgxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
+    }
+    _sgxTcbComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
+    _cpuSvnComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
+    for (auto itr = sgxComponentsArray.Begin(); itr != sgxComponentsArray.End(); ++itr) {
+        auto component = TcbComponent(*itr);
+        _sgxTcbComponents.push_back(component);
+        // backward compatibility
+        _cpuSvnComponents.push_back(component.getSvn());
+    }
+
+    if(_id == TcbInfo::TDX_ID)
+    {
+        if(!tcb.HasMember("tdxtcbcomponents"))
+        {
+            throw FormatException("TCB level JSON for TDX should have [tdxtcbcomponents] field");
+        }
+        const auto& tdxComponentsArray = tcb["tdxtcbcomponents"];
+        if(!tdxComponentsArray.IsArray())
+        {
+            throw FormatException("TCB level JSON's [tdxtcbcomponents] field should be an array");
+        }
+        if(tdxComponentsArray.Size() != SGX_TCB_SVN_COMP_COUNT)
+        {
+            throw FormatException("TCB level [tdxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
+        }
+        _tdxTcbComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
+
+        for (auto itr = tdxComponentsArray.Begin(); itr != tdxComponentsArray.End(); ++itr) {
+            auto component = TcbComponent(*itr);
+            _tdxTcbComponents.push_back(component);
+        }
+    }
 }
 
 void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
 {
-    static constexpr size_t SGX_TCB_SVN_COMP_COUNT = 16;
+
     const std::array<std::string, SGX_TCB_SVN_COMP_COUNT> sgxTcbSvnComponentsNames {{
                                                                                             "sgxtcbcomp01svn",
                                                                                             "sgxtcbcomp02svn",
@@ -246,7 +389,7 @@ void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
     {
         const auto componentNameRaw = componentName.data();
         JsonParser::ParseStatus status = JsonParser::Missing;
-        unsigned int componentValue = 0u;
+        uint32_t componentValue = 0u;
         std::tie(componentValue, status) = jsonParser.getUintFieldOf(tcb, componentNameRaw);
         switch (status)
         {

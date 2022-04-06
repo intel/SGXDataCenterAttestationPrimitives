@@ -37,9 +37,11 @@ enclave {
 #define __QL_QV_COLLATERAL_T
 struct _sgx_ql_qve_collateral_t
 {
-    uint32_t version;                       ///< The version of PCCS/PCS API used to retrieve verification collateral.
+	uint32_t version;                       ///< The version of PCCS/PCS API used to retrieve verification collateral.
                                             ///< For V1 and V2 APIs, the ‘version’ field with have a value of 1.
                                             ///< For V3 APIs, the ‘version’ field will have the value of 3
+
+	uint32_t tee_type;                      ///<  0x00000000: SGX or 0x00000081: TDX
 
     [size = pck_crl_issuer_chain_size] char *pck_crl_issuer_chain;             ///< concatenated PEM format - the order
                                             ///< as it is returned from PCS (root ca +

@@ -30,7 +30,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock-generated-matchers.h>
+#include <gmock/gmock-matchers.h>
 
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 
@@ -64,8 +64,11 @@ struct PckCertificateUT: public testing::Test {
     crypto::X509_uptr intCert = crypto::make_unique<X509>(nullptr);
     crypto::X509_uptr processorCert = crypto::make_unique<X509>(nullptr);
     crypto::X509_uptr platformCert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_uptr platformWithIntegrityCert = crypto::make_unique<X509>(nullptr);
+    crypto::X509_uptr unknownCert = crypto::make_unique<X509>(nullptr);
 
-    std::string pemProcessorPckCert, pemPlatformPckCert, pemIntCert, pemRootCert;
+    std::string pemProcessorPckCert, pemPlatformPckCert, pemPlatformIntegrityPckCert, pemIntCert, pemRootCert;
+    std::string pemUnknownCert;
 
     PckCertificateUT()
     {
@@ -85,11 +88,22 @@ struct PckCertificateUT: public testing::Test {
                                                       constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
                                                       ppid, cpusvn, pcesvn, pceId, fmspc, 1, platformInstanceId,
                                                       true, true, true);
+        platformWithIntegrityCert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
+                                                                  constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
+                                                                  ppid, cpusvn, pcesvn, pceId, fmspc, 2, platformInstanceId,
+                                                                  true, true, true);
+        unknownCert = certGenerator.generatePCKCert(999, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
+                                                    constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
+                                                    ppid, cpusvn, pcesvn, pceId, fmspc, 999, platformInstanceId,
+                                                    true, true, true);
+
 
         pemProcessorPckCert = certGenerator.x509ToString(processorCert.get());
         pemPlatformPckCert = certGenerator.x509ToString(platformCert.get());
+        pemPlatformIntegrityPckCert = certGenerator.x509ToString(platformWithIntegrityCert.get());
         pemIntCert = certGenerator.x509ToString(intCert.get());
         pemRootCert = certGenerator.x509ToString(rootCert.get());
+        pemUnknownCert = certGenerator.x509ToString(unknownCert.get());
     }
 };
 
@@ -186,6 +200,78 @@ TEST_F(PckCertificateUT, platformPckCertificateGetters)
     ASSERT_THAT(pckCertificate.getPceId(), ElementsAreArray(pceId));
     ASSERT_THAT(pckCertificate.getFmspc(), ElementsAreArray(fmspc));
     ASSERT_EQ(pckCertificate.getSgxType(), x509::SgxType::Scalable);
+
+    const auto &tcb = x509::Tcb(cpusvn, cpusvn, 1010);
+    ASSERT_THAT(pckCertificate.getTcb().getCpuSvn(), ElementsAreArray(tcb.getCpuSvn()));
+    ASSERT_THAT(pckCertificate.getTcb().getSgxTcbComponents(), ElementsAreArray(tcb.getSgxTcbComponents()));
+    ASSERT_EQ(pckCertificate.getTcb().getPceSvn(), tcb.getPceSvn());
+    ASSERT_EQ(pckCertificate.getTcb(), tcb);
+
+    free(pubKey);
+}
+
+TEST_F(PckCertificateUT, platformPckCertificateWithIntegrityGetters)
+{
+    const auto& pckCertificate = x509::PckCertificate::parse(pemPlatformIntegrityPckCert);
+
+    ASSERT_EQ(pckCertificate.getVersion(), 3);
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
+
+    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
+    uint8_t *pubKey = nullptr;
+    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
+
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
+    ASSERT_EQ(pckCertificate.getIssuer(), constants::PLATFORM_CA_SUBJECT);
+    ASSERT_EQ(pckCertificate.getSubject(), constants::PCK_SUBJECT);
+    ASSERT_NE(pckCertificate.getIssuer(), pckCertificate.getSubject()); // PCK certificate should not be self-signed
+
+    ASSERT_LT(pckCertificate.getValidity().getNotBeforeTime(), pckCertificate.getValidity().getNotAfterTime());
+
+    const std::vector<x509::Extension> expectedExtensions = constants::PCK_X509_EXTENSIONS;
+    ASSERT_THAT(pckCertificate.getExtensions().size(), expectedExtensions.size());
+
+    ASSERT_THAT(pckCertificate.getPpid(), ElementsAreArray(ppid));
+    ASSERT_THAT(pckCertificate.getPceId(), ElementsAreArray(pceId));
+    ASSERT_THAT(pckCertificate.getFmspc(), ElementsAreArray(fmspc));
+    ASSERT_EQ(pckCertificate.getSgxType(), x509::SgxType::ScalableWithIntegrity);
+
+    const auto &tcb = x509::Tcb(cpusvn, cpusvn, 1010);
+    ASSERT_THAT(pckCertificate.getTcb().getCpuSvn(), ElementsAreArray(tcb.getCpuSvn()));
+    ASSERT_THAT(pckCertificate.getTcb().getSgxTcbComponents(), ElementsAreArray(tcb.getSgxTcbComponents()));
+    ASSERT_EQ(pckCertificate.getTcb().getPceSvn(), tcb.getPceSvn());
+    ASSERT_EQ(pckCertificate.getTcb(), tcb);
+
+    free(pubKey);
+}
+
+TEST_F(PckCertificateUT, unknownTypeCertificateGetters)
+{
+    const auto& pckCertificate = x509::PckCertificate::parse(pemUnknownCert);
+
+    ASSERT_EQ(pckCertificate.getVersion(), 1000);
+    ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
+
+    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
+    uint8_t *pubKey = nullptr;
+    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
+
+    ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
+    ASSERT_EQ(pckCertificate.getIssuer(), constants::PLATFORM_CA_SUBJECT);
+    ASSERT_EQ(pckCertificate.getSubject(), constants::PCK_SUBJECT);
+    ASSERT_NE(pckCertificate.getIssuer(), pckCertificate.getSubject()); // PCK certificate should not be self-signed
+
+    ASSERT_LT(pckCertificate.getValidity().getNotBeforeTime(), pckCertificate.getValidity().getNotAfterTime());
+
+    const std::vector<x509::Extension> expectedExtensions = constants::PCK_X509_EXTENSIONS;
+    ASSERT_THAT(pckCertificate.getExtensions().size(), expectedExtensions.size());
+
+    ASSERT_THAT(pckCertificate.getPpid(), ElementsAreArray(ppid));
+    ASSERT_THAT(pckCertificate.getPceId(), ElementsAreArray(pceId));
+    ASSERT_THAT(pckCertificate.getFmspc(), ElementsAreArray(fmspc));
+    ASSERT_EQ(pckCertificate.getSgxType(), 999);
 
     const auto &tcb = x509::Tcb(cpusvn, cpusvn, 1010);
     ASSERT_THAT(pckCertificate.getTcb().getCpuSvn(), ElementsAreArray(tcb.getCpuSvn()));

@@ -73,7 +73,7 @@ install_lib: $(LIBNAME) $(STATIC_LIBNAME) | $(BUILD_DIR)
 	@$(CP) $(LIBNAME) $|
 
 $(LIBNAME): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(Link_Flags) -o $@
+	$(CXX) $(CXXFLAGS) $(OBJ) -shared -Wl,-soname=$@ $(LDUFLAGS) $(Link_Flags) -o $@
 
 $(STATIC_LIBNAME): $(OBJ)
 	$(AR) rcsD $@ $^

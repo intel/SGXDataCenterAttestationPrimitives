@@ -32,8 +32,8 @@
 
 include ../../buildenv.mk
 
-INSTALL_PATH 	?= /usr/lib/x86_64-linux-gnu
-QVE_SRC_PATH	:= $(DCAP_QV_DIR)/QvE
+INSTALL_PATH 		?= /usr/lib/x86_64-linux-gnu
+QVE_SRC_PATH		:= $(DCAP_QV_DIR)/QvE
 
 QVL_LIB_INC		+= -I$(PREBUILD_OPENSSL_PATH)/inc -I$(QVE_SRC_PATH)/Include
 QVL_PARSER_INC  += -I$(PREBUILD_OPENSSL_PATH)/inc
@@ -73,8 +73,7 @@ QVE_CPP_SRC ?= $(QVE_SRC_PATH)/Enclave/qve.cpp
 QVE_CPP_OBJ ?= $(QVE_SRC_PATH)/Enclave/untrusted_qve.o
 
 QVL_VERIFY_LIB_NAME := libsgx_dcap_quoteverify.so
-QVL_VERSION:= $(shell awk '$$2 ~ /QUOTE_VERIFIER_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
-QVL_SO_VERSION:= $(shell echo $(QVL_VERSION) |awk -F. '{print $$1}') 
+
 
 .PHONY: all run
 
@@ -127,7 +126,7 @@ $(QVL_PARSER_NAME): $(QVL_PARSER_OBJS)
 
 
 $(QVL_VERIFY_LIB_NAME): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) -shared -Wl,-soname=$@.$(QVL_SO_VERSION) $(LDUFLAGS) -o $@
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
 	@ln -sf $(QVL_VERIFY_LIB_NAME) $(QVL_VERIFY_LIB_NAME).1
 
 

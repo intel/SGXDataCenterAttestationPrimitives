@@ -37,6 +37,27 @@
 #ifndef _UTILITY_H_
 #define _UTILITY_H_
 
+#define ENCRYPTED_PPID_LENGTH             384
+#define CPU_SVN_LENGTH                    16
+#define ISV_SVN_LENGTH                    2
+#define PCE_ID_LENGTH                     2
+#define DEFAULT_PLATFORM_ID_LENGTH        16
+#define PLATFORM_MANIFEST_LENGTH          28221
+
+/* PCE ID for the PCE in this library */
+#define PCE_ID 0
+
+/* Crypto_suite */
+#define PCE_ALG_RSA_OAEP_3072 1
+
+/* Signature_scheme */
+#define PCE_NIST_P256_ECDSA_SHA256 0
+
+#define PPID_RSA3072_ENCRYPTED  3
+
+#define REF_RSA_OAEP_3072_MOD_SIZE   384 //hardcode n size to be 384
+#define REF_RSA_OAEP_3072_EXP_SIZE     4 //hardcode e size to be 4
+
 #include <stdint.h>
 #include <string>
 
@@ -68,7 +89,11 @@ uefi_status_t set_registration_status();
 // return value:
 //  0: successfully generate the ecdsa quote
 // -1: error happens.
+#ifdef _MSC_VER
 int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size);
+#else
+int collect_data(uint8_t **p_data_buffer);
+#endif
 
 bool is_valid_proxy_type(std::string& proxy_type);
 
@@ -79,4 +104,5 @@ bool get_program_path(TCHAR *p_file_path, size_t buf_size);
 #else                                       
 bool get_program_path(char *p_file_path, size_t buf_size);
 #endif
-#endif
+
+#endif //_UTILITY_H_

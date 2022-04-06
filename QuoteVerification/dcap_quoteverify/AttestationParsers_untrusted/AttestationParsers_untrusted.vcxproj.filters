@@ -66,5 +66,11 @@
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\ProcessorPckCertificate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TcbComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

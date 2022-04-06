@@ -23,7 +23,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 set(ATTESTATION_PARSERS_ROOT_DIR "") # Optional path to Attestation Parsers library
 set(ATTESTATION_LIBRARY_ROOT_DIR "") # Optional path to Attestation library
@@ -153,8 +153,8 @@ option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.23.269.tar.gz"
-		SHA1 "64024b7b95b4c86d50ae05b926814448c93a70a0"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.23.316.tar.gz"
+		SHA1 "167a33c4cc398504826a1a3014ef66f9ccc35db3"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 

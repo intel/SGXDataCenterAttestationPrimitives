@@ -120,6 +120,7 @@
       <IgnoreSpecificDefaultLibraries>kernel32.lib;libucrt.lib;libucrtd.lib</IgnoreSpecificDefaultLibraries>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -148,6 +149,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\Debug;$(OutDir)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -179,6 +181,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\Release;$(OutDir)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -212,6 +215,7 @@
       <IgnoreSpecificDefaultLibraries>kernel32.lib;libucrt.lib</IgnoreSpecificDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -226,6 +230,7 @@
     <ClCompile Include="..\..\QvE\Enclave\qve.cpp" />
     <ClCompile Include="..\sgx_dcap_quoteverify.cpp" />
     <ClCompile Include="..\sgx_dcap_pcs_com.cpp" />
+    <ClCompile Include="..\tee_qv_class.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="qve_parser.cpp" />
     <ClCompile Include="qve_u.c">
@@ -260,6 +265,7 @@
     <ClInclude Include="..\inc\sgx_dcap_pcs_com.h" />
     <ClInclude Include="..\inc\sgx_dcap_quoteverify.h" />
     <ClInclude Include="..\inc\sgx_dcap_qv_internal.h" />
+    <ClInclude Include="..\inc\tee_qv_class.h" />
     <ClInclude Include="qve_u.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />

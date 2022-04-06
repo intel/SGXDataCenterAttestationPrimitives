@@ -29,7 +29,7 @@
  *
  */
 
-#include "QuoteGenerator.h"
+#include "QuoteV3Generator.h"
 #include "EnclaveIdentityGenerator.h"
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
@@ -52,8 +52,8 @@ using namespace std;
 struct EnclaveReportVerifierUT : public Test
 {
     EnclaveReportVerifier enclaveReportVerifier;
-    test::QuoteGenerator quoteGenerator;
-    test::QuoteGenerator::EnclaveReport enclaveReport;
+    test::QuoteV3Generator quoteGenerator;
+    test::QuoteV3Generator::EnclaveReport enclaveReport;
     EnclaveIdentityParser parser;
 
     X509CertGenerator certGenerator = X509CertGenerator{};
@@ -62,13 +62,25 @@ struct EnclaveReportVerifierUT : public Test
     {
     }
 
-    Quote::EnclaveReport getEnclaveReport()
+    EnclaveReport getEnclaveReport()
     {
         quoteGenerator.withEnclaveReport(enclaveReport);
-        const auto enclaveReportBody = quoteGenerator.getEnclaveReport().bytes();
-        Quote quote;
-        quote.parseEnclaveReport(enclaveReportBody);
-        return quote.getEnclaveReport();
+        const auto enclaveReportBody = quoteGenerator.getEnclaveReport();
+        EnclaveReport eReport{};
+        eReport.cpuSvn = enclaveReportBody.cpuSvn;
+        eReport.miscSelect = enclaveReportBody.miscSelect;
+        eReport.reserved1 = enclaveReportBody.reserved1;
+        eReport.attributes = enclaveReportBody.attributes;
+        eReport.mrEnclave = enclaveReportBody.mrEnclave;
+        eReport.reserved2 = enclaveReportBody.reserved2;
+        eReport.mrSigner = enclaveReportBody.mrSigner;
+        eReport.reserved3 = enclaveReportBody.reserved3;
+        eReport.isvProdID = enclaveReportBody.isvProdID;
+        eReport.isvSvn = enclaveReportBody.isvSvn;
+        eReport.reserved4 = enclaveReportBody.reserved4;
+        eReport.reportData = enclaveReportBody.reportData;
+
+        return eReport;
     }
 
     std::string generateEnclaveIdentity(std::string bodyJson);
@@ -79,7 +91,7 @@ std::string EnclaveReportVerifierUT::generateEnclaveIdentity(std::string bodyJso
     std::vector<uint8_t> enclaveIdentityBodyBytes(bodyJson.begin(), bodyJson.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(enclaveIdentityBodyBytes, tcbSigningKey.get());
 
-    return qeIdentityJsonWithSignature(bodyJson, EcdsaSignatureGenerator::signatureToHexString(signature));
+    return enclaveIdentityJsonWithSignature(bodyJson, EcdsaSignatureGenerator::signatureToHexString(signature));
 }
 
 
@@ -88,7 +100,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportMiscselectMismatchWhenM
     EnclaveIdentityVectorModel model;
     model.miscselect = {{1, 1, 1, 1}};
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
@@ -102,7 +114,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportAttributestMismatchWhen
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
     model.attributes = {{9, 9, 9, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
@@ -116,7 +128,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportAttributestMismatchWhen
     EnclaveIdentityVectorModel model;
     model.attributesMask = {{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}};
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     ASSERT_THROW({
                      try
@@ -135,7 +147,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnStausStausSgxEnclaveIndentityWhenMrs
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     removeWordFromString("mrsigner", json);
 
@@ -156,7 +168,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnStausStausSgxEnclaveIndentityWhenIsv
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     removeWordFromString("isvprodid", json);
 
@@ -177,7 +189,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnStausStausSgxEnclaveIndentityWhenIsv
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     removeWordFromString("isvsvn", json);
 
@@ -199,7 +211,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportMrsignerMismatchWhenMrs
     EnclaveIdentityVectorModel model{};
     model.applyTo(enclaveReport);
     model.mrsigner = {{8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
@@ -213,7 +225,7 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportIsvprodidMismatchWhenIs
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
     model.isvprodid = 11;
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
@@ -222,12 +234,40 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportIsvprodidMismatchWhenIs
     ASSERT_EQ(STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH, result);
 }
 
-TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportIsvsvnMismatchWhenIsvsvnIsDifferent)
+TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportRevokedWhenIsvsvnIsBelowAllLevels)
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    model.isvsvn = 11;
-    string json = model.toJSON();
+    enclaveReport.isvSvn = 2;
+    string json = model.toV2JSON();
+
+    auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
+
+    auto result = enclaveReportVerifier.verify(enclaveIdentity.get(), getEnclaveReport());
+
+    ASSERT_EQ(STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED, result);
+}
+
+TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportRevokedWhenIsvsvnIsOnRevokedLevel)
+{
+    EnclaveIdentityVectorModel model;
+    model.applyTo(enclaveReport);
+    enclaveReport.isvSvn = 4;
+    string json = model.toV2JSON();
+
+    auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
+
+    auto result = enclaveReportVerifier.verify(enclaveIdentity.get(), getEnclaveReport());
+
+    ASSERT_EQ(STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED, result);
+}
+
+TEST_F(EnclaveReportVerifierUT, shouldReturnEnclaveReportOutOfDateWhenIsvsvnIsOnOutOfDateLevel)
+{
+    EnclaveIdentityVectorModel model;
+    model.applyTo(enclaveReport);
+    enclaveReport.isvSvn = 5;
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
@@ -240,11 +280,16 @@ TEST_F(EnclaveReportVerifierUT, shouldReturnStatusOkWhenJsonIsOk)
 {
     EnclaveIdentityVectorModel model;
     model.applyTo(enclaveReport);
-    string json = model.toJSON();
+    string json = model.toV2JSON();
 
     auto enclaveIdentity = parser.parse(generateEnclaveIdentity(json));
 
     auto result = enclaveReportVerifier.verify(enclaveIdentity.get(), getEnclaveReport());
 
     ASSERT_EQ(STATUS_OK, result);
+}
+
+TEST_F(EnclaveReportVerifierUT, shouldReturnOutOfDateWhenIsvsvnIsOutOfDate)
+{
+
 }

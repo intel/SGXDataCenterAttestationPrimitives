@@ -32,48 +32,112 @@
 #ifndef SGXECDSAATTESTATION_ENCLAVEIDENTITYV2_H
 #define SGXECDSAATTESTATION_ENCLAVEIDENTITYV2_H
 
-
-#include "EnclaveIdentity.h"
+#include "OpensslHelpers/Bytes.h"
+#include "Utils/JsonParser.h"
 #include "TcbStatus.h"
 
+#include <SgxEcdsaAttestation/QuoteVerification.h>
+
+#include <rapidjson/document.h>
+
+#include <string>
+#include <vector>
+#include <cstdint>
+
 namespace intel { namespace sgx { namespace dcap {
+
+    enum EnclaveID
+    {
+        QE, QVE, TD_QE
+    };
 
     class TCBLevel
     {
     public:
-        TCBLevel(const unsigned int p_isvsvn,
+        TCBLevel(const uint32_t p_isvsvn,
                  const struct tm &p_tcbDate,
                  const TcbStatus p_tcbStatus):
-                    isvsvn(p_isvsvn), tcbDate(p_tcbDate), tcbStatus(p_tcbStatus) {};
-        unsigned int getIsvsvn() const;
+                isvsvn(p_isvsvn), tcbDate(p_tcbDate), tcbStatus(p_tcbStatus) {};
+        uint32_t getIsvsvn() const;
         struct tm getTcbDate() const;
         TcbStatus getTcbStatus() const;
     protected:
-        unsigned int isvsvn;
+        uint32_t isvsvn;
         struct tm tcbDate;
         TcbStatus tcbStatus;
     };
 
-    class EnclaveIdentityV2 : virtual public EnclaveIdentity
+    class EnclaveIdentityV2
     {
     public:
-        explicit EnclaveIdentityV2(const ::rapidjson::Value &p_body);
+        enum Version
+        {
+            V2 = 2,
+        };
 
-        virtual TcbStatus getTcbStatus(unsigned int isvSvn) const;
-        virtual unsigned int getTcbEvaluationDataNumber() const;
+        explicit EnclaveIdentityV2(const ::rapidjson::Value &p_body);
+        virtual ~EnclaveIdentityV2() = default;
+
+        virtual void setSignature(std::vector<uint8_t> &p_signature);
+        virtual std::vector<uint8_t> getBody() const;
+        virtual std::vector<uint8_t> getSignature() const;
+
+        virtual time_t getIssueDate() const;
+        virtual time_t getNextUpdate() const;
+        virtual const std::vector<uint8_t>& getMiscselect() const;
+        virtual const std::vector<uint8_t>& getMiscselectMask() const;
+        virtual const std::vector<uint8_t>& getAttributes() const;
+        virtual const std::vector<uint8_t>& getAttributesMask() const;
+        virtual const std::vector<uint8_t>& getMrsigner() const;
+        virtual uint32_t getIsvProdId() const;
+        virtual int getVersion() const;
+        virtual bool checkDateCorrectness(time_t expirationDate) const;
+        virtual Status getStatus() const;
+        virtual EnclaveID getID() const;
+
+        virtual TcbStatus getTcbStatus(uint32_t isvSvn) const;
+        virtual uint32_t getTcbEvaluationDataNumber() const;
         virtual const std::vector<TCBLevel>& getTcbLevels() const;
 
     protected:
         EnclaveIdentityV2() = default;
 
+        std::vector<uint8_t> signature;
+        std::vector<uint8_t> body;
+
+        bool parseMiscselect(const rapidjson::Value &input);
+        bool parseMiscselectMask(const rapidjson::Value &input);
+        bool parseAttributes(const rapidjson::Value &input);
+        bool parseAttributesMask(const rapidjson::Value &input);
+        bool parseMrsigner(const rapidjson::Value &input);
+        bool parseIsvprodid(const rapidjson::Value &input);
+        bool parseVersion(const rapidjson::Value &input);
+        bool parseIssueDate(const rapidjson::Value &input);
+        bool parseNextUpdate(const rapidjson::Value &input);
+
+        bool parseHexstringProperty(const rapidjson::Value &object, const std::string &propertyName, size_t length, std::vector<uint8_t> &saveAs);
+        bool parseUintProperty(const rapidjson::Value &object, const std::string &propertyName, uint32_t &saveAs);
+
         bool parseID(const rapidjson::Value &input);
         bool parseTcbEvaluationDataNumber(const rapidjson::Value &input);
         bool parseTcbLevels(const rapidjson::Value &input);
 
-        unsigned int tcbEvaluationDataNumber;
+        JsonParser jsonParser;
+        std::vector<uint8_t> miscselect;
+        std::vector<uint8_t> miscselectMask;
+        std::vector<uint8_t> attributes;
+        std::vector<uint8_t> attributesMask;
+        std::vector<uint8_t> mrsigner;
+        time_t issueDate = {};
+        time_t nextUpdate = {};
+        uint32_t isvProdId = 0;
+        int version = Version::V2;
+        EnclaveID id = EnclaveID::QE;
+        uint32_t tcbEvaluationDataNumber;
         std::vector<TCBLevel> tcbLevels;
+
+        Status status = STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT;
     };
 }}}
-
 
 #endif //SGXECDSAATTESTATION_ENCLAVEIDENTITYV2_H

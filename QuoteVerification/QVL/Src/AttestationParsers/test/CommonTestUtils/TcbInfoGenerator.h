@@ -39,14 +39,17 @@
 namespace intel { namespace sgx { namespace dcap {
 
 extern const std::string validSgxTcb;
+extern const std::string validSgxTcbV3;
+extern const std::string validTdxTcbV3;
 extern const std::string validUpToDateStatus;
 extern const std::string validOutOfDateStatus;
 extern const std::string validRevokedStatus;
 extern const std::string validConfigurationNeededStatus;
-extern const std::string validTcbLevelV1Template;
 extern const std::string validTcbLevelV2Template;
-extern const std::string validTcbInfoV1Template;
+extern const std::string validTcbLevelV3Template;
 extern const std::string validTcbInfoV2Template;
+extern const std::string validSgxTcbInfoV3Template;
+extern const std::string validTdxTcbInfoV3Template;
 extern const std::string validSignatureTemplate;
 
 extern const std::vector<uint8_t> DEFAULT_CPUSVN;
@@ -60,6 +63,9 @@ extern const std::string DEFAULT_NEXT_UPDATE;
 extern const std::string DEFAULT_TCB_DATE;
 extern const int DEFAULT_TCB_TYPE;
 extern const int DEFAULT_TCB_EVALUATION_DATA_NUMBER;
+extern const std::vector<uint8_t> DEFAULT_TDXMODULE_MRSIGNER;
+extern const std::vector<uint8_t> DEFAULT_TDXMODULE_ATTRIBUTES;
+extern const std::vector<uint8_t> DEFAULT_TDXMODULE_ATTRIBUTESMASK;
 
 class TcbInfoGenerator
 {
@@ -71,12 +77,14 @@ public:
  * @param status tcb status json
  * @return TcbInfo as jsons string
  */
-    static std::string generateTcbLevelV1(const std::string &tcbLevelTemplate = validTcbLevelV1Template,
-                                        const std::string &tcb = validSgxTcb,
-                                        const std::string &status = validUpToDateStatus);
-
     static std::string generateTcbLevelV2(const std::string &tcbLevelTemplate = validTcbLevelV2Template,
                                           const std::string &tcb = validSgxTcb,
+                                          const std::string &status = R"("tcbStatus": "UpToDate")",
+                                          const std::string &tcbDate = R"("tcbDate": "2019-05-23T10:36:02Z")",
+                                          const std::string &advisoryIDs = R"("advisoryIDs": ["INTEL-SA-00079","INTEL-SA-00076"])");
+
+    static std::string generateTcbLevelV3(const std::string &tcbLevelTemplate = validTcbLevelV3Template,
+                                          const std::string &tcb = validSgxTcbV3,
                                           const std::string &status = R"("tcbStatus": "UpToDate")",
                                           const std::string &tcbDate = R"("tcbDate": "2019-05-23T10:36:02Z")",
                                           const std::string &advisoryIDs = R"("advisoryIDs": ["INTEL-SA-00079","INTEL-SA-00076"])");
@@ -88,8 +96,8 @@ public:
  * @param signature signature over tcbInfo body
  * @return TcbInfo as json string
  */
-    static std::string generateTcbInfo(const std::string &tcbInfoTemplate = validTcbInfoV1Template,
-                                       const std::string &tcbLevelsJson = generateTcbLevelV1(),
+    static std::string generateTcbInfo(const std::string &tcbInfoTemplate = validTcbInfoV2Template,
+                                       const std::string &tcbLevelsJson = generateTcbLevelV2(),
                                        const std::string &signature = validSignatureTemplate);
 };
 

@@ -33,11 +33,16 @@ include installConfig
 
 PACKAGE_ROOT_FOLDER=pkgroot
 PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
-
+USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
 
 default:
 
-install: $(PACKAGES)
+install: $(PACKAGES)	
+	cd $(shell readlink -m $(DESTDIR)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME)) && \
+        ln -fs $(shell readlink -m $(USR_LIB_PATH)/libsgx_id_enclave.signed.so.1) && \
+        cd $(shell readlink -m $(DESTDIR)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME)) && \
+        ln -fs $(shell readlink -m $(USR_LIB_PATH)/libsgx_pce.signed.so.1) 
+
 
 $(PACKAGES):
 	install -d $(shell readlink -m $(DESTDIR)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME)) 

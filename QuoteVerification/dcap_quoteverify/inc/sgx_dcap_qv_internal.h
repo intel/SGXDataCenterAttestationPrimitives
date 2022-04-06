@@ -45,6 +45,14 @@
 extern "C" {
 #endif
 
+typedef enum {
+	    SGX_EVIDENCE = 0,
+	    TDX_EVIDENCE,
+        UNKNOWN_QUOTE_TYPE
+} tee_evidence_type_t;
+
+//SGX&TDX untrusted quote verification related APIs
+//
 quote3_error_t sgx_qvl_verify_quote(
     const uint8_t *p_quote,
     uint32_t quote_size,

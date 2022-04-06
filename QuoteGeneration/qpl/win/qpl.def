@@ -10,3 +10,4 @@ EXPORTS
     sgx_ql_get_root_ca_crl                      @7
     sgx_ql_free_root_ca_crl                     @8
     sgx_ql_set_logging_callback                 @9
+    sgx_ql_get_quote_verification_collateral_with_params @10

@@ -43,7 +43,7 @@ async function up(sequelize) {
     // this is done by 1.Create new table 2.Copy data 3.Drop old table 4.Rename new into old
     logger.debug('DB Migration -- update fmspc_tcbs');
     sql =
-      'CREATE TABLE IF NOT EXISTS fmspc_tcbs_temp (fmspc VARCHAR(255) , type INTEGER, ' +
+      'CREATE TABLE IF NOT EXISTS fmspc_tcbs_temp (fmspc VARCHAR(255) NOT NULL, type INTEGER NOT NULL, ' +
       ' tcbinfo BLOB, root_cert_id INTEGER, signing_cert_id INTEGER, ' +
       ' created_time DATETIME NOT NULL, updated_time DATETIME NOT NULL, PRIMARY KEY(fmspc, type));';
     await sequelize.query(sql);

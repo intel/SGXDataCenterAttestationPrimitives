@@ -56,89 +56,17 @@ find %{?buildroot} | sort | \
 awk '$0 !~ last "/" {print last} {last=$0} END {print last}' | \
 sed -e "s#^%{?buildroot}##" | \
 grep -v "^%{_install_path}" >> %{_specdir}/list-%{name} || :
-sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
+sed -i 's#^/etc/mpa_registration.conf#%config &#' %{_specdir}/list-%{name}
 
 %files -f %{_specdir}/list-%{name}
 
 %debug_package
 
 %post
-################################################################################
-# Set up SGX Registration Agent                                                #
-################################################################################
+if [ -x %{_install_path}/startup.sh ]; then %{_install_path}/startup.sh; fi
 
-# Generate the script to setup environment variables
-MPA_DST_PATH=%{_install_path}
-
-# Install the MPA service
-
-if [ -d /run/systemd/system ]; then
-    MPA_NAME=mpa_registration_tool.service
-    MPA_TEMP=$MPA_DST_PATH/$MPA_NAME
-    if [ -d /lib/systemd/system ]; then
-        MPA_DEST=/lib/systemd/system/$MPA_NAME
-    else
-        MPA_DEST=/usr/lib/systemd/system/$MPA_NAME
-    fi
-#    sed -e "s:@mpa_folder@:$MPA_DST_PATH:" \
-#        $MPA_TEMP > $MPA_DEST
-    chmod 0644 $MPA_DEST
-    systemctl enable mpa_registration_tool.service
-    #systemctl enable systemd-networkd-wait-online
-    retval=$?
-elif [ -d /etc/init/ ]; then
-    MPA_NAME=mpa_registration_tool.conf
-    MPA_TEMP=$MPA_DST_PATH/$MPA_NAME
-    MPA_DEST=/etc/init/$MPA_NAME
-    sed -e "s:@mpa_folder@:$MPA_DST_PATH:" \
-        $MPA_TEMP > $MPA_DEST
-    chmod 0644 $MPA_DEST
-    /sbin/initctl reload-configuration
-
-    retval=$?
-else
-    echo "Failed."
-    echo "Unsupported platform - neither systemctl nor initctl is no found."
-    exit 5
-fi
-
-if test $retval -ne 0; then
-    echo "failed to install $MPA_NAME."
-    exit 6
-fi
-
-#Removing config files from temporary location
-rm -f $MPA_DST_PATH/mpa_registration_tool.conf
-rm -f $MPA_DST_PATH/mpa_registration_tool.service
-
-echo -e "Installation succeed!"
-
-#Run service
-systemctl start mpa_registration_tool.service
-
-
-%postun
-# Generate the script to setup environment variables
-MPA_DST_PATH=%{_install_path}
-
-# Disable service
-if [ -d /run/systemd/system ]; then
-    systemctl disable mpa_registration_tool.service
-fi
-
-# Removing MPA configuration file
-rm -f /etc/init/mpa_registration_tool.conf
-rm -f /lib/systemd/system/mpa_registration_tool.service
-rm -f /usr/lib/systemd/system/mpa_registration_tool.service
-rm -f /etc/systemd/system/mpa_registration_tool.service
-
-# Removing MPA folder
-rm -rf $MPA_DST_PATH
-
-#Removing log file
-rm -f /var/log/mpa_registration.log
-
-echo -e "Uninstallation succeed!"
+%preun
+if [ -x %{_install_path}/cleanup.sh ]; then %{_install_path}/cleanup.sh; fi
 
 %changelog
 * Mon Feb 10 2020 SGX Team

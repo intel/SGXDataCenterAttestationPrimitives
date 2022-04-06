@@ -67,6 +67,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>mp_uefi.lib;agent.lib;mp_network.lib;common.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);..\windows\curl-7.62\lib</AdditionalLibraryDirectories>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreLinkEvent>
       <Command>
@@ -101,6 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>agent.lib;common.lib;mp_uefi.lib;mp_network.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);..\windows\curl-7.62\lib</AdditionalLibraryDirectories>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>

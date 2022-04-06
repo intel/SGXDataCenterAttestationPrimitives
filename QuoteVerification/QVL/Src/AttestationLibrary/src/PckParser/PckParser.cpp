@@ -125,7 +125,7 @@ bool Subject::operator!=(const Issuer& issuer) const
 
 bool Validity::isValid(const time_t& expirationDate) const
 {
-    return expirationDate <= notAfterTime;
+    return expirationDate <= notAfterTime && expirationDate >= notBeforeTime;
 }
 
 bool Validity::operator==(const Validity& other) const
@@ -409,12 +409,9 @@ Revoked getRevoked(const STACK_OF(X509_REVOKED)* revokedStack, int index)
 
 bool initialized = false;
 
-// Moves given timePoint forward in time by time difference between <from,to>, example:
-//      if timePoint is the 1st of January, 6:00 AM, the difference between <from> and <to> is 5 days and 2 hours
-//      then the result shall be the 6th of January, 8:00 AM
-std::time_t forwardTimePointWithAsn1TimeDiff(
-        const std::time_t& timePoint,
-        const ASN1_TIME* to)
+// Converts ASN1_TIME to time_t using ASN1_TIME_diff to get number of seconds from 1 Jan 1970
+std::time_t asn1TimeToTimet(
+        const ASN1_TIME* asn1Time)
 {
     static_assert(sizeof(std::time_t) >= sizeof(int64_t), "std::time_t size too small, the dates may overflow");
     static constexpr int64_t SECONDS_IN_A_DAY = 24 * 60 * 60;
@@ -422,24 +419,24 @@ std::time_t forwardTimePointWithAsn1TimeDiff(
     int pday;
     int psec;
     auto from = crypto::make_unique(ASN1_TIME_new());
-    ASN1_TIME_set(from.get(), timePoint);
-    if(1 != ASN1_TIME_diff(&pday, &psec, from.get(), to))
+    time_t resultTime = 0;
+    ASN1_TIME_set(from.get(), resultTime);
+    if(1 != ASN1_TIME_diff(&pday, &psec, from.get(), asn1Time))
     {
         // We're here if the format is invalid, thus
         // validity settings in cert should be considered invalid
         throw FormatException(getLastError());
     }
 
-    return timePoint + pday * SECONDS_IN_A_DAY + psec;
+    return resultTime + pday * SECONDS_IN_A_DAY + psec;
 }
 
 // Converts a pair of ASN1_TIME time points into a struct wrapping standard time points
 // Will throw FormatException on error
 Validity asn1TimePeriodToValidity(const ASN1_TIME* validityBegin, const ASN1_TIME* validityEnd)
 {
-    const auto currentTime = getCurrentTime(0);
-    const auto notBeforeTime = forwardTimePointWithAsn1TimeDiff(currentTime, validityBegin);
-    const auto notAfterTime = forwardTimePointWithAsn1TimeDiff(currentTime, validityEnd);
+    const auto notBeforeTime = asn1TimeToTimet(validityBegin);
+    const auto notAfterTime = asn1TimeToTimet(validityEnd);
 
     return Validity{notBeforeTime, notAfterTime};
 }

@@ -266,6 +266,7 @@ async function refresh_one_tcb(fmspc) {
     // Then refresh cache DB
     await fmspcTcbDao.upsertFmspcTcb({
       fmspc: fmspc,
+      type: Constants.PROD_TYPE_SGX,
       tcbinfo: pck_server_res.rawBody,
     });
     // update or insert certificate chain
@@ -282,6 +283,9 @@ async function refresh_one_tcb(fmspc) {
 
 // Refresh all TCBs in the table
 async function refresh_all_tcbs() {
+  // hotfix : delete type==null records
+  await fmspcTcbDao.deleteInvalidTcbs();
+
   const tcbs = await fmspcTcbDao.getAllTcbs();
   for (let tcb of tcbs) {
     // refresh each tcb

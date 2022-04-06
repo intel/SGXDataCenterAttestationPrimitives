@@ -38,6 +38,7 @@
 
 #include <tuple>
 #include <algorithm>
+#include <SgxEcdsaAttestation/AttestationParsers.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {
 
@@ -62,6 +63,10 @@ const rapidjson::Value* JsonParser::getField(const std::string& fieldName) const
 
 std::pair<std::string, JsonParser::ParseStatus> JsonParser::getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     if(!parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair("", ParseStatus::Missing);
@@ -79,6 +84,10 @@ std::pair<std::string, JsonParser::ParseStatus> JsonParser::getStringFieldOf(con
 std::pair<std::vector<std::string>, JsonParser::ParseStatus> JsonParser::getStringVecFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     std::vector<std::string> advisoryIDs;
     if(!parent.HasMember(fieldName.c_str()))
     {
@@ -92,6 +101,10 @@ std::pair<std::vector<std::string>, JsonParser::ParseStatus> JsonParser::getStri
 
     for (rapidjson::SizeType i = 0; i < property_v.Size(); i++)
     {
+        if(!property_v[i].IsString())
+        {
+            return std::make_pair(advisoryIDs, ParseStatus::Invalid);
+        }
         advisoryIDs.push_back(property_v[i].GetString());
     }
 
@@ -101,6 +114,10 @@ std::pair<std::vector<std::string>, JsonParser::ParseStatus> JsonParser::getStri
 std::pair<std::vector<uint8_t>, JsonParser::ParseStatus> JsonParser::getBytesFieldOf(
         const ::rapidjson::Value &parent, const std::string &fieldName, size_t length) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     if(!parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(std::vector<uint8_t>{}, ParseStatus::Missing);
@@ -122,6 +139,10 @@ std::pair<std::vector<uint8_t>, JsonParser::ParseStatus> JsonParser::getBytesFie
 std::pair<time_t, JsonParser::ParseStatus> JsonParser::getDateFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     if(!parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(time_t{}, ParseStatus::Missing);
@@ -134,12 +155,15 @@ std::pair<time_t, JsonParser::ParseStatus> JsonParser::getDateFieldOf(
     return std::make_pair(getEpochTimeFromString(date.GetString()), ParseStatus::OK);
 }
 
-std::pair<unsigned int, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
+std::pair<uint32_t, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     if(!parent.HasMember(fieldName.c_str()))
     {
-
         return std::make_pair(0u, ParseStatus::Missing);
     }
     const ::rapidjson::Value& value = parent[fieldName.c_str()];
@@ -153,6 +177,10 @@ std::pair<unsigned int, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
 std::pair<int, JsonParser::ParseStatus> JsonParser::getIntFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
+    if(!parent.IsObject())
+    {
+        throw intel::sgx::dcap::parser::FormatException("Fields can only be get from objects. Parent should be an object");
+    }
     if(!parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(0, ParseStatus::Missing);

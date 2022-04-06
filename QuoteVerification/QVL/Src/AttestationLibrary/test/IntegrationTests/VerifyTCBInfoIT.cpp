@@ -38,18 +38,18 @@
 #include "X509CertGenerator.h"
 #include "X509CrlGenerator.h"
 #include "TcbInfoJsonGenerator.h"
+#include <vector>
 
 using namespace testing;
 using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::test;
 using namespace intel::sgx::dcap::parser::test;
 
-struct VerifyTCBInfoIT : public Test
-{
+struct VerifyTCBInfoIT : public Test {
     X509CertGenerator certGenerator;
     X509CrlGenerator crlGenerator;
 
-    Bytes rootSerial {0x00, 0x45};
+    Bytes rootSerial{0x00, 0x45};
 
     crypto::X509_uptr rootCaCert = crypto::make_unique<X509>(nullptr);
     crypto::X509_uptr tcbSigningCert = crypto::make_unique<X509>(nullptr);
@@ -61,43 +61,23 @@ struct VerifyTCBInfoIT : public Test
     int timeNow = 0;
     int timeOneHour = 3600;
 
-    const Bytes serialNumber {0x23, 0x45};
+    const Bytes serialNumber{0x23, 0x45};
+    TdxModule tdxModule = { std::vector<uint8_t>(48, 0x00), std::vector<uint8_t>(8, 0x00), std::vector<uint8_t>(8, 0xFF) };
 
-
-    VerifyTCBInfoIT()
-    {
+    VerifyTCBInfoIT() {
         rootKeys = certGenerator.generateEcKeypair();
         tcbSigningKey = certGenerator.generateEcKeypair();
 
         rootCaCert = certGenerator.generateCaCert(2, rootSerial, timeNow, timeOneHour, rootKeys.get(), rootKeys.get(),
                                                   constants::ROOT_CA_SUBJECT, constants::ROOT_CA_SUBJECT);
-        tcbSigningCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, tcbSigningKey.get(), rootKeys.get(),
-                                                           constants::TCB_SUBJECT, constants::ROOT_CA_SUBJECT);
-        rootCaCrl = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, timeNow, timeOneHour, rootCaCert, std::vector<Bytes>{});
+        tcbSigningCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, tcbSigningKey.get(),
+                                                      rootKeys.get(),
+                                                      constants::TCB_SUBJECT, constants::ROOT_CA_SUBJECT);
+        rootCaCrl = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, timeNow, timeOneHour, rootCaCert,
+                                             std::vector<Bytes>{});
     }
 
-    std::string GenerateTCBInfoV1JSON() const
-    {
-        const auto tcbInfoBody = tcbInfoJsonV1Body(
-                1,                         //version
-                "2018-07-22T10:09:10Z",  //issueDate
-                "2118-08-23T10:09:10Z", //nextUpdate
-                "04F34445AA00",             //fmspc
-                "0000",                     //pceId
-                getRandomTcb(),                   //tcb
-                0,                         //pcesvn
-                "UpToDate"                  //status
-        );
-
-        auto tcbInfoBodyBytes = Bytes{};
-        tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), tcbInfoBody.begin(), tcbInfoBody.end());
-        auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, tcbSigningKey.get());
-
-        return tcbInfoJsonGenerator(tcbInfoBody, EcdsaSignatureGenerator::signatureToHexString(signature));
-    }
-
-    std::string GenerateTCBInfoV2JSON() const
-    {
+    std::string GenerateTCBInfoV2JSON() const {
         const auto tcbInfoBody = tcbInfoJsonV2Body(
                 2,                         //version
                 "2018-07-22T10:09:10Z",  //issueDate
@@ -118,6 +98,66 @@ struct VerifyTCBInfoIT : public Test
 
         return tcbInfoJsonGenerator(tcbInfoBody, EcdsaSignatureGenerator::signatureToHexString(signature));
     }
+
+    std::string GenerateSgxTCBInfoV3JSON() const {
+        std::vector<TcbLevelV3> tcbLevels;
+        tcbLevels.push_back(TcbLevelV3{
+                getRandomTcbComponent(),
+                {},
+                5,
+                "UpToDate",
+                "2058-08-23T10:09:10Z"
+        });
+        const auto tcbInfoBody = tcbInfoJsonV3Body(
+                "SGX",                  //id
+                3,                      //version
+                "2018-07-22T10:09:10Z", //issueDate
+                "2118-08-23T10:09:10Z", //nextUpdate
+                "04F34445AA00",         //fmspc
+                "0000",                 //pceId
+                1,                      //tcbType
+                1,                      //tcbEvaluationDataNumber
+                tcbLevels,              // tcblevels
+                false,
+                tdxModule
+        );
+
+        auto tcbInfoBodyBytes = Bytes{};
+        tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), tcbInfoBody.begin(), tcbInfoBody.end());
+        auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, tcbSigningKey.get());
+
+        return tcbInfoJsonGenerator(tcbInfoBody, EcdsaSignatureGenerator::signatureToHexString(signature));
+    }
+
+    std::string GenerateTdxTCBInfoV3JSON() const {
+        std::vector<TcbLevelV3> tcbLevels;
+        tcbLevels.push_back(TcbLevelV3{
+                getRandomTcbComponent(),
+                getRandomTcbComponent(),
+                5,
+                "UpToDate",
+                "2058-08-23T10:09:10Z"
+        });
+        const auto tcbInfoBody = tcbInfoJsonV3Body(
+                "TDX",                  //id
+                3,                      //version
+                "2018-07-22T10:09:10Z", //issueDate
+                "2118-08-23T10:09:10Z", //nextUpdate
+                "04F34445AA00",         //fmspc
+                "0000",                 //pceId
+                1,                      //tcbType
+                1,                      //tcbEvaluationDataNumber
+                tcbLevels,              // tcblevels
+                true,
+                tdxModule
+        );
+
+        auto tcbInfoBodyBytes = Bytes{};
+        tcbInfoBodyBytes.insert(tcbInfoBodyBytes.end(), tcbInfoBody.begin(), tcbInfoBody.end());
+        auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(tcbInfoBodyBytes, tcbSigningKey.get());
+
+        return tcbInfoJsonGenerator(tcbInfoBody, EcdsaSignatureGenerator::signatureToHexString(signature));
+    }
 };
 
 TEST_F(VerifyTCBInfoIT, shouldReturnCertUnsupportedFormatWhenInvalidInput)
@@ -127,19 +167,6 @@ TEST_F(VerifyTCBInfoIT, shouldReturnCertUnsupportedFormatWhenInvalidInput)
     EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", nullptr, "str", "str", nullptr));
     EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", "str", nullptr, "str", nullptr));
     EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT, sgxAttestationVerifyTCBInfo("str", "str", "str", nullptr, nullptr));
-}
-
-TEST_F(VerifyTCBInfoIT, verifyTCBInfoV1ShouldReturnStatusOk)
-{
-    const auto rootCaCertPem = certGenerator.x509ToString(rootCaCert.get());
-    const auto tcbSigningPem = certGenerator.x509ToString(tcbSigningCert.get());
-    const auto certChain = rootCaCertPem  + tcbSigningPem;
-    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
-
-    const auto tcbInfoJSON = GenerateTCBInfoV1JSON();
-
-    ASSERT_EQ(STATUS_OK,
-            sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCaCertPem.c_str(), nullptr));
 }
 
 TEST_F(VerifyTCBInfoIT, verifyTCBInfoV2ShouldReturnStatusOk)
@@ -155,17 +182,30 @@ TEST_F(VerifyTCBInfoIT, verifyTCBInfoV2ShouldReturnStatusOk)
             sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCaCertPem.c_str(), nullptr));
 }
 
-TEST_F(VerifyTCBInfoIT, verifySgxTCBInfoV2ShouldReturnStatusOkCrlAsDer)
+TEST_F(VerifyTCBInfoIT, verifySgxTCBInfoV3ShouldReturnStatusOk)
 {
     const auto rootCaCertPem = certGenerator.x509ToString(rootCaCert.get());
     const auto tcbSigningPem = certGenerator.x509ToString(tcbSigningCert.get());
     const auto certChain = rootCaCertPem  + tcbSigningPem;
-    const auto rootCaCrlDer = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
+    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
 
-    const auto tcbInfoJSON = GenerateTCBInfoV2JSON();
+    const auto tcbInfoJSON = GenerateSgxTCBInfoV3JSON();
 
     ASSERT_EQ(STATUS_OK,
-              sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlDer.c_str(), rootCaCertPem.c_str(), nullptr));
+              sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCaCertPem.c_str(), nullptr));
+}
+
+TEST_F(VerifyTCBInfoIT, verifyTdxTCBInfoV3ShouldReturnStatusOk)
+{
+    const auto rootCaCertPem = certGenerator.x509ToString(rootCaCert.get());
+    const auto tcbSigningPem = certGenerator.x509ToString(tcbSigningCert.get());
+    const auto certChain = rootCaCertPem  + tcbSigningPem;
+    const auto rootCaCrlPem = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
+
+    const auto tcbInfoJSON = GenerateTdxTCBInfoV3JSON();
+
+    ASSERT_EQ(STATUS_OK,
+              sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCaCertPem.c_str(), nullptr));
 }
 
 TEST_F(VerifyTCBInfoIT, shouldReturnUnsupportedCertFormatWhenInvalidCertChain)
@@ -174,7 +214,7 @@ TEST_F(VerifyTCBInfoIT, shouldReturnUnsupportedCertFormatWhenInvalidCertChain)
     const auto invalidCertChainPem = "No a valid X509 CERT CHAIN PEM";
     const auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
-    const auto tcbInfoJSON = GenerateTCBInfoV1JSON();
+    const auto tcbInfoJSON = GenerateTCBInfoV2JSON();
 
     EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT,
             sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), invalidCertChainPem, rootCaCrlPem.c_str(), trustedRootCaCert.c_str(), nullptr));
@@ -186,7 +226,7 @@ TEST_F(VerifyTCBInfoIT, shouldReturnUnsupportedCertFormatWhenInvalidTrustedRootC
     const auto invalidTrustedRootCaCert = "No a valid X509 CERT PEM";
     const auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
-    const auto tcbInfoJSON = GenerateTCBInfoV1JSON();
+    const auto tcbInfoJSON = GenerateTCBInfoV2JSON();
 
     EXPECT_EQ(STATUS_UNSUPPORTED_CERT_FORMAT,
             sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), invalidTrustedRootCaCert, nullptr));
@@ -199,7 +239,7 @@ TEST_F(VerifyTCBInfoIT, shouldReturnCrlUnsupportedFormatWhenInvalidRootCaCrl)
     const auto certChain = rootCaCertPem  + tcbSigningPem;
     const auto invalidRootCaCrlPem = "No a valid X509 CRL PEM";
 
-    const auto tcbInfoJSON = GenerateTCBInfoV1JSON();
+    const auto tcbInfoJSON = GenerateTCBInfoV2JSON();
 
     EXPECT_EQ(STATUS_SGX_CRL_UNSUPPORTED_FORMAT,
             sgxAttestationVerifyTCBInfo(tcbInfoJSON.c_str(), certChain.c_str(), invalidRootCaCrlPem, rootCaCertPem.c_str(), nullptr));

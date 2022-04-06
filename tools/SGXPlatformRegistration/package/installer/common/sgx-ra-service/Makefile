@@ -37,9 +37,9 @@ PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 VAR_OPT_PATH=/var/opt/sgxra
 USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
 
-RAD_CONF_NAME=$(if $(wildcard /run/systemd/system/.*),mpa_registration_tool.service,$(if $(wildcard /etc/init/.*),mpa_registration_tool.conf,))
-RAD_CONF_DEL=$(if $(wildcard /run/systemd/system/.*),mpa_registration_tool.conf,$(if $(wildcard /etc/init/.*),mpa_registration_tool.service,))
-RAD_CONF_PATH=$(if $(wildcard /run/systemd/system/.*),$(if $(wildcard /lib/systemd/system/.*),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.*),/etc/init/))
+RAD_CONF_NAME=$(if $(wildcard /run/systemd/system/.),mpa_registration_tool.service,$(if $(wildcard /etc/init/.),mpa_registration_tool.conf,))
+RAD_CONF_DEL=$(if $(wildcard /run/systemd/system/.),mpa_registration_tool.conf,$(if $(wildcard /etc/init/.),mpa_registration_tool.service,))
+RAD_CONF_PATH=$(if $(wildcard /run/systemd/system/.),$(if $(wildcard /lib/systemd/system/.),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.),/etc/init/))
 
 ifeq ($(RAD_CONF_NAME),)
 ifneq ($(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup),)
@@ -61,7 +61,7 @@ install: $(PACKAGES)
 		 > $(DESTDIR)/$(RAD_CONF_PATH)/$(RAD_CONF_NAME)
 	rm -f $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)/$(RAD_CONF_NAME)
 	rm -f $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)/$(RAD_CONF_DEL)
-	$(if $(wildcard $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)/conf/.*), \
+	$(if $(wildcard $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)/conf/*), \
 		install -d $(shell readlink -m $(DESTDIR)/$(ETC_DIR)) && \
 		cp -fr $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)/conf/* \
                        $(DESTDIR)/$(ETC_DIR) && \
@@ -69,7 +69,7 @@ install: $(PACKAGES)
 
 $(PACKAGES):
 #	install -d $(shell readlink -m $(DESTDIR)/$@)
-	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/.*), \
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*), \
                 install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
                 install $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/* $(DESTDIR)/$@/$(USR_LIB_PATH), \
                 install -d $(shell readlink -m $(DESTDIR)/$(SGX_RA_SERVICE_PACKAGE_PATH)/$(SGX_RA_SERVICE_PACKAGE_NAME)) && \

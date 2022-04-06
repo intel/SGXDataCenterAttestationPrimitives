@@ -138,16 +138,20 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             printf("\tError: sgx_qv_set_enclave_load_policy failed: 0x%04x\n", dcap_ret);
         }
 
-
         //call DCAP quote verify library to get supplemental data size
         //
         dcap_ret = sgx_qv_get_quote_supplemental_data_size(&supplemental_data_size);
-        if (dcap_ret == SGX_QL_SUCCESS) {
+        if (dcap_ret == SGX_QL_SUCCESS && supplemental_data_size == sizeof(sgx_ql_qv_supplemental_t)) {
             printf("\tInfo: sgx_qv_get_quote_supplemental_data_size successfully returned.\n");
             p_supplemental_data = (uint8_t*)malloc(supplemental_data_size);
         }
         else {
-            printf("\tError: sgx_qv_get_quote_supplemental_data_size failed: 0x%04x\n", dcap_ret);
+            if (dcap_ret != SGX_QL_SUCCESS)
+                printf("\tError: sgx_qv_get_quote_supplemental_data_size failed: 0x%04x\n", dcap_ret);
+
+            if (supplemental_data_size != sizeof(sgx_ql_qv_supplemental_t))
+                printf("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.\n");
+
             supplemental_data_size = 0;
         }
 
@@ -179,10 +183,10 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
         // Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
         // e.g. You can get latest QvE ISVSVN in QvE Identity JSON file from
-        // https://api.trustedservices.intel.com/sgx/certification/v2/qve/identity
+        // https://api.trustedservices.intel.com/sgx/certification/v3/qve/identity
         // Make sure you are using trusted & latest QvE ISV SVN as threshold
         //
-        sgx_isv_svn_t qve_isvsvn_threshold = 3;
+        sgx_isv_svn_t qve_isvsvn_threshold = 5;
 
         //call sgx_dcap_tvl API in SampleISVEnclave to verify QvE's report and identity
         //
@@ -269,7 +273,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                 printf("\tError: sgx_qv_get_quote_supplemental_data_size failed: 0x%04x\n", dcap_ret);
 
             if (supplemental_data_size != sizeof(sgx_ql_qv_supplemental_t))
-                printf("\tWarning: sgx_qv_get_quote_supplemental_data_size returned size is not same with header definition in SGX SDK, please make sure you are using same version of SGX SDK and DCAP QVL.\n");
+                printf("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.\n");
 
             supplemental_data_size = 0;
         }

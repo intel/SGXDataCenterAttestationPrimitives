@@ -32,7 +32,7 @@
 #ifndef SGXECDSAATTESTATION_ENCLAVEIDENTITYPARSER_H
 #define SGXECDSAATTESTATION_ENCLAVEIDENTITYPARSER_H
 
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include "Utils/JsonParser.h"
 
 #include <memory>
@@ -41,7 +41,7 @@ namespace intel { namespace sgx { namespace dcap {
     class EnclaveIdentityParser
     {
     public:
-        std::unique_ptr<dcap::EnclaveIdentity> parse(const std::string &input);
+        std::unique_ptr<dcap::EnclaveIdentityV2> parse(const std::string &input);
     protected:
         JsonParser jsonParser;
     };

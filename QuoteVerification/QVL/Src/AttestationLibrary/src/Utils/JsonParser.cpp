@@ -58,7 +58,7 @@ const rapidjson::Value* JsonParser::getRoot() const
 
 const rapidjson::Value* JsonParser::getField(const std::string& fieldName) const
 {
-    if(!jsonDocument.HasMember(fieldName.c_str()))
+    if(!jsonDocument.IsObject() || !jsonDocument.HasMember(fieldName.c_str()))
     {
         return nullptr;
     }
@@ -84,7 +84,7 @@ std::pair<std::string, JsonParser::ParseStatus> JsonParser::getStringFieldOf(con
 std::pair<std::vector<uint8_t>, JsonParser::ParseStatus> JsonParser::getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const
 {
     static auto FailedReturnValue = std::make_pair(std::vector<uint8_t>{}, false);
-    if(!parent.HasMember(fieldName.c_str()))
+    if(!parent.IsObject() || !parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(std::vector<uint8_t>{}, ParseStatus::Missing);
     }
@@ -105,7 +105,7 @@ std::pair<std::vector<uint8_t>, JsonParser::ParseStatus> JsonParser::getHexstrin
 std::pair<tm, JsonParser::ParseStatus> JsonParser::getDateFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
-    if(!parent.HasMember(fieldName.c_str()))
+    if(!parent.IsObject() || !parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(tm{}, ParseStatus::Missing);
     }
@@ -124,10 +124,10 @@ JsonParser::ParseStatus JsonParser::checkDateFieldOf(const ::rapidjson::Value& p
     return status;
 }
 
-std::pair<unsigned int, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
+std::pair<uint32_t, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
-    if(!parent.HasMember(fieldName.c_str()))
+    if(!parent.IsObject() || !parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(0u, ParseStatus::Missing);
     }
@@ -142,7 +142,7 @@ std::pair<unsigned int, JsonParser::ParseStatus> JsonParser::getUintFieldOf(
 std::pair<int, JsonParser::ParseStatus> JsonParser::getIntFieldOf(
         const ::rapidjson::Value& parent, const std::string& fieldName) const
 {
-    if(!parent.HasMember(fieldName.c_str()))
+    if(!parent.IsObject() || !parent.HasMember(fieldName.c_str()))
     {
         return std::make_pair(0, ParseStatus::Missing);
     }

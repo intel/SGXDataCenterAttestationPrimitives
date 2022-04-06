@@ -99,12 +99,12 @@ TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrl
     auto certChain = rootCertPem  + intPem;
     auto rootCaCrlDer = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
 
-    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toJSON();
+    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toV2JSON();
     auto qeIdentityBodyBytes = Bytes{};
     qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), qeIdentityBody.begin(), qeIdentityBody.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, tcbSigningKey.get());
 
-    auto qeIdentityJson = qeIdentityJsonWithSignature(qeIdentityBody,
+    auto qeIdentityJson = enclaveIdentityJsonWithSignature(qeIdentityBody,
                                                       EcdsaSignatureGenerator::signatureToHexString(signature));
 
     ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveIdentity(qeIdentityJson.c_str(), certChain.c_str(), rootCaCrlDer.c_str(), rootCertPem.c_str(), nullptr));
@@ -128,12 +128,12 @@ TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrl
     auto certChain = rootCertPem  + intPem;
     auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
-    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toJSON();
+    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toV2JSON();
     auto qeIdentityBodyBytes = Bytes{};
     qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), qeIdentityBody.begin(), qeIdentityBody.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, tcbSigningKey.get());
 
-    auto qeIdentityJson = qeIdentityJsonWithSignature(qeIdentityBody,
+    auto qeIdentityJson = enclaveIdentityJsonWithSignature(qeIdentityBody,
                                                       EcdsaSignatureGenerator::signatureToHexString(signature));
 
     ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveIdentity(qeIdentityJson.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCertPem.c_str(), nullptr));

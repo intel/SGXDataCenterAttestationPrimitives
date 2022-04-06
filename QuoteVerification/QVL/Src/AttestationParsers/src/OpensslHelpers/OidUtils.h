@@ -45,7 +45,7 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
 void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expectedType, int expectedLength);
 std::vector<uint8_t> oidToBytes(const ASN1_TYPE *oidValue);
 uint8_t oidToByte(const ASN1_TYPE *oidValue);
-unsigned int oidToUInt(const ASN1_TYPE *oidValue);
+uint32_t oidToUInt(const ASN1_TYPE *oidValue);
 int oidToEnum(const ASN1_TYPE *oidValue);
 STACK_OF_ASN1TYPE_uptr oidToStack(const ASN1_TYPE *oidValue);
 

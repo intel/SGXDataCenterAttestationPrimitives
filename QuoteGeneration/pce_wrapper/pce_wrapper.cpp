@@ -87,9 +87,12 @@ extern "C" sgx_status_t sgx_get_metadata(const TCHAR* enclave_file, metadata_t *
 #include <limits.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #define PATH_SEPARATOR '/'
 extern "C" sgx_status_t sgx_get_metadata(const char* enclave_file, metadata_t *metadata);
-#define PCE_ENCLAVE_NAME "libsgx_pce.signed.so"
+#define PCE_ENCLAVE_NAME "libsgx_pce.signed.so.1"
+#define PCE_ENCLAVE_NAME_LEGACY "libsgx_pce.signed.so"
 bool get_pce_path(
     char *p_file_path,
     size_t buf_size)
@@ -131,6 +134,16 @@ bool get_pce_path(
     if(strnlen(p_file_path,buf_size)+strnlen(PCE_ENCLAVE_NAME,buf_size)+sizeof(char)>buf_size)
         return false;
     (void)strncat(p_file_path,PCE_ENCLAVE_NAME, strnlen(PCE_ENCLAVE_NAME,buf_size));
+    struct stat info;
+    if(stat(p_file_path, &info) != 0 ||
+        ((info.st_mode & S_IFREG) == 0 && (info.st_mode & S_IFLNK) == 0)) {
+        if ( p_last_slash != NULL )
+        {
+            *p_last_slash = '\0';  //null terminate the string
+        }
+        else p_file_path[0] = '\0';
+        (void)strncat(p_file_path,PCE_ENCLAVE_NAME_LEGACY, strnlen(PCE_ENCLAVE_NAME_LEGACY,buf_size));
+    }
     return true;
 }
 #endif

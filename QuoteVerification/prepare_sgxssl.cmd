@@ -39,17 +39,17 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1l
+set openssl_ver_name=openssl-1.1.1m
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.13_1.1.1k
+set sgxssl_ver_name=win_2.15_1.1.1m_update
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
 set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=9DA2BBEEDA00F5F65A1D624F55F96E222EA84AE483411264ABC2DB73E1ABE704
-set openssl_chksum=0B7A3E5E59C34827FE0C3A74B7EC8BAEF302B98FA80088D7F9153AA16FA76BD1
+set sgxssl_chksum=C9177D23AB221429EC1BDE38D2118C69FBE612018B6EA9900D22C1DD9596A2E6
+set openssl_chksum=F89199BE8B23CA45FC7CB9F1D8D3EE67312318286AD030F5316ACA6462DB6C96
 
 
 if not exist %sgxssl_dir% (
@@ -72,8 +72,7 @@ if not exist %build_script% (
 )
 
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
-@Rem	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
-	call powershell -Command " [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}; (New-Object Net.WebClient).DownloadFile('%full_openssl_url%', '%openssl_out_dir%\%openssl_ver_name%.tar.gz'); exit" > nul
+	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
 )
 call powershell -Command " $opensslfilehash = Get-FileHash %openssl_out_dir%\%openssl_ver_name%.tar.gz; Write-Output $opensslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_openssl.txt -encoding ascii"
 findstr /i %openssl_chksum% %sgxssl_dir%\check_sum_openssl.txt>nul

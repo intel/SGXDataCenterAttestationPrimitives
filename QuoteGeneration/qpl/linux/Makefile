@@ -32,12 +32,13 @@
 ######## SGX SDK Settings ########
 TOP_DIR  = ../..
 include $(TOP_DIR)/buildenv.mk
-PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl/
+PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
 
 ######## SGX QPL Library Settings ########
 
 QPL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
 
+######## Include path -- Don't forget to update AESM CMakefile ########
 QPL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
                          -I../inc -I$(SGX_SDK)/include          \
                          -I../../common/inc/internal            \

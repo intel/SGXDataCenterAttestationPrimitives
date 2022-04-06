@@ -40,7 +40,7 @@
 #include <Mocks/PckCrlVerifierMock.h>
 #include <Mocks/EnclaveIdentityMock.h>
 #include <CertVerification/X509Constants.h>
-#include <Verifiers/EnclaveIdentityV1.h>
+#include <Verifiers/EnclaveIdentityV2.h>
 #include "KeyHelpers.h"
 
 using namespace testing;
@@ -48,7 +48,7 @@ using namespace intel::sgx::dcap;
 
 struct EnclaveIdentityVerifierUT : public Test
 {
-    NiceMock<test::EnclaveIdentityV1Mock> enclaveIdentityV1;
+    NiceMock<test::EnclaveIdentityMock> enclaveIdentity;
 
     std::vector<uint8_t> pubKey = {};
     const time_t currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -79,12 +79,12 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnStatusOkWhenVerifyPassPositive)
     EXPECT_CALL(validityMock, getNotAfterTime()).WillRepeatedly(Return(currentTime));
     EXPECT_CALL(crlStoreMock, expired(currentTime - 86400)).WillOnce(Return(false));
 
-    EXPECT_CALL(enclaveIdentityV1, getNextUpdate()).WillOnce(Return(currentTime));
+    EXPECT_CALL(enclaveIdentity, getNextUpdate()).WillOnce(Return(currentTime));
 
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime - 86400);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime - 86400);
 
     // THEN
     EXPECT_EQ(STATUS_OK, result);
@@ -106,7 +106,7 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnRootCaMissingWhenTcbSigningChainVe
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_ROOT_CA_MISSING, result);
@@ -134,7 +134,7 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnQeidentityInvalidSignatureWhenChec
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE, result);
@@ -166,7 +166,7 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnStatusCertChainExpiredWhenRootCert
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED, result);
@@ -199,7 +199,7 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnStatusCertChainExpiredWhenTcbSinin
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED, result);
@@ -233,7 +233,7 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnStatusCrlExpiredWhenRootCrlExpired
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_CRL_EXPIRED, result);
@@ -264,12 +264,12 @@ TEST_F(EnclaveIdentityVerifierUT, shouldReturnStatusEnclaveIdentityExpiredWhenNe
     EXPECT_CALL(validityMock, getNotAfterTime()).WillRepeatedly(Return(currentTime + 1));
     EXPECT_CALL(crlStoreMock, expired(currentTime + 1)).WillOnce(Return(false));
 
-    EXPECT_CALL(enclaveIdentityV1, getNextUpdate()).WillOnce(Return(currentTime));
+    EXPECT_CALL(enclaveIdentity, getNextUpdate()).WillOnce(Return(currentTime));
 
     EnclaveIdentityVerifier enclaveIdentityVerifier(std::move(commonVerifierMock), std::move(tcbSigningChainMock));
 
     // WHEN
-    auto result = enclaveIdentityVerifier.verify(enclaveIdentityV1, certificateChainMock, crlStoreMock, certStoreMock, currentTime + 1);
+    auto result = enclaveIdentityVerifier.verify(enclaveIdentity, certificateChainMock, crlStoreMock, certStoreMock, currentTime + 1);
 
     // THEN
     EXPECT_EQ(STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED, result);

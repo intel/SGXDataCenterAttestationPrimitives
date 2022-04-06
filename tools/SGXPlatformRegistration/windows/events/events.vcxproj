@@ -80,6 +80,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <NoEntryPoint>true</NoEntryPoint>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -106,6 +107,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <NoEntryPoint>true</NoEntryPoint>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>

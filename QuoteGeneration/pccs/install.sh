@@ -82,7 +82,7 @@ npm config set proxy $http_proxy
 npm config set http-proxy $http_proxy
 npm config set https-proxy $https_proxy
 npm config set engine-strict true
-npm ci
+npm install
 [ $? -eq 0 ] || exit $?;
 
 doconfig=""

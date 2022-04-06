@@ -113,8 +113,18 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     options->rootCaCrlFile = std::string(rootCaCrlFile->sval[0]);
     options->intermediateCaCrlFile = std::string(intermediateCaCrlFile->sval[0]);
     options->quoteFile = std::string(quoteFile->sval[0]);
-    options->expirationDate = std::stol(expirationDate->sval[0]);
 
+    try
+    {
+        options->expirationDate = std::stol(expirationDate->sval[0]);
+    }
+    catch(std::exception& ex)
+    {
+        printf("Can't parse expirationDate: %s\n\n", ex.what());
+        printHelp(argtable);
+        arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+        return nullptr;
+    }
     arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
 
     return options;

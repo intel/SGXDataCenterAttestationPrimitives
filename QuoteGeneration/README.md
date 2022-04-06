@@ -37,7 +37,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.12.1/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.13/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -136,13 +136,13 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
 - Install prebuilt Intel(R) SGX common loader and other prerequisites from [01.org](https://01.org/intel-software-guard-extensions/downloads)
   * On Ubuntu 18.04 and Ubuntu 20.04:
   ```
-    $ sudo dpkg -i --force-overwrite libsgx-ae-pce_*.deb libsgx-ae-qe3_*.deb libsgx-ae-qve_*.deb libsgx-enclave-common_*.deb libsgx-urts_*.deb
+    $ sudo dpkg -i --force-overwrite libsgx-ae-pce_*.deb libsgx-ae-qe3_*.deb libsgx-ae-id-enclave_*.deb libsgx-ae-qve_*.deb libsgx-enclave-common_*.deb libsgx-urts_*.deb
   ```
   **NOTE**: Sometimes we will split old package into smaller ones or move files between different packages. In such cases, you need to add `--force-overwrite` to overwrite existing files. If you're doing a fresh install, you can omit this option.
 
   * On Red Hat Enterprise Linux 8.2 and CentOS 8.2:
   ```
-    $ sudo rpm -ivh libsgx-ae-pce*.rpm libsgx-ae-qe3*.rpm libsgx-ae-qve*.rpm libsgx-enclave-common*.rpm libsgx-urts*.rpm
+    $ sudo rpm -ivh libsgx-ae-pce*.rpm libsgx-ae-qe3*.rpm libsgx-ae-id-enclave*.rpm libsgx-ae-qve*.rpm libsgx-enclave-common*.rpm libsgx-urts*.rpm
   ```
   **NOTE**: If you're not doing a fresh install, please replace option `-i` to `-U` to avoid some conflict errors.
 

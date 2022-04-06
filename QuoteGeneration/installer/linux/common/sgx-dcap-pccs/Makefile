@@ -34,9 +34,24 @@ include installConfig
 PACKAGE_ROOT_FOLDER=pkgroot
 PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
+PCCS_CONF=pccs.service
+PCCS_CONF_PATH=$(if $(wildcard /run/systemd/system/.),$(if $(wildcard /lib/systemd/system/.),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.),/etc/init/))
+
+ifeq ($(PCCS_CONF_PATH),)
+ifneq ($(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup),)
+PCCS_CONF_PATH=/lib/systemd/system
+$(warning "You may need to start service manually after it's installed!")
+else
+(error "Unsupported platform - neither systemctl nor initctl is found!")
+endif
+endif
+
 default:
 
 install: $(PACKAGES)
+	install -d $(shell readlink -m $(DESTDIR)/$(PCCS_CONF_PATH)) && \
+	mv $(DESTDIR)/$(DCAP_PCCS_PACKAGE_PATH)/$(DCAP_PCCS_PACKAGE_NAME)/$(PCCS_CONF) $(DESTDIR)/$(PCCS_CONF_PATH)
+
 
 $(PACKAGES):
 	install -d $(shell readlink -m $(DESTDIR)/$(DCAP_PCCS_PACKAGE_PATH)/$(DCAP_PCCS_PACKAGE_NAME))

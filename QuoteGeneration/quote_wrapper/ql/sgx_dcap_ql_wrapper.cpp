@@ -624,7 +624,7 @@ quote3_error_t sgx_ql_set_path(sgx_ql_path_type_t path_type, const char *p_path)
 
     if(stat(p_path, &info) != 0)
         return(SGX_QL_ERROR_INVALID_PARAMETER);
-    else if((info.st_mode & S_IFREG) == 0)
+    else if((info.st_mode & S_IFREG) == 0 && (info.st_mode & S_IFLNK) == 0)
         return(SGX_QL_ERROR_INVALID_PARAMETER);
 
     switch(path_type)
@@ -641,6 +641,9 @@ quote3_error_t sgx_ql_set_path(sgx_ql_path_type_t path_type, const char *p_path)
             break;
         case SGX_QL_QPL_PATH:
             ret = sgx_set_qpl_path(p_path);
+            break;
+        case SGX_QL_IDE_PATH:
+            ret = sgx_set_ide_path(p_path);
             break;
     default:
         ret = SGX_QL_ERROR_INVALID_PARAMETER;

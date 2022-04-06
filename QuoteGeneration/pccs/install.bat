@@ -4,12 +4,10 @@ call mkdir logs
 
 echo Install npm packages ......
 
-call npm ci
+call npm install
 
-call npm install pm2 -g
+call npm install node-windows -g
 
-call pm2 update
+call npm link node-windows
 
-call pm2 start pccs_server.config.js
-
-call pm2 save
+call node pccs.service.win

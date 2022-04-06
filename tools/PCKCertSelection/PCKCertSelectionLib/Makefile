@@ -88,7 +88,7 @@ VER_DIR       := $(QG_DIR)/common/inc/internal
 PARSER_CPP_FILES	:= ParserUtils.cpp
 X509_CPP_FILES		:= Certificate.cpp DistinguishedName.cpp Extension.cpp PckCertificate.cpp Signature.cpp Tcb.cpp Validity.cpp
 HELPERS_CPP_FILES	:= OidUtils.cpp
-JSON_CPP_FILES		:= JsonParser.cpp TcbInfo.cpp TcbLevel.cpp
+JSON_CPP_FILES		:= JsonParser.cpp TcbInfo.cpp TcbLevel.cpp TdxModule.cpp TcbComponent.cpp
 UTILS_CPP_FILES		:= GMTime.cpp TimeUtils.cpp
 
 # source files from local dir

@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
- /**
+/**
   * File: os_version.cpp
   *
   * Description: Detect Windows OS version
@@ -38,14 +38,14 @@
 
 // Get Windows Version
 typedef LONG NTSTATUS, *PNTSTATUS;
-typedef NTSTATUS(WINAPI* FpRtlGetVersion)(PRTL_OSVERSIONINFOW);
+typedef NTSTATUS(WINAPI *FpRtlGetVersion)(PRTL_OSVERSIONINFOW);
 
 bool isWin81OrLater() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     if (hMod) {
         FpRtlGetVersion rtlGetVersion = (FpRtlGetVersion)::GetProcAddress(hMod, "RtlGetVersion");
         if (rtlGetVersion != nullptr) {
-            RTL_OSVERSIONINFOW versionInfo = { 0 };
+            RTL_OSVERSIONINFOW versionInfo = {0};
             versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
             if (0 == rtlGetVersion(&versionInfo)) {
                 // For Windows 10, MajorVersion is 10

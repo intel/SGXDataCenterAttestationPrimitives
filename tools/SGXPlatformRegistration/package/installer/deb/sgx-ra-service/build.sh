@@ -109,6 +109,7 @@ update_version() {
 update_install_path() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     sed -i "s#@pkg_path@#${SGX_RA_SERVICE_PACKAGE_PATH}/${SGX_RA_SERVICE_PACKAGE_NAME}#" debian/postinst
+    sed -i "s#@pkg_path@#${SGX_RA_SERVICE_PACKAGE_PATH}/${SGX_RA_SERVICE_PACKAGE_NAME}#" debian/prerm
     popd
 }
 

@@ -50,6 +50,9 @@ sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity = NULL;
 sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl = NULL;
 sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
+tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
+tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
+
 
 /**
  * Dynamically load sgx_ql_get_quote_verification_collateral symbol and call it.
@@ -115,9 +118,6 @@ quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
     //
     return p_sgx_ql_free_quote_verification_collateral(p_quote_collateral);
 }
-
-
-
 
 /**
  * Dynamically load sgx_ql_get_qve_identity & sgx_ql_get_root_ca_crl symbol and call it.
@@ -220,4 +220,69 @@ quote3_error_t sgx_dcap_free_qve_identity(
     ret =  p_sgx_ql_free_root_ca_crl(p_root_ca_crl);
 
     return ret;
+}
+
+/**
+ * Dynamically load tdx_ql_get_quote_verification_collateral symbol and call it.
+ *
+ * @param fmspc[IN] - Pointer to base 16-encoded representation of FMSPC. (5 bytes).
+ * @param pck_ca[IN] - Pointer to Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates. Allowed values {platform, processor}.
+ * @param pp_quote_collateral[OUT] - Pointer to a pointer to the PCK quote collateral data needed for quote verification.
+ *                                   The provider library will allocate this buffer and it is expected that the Quote Library will free it using the provider library sgx_ql_free_quote_verification_collateral() API.
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_NO_QUOTE_COLLATERAL_DATA
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_PLATFORM_LIB_UNAVAILABLE
+ **/
+quote3_error_t tdx_dcap_retrieve_verification_collateral(
+    const char *fmspc,
+    uint16_t fmspc_size,
+    const char *pck_ca,
+    struct _sgx_ql_qve_collateral_t **pp_quote_collateral)
+{
+
+    if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL || *pp_quote_collateral != NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!sgx_dcap_load_qpl() || !p_tdx_ql_get_quote_verification_collateral) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_sgx_ql_get_quote_verification_collateral to retrieve verification collateral
+    //
+    return p_tdx_ql_get_quote_verification_collateral(
+        fmspc,
+        fmspc_size,
+        pck_ca,
+        pp_quote_collateral);
+
+}
+
+/**
+ * Dynamically load tdx_ql_free_quote_verification_collateral symbol and call it.
+ *
+ * @param pp_quote_collateral[IN] - Pointer to the PCK certification that the sgx_ql_get_quote_verification_collateral() API has allocated.
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_NO_QUOTE_COLLATERAL_DATA
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_PLATFORM_LIB_UNAVAILABLE
+ **/
+quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *p_quote_collateral)
+{
+    if (p_quote_collateral == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!sgx_dcap_load_qpl() || !p_tdx_ql_free_quote_verification_collateral) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_sgx_ql_free_quote_verification_collateral to free allocated memory
+    //
+    return p_tdx_ql_free_quote_verification_collateral(p_quote_collateral);
 }

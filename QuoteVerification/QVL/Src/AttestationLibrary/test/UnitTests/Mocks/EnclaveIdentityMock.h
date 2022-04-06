@@ -33,20 +33,11 @@
 #define SGXECDSAATTESTATION_QEIDENTITY_JSON_VERIFIER_MOCK_H_
 
 #include <gmock/gmock.h>
-#include <Verifiers/EnclaveIdentityV1.h>
 #include <Verifiers/EnclaveIdentityV2.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class EnclaveIdentityV1Mock: public dcap::EnclaveIdentityV1
-{
-public:
-    MOCK_CONST_METHOD0(getStatus, Status());
-    MOCK_CONST_METHOD0(getVersion, int());
-    MOCK_CONST_METHOD0(getNextUpdate, time_t());
-};
-
-class EnclaveIdentityV2Mock: public dcap::EnclaveIdentityV2
+class EnclaveIdentityMock: public dcap::EnclaveIdentityV2
 {
 public:
     MOCK_CONST_METHOD0(getID, EnclaveID());

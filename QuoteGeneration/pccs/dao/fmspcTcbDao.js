@@ -33,6 +33,7 @@ import Constants from '../constants/index.js';
 import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import { FmspcTcbs, sequelize } from './models/index.js';
+import Sequelize from 'sequelize';
 
 // Update or insert a record in JSON format
 export async function upsertFmspcTcb(tcbinfoJson) {
@@ -75,5 +76,22 @@ export async function getTcbInfo(type, fmspc) {
 
 //Query all TCBInfos
 export async function getAllTcbs() {
-  return await FmspcTcbs.findAll();
+  return await FmspcTcbs.findAll({
+    where: {
+      type: {
+        [Sequelize.Op.not]: null,
+      },
+    },
+  });
+}
+
+//Delete TCBInfos whose type is null
+export async function deleteInvalidTcbs() {
+  return await FmspcTcbs.destroy({
+    where: {
+      type: {
+        [Sequelize.Op.is]: null,
+      },
+    },
+  });
 }

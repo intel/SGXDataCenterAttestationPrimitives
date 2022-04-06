@@ -210,3 +210,20 @@ TEST_F(AppOptionsParserTests, ReturnsNothingWhenUnsupportedParamPrintsErrorAndHe
     EXPECT_TRUE(output.find("Sample app: invalid option \"--unsupportedParam\"") != std::string::npos);
     EXPECT_TRUE(output.find(helpOutput) != std::string::npos);
 }
+
+TEST_F(AppOptionsParserTests, ReturnsCantParseExpirationDateWhenProvidedInvalidTimestamp)
+{
+    std::vector<const char*> vec {"./AppCommand", "--expirationDate=test"};
+    std::ostringstream logger;
+
+    testing::internal::CaptureStdout();
+
+    auto options = parser.parse((int32_t) vec.size(), const_cast<char**>(vec.data()), logger);
+
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_TRUE(options == nullptr);
+    EXPECT_TRUE(logger.str().empty());
+    EXPECT_TRUE(output.find("Can't parse expirationDate:") != std::string::npos);
+    EXPECT_TRUE(output.find(helpOutput) != std::string::npos);
+}

@@ -39,13 +39,15 @@
 #ifdef _MSC_VER
 #include <Windows.h>
 #include <tchar.h>
+#include "sgx_dcap_ql_wrapper.h"
+#include "Enclave_u.h"
 #else
 #include <dlfcn.h>
 #include <unistd.h>
+#include "id_enclave_u.h"
+#include "pce_u.h"
 #endif
 #include "sgx_urts.h"     
-#include "sgx_dcap_ql_wrapper.h"
-#include "Enclave_u.h"
 #include "utility.h"
 
 #ifndef MAX_PATH
@@ -79,10 +81,9 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name,
 #endif
 
 #else
-#define TOOL_ENCLAVE_NAME "pck_id_retrieval_tool_enclave.signed.so"
+#define PCE_ENCLAVE_NAME  "libsgx_pce.signed.so.1"
+#define ID_ENCLAVE_NAME   "libsgx_id_enclave.signed.so.1"
 #define SGX_URTS_LIBRARY "libsgx_urts.so.1"             
-#define SGX_DCAP_QUOTE_GENERATION_LIBRARY "libsgx_dcap_ql.so.1"
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
 #define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY "libmpa_uefi.so.1"
 #define FINDFUNCTIONSYM   dlsym
 #define CLOSELIBRARYHANDLE  dlclose
@@ -95,9 +96,6 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const char* file_name,
     sgx_misc_attribute_t* misc_attr);
 
 
-typedef quote3_error_t(*sgx_ql_set_path_func_t)(sgx_ql_path_type_t path_type, const char* p_path);
-
-
 void* sgx_urts_handle = NULL;
 #endif 
 
@@ -108,9 +106,16 @@ typedef sgx_status_t(SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid,
     void* ms);
 
 typedef sgx_status_t (SGXAPI* sgx_destroy_enclave_func_t)(const sgx_enclave_id_t enclave_id);
+typedef sgx_status_t (SGXAPI* sgx_get_target_info_func_t)(const sgx_enclave_id_t enclave_id, sgx_target_info_t* target_info);
+
 #ifdef _MSC_VER
 #pragma warning(disable: 4201)    // used to eliminate `unused variable' warning
 #define UNUSED(val) (void)(val)
+
+typedef quote3_error_t (*sgx_qe_get_target_info_func_t)(sgx_target_info_t* p_qe_target_info);
+typedef quote3_error_t (*sgx_qe_get_quote_size_func_t)(uint32_t* p_quote_size);
+typedef quote3_error_t (*sgx_qe_get_quote_func_t)(const sgx_report_t* p_app_report,uint32_t quote_size, uint8_t* p_quote);
+
 #endif 
 #include "MPUefi.h"
 typedef MpResult(*mp_uefi_init_func_t)(const char* path, const LogLevel logLevel);
@@ -120,10 +125,6 @@ typedef MpResult(*mp_uefi_get_registration_status_func_t)(MpRegistrationStatus* 
 typedef MpResult(*mp_uefi_set_registration_status_func_t)(const MpRegistrationStatus* status);
 typedef MpResult(*mp_uefi_terminate_func_t)();
 
-
-typedef quote3_error_t (*sgx_qe_get_target_info_func_t)(sgx_target_info_t* p_qe_target_info);
-typedef quote3_error_t (*sgx_qe_get_quote_size_func_t)(uint32_t* p_quote_size);
-typedef quote3_error_t (*sgx_qe_get_quote_func_t)(const sgx_report_t* p_app_report,uint32_t quote_size, uint8_t* p_quote);
 
 
 //redefine this function to avoid sgx_urts library compile dependency
@@ -195,12 +196,40 @@ bool get_program_path(char *p_file_path, size_t buf_size)
 }
 #endif
 
-bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *app_report)
+
+bool get_urts_library_handle()
+{
+    // try to sgx_urts library to create enclave.
+#if defined(_MSC_VER)
+    sgx_urts_handle = LoadLibrary(SGX_URTS_LIBRARY);
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
+        return false;
+    }
+#else
+    sgx_urts_handle = dlopen(SGX_URTS_LIBRARY, RTLD_LAZY);
+    if (sgx_urts_handle == NULL) {
+        printf("ERROR: didn't find the sgx_urts.so library, please make sure you have installed sgx_urts installer package. \n");
+        return false;
+    }
+#endif
+    return true;
+}
+
+void close_urts_library_handle()
+{
+    CLOSELIBRARYHANDLE(sgx_urts_handle);
+}
+
+extern "C"
+#if defined(_MSC_VER)
+bool load_enclave(const TCHAR* enclave_name, sgx_enclave_id_t* p_eid)
+#else
+bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
+#endif
 {
     bool ret = true;
-    uint32_t retval = 0;
     sgx_status_t sgx_status = SGX_SUCCESS;
-    sgx_enclave_id_t eid = 0;
     int launch_token_updated = 0;
     sgx_launch_token_t launch_token = { 0 };
     memset(&launch_token, 0, sizeof(sgx_launch_token_t));
@@ -214,9 +243,61 @@ bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *
     if (!get_program_path(enclave_path, MAX_PATH))
         return false;
 #if defined(_MSC_VER)    
-    if (_tcsnlen(enclave_path, MAX_PATH) + _tcsnlen(TOOL_ENCLAVE_NAME, MAX_PATH) + sizeof(char) > MAX_PATH)
+    if (_tcsnlen(enclave_path, MAX_PATH) + _tcsnlen(enclave_name, MAX_PATH) + sizeof(char) > MAX_PATH)
         return false;
-    (void)_tcscat_s(enclave_path, MAX_PATH, TOOL_ENCLAVE_NAME);
+    (void)_tcscat_s(enclave_path, MAX_PATH, enclave_name);
+
+#ifdef UNICODE
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavew");
+#else
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavea");
+#endif
+#else
+    if (strnlen(enclave_path, MAX_PATH) + strnlen(enclave_name, MAX_PATH) + sizeof(char) > MAX_PATH)
+        return false;
+    (void)strncat(enclave_path, enclave_name, strnlen(enclave_name, MAX_PATH));
+
+    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclave");
+#endif
+
+
+    if (p_sgx_create_enclave == NULL ) {
+        printf("ERROR: Can't find the function sgx_create_enclave in sgx_urts library.\n");
+        return false;
+    }
+    
+    sgx_status = p_sgx_create_enclave(enclave_path,
+        0,
+        &launch_token,
+        &launch_token_updated,
+        p_eid,
+        NULL);
+    if (SGX_SUCCESS != sgx_status) {
+        printf("Error, call sgx_create_enclave: fail [%s], SGXError:%04x.\n",  __FUNCTION__, sgx_status);
+        ret = false;
+    }
+
+    return ret;
+}
+
+void unload_enclave(sgx_enclave_id_t* p_eid)
+{
+    sgx_destroy_enclave_func_t p_sgx_destroy_enclave = (sgx_destroy_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_destroy_enclave");
+    if (p_sgx_destroy_enclave == NULL) {
+        printf("ERROR: Can't find the function sgx_destory_enclave in sgx_urts library.\n");
+        return;
+    }
+    p_sgx_destroy_enclave(*p_eid);
+}
+
+
+#if defined(_MSC_VER)
+bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *app_report)
+{
+    bool ret = true;
+    uint32_t retval = 0;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_enclave_id_t eid = 0;
 
     // try to sgx_urts library to create enclave.
     sgx_urts_handle = LoadLibrary(SGX_URTS_LIBRARY);
@@ -224,45 +305,13 @@ bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *
         printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
         return false;
     }
-#ifdef UNICODE
-    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavew");
-#else
-    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavea");
-#endif
-#else
-    if (strnlen(enclave_path, MAX_PATH) + strnlen(TOOL_ENCLAVE_NAME, MAX_PATH) + sizeof(char) > MAX_PATH)
-        return false;
-    (void)strncat(enclave_path, TOOL_ENCLAVE_NAME, strnlen(TOOL_ENCLAVE_NAME, MAX_PATH));
 
-    // try to sgx_urts library to create enclave.
-    sgx_urts_handle = dlopen(SGX_URTS_LIBRARY, RTLD_LAZY);
-    if (sgx_urts_handle == NULL) {
-        printf("ERROR: didn't find the sgx_urts.so library, please make sure you have installed sgx_urts installer package. \n");
-        return false;
-    }
-    sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclave");
-#endif
-
-
-    sgx_destroy_enclave_func_t p_sgx_destroy_enclave = (sgx_destroy_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_destroy_enclave");
-    if (p_sgx_create_enclave == NULL || p_sgx_destroy_enclave == NULL) {
-        printf("ERROR: Can't find the function sgx_create_enclave or sgx_destory_enclave in sgx_urts library.\n");
-        CLOSELIBRARYHANDLE(sgx_urts_handle);
-        return false;
-    }
-    // Get the app enclave report targeting the QE3
-    sgx_status = p_sgx_create_enclave(enclave_path,//TOOL_ENCLAVE_NAME,
-        0,
-        &launch_token,
-        &launch_token_updated,
-        &eid,
-        NULL);
-    if (SGX_SUCCESS != sgx_status) {
-        printf("Error, call sgx_create_enclave fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
-        ret = false;
+    ret = load_enclave(TOOL_ENCLAVE_NAME, &eid);
+    if (ret == false) {
         goto CLEANUP;
     }
 
+    // Get the app enclave report targeting the QE3
     sgx_status = enclave_create_report(eid,
         &retval,
         &qe_target_info,
@@ -274,13 +323,17 @@ bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *
     }
 
 CLEANUP:
-    p_sgx_destroy_enclave(eid);
+    if (eid != 0) {
+        unload_enclave(&eid);
+    }
+
     if(sgx_urts_handle) {
         CLOSELIBRARYHANDLE(sgx_urts_handle);
     }
     return ret;
 }
 
+#endif
 
 // for multi-package platform, get the platform manifet
 // return value:
@@ -462,6 +515,8 @@ uefi_status_t set_registration_status()
 // return value:
 //  0: successfully generate the ecdsa quote
 // -1: error happens.
+
+#ifdef _MSC_VER
 int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
 {
     int ret = -1;
@@ -470,7 +525,6 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
     sgx_report_t app_report;
 
     // try to load quote provide library.
-#ifdef _MSC_VER
     HINSTANCE quote_provider_library_handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
     if (quote_provider_library_handle != NULL) {
         PRINT_MESSAGE("Found the Quote provider library. \n");
@@ -486,56 +540,7 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
         CLOSELIBRARYHANDLE(quote_provider_library_handle);
         return ret;
     }
-#else
-    char quote_provider_library_path[MAX_PATH] = "";
-    if (!get_program_path(quote_provider_library_path, MAX_PATH)){
-        printf("ERROR: Can't not the quote provider library path.\n");
-        return ret;
-    }
-    else {
-        PRINT_MESSAGE2("\n Quote provider library path is: %s \n", quote_provider_library_path);
-    }
-
-
-    if(strnlen(quote_provider_library_path ,MAX_PATH)+strnlen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,MAX_PATH)+sizeof(char)>MAX_PATH) {
-        return ret;
-    }
-    (void)strncat(quote_provider_library_path,SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, strnlen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,MAX_PATH));
-
-    // try to load sgx dcap quote generation library to generate quote.
-    void* sgx_dcap_ql_handle = dlopen(SGX_DCAP_QUOTE_GENERATION_LIBRARY, RTLD_LAZY);
-    if (sgx_dcap_ql_handle == NULL) {
-        printf("ERROR: didn't find the libsgx_dcap_ql.so library, please make sure you have installed DCAP quote generation installer package.\n");
-        return ret;
-    }
-
-    sgx_ql_set_path_func_t p_sgx_ql_set_path =(sgx_ql_set_path_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_ql_set_path");
-    if (p_sgx_ql_set_path == NULL) {
-        printf("ERROR: didn't find the funcion: sgx_ql_set_path in the sgx dcap quote generation shared library.\n");
-        return ret;
-    }
-
-    void *quote_provider_library_handle = dlopen(quote_provider_library_path, RTLD_LAZY);
-    if (quote_provider_library_handle != NULL) {
-        PRINT_MESSAGE("Found the Quote provider library. \n");
-    }
-    else {
-        printf("Warning: didn't find the quote provider library. \n");
-    }
-
-    qe3_ret = p_sgx_ql_set_path(SGX_QL_QPL_PATH, quote_provider_library_path);
-    if (SGX_QL_SUCCESS != qe3_ret) {
-        printf("Error in sgx_ql_set_path. 0x%04x\n", qe3_ret);
-	if(quote_provider_library_handle != NULL) {
-            CLOSELIBRARYHANDLE(quote_provider_library_handle);
-        }
-        return ret;
-    }
-    else {
-        PRINT_MESSAGE2("Set Quote provider library path to:%s . \n", quote_provider_library_path);
-    }
-
-#endif   
+    
     sgx_qe_get_target_info_func_t p_sgx_qe_get_target_info = (sgx_qe_get_target_info_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_target_info");
     sgx_qe_get_quote_size_func_t p_sgx_qe_get_quote_size = (sgx_qe_get_quote_size_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote_size");
     sgx_qe_get_quote_func_t p_sgx_qe_get_quote = (sgx_qe_get_quote_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote");
@@ -597,7 +602,172 @@ int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
     }
     return ret;
 }
+#else
+int collect_data(uint8_t **pp_data_buffer)
+{
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_status_t ecall_ret = SGX_SUCCESS;
+    sgx_key_128bit_t platform_id = { 0 };
+    int ret = 0;
+    uint32_t buffer_size = 0;
+    uint8_t * p_temp = NULL;
 
+    sgx_enclave_id_t pce_enclave_eid = 0;
+    sgx_enclave_id_t id_enclave_eid = 0;
+    
+    sgx_report_t id_enclave_report;
+    uint32_t enc_key_size = REF_RSA_OAEP_3072_MOD_SIZE + REF_RSA_OAEP_3072_EXP_SIZE;
+    uint8_t enc_public_key[REF_RSA_OAEP_3072_MOD_SIZE + REF_RSA_OAEP_3072_EXP_SIZE];
+    uint8_t encrypted_ppid[REF_RSA_OAEP_3072_MOD_SIZE];
+    uint32_t encrypted_ppid_ret_size;
+    pce_info_t pce_info;
+    uint8_t signature_scheme;
+    sgx_target_info_t pce_target_info;
+
+    sgx_get_target_info_func_t p_sgx_get_target_info = NULL;
+
+    bool load_flag = get_urts_library_handle();
+    if(false == load_flag) {// can't find urts shared library to load enclave
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    load_flag = load_enclave(ID_ENCLAVE_NAME, &id_enclave_eid);
+    if(false == load_flag) { // can't load id_enclave.
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    sgx_status = ide_get_id(id_enclave_eid, &ecall_ret, &platform_id);
+    if (SGX_SUCCESS != sgx_status) {
+        fprintf(stderr, "Failed to call into the ID_ENCLAVE:get_qe_id. 0x%04x.\n", sgx_status);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    if (SGX_SUCCESS != ecall_ret) {
+        fprintf(stderr, "Failed to get QE_ID. 0x%04x.\n", ecall_ret);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+
+    load_flag = load_enclave(PCE_ENCLAVE_NAME, &pce_enclave_eid);
+    if(false == load_flag) { // can't load pce enclave.
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    p_sgx_get_target_info = (sgx_get_target_info_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_get_target_info");
+    if (p_sgx_get_target_info == NULL) {
+        printf("ERROR: Can't find the function sgx_get_target_info in sgx_urts library.\n");
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    sgx_status = p_sgx_get_target_info(pce_enclave_eid, &pce_target_info);
+    if (SGX_SUCCESS != sgx_status) {
+        fprintf(stderr, "Failed to get pce target info. The error code is:  0x%04x.\n", sgx_status);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    sgx_status = ide_get_pce_encrypt_key(id_enclave_eid,
+                                         &ecall_ret,
+                                         &pce_target_info,
+                                         &id_enclave_report,
+                                         PCE_ALG_RSA_OAEP_3072,
+                                         PPID_RSA3072_ENCRYPTED,
+                                         enc_key_size,
+                                         enc_public_key);
+    if (SGX_SUCCESS != sgx_status) {
+        fprintf(stderr, "Failed to call into the ID_ENCLAVE: get_report_and_pce_encrypt_key. The error code is: 0x%04x.\n", sgx_status);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    if (SGX_SUCCESS != ecall_ret) {
+        fprintf(stderr, "Failed to generate PCE encryption key. The error code is: 0x%04x.\n", ecall_ret);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    sgx_status = get_pc_info(pce_enclave_eid,
+                              (uint32_t*) &ecall_ret,
+                              &id_enclave_report,
+                              enc_public_key,
+                              enc_key_size,
+                              PCE_ALG_RSA_OAEP_3072,
+                              encrypted_ppid,
+                              REF_RSA_OAEP_3072_MOD_SIZE,
+                              &encrypted_ppid_ret_size,
+                              &pce_info,
+                              &signature_scheme);
+    if (SGX_SUCCESS != sgx_status) {
+        fprintf(stderr, "Failed to call into PCE enclave: get_pc_info. The error code is: 0x%04x.\n", sgx_status);
+        ret = -1;
+	goto CLEANUP;
+    }
+    if (SGX_SUCCESS != ecall_ret) {
+        fprintf(stderr, "Failed to get PCE info. The error code is: 0x%04x.\n", ecall_ret);
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    if (signature_scheme != PCE_NIST_P256_ECDSA_SHA256) {
+        fprintf(stderr, "PCE returned incorrect signature scheme.\n");
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    if (encrypted_ppid_ret_size != ENCRYPTED_PPID_LENGTH) {
+        fprintf(stderr, "PCE returned unexpected returned encrypted PPID size.\n");
+        ret = -1;
+	goto CLEANUP;
+    }
+
+    buffer_size = ENCRYPTED_PPID_LENGTH + CPU_SVN_LENGTH + ISV_SVN_LENGTH + PCE_ID_LENGTH + DEFAULT_PLATFORM_ID_LENGTH;
+    *pp_data_buffer = (uint8_t *) malloc(buffer_size);
+
+    if (NULL == *pp_data_buffer) {
+        fprintf(stderr,"Couldn't allocate data buffer\n");
+        ret = -1;
+	goto CLEANUP;
+    }
+    memset(*pp_data_buffer, 0, buffer_size);
+    p_temp = *pp_data_buffer;
+    //encrypted ppid
+    memcpy(p_temp, encrypted_ppid, ENCRYPTED_PPID_LENGTH);
+    
+    //pce id
+    p_temp = p_temp + ENCRYPTED_PPID_LENGTH;
+    memcpy(p_temp , &(pce_info.pce_id), PCE_ID_LENGTH);
+
+    //cpu svn
+    p_temp = p_temp + PCE_ID_LENGTH;
+    memcpy(p_temp , id_enclave_report.body.cpu_svn.svn, CPU_SVN_LENGTH);
+    
+    //pce isv svn
+    p_temp = p_temp + CPU_SVN_LENGTH;
+    memcpy(p_temp , &(pce_info.pce_isvn), ISV_SVN_LENGTH);
+    
+    //platform id
+    p_temp = p_temp + ISV_SVN_LENGTH;
+    memcpy(p_temp , platform_id, DEFAULT_PLATFORM_ID_LENGTH);
+
+    
+CLEANUP:
+    if(pce_enclave_eid != 0) {
+        unload_enclave(&pce_enclave_eid);
+    }
+    if(id_enclave_eid != 0) {
+        unload_enclave(&id_enclave_eid);
+    }
+    close_urts_library_handle();
+    return ret;
+
+}
+#endif
 
 bool is_valid_proxy_type(std::string& proxy_type) {
     if (proxy_type.compare("DEFAULT") == 0 ||

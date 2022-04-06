@@ -12,8 +12,8 @@ global:
     sgx_qcnl_free_qve_identity;
     sgx_qcnl_get_root_ca_crl;
     sgx_qcnl_free_root_ca_crl;
-    sgx_qcnl_register_platform;
     sgx_qcnl_get_api_version;
+    sgx_qcnl_set_logging_callback;
 
 local:
     *;

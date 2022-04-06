@@ -67,7 +67,7 @@ async function do_request(url, options) {
     // global opitons ( proxy, timeout, etc)
     options.timeout = HTTP_TIMEOUT;
     options.agent = HttpsAgent;
-    options.retry = {limit: MAX_RETRY_COUNT};
+    options.retry = {limit: MAX_RETRY_COUNT, methods : ['GET', 'PUT', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE', 'POST']};
     options.throwHttpErrors = false;
 
     let response = await got(url, options);

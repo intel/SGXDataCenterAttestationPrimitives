@@ -48,120 +48,65 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         class JsonParser;
 
         class TcbInfo;
-        /**
-         * Class representing a single TCB Level
-         */
-        class TcbLevel
+        class TcbLevel;
+
+        class TcbComponent
         {
         public:
-            /**
-             * Creates TCB Level object with provided data
-             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
-             * @param pceSvn - Unsigned integer for PCE SVN
-             * @param status - TCB Level status which is a string with one of those values:
-             *          - UpToDate
-             *          - ConfigurationNeeded
-             *          - OutOfDate
-             *          - OutOfDateConfigurationNeeded
-             *          - Revoked
-             * @return the value for given component
-             *
-             */
-            TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
-                     unsigned int pceSvn,
-                     const std::string& status);
+            uint8_t getSvn() const;
+            const std::string &getCategory() const;
+            const std::string &getType() const;
+            TcbComponent(const uint8_t& svn, const std::string& category, const std::string& type)
+                : _svn(svn), _category(category), _type(type) {}
+            TcbComponent(const uint8_t& svn): _svn(svn) {}
 
-            /**
-             * Creates TCB Level object with provided data
-             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
-             * @param pceSvn - Unsigned integer for PCE SVN
-             * @param status - TCB Level status which is a string with one of those values:
-             *          - UpToDate
-             *          - ConfigurationNeeded
-             *          - OutOfDate
-             *          - OutOfDateConfigurationNeeded
-             *          - Revoked
-             * @param tcbDate - Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
-             * @param advisoryIDs - Vector of strings representing security advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
-             * @return the value for given component
-             *
-             */
-            TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
-                     unsigned int pceSvn,
-                     const std::string& status,
-                     std::time_t tcbDate,
-                     std::vector<std::string> advisoryIDs);
-
-            virtual ~TcbLevel() = default;
-
-            virtual bool operator>(const TcbLevel& other) const;
-
-            /**
-             * Get SVN component value at given position
-             * @param componentNumber
-             * @return the value for given component
-             *
-             * @throws intel::sgx::dcap::parser::FormatException when out of range
-             */
-            virtual unsigned int getSgxTcbComponentSvn(unsigned int componentNumber) const;
-
-            /**
-             * Get CPU SVN
-             * @return Vector of bytes representing CPU SVN (16 bytes)
-             *
-             */
-            virtual const std::vector<uint8_t>& getCpuSvn() const;
-
-            /**
-             * Get PCE SVN
-             * @return unsigned integer value representing PCE SVN
-             *
-             */
-            virtual unsigned int getPceSvn() const;
-
-            /**
-             * Get status of this tcb level
-             * @return string with one of those values:
-             *          - UpToDate
-             *          - ConfigurationNeeded
-             *          - OutOfDate
-             *          - OutOfDateConfigurationNeeded
-             *          - Revoked
-             *
-             */
-            virtual const std::string& getStatus() const;
-
-            /**
-             * Get date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
-             * @return std::time_t structure representing TCB Date
-             *
-             */
-            virtual const std::time_t& getTcbDate() const;
-
-            /**
-             * Get array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
-             * @return array of strings
-             *
-             */
-            virtual const std::vector<std::string>& getAdvisoryIDs() const;
-
+            bool operator>(const TcbComponent& other) const;
+            bool operator<(const TcbComponent& other) const;
         private:
-            std::vector<uint8_t> _cpuSvnComponents;
-            unsigned int _pceSvn;
-            std::string _status;
-            std::time_t _tcbDate;
-            std::vector<std::string> _advisoryIDs{};
+            uint8_t _svn = 0;
+            std::string _category;
+            std::string _type;
+            explicit TcbComponent(const ::rapidjson::Value& tcbComponent);
+            friend class TcbLevel;
+        };
 
-            void setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser);
-            void parseSvns(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
-            void parseStatus(const ::rapidjson::Value &tcbLevel,
-                             const std::vector<std::string> &validStatuses,
-                             const std::string &filedName);
-            void parseTcbLevelV1(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
-            void parseTcbLevelV2(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
+        /**
+         * Class representing properties of Intel’s TDX SEAM module.
+         */
+        class TdxModule
+        {
+        public:
+            TdxModule() = default;
+            virtual ~TdxModule() = default;
+            TdxModule(const std::vector<uint8_t>& mrsigner, const std::vector<uint8_t>& attributes,
+                      const std::vector<uint8_t>& attributesMask): _mrsigner(mrsigner), _attributes(attributes),
+                      _attributesMask(attributesMask) {}
 
-            explicit TcbLevel(const ::rapidjson::Value& tcbLevel, unsigned int version);
+            /**
+             * Get MRSIGNER
+             * @return vector of bytes representing the measurement of a TDX SEAM module’s signer
+             *          (48 bytes with SHA384 hash, value: 0’ed for Intel SEAM module).
+             */
+            virtual const std::vector<uint8_t>& getMrSigner() const;
 
+            /**
+             * Get attributes
+             * @return vector of bytes representing attributes "golden" value (upon applying mask) for TDX SEAM module
+             *          (value: 8 bytes set to 0x00).
+             */
+            virtual const std::vector<uint8_t>& getAttributes() const;
+
+            /**
+             * Get attributes mask
+             * @return vector of bytes representing representing mask to be applied to TDX SEAM module’s attributes
+             *          value retrieved from the platform (value: 8 bytes set to 0xFF).
+             */
+            virtual const std::vector<uint8_t>& getAttributesMask() const;
+        private:
+            std::vector<uint8_t> _mrsigner;
+            std::vector<uint8_t> _attributes;
+            std::vector<uint8_t> _attributesMask;
+            explicit TdxModule(const ::rapidjson::Value& tdxModule);
             friend class TcbInfo;
         };
 
@@ -174,20 +119,31 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             /**
              * Enum describing version of TCB Level structure
              */
-            enum class Version : unsigned int
+            enum class Version : uint32_t
             {
-                V1 = 1,
-                V2 = 2
+                V2 = 2,
+                V3 = 3
             };
+
+            /// Identifier of the SGX TCB Info
+            static const std::string SGX_ID;
+            /// Identifier of the TDX TCB Info
+            static const std::string TDX_ID;
 
             TcbInfo() = default;
             virtual ~TcbInfo() = default;
 
             /**
+             * Get identifier of TCB Info structure
+             * @return string with identifier
+             */
+            virtual std::string getId() const;
+
+            /**
              * Get version of TCB Info structure
              * @return unsigned integer with version number
              */
-            virtual unsigned int getVersion() const;
+            virtual uint32_t getVersion() const;
 
             /**
              * Get date and time when TCB information was created in UTC
@@ -250,7 +206,17 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              *
              * @throws intel::sgx::dcap::parser::FormatException in case of TCBInfo version equal 1
              */
-            virtual unsigned int getTcbEvaluationDataNumber() const;
+            virtual uint32_t getTcbEvaluationDataNumber() const;
+
+            /**
+             * Get properties of Intel’s TDX SEAM module
+             * This field is optional:
+                -	In case of TCB Info for SGX it is not present.
+                -	In case of TCB Info for TDX it must be present.
+             * @return TdxModule object representing properties of Intel's TDX SEAM Module
+             * @throw FormatException if TdxModule is not present
+             */
+            virtual const TdxModule& getTdxModule() const;
 
             /**
              * Staic function that parses JSON text from a string into TCB Info object
@@ -262,6 +228,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             static TcbInfo parse(const std::string& json);
 
         private:
+            std::string _id;
             Version _version = Version::V2;
             std::time_t _issueDate = 0;
             std::time_t _nextUpdate = 0;
@@ -270,12 +237,189 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             std::set<TcbLevel, std::greater<TcbLevel>> _tcbLevels;
             std::vector<uint8_t> _signature;
             std::vector<uint8_t> _infoBody;
+            TdxModule _tdxModule;
             int _tcbType{};
-            unsigned int _tcbEvaluationDataNumber{};
+            uint32_t _tcbEvaluationDataNumber{};
 
             void parsePartV2(const ::rapidjson::Value &tcbInfo, JsonParser& jsonParser);
+            void parsePartV3(const ::rapidjson::Value &tcbInfo);
             explicit TcbInfo(const std::string& jsonString);
         };
+
+        /**
+         * Class representing a single TCB Level
+         */
+        class TcbLevel
+        {
+        public:
+            /**
+             * Creates TCB Level object with provided data
+             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
+             * @param pceSvn - unsigned integer for PCE SVN
+             * @param status - TCB Level status which is a string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             * @return the value for given component
+             *
+             */
+            TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
+                     uint32_t pceSvn,
+                     const std::string& status);
+
+            /**
+             * Creates TCB Level object with provided data
+             * @param cpuSvnComponents - Vector of bytes representing CPU SVN value (16 bytes)
+             * @param pceSvn - unsigned integer for PCE SVN
+             * @param status - TCB Level status which is a string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             * @param tcbDate - Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
+             * @param advisoryIDs - Vector of strings representing security advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
+             * @return the value for given component
+             *
+             */
+            TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
+                     const uint32_t pceSvn,
+                     const std::string& status,
+                     const std::time_t tcbDate,
+                     std::vector<std::string> advisoryIDs);
+
+            /**
+             * Creates TCB Level V3 object with provided data
+             * @param id - Identifier of TEE TYPE - SGX or TDX
+             * @param sgxTcbComponents - Vector of TCB Components representing SGX TCB Components value (16 entries)
+             * @param tdxTcbComponents - Vector of TCB Components representing TDX TCB Components value (16 entries)
+             * @param pceSvn - unsigned integer for PCE SVN
+             * @param status - TCB Level status which is a string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             * @return the value for given component
+             *
+             */
+            TcbLevel(const std::string& id,
+                     const std::vector<TcbComponent>& sgxTcbComponents,
+                     const std::vector<TcbComponent>& tdxTcbComponents,
+                     const uint32_t pceSvn,
+                     const std::string& status);
+
+            virtual ~TcbLevel() = default;
+            virtual bool operator>(const TcbLevel& other) const;
+
+            /**
+             * Get SVN component value at given position
+             * @param componentNumber
+             * @return the value for given component
+             *
+             * @throws intel::sgx::dcap::parser::FormatException when out of range
+             */
+            virtual uint32_t getSgxTcbComponentSvn(uint32_t componentNumber) const;
+
+            /**
+             * Get CPU SVN
+             * @return Vector of bytes representing CPU SVN (16 bytes)
+             *
+             */
+            virtual const std::vector<uint8_t>& getCpuSvn() const;
+
+            /**
+             * Get SGX TCB Component
+             * @return Vector of TcbComponents representing (16 entries)
+             *
+             */
+            virtual const std::vector<TcbComponent>& getSgxTcbComponents() const;
+
+            /**
+             * Get SGX SVN component value at given position
+             * @param componentNumber
+             * @return the value for given component
+             *
+             * @throws intel::sgx::dcap::parser::FormatException when out of range
+             */
+            virtual const TcbComponent& getSgxTcbComponent(uint32_t componentNumber) const;
+
+            /**
+             * Get TDX TCB Component
+             * @return Vector of TcbComponents representing (16 entries)
+             *
+             */
+            virtual const std::vector<TcbComponent>& getTdxTcbComponents() const;
+
+            /**
+             * Get TDX SVN component value at given position
+             * @param componentNumber
+             * @return the value for given component
+             *
+             * @throws intel::sgx::dcap::parser::FormatException when out of range
+             */
+            virtual const TcbComponent& getTdxTcbComponent(uint32_t componentNumber) const;
+
+            /**
+             * Get PCE SVN
+             * @return unsigned integer value representing PCE SVN
+             *
+             */
+            virtual uint32_t getPceSvn() const;
+
+            /**
+             * Get status of this tcb level
+             * @return string with one of those values:
+             *          - UpToDate
+             *          - ConfigurationNeeded
+             *          - OutOfDate
+             *          - OutOfDateConfigurationNeeded
+             *          - Revoked
+             *
+             */
+            virtual const std::string& getStatus() const;
+
+            /**
+             * Get date and time when the TCB level was certified not to be vulnerable to any issues described in SAs that were published on or prior to this date.
+             * @return std::time_t structure representing TCB Date
+             *
+             */
+            virtual const std::time_t& getTcbDate() const;
+
+            /**
+             * Get array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to, e.g. [ "INTEL-SA-00079", "INTEL-SA-00076" ]
+             * @return array of strings
+             *
+             */
+            virtual const std::vector<std::string>& getAdvisoryIDs() const;
+
+        private:
+            std::string _id;
+            TcbInfo::Version _version = TcbInfo::Version::V2;
+            std::vector<uint8_t> _cpuSvnComponents;
+            std::vector<TcbComponent> _sgxTcbComponents;
+            std::vector<TcbComponent> _tdxTcbComponents;
+            uint32_t _pceSvn;
+            std::string _status;
+            std::time_t _tcbDate;
+            std::vector<std::string> _advisoryIDs{};
+
+            void setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser);
+            void setTcbComponents(const ::rapidjson::Value& tcb);
+            void parseSvns(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
+            void parseStatus(const ::rapidjson::Value &tcbLevel,
+                             const std::vector<std::string> &validStatuses,
+                             const std::string &filedName);
+            void parseTcbLevelV2(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
+            void parseTcbLevelV3(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser);
+            void parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParser& jsonParser);
+            explicit TcbLevel(const ::rapidjson::Value& tcbLevel, const uint32_t version);
+            explicit TcbLevel(const ::rapidjson::Value& tcbLevel, const uint32_t version, const std::string& id);
+            friend class TcbInfo;
+        };
+
     }
 
     namespace x509
@@ -566,7 +710,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * Get version of X509 certificate
              * @return unsigned integer with version
              */
-            virtual unsigned int getVersion() const;
+            virtual uint32_t getVersion() const;
 
             /**
              * Get serial number of X509 certificate
@@ -633,7 +777,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             static Certificate parse(const std::string& pem);
 
         protected:
-            unsigned int _version;
+            uint32_t _version;
             DistinguishedName _subject;
             DistinguishedName _issuer;
             Validity _validity;
@@ -661,7 +805,8 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         enum SgxType
         {
             Standard,
-            Scalable
+            Scalable,
+            ScalableWithIntegrity
         };
 
         class PckCertificate;
@@ -681,7 +826,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              */
             Tcb(const std::vector<uint8_t>& cpusvn,
                 const std::vector<uint8_t>& cpusvnComponents,
-                unsigned int pcesvn);
+                uint32_t pcesvn);
             virtual ~Tcb() = default;
 
             /**
@@ -698,7 +843,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              *
              * @throws intel::sgx::dcap::parser::FormatException when out of range
              */
-            virtual unsigned int getSgxTcbComponentSvn(unsigned int componentNumber) const;
+            virtual uint32_t getSgxTcbComponentSvn(uint32_t componentNumber) const;
             /**
              * Get all CPU SVN components
              * @return vector of bytes with cpu svn components
@@ -709,7 +854,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * Get PCE SVN
              * @return unsigned integer representing PCE SVN
              */
-            virtual unsigned int getPceSvn() const;
+            virtual uint32_t getPceSvn() const;
 
             /**
              * Get CPU SVN
@@ -720,7 +865,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         private:
             std::vector<uint8_t> _cpuSvn;
             std::vector<uint8_t> _cpuSvnComponents;
-            unsigned int _pceSvn{};
+            uint32_t _pceSvn{};
 
             explicit Tcb(const ASN1_TYPE *);
 

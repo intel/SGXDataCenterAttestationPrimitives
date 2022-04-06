@@ -1,37 +1,36 @@
 Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP): PCK Cert ID Retrieval Tool
 ===============================================
 
-
 ## Prerequisites
 - Ensure that you have the following required hardware:
     * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
     * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 
+- Configure the system with the **Intel(R) SGX hardware enabled** option.
+
 For Linux version:
 - Now this tool supports two modes: 
     a. enclave mode: it means that to retrieve the platform's information, enclave load is needed. Thus in this mode, the following requirements are needed.
-        - Please build and install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
+        - Please install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
              sudo ./sgx_linux_x64_driver.bin
           or you can use Linux kernel 5.11 or higher version kernel 
         - Please install these Debian or RPM packages, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
-             a. libsgx-enclave-common_{version}-{revision}_{arch}.deb or libsgx-enclave-common_{version}-{revision}_{arch}.rpm
-             b. libsgx-dcap-ql_{version}-{revision}_{arch}.deb or libsgx-dcap-ql_{version}-{revision}_{arch}.rpm
+             a. libsgx-enclave-common_{version}-{revision}_{arch}.deb or libsgx-enclave-common-{version}-{revision}_{arch}.rpm
+             b. libsgx-urts_{version}-{revision}_{arch}.deb or libsgx-urts-{version}-{revision}_{arch}.rpm
+             c. libsgx-ae-pce_{version}-{revision}_{arch}.deb or libsgx-ae-pce-{version}-{revision}_{arch}.rpm
+             d. libsgx-ae-id-enclave_{version}-{revision}_{arch}.deb or libsgx-ae-id-enclave-{version}-{revision}_{arch}.rpm
     b. non-enclave mode: in this mode, this tool is used to retrieve the platform manifest for multi-package. command line: -platform_id is used, and 
                          user need provide the platform_id.
 - If this tool is used on multi-package platform:
     a. please install  libsgx-ra-uefi_{version}-{revision}_{arch}.deb or libsgx-ra-uefi_{version}-{revision}_{arch}.rpm
-- Configure the system with the **Intel(R) SGX hardware enabled** option.
 
 For Windows version:
 - Now this tool supports two modes: 
     a. enclave mode: it means that to retrieve the platform's information, enclave load is needed. Thus in this mode, the following requirements are needed.
-        - Please install DCAP INF installer
-        - Please Install Intel(R)_SGX_Windows_x64_PSW_2.x.xxx.xxx for Windows Server 2016 or 2019
+        - If your platform is connected with internet, you don't need to do anything, otherwise you need to install SGX base driver manually.
     b. non-enclave mode: in this mode, this tool is used to retrieve the platform manifest for multi-package. command line: -platform_id is used, and 
                          user need provide the platform_id.
 - If this tool is used on multi-package platform:  Please install INF installer: sgx_mpa_{version}
-    
-
 
 ## Usage
 PCKIDRetrievalTool [OPTION]
@@ -50,7 +49,6 @@ Options:
   -help                                - show command help
 
 If option is not specified, it will write the retrieved data to file: pckid_retrieval.csv
-
 
 user can also use the configuration file(network_configuration.conf) to configure these options, but
 command line option has higher priority.

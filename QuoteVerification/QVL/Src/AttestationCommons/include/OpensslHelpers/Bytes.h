@@ -36,6 +36,8 @@
 #include <stdexcept>
 #include <ctype.h>
 #include <string>
+#include <algorithm>
+#include <iterator>
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -73,6 +75,10 @@ inline Bytes operator+(const Bytes& lhs, const Bytes& rhs)
 inline Bytes hexStringToBytes(const std::string& hexEncoded)
 {
     try{
+        if (hexEncoded.length() % 2 == 1) {
+            return {};
+        }
+
         auto pos = hexEncoded.cbegin();
         Bytes outBuffer;
         outBuffer.reserve(hexEncoded.length() / 2);
@@ -102,6 +108,23 @@ inline std::string bytesToHexString(const Bytes &vector)
         result.push_back(hex[c / 16]);
         result.push_back(hex[c % 16]);
     }
+
+    return result;
+}
+
+inline std::vector<uint8_t> applyMask(const std::vector<uint8_t>& base, const std::vector<uint8_t>& mask)
+{
+    std::vector<uint8_t> result;
+
+    if(base.size() != mask.size())
+    {
+        return result;
+    }
+
+    auto mask_it = mask.cbegin();
+    std::transform(base.cbegin(), base.cend(), std::back_inserter(result), [&mask_it](auto &base_it) {
+        return (uint8_t)((base_it) & (*(mask_it++)));
+    });
 
     return result;
 }

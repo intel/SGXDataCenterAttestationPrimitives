@@ -30,9 +30,24 @@
  */
 
 #include "TcbInfoJsonGenerator.h"
-
 #include <iomanip>
 #include <sstream>
+
+std::string bytesToHexString(const std::vector<uint8_t> &vector)
+{
+    std::string result;
+    result.reserve(vector.size() * 2);   // two digits per character
+
+    static constexpr char hex[] = "0123456789ABCDEF";
+
+    for (const uint8_t c : vector)
+    {
+        result.push_back(hex[c / 16]);
+        result.push_back(hex[c % 16]);
+    }
+
+    return result;
+}
 
 static std::string getTcb(std::array<int, 16> tcb)
 {
@@ -42,7 +57,7 @@ static std::string getTcb(std::array<int, 16> tcb)
     std::stringstream number;
     std::string result;
 
-    for(unsigned int i = 0; i < tcb.size(); i++)
+    for(uint32_t i = 0; i < tcb.size(); i++)
     {
         number << std::setw(2) << std::setfill('0') << i + 1;
         sgxtcbcompXXsvn = sgxtcbcomp + number.str() + svn;
@@ -72,20 +87,49 @@ static std::string getTcbLevels(std::array<int, 16> tcb, int pcesvn, std::string
     return result;
 }
 
-std::string tcbInfoJsonV1Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string status)
+static std::string getTcbComponents(std::array<TcbComponent, 16> components)
 {
-    std::string result;
-    result = R"({"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
-    result +=  R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
-    result += R"(","tcbLevels":)" + getTcbLevelsV1(tcb, pcesvn, status);
-
+    std::string result = "[";
+    for(auto it = components.begin(); it != components.end(); it++)
+    {
+        auto component = *it;
+        result += R"({"svn":)" + std::to_string(component.svn);
+        if(!component.category.empty())
+        {
+            result += R"(,"category":")" + component.category + R"(")";
+        }
+        if(!component.type.empty())
+        {
+            result += R"(,"type":")" + component.type + R"(")";
+        }
+        result += "},";
+    }
+    result = result.substr(0, result.length() - 1) + "]";
     return result;
 }
 
-std::string tcbInfoJsonV2Body(int version, std::string issueDate, std::string nextUpdate, std::string fmspc,
-                              std::string pceId, std::array<int, 16> tcb, int pcesvn, std::string tcbStatus,
-                              int tcbType, int tcbEvaluationDataNumber, std::string tcbDate)
+static std::string getTcbLevels(std::string id, std::vector<TcbLevelV3> tcbLevels)
+{
+    std::string result = "[";
+    for(auto it = tcbLevels.begin(); it != tcbLevels.end(); it++)
+    {
+        auto tcbLevel = *it;
+        result += R"({"tcb":{"sgxtcbcomponents":)" + getTcbComponents(tcbLevel.sgxTcbComponents);
+        if(id == "TDX")
+        {
+            result += R"(,"tdxtcbcomponents":)" + getTcbComponents(tcbLevel.tdxTcbComponents);
+        }
+        result += R"(,"pcesvn":)" + std::to_string(tcbLevel.pcesvn);
+        result += R"(},"tcbDate":")" + tcbLevel.tcbDate;
+        result += R"(","tcbStatus":")" + tcbLevel.tcbStatus + R"("},)";
+    }
+    result = result.substr(0, result.length() - 1) + "]";
+    return result;
+}
+
+std::string tcbInfoJsonV2Body(uint32_t version, std::string issueDate, std::string nextUpdate, std::string fmspc,
+                              std::string pceId, std::array<int, 16> tcb, uint16_t pcesvn, std::string tcbStatus,
+                              uint32_t tcbType, uint32_t tcbEvaluationDataNumber, std::string tcbDate)
 {
     std::string result;
     result = R"({"version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
@@ -94,6 +138,26 @@ std::string tcbInfoJsonV2Body(int version, std::string issueDate, std::string ne
     result += R"(,"tcbEvaluationDataNumber":)" + std::to_string(tcbEvaluationDataNumber);
     result += R"(,"tcbLevels":)" + getTcbLevels(tcb, pcesvn, tcbStatus, tcbDate);
 
+    return result;
+}
+
+std::string tcbInfoJsonV3Body(std::string id, uint32_t version, std::string issueDate, std::string nextUpdate,
+                              std::string fmspc, std::string pceId, uint32_t tcbType, uint32_t tcbEvaluationDataNumber,
+                              std::vector<TcbLevelV3> tcbLevels, bool includeTdxModule, TdxModule tdxModule)
+{
+    std::string result;
+    result = R"({"id":")" + id;
+    result += R"(","version":)" + std::to_string(version) + + R"(,"issueDate":")" + issueDate;
+    result += R"(","nextUpdate":")" + nextUpdate + R"(","fmspc":")" + fmspc + R"(","pceId":")" + pceId;
+    result += R"(","tcbType":)" + std::to_string(tcbType);
+    result += R"(,"tcbEvaluationDataNumber":)" + std::to_string(tcbEvaluationDataNumber);
+    if (includeTdxModule)
+    {
+        result += R"(,"tdxModule":{"mrsigner":")" + bytesToHexString(tdxModule.mrsigner) + R"(","attributes":")"
+                + bytesToHexString(tdxModule.attributes) + R"(","attributesMask":")" + bytesToHexString(tdxModule.attributesMask)
+                + R"("})";
+    }
+    result += R"(,"tcbLevels":)" + getTcbLevels(id, tcbLevels) + "}";
     return result;
 }
 
@@ -126,4 +190,16 @@ std::array<int, 16> getRandomTcb()
     }
 
     return tcb;
+}
+
+std::array<TcbComponent, 16> getRandomTcbComponent()
+{
+    std::array<TcbComponent, 16> tcbComponents;
+    for(unsigned long i = 0; i < 16; i ++)
+    {
+        tcbComponents[i].svn = static_cast<uint8_t>(rand() % 255);
+        tcbComponents[i].category = "category" + std::to_string(rand() % 255);
+        tcbComponents[i].type = "type" + std::to_string(rand() % 255);
+    }
+    return tcbComponents;
 }

@@ -63,6 +63,8 @@ extern sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity;
 extern sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl;
 extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
 
+extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
+extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
 
 extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
 extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
@@ -75,7 +77,6 @@ extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_mu
 extern pthread_create_ocall_func_t p_pthread_create_ocall;
 extern pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall;
 extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
-
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
@@ -110,6 +111,8 @@ bool sgx_dcap_load_qpl()
         return false;
     }
 
+    // don't include TDX related check due to user may use old version QPL
+    //
     if (g_qpl_handle &&
             p_sgx_ql_get_quote_verification_collateral && p_sgx_ql_free_quote_verification_collateral &&
             p_sgx_ql_get_qve_identity && p_sgx_ql_free_qve_identity &&
@@ -206,6 +209,24 @@ bool sgx_dcap_load_qpl()
         if (p_sgx_ql_free_root_ca_crl == NULL || err != NULL) {
             SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in Quote Provider library %s.\n", QL_API_FREE_ROOT_CA_CRL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
             break;
+        }
+
+        //search for tdx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library
+        //
+        p_tdx_ql_get_quote_verification_collateral = (tdx_get_quote_verification_collateral_func_t)dlsym(g_qpl_handle, TDX_QL_API_GET_QUOTE_VERIFICATION_COLLATERAL);
+        err = dlerror();
+        if (p_tdx_ql_get_quote_verification_collateral == NULL || err != NULL) {
+            // don't return error due to user may use old version QPL
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote Provider library %s.\n", TDX_QL_API_GET_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        }
+
+        //search for sgx_ql_free_quote_verification_collateral symbol in dcap_quoteprov library
+        //
+        p_tdx_ql_free_quote_verification_collateral = (tdx_free_quote_verification_collateral_func_t)dlsym(g_qpl_handle, TDX_QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL);
+        err = dlerror();
+        if (p_tdx_ql_free_quote_verification_collateral == NULL || err != NULL) {
+            // don't return error due to user may use old version QPL
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote Provider library %s.\n", TDX_QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         }
 
         ret = true;
@@ -415,6 +436,11 @@ __attribute__((destructor)) void _qv_global_destructor()
         p_sgx_ql_get_root_ca_crl = NULL;
     if (p_sgx_ql_free_root_ca_crl)
         p_sgx_ql_free_root_ca_crl = NULL;
+
+    if (p_tdx_ql_get_quote_verification_collateral)
+        p_tdx_ql_get_quote_verification_collateral = NULL;
+    if (p_tdx_ql_free_quote_verification_collateral)
+        p_tdx_ql_free_quote_verification_collateral = NULL;
 
     if (g_qpl_handle) {
         dlclose(g_qpl_handle);

@@ -41,6 +41,8 @@ License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
 Source0:        %{name}-%{version}.tar.gz
 
+AutoProv:       no
+
 %description
 Intel(R) Software Guard Extensions QE3
 

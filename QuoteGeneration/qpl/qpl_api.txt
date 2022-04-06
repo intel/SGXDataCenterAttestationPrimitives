@@ -146,7 +146,14 @@ typedef struct _sgx_ql_config_t {
 /** This is the data provided to the quote verifier by the verifying platform software. */
 typedef struct _sgx_ql_qve_collateral_t
 {
-    uint32_t version;                      /// version = 1.  PCK Cert chain is in the Quote.
+    union {
+        uint32_t version;           ///< 'version' is the backward compatible legacy representation
+        struct {                    ///< For PCS V1 and V2 APIs, the major_version = 1 and minor_version = 0 and
+            uint16_t major_version; ///< the CRLs will be formatted in PEM. For PCS V3 APIs, the major_version = 3 and the
+            uint16_t minor_version; ///< minor_version can be either 0 or 1. minor_verion of 0 indicates the CRL’s are formatted
+                                    ///< in Base16 encoded DER.  A minor version of 1 indicates the CRL’s are formatted in raw binary DER.
+        };
+    };
     char *pck_crl_issuer_chain;
     uint32_t pck_crl_issuer_chain_size;
     char *root_ca_crl;                     /// Root CA CRL

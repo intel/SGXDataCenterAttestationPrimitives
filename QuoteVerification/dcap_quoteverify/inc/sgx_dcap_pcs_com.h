@@ -53,6 +53,8 @@ extern "C" {
 #define QL_API_GET_ROOT_CA_CRL "sgx_ql_get_root_ca_crl"
 #define QL_API_FREE_ROOT_CA_CRL "sgx_ql_free_root_ca_crl"
 
+#define TDX_QL_API_GET_QUOTE_VERIFICATION_COLLATERAL "tdx_ql_get_quote_verification_collateral"
+#define TDX_QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL "tdx_ql_free_quote_verification_collateral"
 
 typedef quote3_error_t(*sgx_get_quote_verification_collateral_func_t)(const char *fmspc,
         uint16_t fmspc_size,
@@ -72,7 +74,12 @@ typedef quote3_error_t(*sgx_ql_get_root_ca_crl_func_t)(uint8_t **pp_root_ca_crl,
 
 typedef quote3_error_t(*sgx_ql_free_root_ca_crl_func_t)(uint8_t *p_root_ca_crl);
 
+typedef quote3_error_t(*tdx_get_quote_verification_collateral_func_t)(const char *fmspc,
+        uint16_t fmspc_size,
+        const char *pck_ca,
+        struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
 
+typedef quote3_error_t(*tdx_free_quote_verification_collateral_func_t)(struct _sgx_ql_qve_collateral_t *p_quote_collateral);
 
 
 bool sgx_dcap_load_qpl();
@@ -85,7 +92,6 @@ quote3_error_t sgx_dcap_retrieve_verification_collateral(
 
 quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *pp_quote_collateral);
 
-
 quote3_error_t sgx_dcap_retrieve_qve_identity(
         uint8_t **pp_qveid,
         uint32_t *p_qveid_size,
@@ -94,10 +100,20 @@ quote3_error_t sgx_dcap_retrieve_qve_identity(
         uint8_t **pp_root_ca_crl,
         uint16_t *p_root_ca_crl_size);
 
-
 quote3_error_t sgx_dcap_free_qve_identity(uint8_t *p_qveid,
                                           uint8_t *p_qveid_issue_chain,
                                           uint8_t *p_root_ca_crl);
+
+
+quote3_error_t tdx_dcap_retrieve_verification_collateral(
+        const char *fmspc,
+        uint16_t fmspc_size,
+        const char *pck_ca,
+        struct _sgx_ql_qve_collateral_t **pp_quote_collateral);
+
+quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collateral_t *pp_quote_collateral);
+
+
 #ifndef _MSC_VER
 bool sgx_qv_set_qpl_path(const char* p_path);
 bool sgx_qv_set_qve_path(const char* p_path);

@@ -30,7 +30,7 @@
  */
 
 #include "EnclaveIdentityVerifier.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include "Utils/TimeUtils.h"
 
 #include <CertVerification/X509Constants.h>
@@ -51,7 +51,7 @@ EnclaveIdentityVerifier::EnclaveIdentityVerifier(std::unique_ptr<CommonVerifier>
 }
 
 Status EnclaveIdentityVerifier::verify(
-            const EnclaveIdentity &enclaveIdentity,
+            const EnclaveIdentityV2 &enclaveIdentity,
             const CertificateChain &chain,
             const pckparser::CrlStore &rootCaCrl,
             const dcap::parser::x509::Certificate &trustedRoot,

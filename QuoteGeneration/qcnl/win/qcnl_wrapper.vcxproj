@@ -94,7 +94,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;QCNLWRAPPER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -106,6 +106,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winhttp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>qcnl_wrapper.def</ModuleDefinitionFile>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -116,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;QCNLWRAPPER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -128,6 +129,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winhttp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>qcnl_wrapper.def</ModuleDefinitionFile>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -140,7 +142,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;QCNLWRAPPER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -153,6 +155,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winhttp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>qcnl_wrapper.def</ModuleDefinitionFile>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -165,7 +168,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;QCNLWRAPPER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)/include;../inc;../../pce_wrapper/inc;../../quote_wrapper/common/inc;../../common/inc/internal;../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -178,18 +181,32 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winhttp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>qcnl_wrapper.def</ModuleDefinitionFile>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\inc\local_cache.h" />
     <ClInclude Include="..\inc\network_wrapper.h" />
+    <ClInclude Include="..\inc\pccs_response_object.h" />
+    <ClInclude Include="..\inc\pckcert_provider.h" />
+    <ClInclude Include="..\inc\qcnl_config.h" />
+    <ClInclude Include="..\inc\qcnl_def.h" />
+    <ClInclude Include="..\inc\qv_collateral_provider.h" />
+    <ClInclude Include="..\inc\sgx_default_qcnl_wrapper.h" />
+    <ClInclude Include="..\inc\qcnl_util.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\pccs_response_object.cpp" />
+    <ClCompile Include="..\pckcert_provider.cpp" />
+    <ClCompile Include="..\qcnl_config.cpp" />
+    <ClCompile Include="..\qv_collateral_provider.cpp" />
     <ClCompile Include="..\sgx_default_qcnl_wrapper.cpp" />
+    <ClCompile Include="..\qcnl_util.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="network_wrapper.cpp" />
     <ClCompile Include="os_version.cpp" />
-    <ClCompile Include="qcnl_config.cpp" />
+    <ClCompile Include="qcnl_config_impl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="qcnl_wrapper.def" />

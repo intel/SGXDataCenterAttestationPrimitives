@@ -38,6 +38,7 @@
 #include "CertVerification/CertificateChain.h"
 #include "QuoteVerification/Quote.h"
 #include "QuoteVerification/QuoteConstants.h"
+#include "QuoteVerification/QuoteParsers.h"
 
 #include "Verifiers/PckCertVerifier.h"
 #include "Verifiers/PckCrlVerifier.h"
@@ -46,7 +47,7 @@
 #include "Verifiers/EnclaveReportVerifier.h"
 #include "Verifiers/QuoteVerifier.h"
 #include "Verifiers/EnclaveIdentityParser.h"
-#include "Verifiers/EnclaveIdentity.h"
+#include "Verifiers/EnclaveIdentityV2.h"
 #include "Utils/TimeUtils.h"
 #include "Utils/SafeMemcpy.h"
 
@@ -252,7 +253,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     }
 
     dcap::EnclaveIdentityParser parser;
-    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentity;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentity;
     try
     {
         enclaveIdentity = parser.parse(enclaveIdentityString);
@@ -308,7 +309,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     }
    
     // We totally trust user on this, it should be explicitly and clearly
-    // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ? 
+    // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     /// 4.1.2.4.2
@@ -341,7 +342,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     }
 
     dcap::EnclaveIdentityParser parser;
-    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentity;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentity;
     if (qeIdentityJson != nullptr)
     {
         try {
@@ -377,15 +378,25 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
 
     /// 4.1.2.9.1
     const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + dcap::constants::ENCLAVE_REPORT_BYTE_LEN);
-    dcap::Quote quote;
-    if(!quote.parseEnclaveReport(vecEnclaveReport))
+    dcap::EnclaveReport eReport{};
+    auto from = vecEnclaveReport.cbegin();
+    auto end = vecEnclaveReport.cend();
+    if (!dcap::copyAndAdvance(eReport,
+                                     from,
+                                     dcap::constants::ENCLAVE_REPORT_BYTE_LEN,
+                                     end))
+    {
+        return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
+    }
+
+    if(from != end)
     {
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
     /// 4.1.2.9.2
     dcap::EnclaveIdentityParser parser;
-    std::unique_ptr<dcap::EnclaveIdentity> enclaveIdentityParsed;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentityParsed;
     try
     {
         enclaveIdentityParsed = parser.parse(enclaveIdentity);
@@ -395,7 +406,7 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
         return e.getStatus();
     }
 
-    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getEnclaveReport());
+    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), eReport);
 }
 
 Status sgxAttestationGetQECertificationDataSize(
@@ -419,7 +430,7 @@ Status sgxAttestationGetQECertificationDataSize(
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
-    *qeCertificationDataSize = static_cast<uint32_t>(quote.getQuoteAuthData().qeCertData.parsedDataSize);
+    *qeCertificationDataSize = static_cast<uint32_t>(quote.getCertificationData().parsedDataSize);
 
     return STATUS_OK;
 }
@@ -443,22 +454,23 @@ Status sgxAttestationGetQECertificationData(
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     dcap::Quote quote;
+
     if(!quote.parse(vecQuote) || !quote.validate())
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
-    const auto& quoteQeCertData = quote.getQuoteAuthData().qeCertData;
+    const auto& quoteCertificationData = quote.getCertificationData();
 
-    if(qeCertificationDataSize != quoteQeCertData.parsedDataSize)
+    if(qeCertificationDataSize != quoteCertificationData.parsedDataSize)
     {
         return STATUS_INVALID_QE_CERTIFICATION_DATA_SIZE;
     }
 
-    *qeCertificationDataType = quoteQeCertData.type;
+    *qeCertificationDataType = quoteCertificationData.type;
 
     // buffer pointed to by 'qeCertificationData' must be at least 'qeCertificationDataSize' long
-    std::copy(std::begin(quoteQeCertData.data), std::end(quoteQeCertData.data), qeCertificationData);
+    std::copy(std::begin(quoteCertificationData.data), std::end(quoteCertificationData.data), qeCertificationData);
 
     return STATUS_OK;
 }

@@ -131,6 +131,10 @@ export async function database_check() {
   try {
     await test_connection();
 
+    if (Config.has('init_db') && Config.get('init_db') == false) {
+      return true;
+    }
+
     let url = new URL(Config.get('uri'));
 
     let db_initialized = await test_db_status();

@@ -101,6 +101,12 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TcbComponent.cpp">
+      <Filter>Json</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp">
+      <Filter>Json</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pck_sorter.h">

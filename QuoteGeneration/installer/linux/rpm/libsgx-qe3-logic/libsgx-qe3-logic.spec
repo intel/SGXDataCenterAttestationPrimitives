@@ -36,7 +36,7 @@ Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions QE3 logic
 Group:          Development/Libraries
-Requires:       libsgx-urts >= 2.15 libsgx-ae-qe3 >= %{version}-%{release}
+Requires:       libsgx-urts >= 2.16 libsgx-ae-qe3 >= %{version}-%{release} libsgx-ae-id-enclave >= %{version}-%{release}
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
