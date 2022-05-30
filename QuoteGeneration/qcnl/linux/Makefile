@@ -65,14 +65,25 @@ endif
 CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 
-CNL_Lib_Name_Dynamic  := libsgx_default_qcnl_wrapper.so
+CNL_Lib_Name := libsgx_default_qcnl_wrapper
+CNL_Lib_Name_Dynamic :=  $(CNL_Lib_Name).so
+CNL_Lib_Name_Static := $(CNL_Lib_Name).a
+
 
 .PHONY: all run
 
-all: $(CNL_Lib_Name) install_lib
+all: install_lib
 
-install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
-	@$(CP) $(CNL_Lib_Name_Dynamic) $|
+install_lib: $(BUILD_DIR)
+ifeq ($(GEN_DYNAMIC),1)
+	@$(MAKE) $(CNL_Lib_Name_Dynamic)
+	@$(CP) $(CNL_Lib_Name_Dynamic) $(BUILD_DIR)
+endif
+
+ifeq ($(GEN_STATIC),1)
+	@$(MAKE) $(CNL_Lib_Name_Static)
+	@$(CP) $(CNL_Lib_Name_Static) $(BUILD_DIR)
+endif
 
 run: all
 
@@ -87,6 +98,9 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 $(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects)
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
 
+$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects)
+	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects)
+
 force_look:
 	true
 
@@ -96,6 +110,6 @@ $(BUILD_DIR):
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug)
+	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Static)
 
 

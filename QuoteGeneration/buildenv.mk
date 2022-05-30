@@ -194,6 +194,16 @@ CXXFLAGS += $(COMMON_FLAGS)
 # Enable the security flags
 COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 
+# Enable build static library
+GEN_STATIC ?= 0
+GEN_DYNAMIC ?= 1
+ifeq ($(GEN_DYNAMIC),0)
+    ifeq ($(GEN_STATIC),0)
+        $(info Choose at least one library to build)
+        $(error Aborting)
+    endif
+endif
+
 # Compiler and linker options for an Enclave
 #
 # We are using '--export-dynamic' so that `g_global_data_sim' etc.

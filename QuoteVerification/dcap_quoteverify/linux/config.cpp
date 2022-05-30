@@ -44,12 +44,14 @@
 
 #define MAX(x, y) (((x)>(y))?(x):(y))
 #define PATH_SEPARATOR '/'
-#define SGX_URTS_LIB_FILE_NAME "libsgx_urts.so.1"
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
 
+#define SGX_URTS_LIB_FILE_NAME "libsgx_urts.so.1"
 void *g_urts_handle = NULL;
 se_mutex_t g_urts_mutex;
+
+#ifndef GEN_STATIC
+#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
+#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
 
 void *g_qpl_handle = NULL;
 se_mutex_t g_qpl_mutex;
@@ -65,6 +67,7 @@ extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
 
 extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
 extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
+#endif
 
 extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
 extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
@@ -99,7 +102,7 @@ extern "C" bool sgx_qv_set_qpl_path(const char* p_path)
     return true;
 }
 
-
+#ifndef GEN_STATIC
 bool sgx_dcap_load_qpl()
 {
     char *err = NULL;
@@ -242,6 +245,7 @@ bool sgx_dcap_load_qpl()
 
     return ret;
 }
+#endif
 
 
 bool sgx_dcap_load_urts()
@@ -401,7 +405,9 @@ __attribute__((constructor)) void _qv_global_constructor()
 {
     se_mutex_init(&g_urts_mutex);
 
+#ifndef GEN_STATIC
     se_mutex_init(&g_qpl_mutex);
+#endif
 
     return;
 }
@@ -414,7 +420,10 @@ __attribute__((destructor)) void _qv_global_destructor()
 {
     // Try to unload Quote Provider library
     //
-    int rc = se_mutex_lock(&g_qpl_mutex);
+    int rc = 0;
+
+#ifndef GEN_STATIC
+    rc = se_mutex_lock(&g_qpl_mutex);
     if (rc != 1) {
         SE_TRACE(SE_TRACE_ERROR, "Failed to lock qpl mutex\n");
         //destroy the mutex before lib is unloaded, even there are some errs here
@@ -453,7 +462,7 @@ __attribute__((destructor)) void _qv_global_destructor()
     }
 
     se_mutex_destroy(&g_qpl_mutex);
-
+#endif
 
     // Try to unload sgx urts library
     //
