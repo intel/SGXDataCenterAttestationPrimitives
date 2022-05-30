@@ -67,25 +67,36 @@ QVL_VERIFY_C_SRCS := $(COMMON_DIR)/src/se_trace.c $(COMMON_DIR)/src/se_thread.c
 QVL_VERIFY_C_SRCS += qve_u.c
 
 QVL_VERIFY_CPP_OBJS := $(QVL_VERIFY_CPP_SRCS:.cpp=.o)
+QVL_VERIFY_CPP_OBJS_STATIC := $(QVL_VERIFY_CPP_SRCS:.cpp=_s.o)
 QVL_VERIFY_C_OBJS := $(QVL_VERIFY_C_SRCS:.c=.o)
 
 QVE_CPP_SRC ?= $(QVE_SRC_PATH)/Enclave/qve.cpp
 QVE_CPP_OBJ ?= $(QVE_SRC_PATH)/Enclave/untrusted_qve.o
 
-QVL_VERIFY_LIB_NAME := libsgx_dcap_quoteverify.so
+QVL_VERIFY_LIB_NAME := libsgx_dcap_quoteverify
+QVL_VERIFY_LIB_NAME_Dynamic := $(QVL_VERIFY_LIB_NAME).so
+QVL_VERIFY_LIB_NAME_Static := $(QVL_VERIFY_LIB_NAME).a
 
 
 .PHONY: all run
 
 
-all: $(QVL_VERIFY_LIB_NAME) install_lib
+all: install_lib
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
-install_lib: $(QVL_VERIFY_LIB_NAME) | $(BUILD_DIR)
-	@$(CP) $(QVL_VERIFY_LIB_NAME) $|
-	ln -sf $|/$(QVL_VERIFY_LIB_NAME) $|/$(QVL_VERIFY_LIB_NAME).1
+install_lib: $(BUILD_DIR)
+ifeq ($(GEN_DYNAMIC),1)
+	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Dynamic)
+	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $(BUILD_DIR)
+	ln -sf $(BUILD_DIR)/$(QVL_VERIFY_LIB_NAME_Dynamic) $(BUILD_DIR)/$(QVL_VERIFY_LIB_NAME_Dynamic).1
+endif
+
+ifeq ($(GEN_STATIC),1)
+	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Static)
+	@$(CP) $(QVL_VERIFY_LIB_NAME_Static) $(BUILD_DIR)
+endif
 
 
 run: all
@@ -104,6 +115,10 @@ $(QVL_VERIFY_C_OBJS): %.o: %.c qve_u.c
 
 $(QVL_VERIFY_CPP_OBJS): %.o: %.cpp qve_u.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_INC) -c $< -o $@
+	@echo "CXX  <=  $<"
+
+$(QVL_VERIFY_CPP_OBJS_STATIC): %_s.o: %.cpp qve_u.h
+	@$(CXX) -DGEN_STATIC $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_INC) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 $(QVE_CPP_OBJ): $(QVE_CPP_SRC)
@@ -125,25 +140,28 @@ $(QVL_PARSER_NAME): $(QVL_PARSER_OBJS)
 	@$(AR) rsD $(QVL_PARSER_NAME) $(QVL_PARSER_OBJS)
 
 
-$(QVL_VERIFY_LIB_NAME): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
+$(QVL_VERIFY_LIB_NAME_Dynamic): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
-	@ln -sf $(QVL_VERIFY_LIB_NAME) $(QVL_VERIFY_LIB_NAME).1
+	@ln -sf $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Dynamic).1
+
+$(QVL_VERIFY_LIB_NAME_Static): $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
+	@$(AR) rsD $(QVL_VERIFY_LIB_NAME_Static) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ)
 
 
 force_look:
 	true
 
-install: $(QVL_VERIFY_LIB_NAME)
-	$(CP) $(QVL_VERIFY_LIB_NAME) $(INSTALL_PATH)
-	ln -sf $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME) $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME).1
+install: $(QVL_VERIFY_LIB_NAME_Dynamic)
+	$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $(INSTALL_PATH)
+	ln -sf $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME_Dynamic) $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME_Dynamic).1
 
 uninstall:
-	rm -f $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME) $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME).1
+	rm -f $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME_Dynamic) $(INSTALL_PATH)/$(QVL_VERIFY_LIB_NAME_Dynamic).1
 
 .PHONY: clean
 
 clean:
-	@rm -f *_u.* $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVL_VERIFY_LIB_NAME)
+	@rm -f *_u.* $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Static)
 	@rm -f $(QVL_LIB_OBJS) $(QVL_PARSER_OBJS)
 	@rm -f $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
 	@rm -f *.orig *.debug *.1
