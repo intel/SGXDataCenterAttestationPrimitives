@@ -33,12 +33,14 @@ import { tcbinfoService } from '../services/index.js';
 import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
+import * as appUtil from '../utils/apputil.js';
 
 async function getTcbInfo(req, res, next, type) {
   const FMSPC_SIZE = 12;
 
   try {
     // validate request parameters
+    let version = appUtil.get_api_version_from_url(req.originalUrl);
     let fmspc = req.query.fmspc;
     if (fmspc == null || fmspc.length != FMSPC_SIZE) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
@@ -48,14 +50,15 @@ async function getTcbInfo(req, res, next, type) {
     fmspc = fmspc.toUpperCase();
 
     // call service
-    let tcbinfoJson = await tcbinfoService.getTcbInfo(type, fmspc);
+    let tcbinfoJson = await tcbinfoService.getTcbInfo(type, fmspc, version);
+    let issuerChainName = appUtil.getTcbInfoIssuerChainName(version);
 
     // send response
     res
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
       .header(
-        Constants.SGX_TCB_INFO_ISSUER_CHAIN,
-        tcbinfoJson[Constants.SGX_TCB_INFO_ISSUER_CHAIN]
+        issuerChainName,
+        tcbinfoJson[issuerChainName]
       )
       .header('Content-Type', 'application/json')
       .send(tcbinfoJson['tcbinfo']);
@@ -68,3 +71,6 @@ export async function getSgxTcbInfo(req, res, next) {
   await getTcbInfo(req, res, next, Constants.PROD_TYPE_SGX);
 }
 
+export async function getTdxTcbInfo(req, res, next) {
+  await getTcbInfo(req, res, next, Constants.PROD_TYPE_TDX);
+}

@@ -75,14 +75,14 @@ bool QcnlConfigLegacy::load_config() {
                 try {
                     string::size_type sz;
                     retry_times_ = stoi(value, &sz);
-                } catch (const invalid_argument &e) {
+                } catch (const invalid_argument &) {
                     continue;
                 }
             } else if (name.compare("RETRY_DELAY") == 0) {
                 try {
                     string::size_type sz;
                     retry_delay_ = stoi(value, &sz);
-                } catch (const invalid_argument &e) {
+                } catch (const invalid_argument &) {
                     continue;
                 }
             } else if (name.compare("LOCAL_PCK_URL") == 0) {
@@ -93,7 +93,7 @@ bool QcnlConfigLegacy::load_config() {
                     cache_expire_hour_ = stoi(value, &sz);
                     if (cache_expire_hour_ > CACHE_MAX_EXPIRY_HOURS)
                         cache_expire_hour_ = CACHE_MAX_EXPIRY_HOURS;
-                } catch (const invalid_argument &e) {
+                } catch (const invalid_argument &) {
                     continue;
                 }
             } else {

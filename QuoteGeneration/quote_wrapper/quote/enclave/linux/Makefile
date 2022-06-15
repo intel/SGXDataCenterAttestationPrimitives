@@ -39,7 +39,6 @@ SONAME := $(AENAME).so
 
 QE3_VER:= $(shell awk '$$2 ~ /QE3_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
 
-CONFIG := config.xml
 TCRYPTO_LIB_NAME := sgx_tcrypto
 
 INCLUDE := -I$(SGX_SDK)/include                        \

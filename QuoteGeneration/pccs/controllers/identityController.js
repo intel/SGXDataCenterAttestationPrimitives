@@ -32,12 +32,15 @@
 import { identityService } from '../services/index.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
+import * as appUtil from '../utils/apputil.js';
 
 async function getEnclaveIdentity(req, res, next, enclave_id) {
   try {
     // call service
+    let version = appUtil.get_api_version_from_url(req.originalUrl);
     let enclaveIdentityJson = await identityService.getEnclaveIdentity(
-      enclave_id
+      enclave_id,
+      version
     );
 
     // send response
@@ -62,3 +65,6 @@ export async function getQveIdentity(req, res, next) {
   return getEnclaveIdentity(req, res, next, Constants.QVE_IDENTITY_ID);
 }
 
+export async function getTdQeIdentity(req, res, next) {
+  return getEnclaveIdentity(req, res, next, Constants.TDQE_IDENTITY_ID);
+}

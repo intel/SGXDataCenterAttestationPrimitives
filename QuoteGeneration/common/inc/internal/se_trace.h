@@ -119,7 +119,7 @@ void  __attribute__((weak)) sgx_proc_log_report(int level, const char* format, .
 #else
 #define SE_PROD_LOG(fmt, ...)                                                                                       \
     do {                                                                                                            \
-        if(sgx_proc_log_report) {                                                                                   \
+        if(sgx_proc_log_report != NULL) {                                                                                   \
             sgx_proc_log_report(1, "[%s %s:%d] " fmt, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);             \
         } else {                                                                                                    \
             se_trace_internal(SE_TRACE_ERROR, "[%s %s:%d] " fmt, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);  \

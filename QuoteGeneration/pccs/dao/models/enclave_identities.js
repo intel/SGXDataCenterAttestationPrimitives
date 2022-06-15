@@ -35,6 +35,7 @@ export default class EnclaveIdentities extends Sequelize.Model {
     super.init(
       {
         id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
+        version: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
         identity: { type: Sequelize.DataTypes.BLOB },
         root_cert_id: { type: Sequelize.DataTypes.INTEGER },
         signing_cert_id: { type: Sequelize.DataTypes.INTEGER },

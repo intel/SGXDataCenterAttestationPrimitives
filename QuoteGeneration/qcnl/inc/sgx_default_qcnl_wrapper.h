@@ -65,6 +65,11 @@ typedef enum _sgx_qcnl_error_t {
     SGX_QCNL_INVALID_CONFIG = SGX_QCNL_MK_ERROR(0x0030),                   ///< Error in configuration file
 } sgx_qcnl_error_t;
 
+typedef enum _sgx_qe_type_t {
+    SGX_QE_TYPE_ECDSA = 0,
+    SGX_QE_TYPE_TD = 1,
+} sgx_qe_type_t;
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -90,7 +95,15 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
 
 void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo);
 
-sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
+sgx_qcnl_error_t tdx_qcnl_get_tcbinfo(const char *fmspc,
+                                      uint16_t fmspc_size,
+                                      const char* custom_param_b64_string,
+                                      uint8_t **p_tcbinfo,
+                                      uint16_t *p_tcbinfo_size);
+
+void tdx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo);
+
+sgx_qcnl_error_t sgx_qcnl_get_qe_identity(sgx_qe_type_t qe_type,
                                           const char* custom_param_b64_string,
                                           uint8_t **p_qe_identity,
                                           uint16_t *p_qe_identity_size);

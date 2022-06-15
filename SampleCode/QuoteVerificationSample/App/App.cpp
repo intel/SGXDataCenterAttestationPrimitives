@@ -144,6 +144,14 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         if (dcap_ret == SGX_QL_SUCCESS && supplemental_data_size == sizeof(sgx_ql_qv_supplemental_t)) {
             printf("\tInfo: sgx_qv_get_quote_supplemental_data_size successfully returned.\n");
             p_supplemental_data = (uint8_t*)malloc(supplemental_data_size);
+            if (p_supplemental_data != NULL) {
+                memset(p_supplemental_data, 0, sizeof(supplemental_data_size));
+            }
+            //Just print error in sample
+            //
+            else {
+                printf("\tError: Cannot allocate memory for supplemental data.\n");
+            }
         }
         else {
             if (dcap_ret != SGX_QL_SUCCESS)
@@ -182,11 +190,14 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
 
         // Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
-        // e.g. You can get latest QvE ISVSVN in QvE Identity JSON file from
+        // e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
+        // https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteVerification/QvE/Enclave/linux/config.xml#L4
+        // or you can get latest QvE ISVSVN in QvE Identity JSON file from
         // https://api.trustedservices.intel.com/sgx/certification/v3/qve/identity
         // Make sure you are using trusted & latest QvE ISV SVN as threshold
+        // Warning: The function may return erroneous result if QvE ISV SVN has been modified maliciously.
         //
-        sgx_isv_svn_t qve_isvsvn_threshold = 5;
+        sgx_isv_svn_t qve_isvsvn_threshold = 6;
 
         //call sgx_dcap_tvl API in SampleISVEnclave to verify QvE's report and identity
         //
@@ -267,6 +278,14 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         if (dcap_ret == SGX_QL_SUCCESS && supplemental_data_size == sizeof(sgx_ql_qv_supplemental_t)) {
             printf("\tInfo: sgx_qv_get_quote_supplemental_data_size successfully returned.\n");
             p_supplemental_data = (uint8_t*)malloc(supplemental_data_size);
+            if (p_supplemental_data != NULL) {
+                memset(p_supplemental_data, 0, sizeof(supplemental_data_size));
+            }
+            //Just print error in sample
+            //
+            else {
+                printf("\tError: Cannot allocate memory for supplemental data.\n");
+            }
         }
         else {
             if (dcap_ret != SGX_QL_SUCCESS)
@@ -350,6 +369,10 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
     }
 
+
+    if (p_supplemental_data) {
+        free(p_supplemental_data);
+    }
 
     if (eid) {
         sgx_destroy_enclave(eid);

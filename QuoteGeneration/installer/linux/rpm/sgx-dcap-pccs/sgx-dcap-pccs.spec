@@ -52,80 +52,35 @@ Intel(R) Software Guard Extensions PCK Caching Service
 %install
 make DESTDIR=%{?buildroot} install
 install -d %{?buildroot}%{_docdir}/%{name}
-find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
-echo "%{_install_path}" > %{_specdir}/listfiles
-echo %{_docdir}/%{name}/%{_license_file} >> %{_specdir}/listfiles
-echo "%config %{_install_path}/config/default.json" >> %{_specdir}/listfiles
+find linux/installer/common/sdk/output/package/licenses/ -type f -print0 | \
+xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
+find %{?buildroot} -type d -links 2 | \
+sed -e "s#^%{?buildroot}##" | \
+grep -v "^%{_libdir}" | \
+grep -v "^%{_bindir}" | \
+grep -v "^%{_sysconfdir}" | \
+grep -v "^%{_install_path}" | \
+sed -e "s#^#%dir #" > %{_specdir}/listfiles
+for f in $(find %{?buildroot}); do
+    if [ -d ${f} ]; then
+        echo ${f} | \
+        sed -e "s#^%{?buildroot}##" | \
+        grep "^%{_install_path}" | \
+        sed -e "s#^#%dir #" >> %{_specdir}/listfiles
+    else
+        echo ${f} | \
+        sed -e "s#^%{?buildroot}##" >> %{_specdir}/listfiles
+    fi
+done
+sed -i 's#^%{_install_path}/config/default.json#%config &#' %{_specdir}/listfiles
+
 %files -f %{_specdir}/listfiles
 
 %post
-PCCS_USER=pccs
-PCCS_HOME=%{_install_path}
-if [ ! $(getent group $PCCS_USER) ]; then
-    groupadd $PCCS_USER
-fi
-if ! id "$PCCS_USER" &>/dev/null; then
-    adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
-fi
-chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
-chmod 640 $PCCS_HOME/config/default.json
-#Install PCCS as system service
-echo -n "Installing PCCS service ..."
-if [ -d /run/systemd/system ]; then
-    PCCS_NAME=pccs.service
-    PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
-    if [ -d /lib/systemd/system ]; then
-        PCCS_DEST=/lib/systemd/system/$PCCS_NAME
-    else
-        PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
-    fi
-    cp $PCCS_TEMP $PCCS_DEST
-    chmod 0644 $PCCS_DEST
-    systemctl daemon-reload
-    systemctl enable pccs
-elif [ -d /etc/init/ ]; then
-    PCCS_NAME=pccs.service
-    PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
-    PCCS_DEST=/etc/init/$PCCS_NAME
-    cp $PCCS_TEMP $PCCS_DEST
-    chmod 0644 $PCCS_DEST
-    /sbin/initctl reload-configuration
-else
-    echo " failed."
-    echo "Unsupported platform - neither systemctl nor initctl was found."
-    exit 5
-fi
-echo "finished."
-echo "Installation completed successfully."
+if [ -x %{_install_path}/startup.sh ]; then %{_install_path}/startup.sh; fi
 
-%postun
-if [ $1 == 0 ]; then
-    echo -n "Uninstalling PCCS service ..."
-    if [ -d /run/systemd/system ]; then
-        PCCS_NAME=pccs.service
-        if [ -d /lib/systemd/system ]; then
-            PCCS_DEST=/lib/systemd/system/$PCCS_NAME
-        else
-            PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
-        fi
-        systemctl stop pccs || true
-        systemctl disable pccs || true
-        rm $PCCS_DEST || true
-        systemctl daemon-reload
-    elif [ -d /etc/init/ ]; then
-        PCCS_NAME=pccs.service
-        PCCS_DEST=/etc/init/$PCCS_NAME
-        rm $PCCS_DEST || true
-        /sbin/initctl reload-configuration
-    fi
-    echo "finished."
-
-    if [ -d %{_install_path} ]; then
-        pushd %{_install_path} &> /dev/null
-        rm -rf node_modules || true
-        popd &> /dev/null
-    fi
-fi
+%preun
+if [ $1 == 0 -a -x %{_install_path}/cleanup.sh ]; then %{_install_path}/cleanup.sh; fi
 
 %changelog
 * Mon Mar 10 2020 SGX Team

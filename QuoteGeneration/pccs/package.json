@@ -1,14 +1,14 @@
 {
   "name": "PCCS",
   "description": "Provisioning Certificate Caching Service",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "dependencies": {
     "@fidm/x509": "^1.2.1",
     "ajv": "^6.12.4",
     "body-parser": "^1.19.0",
     "caw": "^2.0.1",
     "cls-hooked": "^4.2.2",
-    "config": "^3.3.1",
+    "config": "^3.3.7",
     "esm": "^3.2.25",
     "express": "^4.17.1",
     "ffi-napi": "^4.0.3",
@@ -18,8 +18,8 @@
     "node-schedule": "^2.1.0",
     "ref-array-di": "^1.2.2",
     "ref-napi": "^3.0.3",
-    "sequelize": "^6.6.5",
-    "sqlite3": "npm:@vscode/sqlite3@^5.0.7",
+    "sequelize": "^6.19.0",
+    "sqlite3": "^5.0.6",
     "umzug": "^2.3.0",
     "winston": "^3.3.3"
   },

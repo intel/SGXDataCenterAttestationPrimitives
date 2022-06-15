@@ -276,7 +276,7 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectly)
     header.version = 4;
     header.teeType = dcap::constants::TEE_TYPE_TDX;
     auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    tdReport.teeTcbSvn = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     gen.withTDReport(tdReport);
     gen.withHeader(header);
@@ -294,6 +294,30 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectly)
     EXPECT_EQ(STATUS_OK, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
 }
 
+TEST_F(QuoteV4VerifierUT, shouldFailWithTcbInfoMismatchWhenTdxQuoteSvnDoesntMatchTcbInfo)
+{
+    auto header = dcap::test::QuoteV4Generator::QuoteHeader{};
+    header.version = 4;
+    header.teeType = dcap::constants::TEE_TYPE_TDX;
+    auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
+    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    gen.withTDReport(tdReport);
+    gen.withHeader(header);
+    gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
+    const auto quoteBin = gen.buildTdxQuote();
+
+    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
+    EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
+    EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
+    EXPECT_CALL(enclaveIdentityV2, getID()).WillOnce(testing::Return(EnclaveID::TD_QE));
+
+    dcap::Quote quote;
+    ASSERT_TRUE(quote.parse(quoteBin));
+    EXPECT_EQ(STATUS_TCB_INFO_MISMATCH, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
+}
+
 TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectlyWhenTdReportSeamAttributesMaskedMatch)
 {
     auto header = dcap::test::QuoteV4Generator::QuoteHeader{};
@@ -301,7 +325,7 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectlyWhenTdReportSeamAttributesMask
     header.teeType = dcap::constants::TEE_TYPE_TDX;
     auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
     tdReport.seamAttributes = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    tdReport.teeTcbSvn = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     gen.withTDReport(tdReport);
     gen.withHeader(header);
@@ -642,7 +666,7 @@ TEST_F(QuoteV4VerifierUT, shouldBackoffToLowerLevelBecauseTdReportTeeSvnIsOutOfD
     header.version = 4;
     header.teeType = dcap::constants::TEE_TYPE_TDX;
     auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    tdReport.teeTcbSvn = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     gen.withTDReport(tdReport);
     gen.withHeader(header);
@@ -668,13 +692,13 @@ TEST_F(QuoteV4VerifierUT, shouldBackoffToLowerLevelBecauseNoAllSvnsAreHigher)
     header.version = 4;
     header.teeType = dcap::constants::TEE_TYPE_TDX;
     auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    tdReport.teeTcbSvn = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     gen.withTDReport(tdReport);
     gen.withHeader(header);
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
-    std::vector<dcap::parser::json::TcbComponent> tdxComponents = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    std::vector<dcap::parser::json::TcbComponent> tdxComponents = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
     tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});

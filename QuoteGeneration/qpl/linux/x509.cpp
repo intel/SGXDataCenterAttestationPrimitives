@@ -34,6 +34,7 @@
  * Description: X.509 parser
  *
  */
+#include "x509.h"
 #include <iostream>
 #include <map>
 #include <openssl/pem.h>

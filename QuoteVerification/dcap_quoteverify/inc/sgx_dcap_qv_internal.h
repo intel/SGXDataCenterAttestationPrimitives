@@ -71,7 +71,7 @@ quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
     uint32_t *p_version);
 
 
- quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
+quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
      unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
      unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size);
 

@@ -165,11 +165,21 @@ sgx_qcnl_error_t QvCollateralProvider::get_pck_crl_chain(const char *ca,
     return ret;
 }
 
-sgx_qcnl_error_t QvCollateralProvider::build_tcbinfo_url(const char *fmspc,
+sgx_qcnl_error_t QvCollateralProvider::build_tcbinfo_url(sgx_prod_type_t prod_type,
+                                                         const char *fmspc,
                                                          uint16_t fmspc_size,
                                                          string &url) {
     // initialize https request url
     url = QcnlConfig::Instance()->getCollateralServiceUrl();
+
+    if (prod_type == SGX_PROD_TYPE_TDX) {
+        auto found = url.find("/sgx/");
+        if (found != std::string::npos) {
+            url = url.replace(found, 5, "/tdx/");
+        } else {
+            return SGX_QCNL_UNEXPECTED_ERROR;
+        }
+    } 
 
     // Append fmspc
     url.append("tcb?fmspc=");
@@ -185,12 +195,13 @@ sgx_qcnl_error_t QvCollateralProvider::build_tcbinfo_url(const char *fmspc,
     return SGX_QCNL_SUCCESS;
 }
 
-sgx_qcnl_error_t QvCollateralProvider::get_tcbinfo(const char *fmspc,
+sgx_qcnl_error_t QvCollateralProvider::get_tcbinfo(sgx_prod_type_t prod_type,
+                                                   const char *fmspc,
                                                    uint16_t fmspc_size,
                                                    uint8_t **p_tcbinfo,
                                                    uint16_t *p_tcbinfo_size) {
     string url("");
-    sgx_qcnl_error_t ret = build_tcbinfo_url(fmspc, fmspc_size, url);
+    sgx_qcnl_error_t ret = build_tcbinfo_url(prod_type, fmspc, fmspc_size, url);
     if (ret != SGX_QCNL_SUCCESS) {
         return ret;
     }
@@ -248,8 +259,18 @@ sgx_qcnl_error_t QvCollateralProvider::get_tcbinfo(const char *fmspc,
     return ret;
 }
 
-sgx_qcnl_error_t QvCollateralProvider::build_qeidentity_url(string &url) {
+sgx_qcnl_error_t QvCollateralProvider::build_qeidentity_url(sgx_qe_type_t qe_type, string &url) {
     url = QcnlConfig::Instance()->getCollateralServiceUrl();
+
+    if (qe_type == SGX_QE_TYPE_TD) {
+        auto found = url.find("/sgx/");
+        if (found != std::string::npos) {
+            url = url.replace(found, 5, "/tdx/");
+        } else {
+            return SGX_QCNL_UNEXPECTED_ERROR;
+        }
+    } 
+
     url.append("qe/identity");
     if (!custom_param_.empty()) {
         url.append("?").append(get_custom_param_string());
@@ -260,13 +281,13 @@ sgx_qcnl_error_t QvCollateralProvider::build_qeidentity_url(string &url) {
     return SGX_QCNL_SUCCESS;
 }
 
-sgx_qcnl_error_t QvCollateralProvider::get_qe_identity(uint8_t qe_type,
+sgx_qcnl_error_t QvCollateralProvider::get_qe_identity(sgx_qe_type_t qe_type,
                                                        uint8_t **p_qe_identity,
                                                        uint16_t *p_qe_identity_size) {
     (void)qe_type;
     // initialize https request url
     string url("");
-    sgx_qcnl_error_t ret = build_qeidentity_url(url);
+    sgx_qcnl_error_t ret = build_qeidentity_url(qe_type, url);
     if (ret != SGX_QCNL_SUCCESS) {
         return ret;
     }

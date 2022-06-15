@@ -1,6 +1,6 @@
 
 Rem
-Rem Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+Rem Copyright (C) 2011-2022 Intel Corporation. All rights reserved.
 Rem
 Rem Redistribution and use in source and binary forms, with or without
 Rem modification, are permitted provided that the following conditions
@@ -39,17 +39,17 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1m
+set openssl_ver_name=openssl-1.1.1o
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.15_1.1.1m_update
+set sgxssl_ver_name=win_2.16_1.1.1o
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
 set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=C9177D23AB221429EC1BDE38D2118C69FBE612018B6EA9900D22C1DD9596A2E6
-set openssl_chksum=F89199BE8B23CA45FC7CB9F1D8D3EE67312318286AD030F5316ACA6462DB6C96
+set sgxssl_chksum=E25CF02BF48FA279CFCB6B134ACB0A1FB04B84F680B40F32EF03AFF7368BE1E6
+set openssl_chksum=9384A2B0570DD80358841464677115DF785EDB941C71211F75076D72FE6B438F
 
 
 if not exist %sgxssl_dir% (

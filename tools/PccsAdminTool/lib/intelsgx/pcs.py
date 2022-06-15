@@ -40,6 +40,8 @@ class PCS:
     def _geturl(self, func, type='sgx'):
         if type == 'sgx':
             return urllib.parse.urljoin(self.BaseUrl, func)
+        elif type == 'tdx':
+            return urllib.parse.urljoin(self.BaseUrl.replace('/sgx/', '/tdx/'), func)
         else:
             raise Exception('Internal error!')
 
@@ -596,7 +598,10 @@ class PCS:
     def get_enclave_identity(self, name, dec=None):
         self.clear_errors()
 
-        url= self._geturl(name + '/identity', 'sgx')
+        if name == 'tdqe':
+            url= self._geturl('qe/identity', 'tdx')
+        else:
+            url= self._geturl(name + '/identity', 'sgx')
 
         response= self._get_request(url, False)
         if response.status_code != 200:

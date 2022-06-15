@@ -32,6 +32,7 @@ import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 import logger from '../utils/Logger.js';
+import X509 from '../x509/x509.js';
 import * as pckcertDao from '../dao/pckcertDao.js';
 import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
@@ -43,27 +44,52 @@ import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
 import * as crlCacheDao from '../dao/crlCacheDao.js';
 import * as pcsClient from '../pcs_client/pcs_client.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
+import * as appUtil from '../utils/apputil.js';
 import { sequelize } from '../dao/models/index.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
-import X509 from '../x509/x509.js';
 
 // Refresh the enclave_identities table
-async function refresh_enclave_identity(enclave_id) {
-  const pck_server_res = await pcsClient.getEnclaveIdentity(enclave_id);
-  if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-    // Then refresh cache DB
-    await enclaveIdentityDao.upsertEnclaveIdentity(
-      enclave_id,
-      pck_server_res.rawBody
+async function refresh_enclave_identities() {
+  let enclave_id_list;
+  if (global.PCS_VERSION == 3) {
+    enclave_id_list = [
+      [Constants.QE_IDENTITY_ID, 3],
+      [Constants.QVE_IDENTITY_ID, 3],
+    ];
+  } else if (global.PCS_VERSION == 4) {
+    enclave_id_list = [
+      [Constants.QE_IDENTITY_ID, 3],
+      [Constants.QVE_IDENTITY_ID, 3],
+      [Constants.QE_IDENTITY_ID, 4],
+      [Constants.QVE_IDENTITY_ID, 4],
+      [Constants.TDQE_IDENTITY_ID, 4],
+    ];
+  }
+  let issuer_chain_updated = false;  // Update issuer chain only once
+  for (const enclave_id of enclave_id_list) {
+    const pck_server_res = await pcsClient.getEnclaveIdentity(
+      enclave_id[0],
+      enclave_id[1]
     );
-    await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-      pcsClient.getHeaderValue(
-        pck_server_res.headers,
-        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-      )
-    );
-  } else {
-    throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
+      // Then refresh cache DB
+      await enclaveIdentityDao.upsertEnclaveIdentity(
+        enclave_id[0],
+        pck_server_res.rawBody,
+        enclave_id[1]
+      );
+      if (!issuer_chain_updated) {
+        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
+          pcsClient.getHeaderValue(
+            pck_server_res.headers,
+            Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
+          )
+        );
+        issuer_chain_updated = true;
+      }
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+    }
   }
 }
 
@@ -152,7 +178,7 @@ async function refresh_all_pckcerts(fmspc_array) {
       const tcbinfo = pck_server_res.rawBody;
       tcbinfo_str = pck_server_res.body;
 
-      pem_certs = pckcerts.map((o) => unescape(o.cert));
+      pem_certs = pckcerts.map((o) => decodeURIComponent(o.cert));
 
       // flush and add PCK certs
       await pckcertDao.deleteCerts(platformTcb.qe_id, platformTcb.pce_id);
@@ -161,7 +187,7 @@ async function refresh_all_pckcerts(fmspc_array) {
           platformTcb.qe_id,
           platformTcb.pce_id,
           pckcert.tcbm,
-          unescape(pckcert.cert)
+          decodeURIComponent(pckcert.cert)
         );
       }
     }
@@ -232,11 +258,10 @@ async function refresh_rootca_crl() {
   let rootca = await pcsCertificatesDao.getCertificateById(
     Constants.PROCESSOR_ROOT_CERT_ID
   );
-  if (!rootca)
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  if (!rootca) throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 
   const x509 = new X509();
-  if (!x509.parseCert(unescape(rootca.cert)) || !x509.cdp_uri) {
+  if (!x509.parseCert(decodeURIComponent(rootca.cert)) || !x509.cdp_uri) {
     // Certificate is invalid
     throw new Error('Invalid PCS certificate!');
   }
@@ -260,20 +285,21 @@ async function refresh_cached_crls() {
 }
 
 // Refresh the TCB info for the specified fmspc value
-async function refresh_one_tcb(fmspc) {
-  const pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
+async function refresh_one_tcb(fmspc, type, version) {
+  const pck_server_res = await pcsClient.getTcb(type, fmspc, version);
   if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
     // Then refresh cache DB
     await fmspcTcbDao.upsertFmspcTcb({
+      type: type,
       fmspc: fmspc,
-      type: Constants.PROD_TYPE_SGX,
+      version: version,
       tcbinfo: pck_server_res.rawBody,
     });
     // update or insert certificate chain
     await pcsCertificatesDao.upsertTcbInfoIssuerChain(
       pcsClient.getHeaderValue(
         pck_server_res.headers,
-        Constants.SGX_TCB_INFO_ISSUER_CHAIN
+        appUtil.getTcbInfoIssuerChainName(version)
       )
     );
   } else {
@@ -289,7 +315,7 @@ async function refresh_all_tcbs() {
   const tcbs = await fmspcTcbDao.getAllTcbs();
   for (let tcb of tcbs) {
     // refresh each tcb
-    await refresh_one_tcb(tcb.fmspc);
+    await refresh_one_tcb(tcb.fmspc, tcb.type, tcb.version);
   }
 }
 
@@ -306,8 +332,7 @@ export async function refreshCache(type, fmspc) {
     await sequelize.transaction(async (t) => {
       await refresh_pck_crls();
       await refresh_all_tcbs();
-      await refresh_enclave_identity(Constants.QE_IDENTITY_ID);
-      await refresh_enclave_identity(Constants.QVE_IDENTITY_ID);
+      await refresh_enclave_identities();
       await refresh_rootca_crl();
       await refresh_cached_crls();
     });
@@ -333,8 +358,7 @@ export async function scheduledRefresh() {
     await sequelize.transaction(async (t) => {
       await refresh_pck_crls();
       await refresh_all_tcbs();
-      await refresh_enclave_identity(Constants.QE_IDENTITY_ID);
-      await refresh_enclave_identity(Constants.QVE_IDENTITY_ID);
+      await refresh_enclave_identities();
       await refresh_rootca_crl();
       await refresh_cached_crls();
     });

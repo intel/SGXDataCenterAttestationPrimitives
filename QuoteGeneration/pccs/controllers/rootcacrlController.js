@@ -40,7 +40,7 @@ export async function getRootCaCrl(req, res, next) {
     // send response
     res
       .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
-      .header('Content-Type', 'application/x-pem-file')
+      .header('Content-Type', 'application/pkix-crl')
       .send(rootcacrl);
   } catch (err) {
     next(err);

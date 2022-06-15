@@ -38,7 +38,6 @@ function define(name, value) {
   });
 }
 
-define('API_VERSION', 3);
 define('DB_VERSION', 2);
 
 define('PLATF_REG_NEW', 0);
@@ -58,12 +57,14 @@ define('PROCESSOR_INTERMEDIATE_CERT_ID', 2);
 define('PROCESSOR_SIGNING_CERT_ID', 3);
 define('PLATFORM_INTERMEDIATE_CERT_ID', 4);
 
-// Product Type
+// Product Type : SGX or TDX
 define('PROD_TYPE_SGX', 0);
+define('PROD_TYPE_TDX', 1);
 
 // Enclave Identity IDs
 define('QE_IDENTITY_ID', 1);
 define('QVE_IDENTITY_ID', 2);
+define('TDQE_IDENTITY_ID', 3);
 
 //CAs
 define('CA_PROCESSOR', 'PROCESSOR');
@@ -71,6 +72,7 @@ define('CA_PLATFORM', 'PLATFORM');
 
 //Certchain names
 define('SGX_PCK_CERTIFICATE_ISSUER_CHAIN', 'SGX-PCK-Certificate-Issuer-Chain');
+define('TCB_INFO_ISSUER_CHAIN', 'TCB-Info-Issuer-Chain');
 define('SGX_TCB_INFO_ISSUER_CHAIN', 'SGX-TCB-Info-Issuer-Chain');
 define('SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN', 'SGX-Enclave-Identity-Issuer-Chain');
 define('SGX_PCK_CRL_ISSUER_CHAIN', 'SGX-PCK-CRL-Issuer-Chain');

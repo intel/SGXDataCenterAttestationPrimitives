@@ -42,19 +42,19 @@
 
 using namespace std;
 
-QcnlConfig *QcnlConfig::myInstance = nullptr;
+std::shared_ptr<QcnlConfig> QcnlConfig::myInstance;
 
-QcnlConfig *QcnlConfig::Instance() {
-    if (myInstance == nullptr) {
+std::shared_ptr<QcnlConfig> QcnlConfig::Instance() {
+    if (!myInstance) {
         QcnlConfigJson *pConfigJson = new QcnlConfigJson();
         if (pConfigJson->load_config()) {
-            myInstance = pConfigJson;
+            myInstance.reset(pConfigJson);
         } else {
             delete pConfigJson;
             pConfigJson = nullptr;
             QcnlConfigLegacy *pConfigLegacy = new QcnlConfigLegacy();
             pConfigLegacy->load_config();
-            myInstance = pConfigLegacy;
+            myInstance.reset(pConfigLegacy);
         }
     }
 

@@ -412,8 +412,10 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/d2FH4- %(AdditionalOptions)</AdditionalOptions>
+      <UseFullPaths>false</UseFullPaths>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib;AttestationParsers.lib;AttestationLibrary.lib;libsgx_tsgxssl.lib;libsgx_tsgxssl_crypto.lib</AdditionalDependencies>
@@ -427,6 +429,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalOptions>/PDBALTPATH:qve.pdb %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Command>"$(SGXSDKInstallPath)bin\x64\release\sgx_sign.exe" sign -key "qve_test_key.pem" -enclave "$(OutDir)qve.dll" -out "$(OutDir)qve.signed.dll" -config "win\config.xml"</Command>

@@ -40,11 +40,15 @@ fi
 
 PCCS_USER=pccs
 PCCS_HOME=$(readlink -m $(dirname "$0"))
-if [ ! $(getent group $PCCS_USER) ]; then
-    groupadd $PCCS_USER
-fi
-if ! id "$PCCS_USER" &>/dev/null; then
-    adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
+if [ "$1" == "debian" ]; then
+    adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
+else
+    if [ ! $(getent group $PCCS_USER) ]; then
+        groupadd $PCCS_USER
+    fi
+    if ! id "$PCCS_USER" &>/dev/null; then
+        adduser --system $PCCS_USER -g $PCCS_USER --home $PCCS_HOME --no-create-home --shell /bin/bash
+    fi
 fi
 chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
 chmod 640 $PCCS_HOME/config/default.json

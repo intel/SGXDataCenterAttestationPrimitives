@@ -79,19 +79,24 @@ async function do_request(url, options) {
 
     let response = await got(url, options);
     logger.info('Request-ID is : ' + response.headers['request-id']);
+    logger.debug('Request URL ' + url);
 
     if (response.statusCode != Constants.HTTP_SUCCESS) {
-      logger.error('Intel PCS server returns error. ' + response.body);
+      logger.error('Intel PCS server returns error(' + response.statusCode + ').' + response.body);
     }
 
     return response;
   } catch (err) {
-    logger.debug(err);
+    logger.error(err);
     if (err.response && err.response.headers) {
       logger.info('Request-ID is : ' + err.response.headers['request-id']);
     }
     throw new PccsError(PccsStatus.PCCS_STATUS_PCS_ACCESS_FAILURE);
   }
+}
+
+function getTdxUrl(url) {
+  return url.replace('/sgx/', '/tdx/');
 }
 
 export async function getCert(enc_ppid, cpusvn, pcesvn, pceid) {
@@ -150,8 +155,8 @@ export async function getPckCrl(ca) {
   return do_request(Config.get('uri') + 'pckcrl', options);
 }
 
-export async function getTcb(type, fmspc) {
-  if (type != Constants.PROD_TYPE_SGX) {
+export async function getTcb(type, fmspc, version) {
+  if (type != Constants.PROD_TYPE_SGX && type != Constants.PROD_TYPE_TDX) {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
 
@@ -163,14 +168,23 @@ export async function getTcb(type, fmspc) {
   };
 
   let uri = Config.get('uri') + 'tcb';
+  if (type == Constants.PROD_TYPE_TDX) {
+    uri = getTdxUrl(uri);
+  }
+
+  if (global.PCS_VERSION == 4 && version == 3) {
+    // A little tricky here because we need to use the v3 PCS URL though v4 is configured
+    uri = uri.replace('/v4/', '/v3/');
+  }
 
   return do_request(uri, options);
 }
 
-export async function getEnclaveIdentity(enclave_id) {
+export async function getEnclaveIdentity(enclave_id, version) {
   if (
     enclave_id != Constants.QE_IDENTITY_ID &&
-    enclave_id != Constants.QVE_IDENTITY_ID
+    enclave_id != Constants.QVE_IDENTITY_ID &&
+    enclave_id != Constants.TDQE_IDENTITY_ID
   ) {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
@@ -183,6 +197,13 @@ export async function getEnclaveIdentity(enclave_id) {
   let uri = Config.get('uri') + 'qe/identity';
   if (enclave_id == Constants.QVE_IDENTITY_ID) {
     uri = Config.get('uri') + 'qve/identity';
+  } else if (enclave_id == Constants.TDQE_IDENTITY_ID) {
+    uri = getTdxUrl(uri);
+  }
+
+  if (global.PCS_VERSION == 4 && version == 3) {
+    // A little tricky here because we need to use the v3 PCS URL though v4 is configured
+    uri = uri.replace('/v4/', '/v3/');
   }
 
   return do_request(uri, options);

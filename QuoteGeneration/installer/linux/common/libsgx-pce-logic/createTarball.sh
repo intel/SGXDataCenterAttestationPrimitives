@@ -55,6 +55,8 @@ python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-pce-logic-package.txt  --cl
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
+SGX_VERSION=$(awk '/PCE_WRAPPER_VERSION/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 pushd ${INSTALL_PATH} &> /dev/null
+sed -i "s/USR_LIB_VER=.*/USR_LIB_VER=${SGX_VERSION}/" Makefile
 tar -zcvf ${TARBALL_NAME} *
 popd &> /dev/null

@@ -40,7 +40,7 @@ Prerequisite:
    $ make SGX_DEBUG=1
    $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
-
+**Note**: Our libdcap_quoteprov.so is not built with Intel(R) Control Flow Enforcement Technology(CET) feature. If the sample is built with CET feature(it can be enabled by the compiler's default setting) and it is running on a CET enabled platform, you may encounter such an error message(or something similar): "Couldn't find the platform library. rebuild shared object with SHSTK support enabled". It means the system glibc enforces that a CET-enabled application can't load a non-CET shared library. You need to rebuild the sample by adding  -fcf-protection=none option explicitly to disable CET.
 
 ## Windows
 Supported operating systems:

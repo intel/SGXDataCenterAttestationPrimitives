@@ -49,6 +49,7 @@ AddService = , %SPSVCINST_ASSOCSERVICE%
 [SgxDCAPComponentsDevice_CopyFiles]
 sgx_dcap_ql.dll
 qe3.signed.dll
+id_enclave.signed.dll
 pce.signed.dll
 qve.signed.dll
 sgx_dcap_quoteverify.dll
@@ -60,6 +61,7 @@ ThirdPartyLicenses.txt
 [SourceDisksFiles]
 sgx_dcap_ql.dll = 1
 qe3.signed.dll = 1
+id_enclave.signed.dll = 1
 pce.signed.dll = 1
 qve.signed.dll = 1
 sgx_dcap_quoteverify.dll = 1

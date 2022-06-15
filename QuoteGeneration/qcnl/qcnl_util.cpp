@@ -127,6 +127,10 @@ bool byte_array_to_hex_string(const uint8_t *in_buf, uint32_t in_size, uint8_t *
 
 // This function is used to unescpae URL Codes, for example, %20 to SPACE character(0x20)
 string unescape(string &src) {
+    if (src.length() < 3) {
+        return src;
+    }
+
     string dst;
     char ch;
     int i, value;

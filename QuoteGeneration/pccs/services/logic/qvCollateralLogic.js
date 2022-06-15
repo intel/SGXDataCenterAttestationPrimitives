@@ -47,18 +47,63 @@ export async function checkQuoteVerificationCollateral() {
 
   // QE identity
   const qeid = await enclaveIdentityDao.getEnclaveIdentity(
-    Constants.QE_IDENTITY_ID
+    Constants.QE_IDENTITY_ID,
+    global.PCS_VERSION
   );
   if (qeid == null) {
-    await CommonCacheLogic.getEnclaveIdentityFromPCS(Constants.QE_IDENTITY_ID);
+    await CommonCacheLogic.getEnclaveIdentityFromPCS(
+      Constants.QE_IDENTITY_ID,
+      global.PCS_VERSION
+    );
   }
   // QVE identity
   const qveid = await enclaveIdentityDao.getEnclaveIdentity(
-    Constants.QVE_IDENTITY_ID
+    Constants.QVE_IDENTITY_ID,
+    global.PCS_VERSION
   );
   if (qveid == null) {
-    await CommonCacheLogic.getEnclaveIdentityFromPCS(Constants.QVE_IDENTITY_ID);
+    await CommonCacheLogic.getEnclaveIdentityFromPCS(
+      Constants.QVE_IDENTITY_ID,
+      global.PCS_VERSION
+    );
   }
+
+  if (global.PCS_VERSION == 4) {
+    // QE identity v3
+    const qeid = await enclaveIdentityDao.getEnclaveIdentity(
+      Constants.QE_IDENTITY_ID,
+      3
+    );
+    if (qeid == null) {
+      await CommonCacheLogic.getEnclaveIdentityFromPCS(
+        Constants.QE_IDENTITY_ID,
+        3
+      );
+    }
+    // QVE identity v3
+    const qveid = await enclaveIdentityDao.getEnclaveIdentity(
+      Constants.QVE_IDENTITY_ID,
+      3
+    );
+    if (qveid == null) {
+      await CommonCacheLogic.getEnclaveIdentityFromPCS(
+        Constants.QVE_IDENTITY_ID,
+        3
+      );
+    }
+    // TD QE identity v4
+    const tdqeid = await enclaveIdentityDao.getEnclaveIdentity(
+      Constants.TDQE_IDENTITY_ID,
+      4
+    );
+    if (tdqeid == null) {
+      await CommonCacheLogic.getEnclaveIdentityFromPCS(
+        Constants.TDQE_IDENTITY_ID,
+        4
+      );
+    }
+  }
+
   // Root CA crl
   let rootca = await pcsCertificatesDao.getCertificateById(
     Constants.PROCESSOR_ROOT_CERT_ID

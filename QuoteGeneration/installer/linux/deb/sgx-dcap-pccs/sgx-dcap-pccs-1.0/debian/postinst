@@ -17,49 +17,11 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+PACKAGE_PATH=@pkg_path@
 
 case "$1" in
     configure)
-        PCCS_USER=pccs
-        PCCS_HOME=/opt/intel/sgx-dcap-pccs
-        if ! id "$PCCS_USER" &>/dev/null; then
-            adduser --quiet --system $PCCS_USER --group --home $PCCS_HOME --no-create-home --shell /bin/bash
-        fi
-        chown -R $PCCS_USER:$PCCS_USER $PCCS_HOME
-        if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
-        then
-            /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh" $PCCS_USER
-        fi
-
-        #Install PCCS as system service
-        echo -n "Installing PCCS service ..."
-        if [ -d /run/systemd/system ]; then
-            PCCS_NAME=pccs.service
-            PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
-            if [ -d /lib/systemd/system ]; then
-                PCCS_DEST=/lib/systemd/system/$PCCS_NAME
-            else
-                PCCS_DEST=/usr/lib/systemd/system/$PCCS_NAME
-            fi
-            cp $PCCS_TEMP $PCCS_DEST
-            chmod 0644 $PCCS_DEST
-            systemctl daemon-reload
-            systemctl enable pccs
-            systemctl start pccs
-        elif [ -d /etc/init/ ]; then
-            PCCS_NAME=pccs.service
-            PCCS_TEMP=$PCCS_HOME/$PCCS_NAME
-            PCCS_DEST=/etc/init/$PCCS_NAME
-            cp $PCCS_TEMP $PCCS_DEST
-            chmod 0644 $PCCS_DEST
-            /sbin/initctl reload-configuration
-        else
-            echo "failed."
-            echo "Unsupported platform - neither systemctl nor initctl was found."
-            exit 5
-        fi
-        echo "finished."
-        echo "Installation completed successfully."
+        if [ -x ${PACKAGE_PATH}/startup.sh ]; then ${PACKAGE_PATH}/startup.sh debian; fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

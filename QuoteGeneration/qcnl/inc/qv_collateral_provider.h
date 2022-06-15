@@ -50,10 +50,11 @@ private:
     string get_custom_param_string();
     sgx_qcnl_error_t build_pck_crl_url(const char *ca,
                                        string &url);
-    sgx_qcnl_error_t build_tcbinfo_url(const char *fmspc,
+    sgx_qcnl_error_t build_tcbinfo_url(sgx_prod_type_t prod_type,
+                                       const char *fmspc,
                                        uint16_t fmspc_size,
                                        string &url);
-    sgx_qcnl_error_t build_qeidentity_url(string &url);
+    sgx_qcnl_error_t build_qeidentity_url(sgx_qe_type_t qe_type, string &url);
     sgx_qcnl_error_t build_qveidentity_url(string &url);
     sgx_qcnl_error_t build_root_ca_crl_url(const char *root_ca_cdp_url, string &url);
 public:
@@ -65,11 +66,12 @@ public:
                                        uint16_t ca_size,
                                        uint8_t **p_crl_chain,
                                        uint16_t *p_crl_chain_size);
-    sgx_qcnl_error_t get_tcbinfo(const char *fmspc,
+    sgx_qcnl_error_t get_tcbinfo(sgx_prod_type_t prod_type,
+                                 const char *fmspc,
                                  uint16_t fmspc_size,
                                  uint8_t **p_tcbinfo,
                                  uint16_t *p_tcbinfo_size);
-    sgx_qcnl_error_t get_qe_identity(uint8_t qe_type,
+    sgx_qcnl_error_t get_qe_identity(sgx_qe_type_t qe_type,
                                      uint8_t **p_qe_identity,
                                      uint16_t *p_qe_identity_size);
     sgx_qcnl_error_t get_qve_identity(char **pp_qve_identity,
