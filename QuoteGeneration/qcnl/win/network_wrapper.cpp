@@ -34,6 +34,7 @@
  * Description: Network access logic
  *
  */
+#include "sgx_default_qcnl_wrapper.h"
 #include "network_wrapper.h"
 #include "qcnl_config.h"
 #include <winhttp.h>
@@ -278,6 +279,8 @@ sgx_qcnl_error_t qcnl_https_request_once(const char *url,
             ret = windows_last_error_to_qcnl_error();
             break;
         }
+
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] HTTP status code: %ld \n", dwStatus);
 
         if (dwStatus == HTTP_STATUS_OK) // 200
         {

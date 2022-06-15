@@ -40,6 +40,8 @@ rel_dir_base=PCKIDRetrievalTool_v$SGX_VERSION
 rel_dir_name=$rel_dir_base$1
 
 rm -rf $rel_dir_base*
+make clean
+make STANDALONE=1
 
 mkdir $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name

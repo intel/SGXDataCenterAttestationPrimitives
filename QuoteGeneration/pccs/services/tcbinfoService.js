@@ -28,19 +28,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import Constants from '../constants/index.js';
 import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
+import * as appUtil from '../utils/apputil.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
 
-export async function getTcbInfo(type, fmspc) {
+export async function getTcbInfo(type, fmspc, version) {
   // query tcbinfo from local database first
-  const tcbinfo = await fmspcTcbDao.getTcbInfo(type, fmspc);
+  const tcbinfo = await fmspcTcbDao.getTcbInfo(type, fmspc, version);
   let result = {};
   if (tcbinfo == null) {
-    result = await cachingModeManager.getTcbInfoFromPCS(type, fmspc);
+    result = await cachingModeManager.getTcbInfoFromPCS(type, fmspc, version);
   } else {
-    result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] =
+    result[appUtil.getTcbInfoIssuerChainName(version)] =
       tcbinfo.signing_cert + tcbinfo.root_cert;
     result['tcbinfo'] = tcbinfo.tcbinfo;
   }

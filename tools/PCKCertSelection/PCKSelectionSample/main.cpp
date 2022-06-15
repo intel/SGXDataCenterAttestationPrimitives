@@ -49,8 +49,8 @@ const string SAMPLE_DIR = "../SampleData/";
 #else
 const string SAMPLE_DIR = "..\\..\\SampleData\\";
 #endif
-const string CERT_FILES[] = { "pck2.pem", "pck1.pem", "pck0.pem" };
-const string TCB_FILE = "tcb_info.json";
+const string CERT_FILES[] = { "pck6_sample.pem", "pck5_sample.pem", "pck4_sample.pem", "pck3_sample.pem", "pck2_sample.pem", "pck1_sample.pem", "pck0_sample.pem" };
+const string TCB_FILE = "tcb_info_4.json";
 
 /**
  * read file (certificate PEM or JSON) into std::string
@@ -97,9 +97,10 @@ int main ( void )
 	// trick to keep PCKs strings alive
 	vector < string > strs;
 	vector < const char* > pcks;
+	uint32_t cert_count = sizeof(CERT_FILES)/ sizeof(CERT_FILES[0]);
 
 	// read sample PCK Certs from PEM files to strings array 
-	for ( size_t i = 0; i < 3; i++ )
+	for ( size_t i = 0; i < cert_count; i++ )
 	{
 		string pem;
 		path = SAMPLE_DIR + CERT_FILES[i];
@@ -118,11 +119,11 @@ int main ( void )
 	cpu_svn_t plat_svn = { 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 	uint16_t plat_pcesvn = 6;
 	uint16_t plat_pceid = 0;
-	uint32_t best_index = 0;
+	uint32_t best_index = 6;
 
 	// call PCK Cert Selection library with sample data input
-	cout << "Call with PCESVN (6), CPUSVN { 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, expecting success with index 1\n";
-	pck_cert_selection_res_t res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), 3, &best_index );
+	cout << "Call with PCESVN (6), CPUSVN { 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, expecting success with index 6\n";
+	pck_cert_selection_res_t res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), cert_count, &best_index );
 	if ( res == PCK_CERT_SELECT_SUCCESS )
 	{
 		cout << "Best PCK is: " << best_index << "\n";
@@ -136,8 +137,8 @@ int main ( void )
 	// change platform TCB raw data and call PCK Cert Selection library again, sample data is same
 	plat_svn = { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
 	plat_pcesvn = 4;
-	cout << "Call with PCESVN (4), CPUSVN { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, expecting success with index 0\n";
-	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), 3, &best_index );
+	cout << "Call with PCESVN (4), CPUSVN { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, expecting success with index 4\n";
+	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), cert_count, &best_index );
 	if ( res == PCK_CERT_SELECT_SUCCESS )
 	{
 		cout << "Best PCK is: " << best_index << "\n";
@@ -152,7 +153,7 @@ int main ( void )
 	plat_svn = { 0 };
 	plat_pcesvn = 1;
 	cout << "Call with PCESVN (1), CPUSVN { 0 }, expecting fail not found (error 12)\n";
-	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), 3, &best_index );
+	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), cert_count, &best_index );
 	if ( res == PCK_CERT_SELECT_SUCCESS )
 	{
 		cout << " Success index: " << res << ", exit\n";
@@ -162,10 +163,26 @@ int main ( void )
 	{
 		cout << "Error returned: " << res << "\n";
 	}
+	// platform TCB raw data, CPUSVN and PCESVN
+	plat_svn = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1 };
+	plat_pcesvn = 7;
+
+	// call PCK Cert Selection library with sample data input
+	cout << "Call with PCESVN (7), CPUSVN { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1 }, expecting success with index 6\n";
+	res = pck_cert_select ( &plat_svn, plat_pcesvn, plat_pceid, tcb.c_str (), pcks.data (), cert_count, &best_index );
+	if ( res == PCK_CERT_SELECT_SUCCESS )
+	{
+		cout << "Best PCK is: " << best_index << "\n";
+	}
+	else
+	{
+		cout << "Unexpected Error returned: " << res << ", exit\n";
+		return 1;
+	}
 
 	cout << "Below test case to get the hw config ID" << endl;
 	
-	// check the 
+	// check the hw config 
 	plat_svn = { 0, 1, 2, 3, 4, 5, 19, 7, 8, 9, 0, 0, 0, 0, 0, 0 };
 	plat_pcesvn = 4;
 	uint32_t configuration_id = 0;

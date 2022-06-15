@@ -105,6 +105,7 @@ struct VerifyQuoteIT : public Test
     string positiveTdxTcbInfoV3JsonBody;
     string positiveSgxTcbInfoV3JsonBody;
     string positiveQEIdentityV2JsonBody;
+    std::vector<TcbLevelV3> tdxTcbLevels;
 
     test::QuoteV3Generator::EnclaveReport enclaveReport;
 
@@ -140,7 +141,7 @@ struct VerifyQuoteIT : public Test
         positiveSgxTcbInfoV3JsonBody = tcbInfoJsonV3Body("SGX", 3, issueDate, nextUpdate, fmspcStr, pceIdStr,
                                                          1, 1, sgxTcbLevels, false, tdxModule);
 
-        std::vector<TcbLevelV3> tdxTcbLevels;
+
         tdxTcbLevels.push_back(TcbLevelV3{
                 getRandomTcbComponent(),
                 getRandomTcbComponent(),
@@ -605,7 +606,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successffuly)
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     std::copy_n(tdxModule.mrsigner.begin(), tdxModule.mrsigner.size(), quoteV4Generator.getTdReport().mrSignerSeam.begin());
     quoteV4Generator.getTdReport().seamAttributes.fill(0x00);
-    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
+    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, tdxTcbLevels[0].tdxTcbComponents[1].svn, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
 
@@ -675,7 +676,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     quoteV4Generator.getTdReport().mrSignerSeam.fill(0x01);
     quoteV4Generator.getTdReport().seamAttributes.fill(0x00);
-    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
+    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, tdxTcbLevels[0].tdxTcbComponents[1].svn, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
 
@@ -739,7 +740,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     quoteV4Generator.getTdReport().mrSignerSeam.fill(0x00);
     quoteV4Generator.getTdReport().seamAttributes.fill(0x01);
-    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
+    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, tdxTcbLevels[0].tdxTcbComponents[1].svn, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
 
@@ -803,7 +804,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentit
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     std::copy_n(tdxModule.mrsigner.begin(), tdxModule.mrsigner.size(), quoteV4Generator.getTdReport().mrSignerSeam.begin());
     quoteV4Generator.getTdReport().seamAttributes.fill(0x00);
-    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
+    quoteV4Generator.getTdReport().teeTcbSvn = {0xFF, tdxTcbLevels[0].tdxTcbComponents[1].svn, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,};
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
 

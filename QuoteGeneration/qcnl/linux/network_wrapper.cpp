@@ -30,7 +30,7 @@
  */
 /**
  * File: network_wrapper.cpp
- *  
+ *
  * Description: Network access logic
  *
  */
@@ -38,6 +38,7 @@
 #include "network_wrapper.h"
 #include "qcnl_config.h"
 #include "se_memcpy.h"
+#include "sgx_default_qcnl_wrapper.h"
 #include <curl/curl.h>
 #include <unistd.h>
 
@@ -71,12 +72,12 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 }
 
 /**
-* This method converts CURL error codes to QCNL error codes
-*
-* @param curl_error Curl library error codes
-*
-* @return Collateral Network Library Error Codes
-*/
+ * This method converts CURL error codes to QCNL error codes
+ *
+ * @param curl_error Curl library error codes
+ *
+ * @return Collateral Network Library Error Codes
+ */
 static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error) {
     switch (curl_error) {
     case CURLE_OK:
@@ -103,12 +104,12 @@ static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error) {
 }
 
 /**
-* This method converts PCCS HTTP status codes to QCNL error codes
-*
-* @param pccs_status_code PCCS HTTP status codes
-*
-* @return Collateral Network Library Error Codes
-*/
+ * This method converts PCCS HTTP status codes to QCNL error codes
+ *
+ * @param pccs_status_code PCCS HTTP status codes
+ *
+ * @return Collateral Network Library Error Codes
+ */
 static sgx_qcnl_error_t pccs_status_to_qcnl_error(long pccs_status_code) {
     switch (pccs_status_code) {
     case 200: // PCCS_STATUS_SUCCESS
@@ -129,20 +130,20 @@ static sgx_qcnl_error_t pccs_status_to_qcnl_error(long pccs_status_code) {
 }
 
 /**
-* This method calls curl library to perform https POST request with raw body in JSON format and returns response body and header
-*
-* @param url HTTPS GET/POST URL 
-* @param req_body Request body in raw JSON format. For GET request it should be NULL.
-* @param req_body_size Size of request body. For GET request it should be 0.
-* @param user_token user token to access PCCS v3/platforms API. For GET request it should be NULL.
-* @param user_token_size Size of user token. For GET request it should be 0.
-* @param resp_msg Output buffer of response body
-* @param resp_size Size of response body
-* @param resp_header Output buffer of response header
-* @param header_size Size of response header
-*
-* @return SGX_QCNL_SUCCESS Call https post successfully. Other return codes indicate an error occured.
-*/
+ * This method calls curl library to perform https POST request with raw body in JSON format and returns response body and header
+ *
+ * @param url HTTPS GET/POST URL
+ * @param req_body Request body in raw JSON format. For GET request it should be NULL.
+ * @param req_body_size Size of request body. For GET request it should be 0.
+ * @param user_token user token to access PCCS v3/platforms API. For GET request it should be NULL.
+ * @param user_token_size Size of user token. For GET request it should be 0.
+ * @param resp_msg Output buffer of response body
+ * @param resp_size Size of response body
+ * @param resp_header Output buffer of response header
+ * @param header_size Size of response header
+ *
+ * @return SGX_QCNL_SUCCESS Call https post successfully. Other return codes indicate an error occured.
+ */
 sgx_qcnl_error_t qcnl_https_request(const char *url,
                                     http_header_map &header_map,
                                     const char *req_body,
@@ -239,20 +240,14 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
 
             if (curl_ret == CURLE_OK) {
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                if (http_code == 404) {
-                    ret = SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA;
-                    goto cleanup;
+                qcnl_log(SGX_QL_LOG_INFO, "[QCNL] HTTP status code: %ld \n", http_code);
+                if (http_code == 200) {
+                    break;
                 } else if (http_code == 503) { // SERVICE_UNAVAILABLE
                     need_retry = true;
-                } else if (http_code != 200) {
-                    ret = pccs_status_to_qcnl_error(http_code);
-                    goto cleanup;
                 }
             } else if (curl_ret == CURLE_OPERATION_TIMEDOUT || curl_ret == CURLE_COULDNT_RESOLVE_HOST || curl_ret == CURLE_COULDNT_RESOLVE_PROXY || curl_ret == CURLE_COULDNT_CONNECT || curl_ret == CURLE_HTTP_RETURNED_ERROR) {
                 need_retry = true;
-            } else {
-                ret = curl_error_to_qcnl_error(curl_ret);
-                goto cleanup;
             }
 
             retry_times--;
@@ -265,9 +260,13 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
                 }
                 continue;
             } else {
-                break;
+                if (curl_ret != CURLE_OK)
+                    ret = curl_error_to_qcnl_error(curl_ret);
+                else
+                    ret = pccs_status_to_qcnl_error(http_code);
+                goto cleanup;
             }
-        } while (retry_times > 0);
+        } while (true);
 
         *resp_msg = res_body.base;
         resp_size = res_body.size;

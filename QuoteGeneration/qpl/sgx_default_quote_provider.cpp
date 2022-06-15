@@ -127,8 +127,10 @@ quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config) {
 
 static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char **__unaligned out_buf1, uint32_t *__unaligned out_buf1_size,
                                    char **__unaligned out_buf2, uint32_t *__unaligned out_buf2_size) {
+    const string delimiter = "-----BEGIN CERTIFICATE-----";
+
     string s0((char *)in_buf, in_buf_size);
-    size_t pos = s0.find(X509_DELIMITER);
+    size_t pos = s0.find(delimiter);
     if (pos == string::npos) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Invalid certificate chain.\n");
         return SGX_QL_MESSAGE_ERROR;
@@ -140,7 +142,7 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char *
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Out of memory.\n");
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
-    if (memcpy_s(*out_buf1, pos, s0.c_str(), pos) != 0) {
+    if (memcpy_s(*out_buf1, pos, s0.data(), pos) != 0) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
         free(*out_buf1);
         *out_buf1 = NULL;
@@ -155,7 +157,7 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char *
         *out_buf1 = NULL;
         return SGX_QL_ERROR_OUT_OF_MEMORY;
     }
-    if (memcpy_s(*out_buf2, *out_buf2_size, s0.substr(pos).c_str(), in_buf_size - pos) != 0) {
+    if (memcpy_s(*out_buf2, *out_buf2_size, s0.data() + pos, in_buf_size - pos) != 0) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Unexpected error in memcpy_s.\n");
         free(*out_buf1);
         free(*out_buf2);
@@ -167,17 +169,13 @@ static quote3_error_t split_buffer(uint8_t *in_buf, uint16_t in_buf_size, char *
     return SGX_QL_SUCCESS;
 }
 
-quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
-                                                        sgx_ql_qve_collateral_t **pp_quote_collateral) {
-    return sgx_ql_get_quote_verification_collateral_with_params(fmspc, fmspc_size, pck_ca, NULL, 0, pp_quote_collateral);
-}
-
-quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc,
-                                                                    const uint16_t fmspc_size,
-                                                                    const char *pck_ca,
-                                                                    const void *custom_param,
-                                                                    const uint16_t custom_param_length,
-                                                                    sgx_ql_qve_collateral_t **pp_quote_collateral) {
+quote3_error_t ql_get_quote_verification_collateral_internal(sgx_prod_type_t prod_type,
+                                                             const uint8_t *fmspc,
+                                                             const uint16_t fmspc_size,
+                                                             const char *pck_ca,
+                                                             const void* custom_param,
+                                                             const uint16_t custom_param_length,
+                                                             sgx_ql_qve_collateral_t **pp_quote_collateral) {
     if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL ||
         (custom_param != NULL && custom_param_length == 0) ||
         (custom_param == NULL && custom_param_length != 0)) {
@@ -237,7 +235,12 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
         }
 
         // Set TCBInfo and certchain
-        qcnl_ret = sgx_qcnl_get_tcbinfo(reinterpret_cast<const char *>(fmspc), fmspc_size, base64_string, &p_tcbinfo, &tcbinfo_size);
+        if (prod_type == SGX_PROD_TYPE_SGX) {
+            qcnl_ret = sgx_qcnl_get_tcbinfo(reinterpret_cast<const char *>(fmspc), fmspc_size, base64_string, &p_tcbinfo, &tcbinfo_size);
+        } else {
+            qcnl_ret = tdx_qcnl_get_tcbinfo(reinterpret_cast<const char *>(fmspc), fmspc_size, base64_string, &p_tcbinfo, &tcbinfo_size);
+        } 
+
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get TCBInfo : 0x%04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
@@ -252,7 +255,12 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
         }
 
         // Set QEIdentity and certchain
-        qcnl_ret = sgx_qcnl_get_qe_identity(0, base64_string, &p_qe_identity, &qe_identity_size);
+        sgx_qe_type_t qe_type;
+        if (prod_type == SGX_PROD_TYPE_SGX)
+            qe_type = SGX_QE_TYPE_ECDSA;
+        else qe_type = SGX_QE_TYPE_TD;
+
+        qcnl_ret = sgx_qcnl_get_qe_identity(qe_type, base64_string, &p_qe_identity, &qe_identity_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : 0x%04x\n", qcnl_ret);
             ret = qcnl_error_to_ql_error(qcnl_ret);
@@ -301,7 +309,11 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
     } while (0);
 
     sgx_qcnl_free_pck_crl_chain(p_pck_crl_chain);
-    sgx_qcnl_free_tcbinfo(p_tcbinfo);
+    if (prod_type == SGX_PROD_TYPE_SGX) {
+        sgx_qcnl_free_tcbinfo(p_tcbinfo);
+    } else {
+        tdx_qcnl_free_tcbinfo(p_tcbinfo);
+    }
     sgx_qcnl_free_qe_identity(p_qe_identity);
     if (base64_string) {
         free(base64_string);
@@ -316,7 +328,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
     return ret;
 }
 
-quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t *p_quote_collateral) {
+quote3_error_t ql_free_quote_verification_collateral_internal(sgx_ql_qve_collateral_t *p_quote_collateral) {
     if (p_quote_collateral) {
         if (p_quote_collateral->pck_crl_issuer_chain) {
             free(p_quote_collateral->pck_crl_issuer_chain);
@@ -353,6 +365,69 @@ quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t
     return SGX_QL_SUCCESS;
 }
 
+quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc, 
+                                                        uint16_t fmspc_size, 
+                                                        const char *pck_ca,
+                                                        sgx_ql_qve_collateral_t **pp_quote_collateral) {
+    quote3_error_t ret = ql_get_quote_verification_collateral_internal(SGX_PROD_TYPE_SGX,
+                                                                       fmspc,
+                                                                       fmspc_size,
+                                                                       pck_ca,
+                                                                       NULL,
+                                                                       0,
+                                                                       pp_quote_collateral);
+    if (ret == SGX_QL_SUCCESS) {
+        (*pp_quote_collateral)->tee_type = 0x0; // SGX
+    } else {
+        qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
+    }
+    return ret;
+}
+
+quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc,
+                                                                    const uint16_t fmspc_size,
+                                                                    const char *pck_ca,
+                                                                    const void* custom_param,
+                                                                    const uint16_t custom_param_length,
+                                                                    sgx_ql_qve_collateral_t **pp_quote_collateral) {
+    quote3_error_t ret = ql_get_quote_verification_collateral_internal(SGX_PROD_TYPE_SGX,
+                                                                       fmspc,
+                                                                       fmspc_size,
+                                                                       pck_ca,
+                                                                       custom_param,
+                                                                       custom_param_length,
+                                                                       pp_quote_collateral);
+    if (ret == SGX_QL_SUCCESS) {
+        (*pp_quote_collateral)->tee_type = 0x0; // SGX
+    } else {
+        qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
+    }
+    return ret;
+}
+quote3_error_t tdx_ql_get_quote_verification_collateral(const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
+                                                        sgx_ql_qve_collateral_t **pp_quote_collateral) {
+    quote3_error_t ret = ql_get_quote_verification_collateral_internal(SGX_PROD_TYPE_TDX,
+                                                                       fmspc,
+                                                                       fmspc_size,
+                                                                       pck_ca,
+                                                                       NULL,
+                                                                       0,
+                                                                       pp_quote_collateral);
+    if (ret == SGX_QL_SUCCESS) {
+        (*pp_quote_collateral)->tee_type = 0x0; // SGX
+    } else {
+        qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
+    }
+    return ret;
+}
+quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t *p_quote_collateral) {
+    return ql_free_quote_verification_collateral_internal(p_quote_collateral);
+}
+
+quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qve_collateral_t *p_quote_collateral) {
+    return ql_free_quote_verification_collateral_internal((tdx_ql_qve_collateral_t *)p_quote_collateral);
+}
+
 quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
                                        uint32_t *p_qve_identity_size,
                                        char **pp_qve_identity_issuer_chain,
@@ -381,7 +456,7 @@ quote3_error_t sgx_ql_get_root_ca_crl(uint8_t **pp_root_ca_crl, uint16_t *p_root
     quote3_error_t ret = SGX_QL_ERROR_UNEXPECTED;
 
     // Get QEIdentity and certchain
-    sgx_qcnl_error_t qcnl_ret = sgx_qcnl_get_qe_identity(0, NULL, &p_qe_identity, &qe_identity_size);
+    sgx_qcnl_error_t qcnl_ret = sgx_qcnl_get_qe_identity(SGX_QE_TYPE_ECDSA, NULL, &p_qe_identity, &qe_identity_size);
     if (qcnl_ret != SGX_QCNL_SUCCESS) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : 0x%04x\n", qcnl_ret);
         return qcnl_error_to_ql_error(qcnl_ret);

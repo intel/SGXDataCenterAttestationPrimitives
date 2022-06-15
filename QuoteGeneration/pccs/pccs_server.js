@@ -31,13 +31,12 @@
  */
 
 import Config from 'config';
-import Constants from './constants/index.js';
 import morgan from 'morgan';
 import express from 'express';
 import logger from './utils/Logger.js';
 import node_schedule from 'node-schedule';
 import body_parser from 'body-parser';
-import { sgxRouter } from './routes/index.js';
+import { sgxRouter, tdxRouter } from './routes/index.js';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as auth from './middleware/auth.js';
@@ -65,6 +64,9 @@ const app = express();
 const { urlencoded, json } = body_parser;
 const { scheduleJob } = node_schedule;
 
+  // Get PCS API version from the config file
+  global.PCS_VERSION = appUtil.get_api_version_from_url(Config.get('uri'));
+
 // startup check
 if (!appUtil.startup_check()) {
   logger.endAndExitProcess();
@@ -77,7 +79,7 @@ appUtil.database_check().then((db_init_ok) => {
 
   // Change storage file permission if DB is sqlite
   if (Config.get('DB_CONFIG') == 'sqlite') {
-    fs.chmod(Config.get('sqlite').options.storage, 0o640, ()=>{});
+    fs.chmod(Config.get('sqlite').options.storage, 0o640, () => {});
   }
 
   // logger
@@ -90,44 +92,36 @@ appUtil.database_check().then((db_init_ok) => {
   app.use(urlencoded({ extended: true }));
   app.use(json({ limit: '200000kb' }));
 
-  // authentication middleware
-  app.get(
-    '/sgx/certification/v' + Constants.API_VERSION + '/platforms',
-    auth.validateAdmin
-  );
-  app.post(
-    '/sgx/certification/v' + Constants.API_VERSION + '/platforms',
-    auth.validateUser
-  );
-  app.use(
-    '/sgx/certification/v' + Constants.API_VERSION + '/platformcollateral',
-    auth.validateAdmin
-  );
-  app.use(
-    '/sgx/certification/v' + Constants.API_VERSION + '/refresh',
-    auth.validateAdmin
-  );
+  // authentication middleware for v3
+  app.get('/sgx/certification/v3/platforms', auth.validateAdmin);
+  app.post('/sgx/certification/v3/platforms', auth.validateUser);
+  app.use('/sgx/certification/v3/platformcollateral', auth.validateAdmin);
+  app.use('/sgx/certification/v3/refresh', auth.validateAdmin);
+  if (global.PCS_VERSION == 4) {
+    // authentication middleware for v4
+    app.get('/sgx/certification/v4/platforms', auth.validateAdmin);
+    app.post('/sgx/certification/v4/platforms', auth.validateUser);
+    app.use('/sgx/certification/v4/platformcollateral', auth.validateAdmin);
+    app.use('/sgx/certification/v4/refresh', auth.validateAdmin);
+  }
 
   // router
-  app.use('/sgx/certification/v' + Constants.API_VERSION, sgxRouter);
+  app.use('/sgx/certification/v3', sgxRouter);
+  if (global.PCS_VERSION == 4) {
+    app.use('/sgx/certification/v4', sgxRouter);
+    app.use('/tdx/certification/v4', tdxRouter);
+  }
 
   // error handling middleware
   app.use(error.errorHandling);
 
-  //Config Options
-  const CONFIG_OPTION_CACHE_FILL_MODE = 'CachingFillMode';
-  //Config values
-  const CACHE_FILL_MODE_LAZY = 'LAZY';
-  const CACHE_FILL_MODE_REQ = 'REQ';
-  const CACHE_FILL_MODE_OFFLINE = 'OFFLINE';
-
   // set caching mode
-  let cacheMode = Config.get(CONFIG_OPTION_CACHE_FILL_MODE);
-  if (cacheMode == CACHE_FILL_MODE_LAZY) {
+  let cacheMode = Config.get('CachingFillMode');
+  if (cacheMode == 'LAZY') {
     cachingModeManager.cachingMode = new LazyCachingMode();
-  } else if (cacheMode == CACHE_FILL_MODE_REQ) {
+  } else if (cacheMode == 'REQ') {
     cachingModeManager.cachingMode = new ReqCachingMode();
-  } else if (cacheMode == CACHE_FILL_MODE_OFFLINE) {
+  } else if (cacheMode == 'OFFLINE') {
     cachingModeManager.cachingMode = new OfflineCachingMode();
   } else {
     logger.error('Unknown caching mode. Please check your configuration file.');

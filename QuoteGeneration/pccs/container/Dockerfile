@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 AS builder
 
 # DCAP version (github repo branch, tag or commit hash)
-ARG DCAP_VERSION=DCAP_1.13
+ARG DCAP_VERSION=DCAP_1.14
 
 # update and install packages
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -15,7 +15,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
             zip
 
 # install node.js
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends nodejs
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*

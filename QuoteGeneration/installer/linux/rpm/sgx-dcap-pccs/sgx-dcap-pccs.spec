@@ -79,8 +79,8 @@ sed -i 's#^%{_install_path}/config/default.json#%config &#' %{_specdir}/listfile
 %post
 if [ -x %{_install_path}/startup.sh ]; then %{_install_path}/startup.sh; fi
 
-%postun
-if [ -x %{_install_path}/cleanup.sh ]; then %{_install_path}/cleanup.sh; fi
+%preun
+if [ $1 == 0 -a -x %{_install_path}/cleanup.sh ]; then %{_install_path}/cleanup.sh; fi
 
 %changelog
 * Mon Mar 10 2020 SGX Team

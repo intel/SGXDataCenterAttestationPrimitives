@@ -38,7 +38,8 @@ if test $(id -u) -ne 0; then
     exit 1
 fi
 
-rm -rf node_modules
+PCCS_HOME=$(readlink -m $(dirname "$0"))
+rm -rf ${PCCS_HOME}/node_modules
 
 #Remove PCCS system service
 echo -n "Uninstalling PCCS service ..."

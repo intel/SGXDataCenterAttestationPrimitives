@@ -38,8 +38,8 @@
 #pragma once
 
 #include "sgx_default_qcnl_wrapper.h"
-#include <string>
 #include <map>
+#include <string>
 
 using namespace std;
 

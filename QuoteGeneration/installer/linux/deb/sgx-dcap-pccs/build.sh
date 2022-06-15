@@ -108,7 +108,7 @@ update_install_path() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/conffiles
     sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/postinst
-    sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/postrm
+    sed -i "s#@pkg_path@#${DCAP_PCCS_PACKAGE_PATH}/${DCAP_PCCS_PACKAGE_NAME}#" debian/prerm
     popd
 }
 

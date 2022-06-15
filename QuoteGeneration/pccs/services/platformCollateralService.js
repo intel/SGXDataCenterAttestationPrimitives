@@ -43,7 +43,8 @@ import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import * as pckCertchainDao from '../dao/pckCertchainDao.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
-import { PLATFORM_COLLATERAL_SCHEMA } from './pccs_schemas.js';
+import * as appUtil from '../utils/apputil.js';
+import { PLATFORM_COLLATERAL_SCHEMA_V4 } from './pccs_schemas.js';
 import { sequelize } from '../dao/models/index.js';
 
 const ajv = new Ajv();
@@ -58,10 +59,13 @@ function verify_cert(root1, root2) {
   return true;
 }
 
-export async function addPlatformCollateral(collateralJson) {
+export async function addPlatformCollateral(collateralJson, version) {
   return await sequelize.transaction(async (t) => {
     //check parameters
-    let valid = ajv.validate(PLATFORM_COLLATERAL_SCHEMA, collateralJson);
+    let valid;
+    if (version < 4)
+      valid = ajv.validate(PLATFORM_COLLATERAL_SCHEMA_V3, collateralJson);
+    else valid = ajv.validate(PLATFORM_COLLATERAL_SCHEMA_V4, collateralJson);
     if (!valid) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
@@ -80,7 +84,7 @@ export async function addPlatformCollateral(collateralJson) {
           toUpper(platform_certs.qe_id),
           toUpper(platform_certs.pce_id),
           toUpper(cert.tcbm),
-          unescape(cert.cert)
+          decodeURIComponent(cert.cert)
         );
       }
 
@@ -133,7 +137,7 @@ export async function addPlatformCollateral(collateralJson) {
       }
       // parse arbitary cert to get fmspc value
       const x509 = new X509();
-      if (!x509.parseCert(unescape(mycerts[0].cert))) {
+      if (!x509.parseCert(decodeURIComponent(mycerts[0].cert))) {
         logger.error('Invalid certificate format.');
         throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
       }
@@ -151,14 +155,18 @@ export async function addPlatformCollateral(collateralJson) {
         throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
       }
 
-      let pem_certs = mycerts.map((o) => unescape(o.cert));
+      let tcbinfo_str;
+      if (version < 4) tcbinfo_str = JSON.stringify(tcbinfo.tcbinfo);
+      else tcbinfo_str = JSON.stringify(tcbinfo.sgx_tcbinfo);
+
+      let pem_certs = mycerts.map((o) => decodeURIComponent(o.cert));
       for (let platform of platforms_cleaned) {
         // get the best cert with PCKCertSelectionTool
         let cert_index = pckLibWrapper.pck_cert_select(
           platform.cpu_svn,
           platform.pce_svn,
           platform.pce_id,
-          JSON.stringify(tcbinfo.tcbinfo),
+          tcbinfo_str,
           pem_certs,
           pem_certs.length
         );
@@ -194,10 +202,23 @@ export async function addPlatformCollateral(collateralJson) {
     // loop through tcbinfos
     for (const tcbinfo of tcbinfos) {
       tcbinfo.fmspc = toUpper(tcbinfo.fmspc);
-      if (tcbinfo.tcbinfo) {
+      tcbinfo.version = version;
+      if (version < 4 && tcbinfo.tcbinfo) {
         tcbinfo.type = Constants.PROD_TYPE_SGX;
         tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.tcbinfo));
         await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
+      }
+      if (version >= 4) {
+        if (tcbinfo.sgx_tcbinfo) {
+          tcbinfo.type = Constants.PROD_TYPE_SGX;
+          tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.sgx_tcbinfo));
+          await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
+        }
+        if (tcbinfo.tdx_tcbinfo) {
+          tcbinfo.type = Constants.PROD_TYPE_TDX;
+          tcbinfo.tcbinfo = Buffer.from(JSON.stringify(tcbinfo.tdx_tcbinfo));
+          await fmspcTcbDao.upsertFmspcTcb(tcbinfo);
+        }
       }
     }
 
@@ -219,14 +240,24 @@ export async function addPlatformCollateral(collateralJson) {
     if (collaterals.qeidentity) {
       await enclaveIdentityDao.upsertEnclaveIdentity(
         Constants.QE_IDENTITY_ID,
-        collaterals.qeidentity
+        collaterals.qeidentity,
+        version
+      );
+    }
+    // Update or insert TDQE Identity
+    if (collaterals.tdqeidentity) {
+      await enclaveIdentityDao.upsertEnclaveIdentity(
+        Constants.TDQE_IDENTITY_ID,
+        collaterals.tdqeidentity,
+        version
       );
     }
     // Update or insert QvE Identity
     if (collaterals.qveidentity) {
       await enclaveIdentityDao.upsertEnclaveIdentity(
         Constants.QVE_IDENTITY_ID,
-        collaterals.qveidentity
+        collaterals.qveidentity,
+        version
       );
     }
 
@@ -271,10 +302,12 @@ export async function addPlatformCollateral(collateralJson) {
       }
     }
     if (
-      Boolean(collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN])
+      Boolean(
+        collaterals.certificates[appUtil.getTcbInfoIssuerChainName(version)]
+      )
     ) {
       rootCert[2] = await pcsCertificatesDao.upsertTcbInfoIssuerChain(
-        collaterals.certificates[Constants.SGX_TCB_INFO_ISSUER_CHAIN]
+        collaterals.certificates[appUtil.getTcbInfoIssuerChainName(version)]
       );
     }
     if (

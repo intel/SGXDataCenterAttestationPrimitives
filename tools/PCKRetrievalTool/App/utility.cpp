@@ -273,7 +273,7 @@ bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
         p_eid,
         NULL);
     if (SGX_SUCCESS != sgx_status) {
-        printf("Error, call sgx_create_enclave: fail [%s], SGXError:%04x.\n",  __FUNCTION__, sgx_status);
+        printf("Error, call sgx_create_enclave: fail [%s], SGXError:%04x.\n",__FUNCTION__, sgx_status);
         ret = false;
     }
 
@@ -629,47 +629,47 @@ int collect_data(uint8_t **pp_data_buffer)
     bool load_flag = get_urts_library_handle();
     if(false == load_flag) {// can't find urts shared library to load enclave
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     load_flag = load_enclave(ID_ENCLAVE_NAME, &id_enclave_eid);
     if(false == load_flag) { // can't load id_enclave.
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     sgx_status = ide_get_id(id_enclave_eid, &ecall_ret, &platform_id);
     if (SGX_SUCCESS != sgx_status) {
         fprintf(stderr, "Failed to call into the ID_ENCLAVE:get_qe_id. 0x%04x.\n", sgx_status);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     if (SGX_SUCCESS != ecall_ret) {
         fprintf(stderr, "Failed to get QE_ID. 0x%04x.\n", ecall_ret);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
 
     load_flag = load_enclave(PCE_ENCLAVE_NAME, &pce_enclave_eid);
     if(false == load_flag) { // can't load pce enclave.
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     p_sgx_get_target_info = (sgx_get_target_info_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_get_target_info");
     if (p_sgx_get_target_info == NULL) {
         printf("ERROR: Can't find the function sgx_get_target_info in sgx_urts library.\n");
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     sgx_status = p_sgx_get_target_info(pce_enclave_eid, &pce_target_info);
     if (SGX_SUCCESS != sgx_status) {
         fprintf(stderr, "Failed to get pce target info. The error code is:  0x%04x.\n", sgx_status);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     sgx_status = ide_get_pce_encrypt_key(id_enclave_eid,
@@ -683,13 +683,13 @@ int collect_data(uint8_t **pp_data_buffer)
     if (SGX_SUCCESS != sgx_status) {
         fprintf(stderr, "Failed to call into the ID_ENCLAVE: get_report_and_pce_encrypt_key. The error code is: 0x%04x.\n", sgx_status);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     if (SGX_SUCCESS != ecall_ret) {
         fprintf(stderr, "Failed to generate PCE encryption key. The error code is: 0x%04x.\n", ecall_ret);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     sgx_status = get_pc_info(pce_enclave_eid,
@@ -706,24 +706,24 @@ int collect_data(uint8_t **pp_data_buffer)
     if (SGX_SUCCESS != sgx_status) {
         fprintf(stderr, "Failed to call into PCE enclave: get_pc_info. The error code is: 0x%04x.\n", sgx_status);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
     if (SGX_SUCCESS != ecall_ret) {
         fprintf(stderr, "Failed to get PCE info. The error code is: 0x%04x.\n", ecall_ret);
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     if (signature_scheme != PCE_NIST_P256_ECDSA_SHA256) {
         fprintf(stderr, "PCE returned incorrect signature scheme.\n");
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     if (encrypted_ppid_ret_size != ENCRYPTED_PPID_LENGTH) {
         fprintf(stderr, "PCE returned unexpected returned encrypted PPID size.\n");
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
 
     buffer_size = ENCRYPTED_PPID_LENGTH + CPU_SVN_LENGTH + ISV_SVN_LENGTH + PCE_ID_LENGTH + DEFAULT_PLATFORM_ID_LENGTH;
@@ -732,7 +732,7 @@ int collect_data(uint8_t **pp_data_buffer)
     if (NULL == *pp_data_buffer) {
         fprintf(stderr,"Couldn't allocate data buffer\n");
         ret = -1;
-	goto CLEANUP;
+        goto CLEANUP;
     }
     memset(*pp_data_buffer, 0, buffer_size);
     p_temp = *pp_data_buffer;

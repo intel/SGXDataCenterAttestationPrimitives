@@ -42,19 +42,19 @@
 
 using namespace std;
 
-QcnlConfig *QcnlConfig::myInstance = nullptr;
+std::shared_ptr<QcnlConfig> QcnlConfig::myInstance;
 
-QcnlConfig *QcnlConfig::Instance() {
-    if (myInstance == nullptr) {
+std::shared_ptr<QcnlConfig> QcnlConfig::Instance() {
+    if (!myInstance) {
         QcnlConfigJson *pConfigJson = new QcnlConfigJson();
         if (pConfigJson->load_config()) {
-            myInstance = pConfigJson;
+            myInstance.reset(pConfigJson);
         } else {
             delete pConfigJson;
             pConfigJson = nullptr;
             QcnlConfigLegacy *pConfigLegacy = new QcnlConfigLegacy();
             pConfigLegacy->load_config();
-            myInstance = pConfigLegacy;
+            myInstance.reset(pConfigLegacy);
         }
     }
 
@@ -69,9 +69,12 @@ bool QcnlConfig::load_config_json(const TCHAR *json_file) {
     ParseResult ok = config.ParseStream<kParseCommentsFlag>(isw);
 
     if (!ok) {
-        qcnl_log(SGX_QL_LOG_INFO, "Failed to load config file in JSON. Either the legacy format config file is used, \n");
-        qcnl_log(SGX_QL_LOG_INFO, "or there is something wrong with it (should be JSON format). \n");
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to load config file in JSON. Either the legacy format config file is used, \n");
+        qcnl_log(SGX_QL_LOG_INFO, "       or there is something wrong with it (should be JSON format). \n");
         return false;
+    }
+    else {
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] JSON config file %s is loaded successfully. \n", json_file);
     }
 
     if (config.HasMember("pccs_url")) {

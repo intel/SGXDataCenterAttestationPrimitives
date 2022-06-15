@@ -35,22 +35,35 @@ import { sequelize, PcsVersion } from '../dao/models/index.js';
 import Umzug from 'umzug';
 import * as fs from 'fs';
 
+export function get_api_version_from_url(url) {
+  if (!url) return 0;
+
+  let verstr = url.match(/\/v([1-9][0-9]*)\//);
+  if (!verstr || verstr[0].length < 4) {
+    throw new Error('Unsupported API version');
+  }
+  let ver = parseInt(verstr[0].substr(2).slice(0, -1));
+  if (ver != 3 && ver != 4) {
+    throw new Error('Unsupported API version');
+  }
+  return ver;
+}
+
+export function getTcbInfoIssuerChainName(version) {
+  if (version == 3) {
+    return Constants.SGX_TCB_INFO_ISSUER_CHAIN;
+  } else {
+    return Constants.TCB_INFO_ISSUER_CHAIN;
+  }
+}
+
 // Check the version of PCS service currently configured
 export function startup_check() {
-  let pcs_api_version;
-  let pcs_url = Config.get('uri');
-  let verstr = pcs_url.match(/\/v([1-9][0-9]*)\//);
-  if (verstr.length == 0) pcs_api_version = 1;
-  let ver = verstr[0].substr(2).slice(0, -1);
-  pcs_api_version = parseInt(ver);
-
-  if (pcs_api_version != Constants.API_VERSION) {
+  if (global.PCS_VERSION != 3 && global.PCS_VERSION != 4) {
     logger.error(
       'The PCS API version ' +
-        verstr[0] +
-        ' configured is not supported. Should be version ' +
-        Constants.API_VERSION +
-        '.'
+        global.PCS_VERSION +
+        ' configured is not supported. Should be v3 or v4.'
     );
     return false;
   }

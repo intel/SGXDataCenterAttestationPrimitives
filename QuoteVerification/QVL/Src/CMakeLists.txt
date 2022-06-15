@@ -151,7 +151,7 @@ set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
-include("ThirdParty/hunter/HunterGate.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
 		URL "https://github.com/cpp-pm/hunter/archive/v0.23.316.tar.gz"
 		SHA1 "167a33c4cc398504826a1a3014ef66f9ccc35db3"
@@ -348,6 +348,8 @@ if (BUILD_TESTS)
 
 	if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		if(UNIX)
+            include(ProcessorCount)
+            ProcessorCount(N)
 			set(COVFILE "${CMAKE_SOURCE_DIR}/sgx.cov")
 
 			add_custom_target(cov_on
@@ -366,7 +368,7 @@ if (BUILD_TESTS)
 					COMMAND ${BULLSEYE_COV_XML} -f${COVFILE} -o${PROJECT_SOURCE_DIR}/code-coverage-report/coverage.xml  --no-banner)
 
 			add_custom_target(code-coverage
-					COMMAND COVFILE=${COVFILE} ${CMAKE_MAKE_PROGRAM} -C ${QVL_BUILD_DIR} -j1 cov_on runTests cov_off cov_html cov_xml)
+					COMMAND COVFILE=${COVFILE} $(MAKE) -j${N} -C ${QVL_BUILD_DIR} cov_on runTests cov_off cov_html cov_xml)
 		else()
 			message(FATAL_ERROR "Coverage build is only supported on Linux")
 		endif()

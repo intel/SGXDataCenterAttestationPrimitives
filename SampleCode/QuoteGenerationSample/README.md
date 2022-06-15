@@ -20,6 +20,7 @@ Prerequisite:
 * Intel(R) SGX SDK
 * Intel(R) SGX DCAP Packages
 * Intel(R) SGX DCAP PCCS (Provisioning Certificate Caching Service)
+* If you want to use "out-of-process" quote generation, you need to install quote-ex package in Intel(R) SGX PSW Packages
 
 *Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf" to install above dependencies*<br/>
 *Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*
@@ -45,16 +46,21 @@ Details please refer to driver [README](https://github.com/intel/SGXDataCenterAt
 
 *Note that you need to install libsgx-quote-ex-dev package and all its dependencies and recommends in order to build and run this sample. Or you can remove the `-l$(Uae_Library_Name)` in Makefile.
 ```
-   Release build:
+   "in-porc" Release build:
    $ make
    Or Debug build:
    $ make SGX_DEBUG=1
    Run application in "in-proc" mode:
    $ ./app
+
+   "out-of-proc" Release build:
+   $ make OUT_OF_PROC=1
+   Or Debug build:
+   $ make SGX_DEBUG=1 OUT_OF_PROC=1
    Run application in "out-of-proc" mode:
    $ SGX_AESM_ADDR=1 ./app
 ```
-
+**Note**: Our libdcap_quoteprov.so is not built with Intel(R) Control Flow Enforcement Technology(CET) feature. If the sample is built with CET feature(it can be enabled by the compiler's default setting) and it is running on a CET enabled platform, you may encounter such an error message(or something similar): "Couldn't find the platform library. rebuild shared object with SHSTK support enabled". It means the system glibc enforces that a CET-enabled application can't load a non-CET shared library. You need to rebuild the sample by adding  -fcf-protection=none option explicitly to disable CET.
 
 ## Windows
 Supported operating systems:

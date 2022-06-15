@@ -40,6 +40,7 @@ export async function upsertFmspcTcb(tcbinfoJson) {
   return await FmspcTcbs.upsert({
     type: tcbinfoJson.type,
     fmspc: tcbinfoJson.fmspc,
+    version: tcbinfoJson.version,
     tcbinfo: tcbinfoJson.tcbinfo,
     root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
     signing_cert_id: Constants.PROCESSOR_SIGNING_CERT_ID,
@@ -47,8 +48,8 @@ export async function upsertFmspcTcb(tcbinfoJson) {
 }
 
 //Query TCBInfo by fmspc
-export async function getTcbInfo(type, fmspc) {
-  if (typeof type == 'undefined') {
+export async function getTcbInfo(type, fmspc, version) {
+  if (typeof type == 'undefined' || typeof version == 'undefined') {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
 
@@ -58,12 +59,14 @@ export async function getTcbInfo(type, fmspc) {
     ' (select cert from pcs_certificates where id=a.signing_cert_id) as signing_cert' +
     ' from fmspc_tcbs a ' +
     ' where a.type=$type' +
-    ' and a.fmspc=$fmspc';
+    ' and a.fmspc=$fmspc' +
+    ' and a.version=$version';
   const tcbinfo = await sequelize.query(sql, {
     type: sequelize.QueryTypes.SELECT,
     bind: {
       type: type,
       fmspc: fmspc,
+      version: version,
     },
   });
   if (tcbinfo.length == 0) return null;

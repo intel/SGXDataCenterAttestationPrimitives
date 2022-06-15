@@ -21,7 +21,7 @@ def main():
     #  subparser for get
     parser_get = subparsers.add_parser('get', formatter_class=argparse.RawTextHelpFormatter)
     # add optional arguments for get
-    parser_get.add_argument("-u", "--url", help="The URL of the PCCS's GET platforms API; default: https://localhost:8081/sgx/certification/v3/platforms")
+    parser_get.add_argument("-u", "--url", help="The URL of the PCCS's GET platforms API; default: https://localhost:8081/sgx/certification/v4/platforms")
     parser_get.add_argument("-o", "--output_file", help="The output file name for platform list; default: platform_list.json")
     parser_get.add_argument("-s", "--source", help=
               "reg - Get platforms from registration table.(default)\n"
@@ -32,14 +32,14 @@ def main():
     #  subparser for put
     parser_put = subparsers.add_parser('put')
     # add optional arguments for put
-    parser_put.add_argument("-u", "--url", help="The URL of the PCCS's PUT collateral API; default: https://localhost:8081/sgx/certification/v3/platformcollateral")
+    parser_put.add_argument("-u", "--url", help="The URL of the PCCS's PUT collateral API; default: https://localhost:8081/sgx/certification/v4/platformcollateral")
     parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals; default: platform_collaterals.json")
     parser_put.set_defaults(func=pccs_put)
 
     #  subparser for fetch
     parser_fetch = subparsers.add_parser('fetch')
     # add optional arguments for fetch
-    parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v3/")
+    parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/")
     parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.json")
     parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals; default: platform_collaterals.json")
     parser_fetch.set_defaults(func=pcs_fetch)
@@ -54,7 +54,7 @@ def main():
     #  subparser for refresh
     parser_refresh = subparsers.add_parser('refresh')
     # add optional arguments for refresh
-    parser_refresh.add_argument("-u", "--url", help="The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v3/refresh")
+    parser_refresh.add_argument("-u", "--url", help="The URL of the PCCS's refresh API; default: https://localhost:8081/sgx/certification/v4/refresh")
     parser_refresh.add_argument("-f", "--fmspc", help="Only refresh certificates for specified FMSPCs. Format: [FMSPC1, FMSPC2, ..., FMSPCn]")
     parser_refresh.set_defaults(func=pccs_refresh)
 
@@ -80,7 +80,7 @@ def is_file_writable(filename):
 
 def pccs_get(args):
     try :
-        url = "https://localhost:8081/sgx/certification/v3/platforms"
+        url = "https://localhost:8081/sgx/certification/v4/platforms"
         if args.url:
             url = args.url
         output_file = "platform_list.json"
@@ -115,7 +115,7 @@ def pccs_get(args):
 
 def pccs_put(args):
     try :
-        url = "https://localhost:8081/sgx/certification/v3/platformcollateral"
+        url = "https://localhost:8081/sgx/certification/v4/platformcollateral"
         if args.url:
             url = args.url
         input_file = "platform_collaterals.json"
@@ -148,7 +148,7 @@ def pccs_put(args):
         print(e)
 
 def get_api_version_from_url(url):
-    version = 3
+    version = 4
     regex = re.compile('/v[1-9][0-9]*/')
     match = regex.search(url)
     if match is not None:
@@ -159,8 +159,8 @@ def get_api_version_from_url(url):
 
 def pcs_fetch(args):
     try :
-        url = 'https://api.trustedservices.intel.com/sgx/certification/v3/'
-        ApiVersion = 3
+        url = 'https://api.trustedservices.intel.com/sgx/certification/v4/'
+        ApiVersion = 4
 
         if args.url:
             url = args.url
@@ -192,11 +192,13 @@ def pcs_fetch(args):
         output_json={}
         output_json["platforms"] = plaformlist
         output_json["collaterals"] = {
+            "version" : ApiVersion,
             "pck_certs" : [],
             "tcbinfos" : [],
             "pckcacrl" : {
             },
             "qeidentity" : "",
+            "tdqeidentity" : "",
             "qveidentity" : "",
             "certificates" : {
                 PCS.HDR_PCK_Certificate_Issuer_Chain: {},
@@ -235,7 +237,7 @@ def pcs_fetch(args):
             # set pck-certificate-issuer-chain
             ca = sgxext.get_ca()
             if ca is None:
-                print("Wrong certificate format!")
+                print("Wrong PCK certificate format!")
                 return
 
             pckchain = output_json["collaterals"]["certificates"][PCS.HDR_PCK_Certificate_Issuer_Chain]
@@ -277,10 +279,18 @@ def pcs_fetch(args):
             sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', 'ascii')
             tcbinfoJson = {"fmspc" : fmspc}
             if sgx_tcbinfo != None:
-                tcbinfoJson['tcbinfo'] = json.loads(sgx_tcbinfo[0])
+                if ApiVersion >= 4:    
+                    tcbinfoJson['sgx_tcbinfo'] = json.loads(sgx_tcbinfo[0])
+                else:
+                    tcbinfoJson['tcbinfo'] = json.loads(sgx_tcbinfo[0])
             else:
                 print("Failed to get SGXtcbinfo for FMSPC:%s" %(fmspc))
                 return
+            # TDX tcbinfo is optional
+            if ApiVersion >= 4:
+                tdx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'tdx', 'ascii')
+                if tdx_tcbinfo != None:
+                    tcbinfoJson['tdx_tcbinfo'] = json.loads(tdx_tcbinfo[0])
             output_json["collaterals"]["tcbinfos"].append(tcbinfoJson)
             if output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] == '':
                 output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] = sgx_tcbinfo[1]
@@ -306,6 +316,14 @@ def pcs_fetch(args):
             return
         output_json["collaterals"]["qeidentity"] = qe_identity[0]
         output_json["collaterals"]["certificates"][PCS.HDR_Enclave_Identity_Issuer_Chain] = qe_identity[1]
+
+        # output.collaterals.tdqeidentity (Api Version >= 4)
+        if ApiVersion >= 4:
+            tdqe_identity = pcsclient.get_enclave_identity('tdqe', 'ascii')
+            if tdqe_identity == None:
+                print("Failed to get TDQE identity")
+                return
+            output_json["collaterals"]["tdqeidentity"] = tdqe_identity[0]
 
         # output.collaterals.qveidentity
         qve_identity = pcsclient.get_enclave_identity('qve', 'ascii')
@@ -363,7 +381,7 @@ def pcs_collect(args):
 
 def pccs_refresh(args):
     try :
-        url = "https://localhost:8081/sgx/certification/v3/refresh"
+        url = "https://localhost:8081/sgx/certification/v4/refresh"
         if args.url:
             url = args.url
         fmspc = None 

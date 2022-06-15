@@ -62,7 +62,7 @@ IF /I "%ERRORLEVEL%" NEQ "0" (
 )
 echo:
 echo ========= Creating The Catalog File ==============
-%INF2CAT% /driver:%DST_DIR% /os:10_x64 /VERBOSE 
+%INF2CAT% /driver:%DST_DIR% /os:10_x64 /uselocaltime /VERBOSE 
 IF /I "%ERRORLEVEL%" NEQ "0" (
     goto exit
 )

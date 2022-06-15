@@ -43,6 +43,7 @@ import {
 
 // express routes for our API
 const sgxRouter = Router();
+const tdxRouter = Router();
 
 //---------------- Routes for SGX APIs-------------------------------
 sgxRouter
@@ -73,5 +74,9 @@ sgxRouter
   .post(refreshController.refreshCache)
   .get(refreshController.refreshCache);
 
+//---------------- Routes for TDX APIs-------------------------------
+tdxRouter.route('/tcb').get(tcbinfoController.getTdxTcbInfo);
 
-export { sgxRouter };
+tdxRouter.route('/qe/identity').get(identityController.getTdQeIdentity);
+
+export { sgxRouter, tdxRouter };

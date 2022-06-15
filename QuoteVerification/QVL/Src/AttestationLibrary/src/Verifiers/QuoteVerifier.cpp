@@ -83,7 +83,7 @@ bool isTdxTcbHigherOrEqual(const dcap::quote::TDReport& tdReport,
     // but for TCB level to be considered higher it requires *EVERY* SVN to be higher or equal
     return true;
 }
-const std::string& getMatchingTcbLevel(const dcap::parser::json::TcbInfo &tcbInfo,
+const parser::json::TcbLevel& getMatchingTcbLevel(const dcap::parser::json::TcbInfo &tcbInfo,
                                        const dcap::parser::x509::PckCertificate &pckCert,
                                        const Quote &quote)
 {
@@ -100,12 +100,12 @@ const std::string& getMatchingTcbLevel(const dcap::parser::json::TcbInfo &tcbInf
             {
                 if (isTdxTcbHigherOrEqual(quote.getTdReport(), tcb))
                 {
-                    return tcb.getStatus();
+                    return tcb;
                 }
             }
             else
             {
-                return tcb.getStatus();
+                return tcb;
             }
         }
     }
@@ -118,7 +118,15 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
         const Quote& quote)
 {
     /// 4.1.2.4.17.1 & 4.1.2.4.17.2
-    const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson, pckCert, quote);
+    const auto& tcbLevel = getMatchingTcbLevel(tcbInfoJson, pckCert, quote);
+
+    if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID
+        && tcbLevel.getTdxTcbComponent(1).getSvn() != quote.getTdReport().teeTcbSvn[1])
+    {
+        return STATUS_TCB_INFO_MISMATCH;
+    }
+
+    const auto& tcbLevelStatus = tcbLevel.getStatus();
 
     if (tcbLevelStatus == "OutOfDate")
     {
@@ -385,6 +393,11 @@ Status QuoteVerifier::verify(const Quote& quote,
     {
         /// 4.1.2.4.17
         const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert, quote);
+
+        if (tcbLevelStatus == STATUS_TCB_INFO_MISMATCH)
+        {
+            return STATUS_TCB_INFO_MISMATCH;
+        }
 
         if (enclaveIdentity)
         {

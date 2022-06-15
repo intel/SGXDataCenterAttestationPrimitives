@@ -15,3 +15,5 @@ EXPORTS
     sgx_qcnl_free_root_ca_crl         @12
     sgx_qcnl_get_api_version          @13
     sgx_qcnl_set_logging_callback     @14
+    tdx_qcnl_get_tcbinfo              @15
+    tdx_qcnl_free_tcbinfo             @16

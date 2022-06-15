@@ -43,6 +43,7 @@
 #include "sgx_pce.h"
 #include "qcnl_util.h"
 #include <cstdarg>
+#include <stdexcept>
 
 static sgx_ql_logging_callback_t logger_callback = nullptr;
 
@@ -153,6 +154,7 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain) {
 * This API gets TCB information from PCCS server. The p_tcbinfo buffer allocated by this API
 * must be freed with sgx_qcnl_free_tcbinfo upon success.
 *
+* @param prod_type SGX or TDX
 * @param fmspc Family-Model-Stepping value
 * @param fmspc_size Size of the fmspc buffer
 * @param p_tcbinfo Output buffer for TCB information
@@ -160,11 +162,12 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain) {
 *
 * @return SGX_QCNL_SUCCESS If the TCB information was retrieved from PCCS server successfully.
 */
-sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
-                                      uint16_t fmspc_size,
-                                      const char* custom_param_b64_string,
-                                      uint8_t **p_tcbinfo,
-                                      uint16_t *p_tcbinfo_size) {
+sgx_qcnl_error_t qcnl_get_tcbinfo_internal(sgx_prod_type_t prod_type,
+                                           const char *fmspc,
+                                           uint16_t fmspc_size,
+                                           const char* custom_param_b64_string,
+                                           uint8_t **p_tcbinfo,
+                                           uint16_t *p_tcbinfo_size) {
     // Check input parameters
     // fmspc is always 6 bytes
     if (p_tcbinfo == NULL || p_tcbinfo_size == NULL) {
@@ -175,7 +178,33 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
     }
 
     QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_tcbinfo(fmspc, fmspc_size, p_tcbinfo, p_tcbinfo_size);
+    return qvCollateralProvider.get_tcbinfo(prod_type, fmspc, fmspc_size, p_tcbinfo, p_tcbinfo_size);
+}
+
+sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
+                                      uint16_t fmspc_size,
+                                      const char* custom_param_b64_string,
+                                      uint8_t **p_tcbinfo,
+                                      uint16_t *p_tcbinfo_size) {
+    return qcnl_get_tcbinfo_internal(SGX_PROD_TYPE_SGX,
+                                     fmspc,
+                                     fmspc_size,
+                                     custom_param_b64_string,
+                                     p_tcbinfo,
+                                     p_tcbinfo_size);
+}
+
+sgx_qcnl_error_t tdx_qcnl_get_tcbinfo(const char *fmspc,
+                                      uint16_t fmspc_size,
+                                      const char* custom_param_b64_string,
+                                      uint8_t **p_tcbinfo,
+                                      uint16_t *p_tcbinfo_size) {
+    return qcnl_get_tcbinfo_internal(SGX_PROD_TYPE_TDX,
+                                     fmspc,
+                                     fmspc_size,
+                                     custom_param_b64_string,
+                                     p_tcbinfo,
+                                     p_tcbinfo_size);
 }
 
 /**
@@ -189,21 +218,30 @@ void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
 }
 
 /**
+* This API frees the p_tcbinfo buffer allocated by tdx_qcnl_get_tcbinfo
+*/
+void tdx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
+    if (p_tcbinfo) {
+        free(p_tcbinfo);
+    }
+}
+
+/**
 * This API gets QE identity from PCCS server. The p_qe_identity buffer allocated by this API
 * must be freed with sgx_qcnl_free_qe_identity upon success.
 *
-* @param qe_type Currently only 0 (ECDSA QE) is supported
+* @param qe_type Type of QE
 * @param p_qe_identity Output buffer for QE identity
 * @param p_qe_identity_size Size of QE identity
 *
 * @return SGX_QCNL_SUCCESS If the QE identity was retrieved from PCCS server successfully.
 */
-sgx_qcnl_error_t sgx_qcnl_get_qe_identity(uint8_t qe_type,
+sgx_qcnl_error_t sgx_qcnl_get_qe_identity(sgx_qe_type_t qe_type,
                                           const char* custom_param_b64_string,
                                           uint8_t **p_qe_identity,
                                           uint16_t *p_qe_identity_size) {
     // Check input parameters
-    if (p_qe_identity == NULL || p_qe_identity_size == NULL || qe_type != 0) {
+    if (p_qe_identity == NULL || p_qe_identity_size == NULL ) {
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
@@ -297,18 +335,35 @@ void sgx_qcnl_free_root_ca_crl(uint8_t *p_root_ca_crl) {
  * This function returns the collateral version.
  */
 bool sgx_qcnl_get_api_version(uint16_t *p_major_ver, uint16_t *p_minor_ver) {
-    *p_major_ver = 3;
-    *p_minor_ver = 1;
-
-    if (!is_collateral_service_pcs()) { // PCCS
-        // Only 3.1 and 3.0 are supported
-        if (QcnlConfig::Instance()->getCollateralVersion() == "3.0") {
-            *p_minor_ver = 0;
-        } else if (QcnlConfig::Instance()->getCollateralVersion() != "3.1") {
-            *p_major_ver = 0;
-            *p_minor_ver = 0;
+    string version = QcnlConfig::Instance()->getCollateralVersion();
+    if (!version.empty()) {
+        auto pos = version.find(".");
+        if (pos != std::string::npos) {
+            auto s_major = version.substr(0, pos);
+            auto s_minor = version.substr(pos + 1);
+            try {
+                string::size_type sz;
+                *p_major_ver = (uint16_t)stoi(s_major, &sz);
+                *p_minor_ver = (uint16_t)stoi(s_minor, &sz);
+                return true;
+            } catch (const invalid_argument &e) {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to parse version string : %s", e.what());
+                return false;
+            }
+        } else {
             return false;
         }
+    }
+
+    string url = QcnlConfig::Instance()->getCollateralServiceUrl();
+    if (url.find("/v3/") != std::string::npos) {
+        *p_major_ver = 3;
+        *p_minor_ver = 0;
+    } else if (url.find("/v4/") != std::string::npos) {
+        *p_major_ver = 4;
+        *p_minor_ver = 0;
+    } else {
+        return false;
     }
 
     return true;

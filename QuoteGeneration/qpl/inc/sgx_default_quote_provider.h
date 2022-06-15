@@ -48,7 +48,7 @@ extern "C" {
 quote3_error_t sgx_ql_get_quote_config(const sgx_ql_pck_cert_id_t *p_pck_cert_id, sgx_ql_config_t **pp_quote_config);
 quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
 quote3_error_t sgx_ql_get_quote_verification_collateral(const uint8_t *fmspc,
-                                                        uint16_t fmspc_size, 
+                                                        uint16_t fmspc_size,
                                                         const char *pck_ca,
                                                         sgx_ql_qve_collateral_t **pp_quote_collateral);
 quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc,
@@ -58,6 +58,11 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
                                                                     const uint16_t custom_param_length,
                                                                     sgx_ql_qve_collateral_t **pp_quote_collateral);
 quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t *p_quote_collateral);
+quote3_error_t tdx_ql_get_quote_verification_collateral(const uint8_t *fmspc, 
+                                                        uint16_t fmspc_size, 
+                                                        const char *pck_ca,
+                                                        tdx_ql_qve_collateral_t **pp_quote_collateral);
+quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qve_collateral_t *p_quote_collateral);
 quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
                                        uint32_t *p_qve_identity_size,
                                        char **pp_qve_identity_issuer_chain,

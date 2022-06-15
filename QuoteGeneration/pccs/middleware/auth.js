@@ -31,7 +31,7 @@
 import Config from 'config';
 import Crypto from 'crypto';
 import PccsStatus from '../constants/pccs_status_code.js';
-import Constants from '../constants/index.js';
+import PccsError from '../utils/PccsError.js';
 
 export function validateUser(req, res, next) {
   const HTTP_HEADER_USER_TOKEN = 'user-token';
@@ -42,16 +42,12 @@ export function validateUser(req, res, next) {
     let user_token_hash = hash.digest('hex');
 
     if (user_token_hash != Config.get('UserTokenHash')) {
-      return res
-        .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
-        .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+      throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
     } else {
       next();
     }
   } else {
-    res
-      .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
-      .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+    throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
   }
 }
 
@@ -64,15 +60,11 @@ export function validateAdmin(req, res, next) {
     let admin_token_hash = hash.digest('hex');
 
     if (admin_token_hash != Config.get('AdminTokenHash')) {
-      return res
-        .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
-        .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+      throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
     } else {
       next();
     }
   } else {
-    res
-      .status(PccsStatus.PCCS_STATUS_UNAUTHORIZED[0])
-      .send(PccsStatus.PCCS_STATUS_UNAUTHORIZED[1]);
+    throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
   }
 }

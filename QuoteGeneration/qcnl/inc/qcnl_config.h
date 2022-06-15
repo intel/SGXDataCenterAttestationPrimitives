@@ -39,6 +39,7 @@
 
 #include "document.h"
 #include <string>
+#include <memory>
 
 using namespace std;
 using namespace rapidjson;
@@ -84,10 +85,6 @@ protected:
                    cache_expire_hour_(0) {}
     // To define the virtual destructor outside the class:
     virtual ~QcnlConfig() {
-        if (myInstance) {
-            delete myInstance;
-            myInstance = nullptr;
-        }
     };
 
 public:
@@ -96,8 +93,8 @@ public:
     QcnlConfig &operator=(QcnlConfig const &) = delete;
     QcnlConfig &operator=(QcnlConfig &&) = delete;
 
-    static QcnlConfig *myInstance;
-    static QcnlConfig *Instance();
+    static std::shared_ptr<QcnlConfig> myInstance;
+    static std::shared_ptr<QcnlConfig> Instance();
 
     string getServerUrl() {
         return server_url_;

@@ -108,6 +108,8 @@ sgx_qcnl_error_t PckCertProvider::build_pckcert_url(const string &base_url,
         }
     }
 
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Request URL %s \n", url.c_str());
+
     return SGX_QCNL_SUCCESS;
 }
 
@@ -233,26 +235,31 @@ sgx_qcnl_error_t PckCertProvider::get_pck_cert_chain(const sgx_ql_pck_cert_id_t 
     sgx_qcnl_error_t ret = SGX_QCNL_ERROR_STATUS_UNEXPECTED;
 
     if (!QcnlConfig::Instance()->getLocalPckUrl().empty()) {
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Try local service... \n");
         // Will get PCK certificates from LOCAL_PCK_URL
         ret = this->get_pck_cert_chain_from_url(QcnlConfig::Instance()->getLocalPckUrl(),
                                                  p_pck_cert_id, pp_quote_config);
         if (ret == SGX_QCNL_SUCCESS)
             return ret;
+
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to retrieve PCK certchain from local PCK service. \n");
     }
 
     // try memory cache next
     if (QcnlConfig::Instance()->getCacheExpireHour() > 0) {
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Try memory cache... \n");
         if (LocalMemCache::Instance().get_pck_cert_chain(p_pck_cert_id, pp_quote_config)) {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Retrieved PCK certchain from memory cache successfully. \n");
             return SGX_QCNL_SUCCESS;
         }
     }
 
     // Failover to remote service
     if (!QcnlConfig::Instance()->getServerUrl().empty()) {
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Try remote service... \n");
         // Try to fetch PCK certificates from PCCS
         ret = this->get_pck_cert_chain_from_url(QcnlConfig::Instance()->getServerUrl(),
                                                 p_pck_cert_id, pp_quote_config);
-
         if (ret == SGX_QCNL_SUCCESS && QcnlConfig::Instance()->getCacheExpireHour() > 0) {
             // Update local cache
             LocalMemCache::Instance().set_pck_cert_chain(p_pck_cert_id, pp_quote_config);

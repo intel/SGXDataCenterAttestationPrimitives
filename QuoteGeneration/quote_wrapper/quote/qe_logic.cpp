@@ -62,8 +62,8 @@
 #include "se_trace.h"
 
 #include "qe3_u.h"
+#include "id_enclave_u.h"
 #ifndef _MSC_VER
-    #include "id_enclave_u.h"
     #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so.1"
     #define QE3_ENCLAVE_NAME_LEGACY "libsgx_qe3.signed.so"
     #define ID_ENCLAVE_NAME "libsgx_id_enclave.signed.so.1"
@@ -73,6 +73,7 @@
     #define _T(x) (x)
 #else
     #define QE3_ENCLAVE_NAME _T("qe3.signed.dll")
+    #define ID_ENCLAVE_NAME _T("id_enclave.signed.dll")
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "dcap_quoteprov.dll"
 #endif
 #define ECDSA_BLOB_LABEL "ecdsa_data.blob"
@@ -758,7 +759,6 @@ void unload_qe()
     }
 }
 
-#ifndef _MSC_VER
 static quote3_error_t load_id_enclave(sgx_enclave_id_t* p_qe_eid)
 {
     quote3_error_t ret_val = SGX_QL_SUCCESS;
@@ -831,6 +831,9 @@ static quote3_error_t load_id_enclave_get_id(sgx_key_128bit_t* p_id)
         goto CLEANUP;
     }
 
+    SE_TRACE(SE_TRACE_DEBUG, "QE_ID:\n");
+    PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, p_id, sizeof(sgx_key_128bit_t));
+
 CLEANUP:
     if (0 != id_enclave_eid) {
         sgx_destroy_enclave(id_enclave_eid);
@@ -838,7 +841,6 @@ CLEANUP:
 
     return ret_val;
 }
-#endif
 
 /* This function output encrypted PPID which is encrypted with backend server's pub key
  *
@@ -1150,7 +1152,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
     SE_TRACE(SE_TRACE_DEBUG, "\npce_cert_psvn.isv_svn = 0x%04x.\n", p_plaintext_data->cert_pce_info.pce_isv_svn);
     pce_error = sgx_pce_sign_report(&p_plaintext_data->cert_pce_info.pce_isv_svn,
                                     &p_plaintext_data->cert_cpu_svn,
-                                    &p_plaintext_data->qe3_report,
+                                    &p_plaintext_data->qe_report,
                                     (uint8_t*)&pce_sig,
                                     sizeof(pce_sig),
                                     &sig_out_size);
@@ -1161,7 +1163,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
     }
 
     // Update the signature data and the report that was signed.
-    if(0 != memcpy_s(&p_plaintext_data->qe3_report_cert_key_sig, sizeof(p_plaintext_data->qe3_report_cert_key_sig), &pce_sig, sizeof(pce_sig))) {
+    if(0 != memcpy_s(&p_plaintext_data->qe_report_cert_key_sig, sizeof(p_plaintext_data->qe_report_cert_key_sig), &pce_sig, sizeof(pce_sig))) {
         refqt_ret = SGX_QL_ERROR_UNEXPECTED;
         goto CLEANUP;
     }
@@ -1438,7 +1440,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
         //QE's TCB has increased, (a decrease would cause a blob verification failure) then catch it here and generate a
         //new key
-        if((qe3_report_body.isv_svn > p_seal_data_plain_text->cert_qe3_isv_svn) ||
+        if((qe3_report_body.isv_svn > p_seal_data_plain_text->cert_qe_isv_svn) ||
            (0 != memcmp(&p_seal_data_plain_text->raw_cpu_svn, &qe3_report_body.cpu_svn, sizeof(p_seal_data_plain_text->raw_cpu_svn)))) {
             SE_TRACE(SE_TRACE_ERROR, "Platform TCB has increased, Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
             gen_new_key = true;
@@ -1464,7 +1466,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
 
-#ifndef _MSC_VER
         if (NULL == g_ql_global_data.m_qe_id)
         {
 
@@ -1480,7 +1481,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 goto CLEANUP;
             }
         }
-#endif
 
         // Determine if the raw-TCB has changed since the blob was last generated or the platform library
         // has a new TCBm. If the raw-TCB was downgraded, the ECDSA blob will not be accessible and fail
@@ -1496,13 +1496,8 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         // sgx_ql_get_quote_config(). If it is not available or the API returns SGX_QL_NO_PLATFORM_CERT_DATA, then use
         // the platform's raw TCB to certify the key.
         cert_data_size = 0;
-#ifndef _MSC_VER
         pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
-#else
-        pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-        pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
-#endif
         pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1543,18 +1538,18 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 plaintext_data.raw_pce_info.pce_isv_svn = pce_isv_svn;
                 plaintext_data.raw_pce_info.pce_id = p_seal_data_plain_text->cert_pce_info.pce_id;
                 // For recertification, pull out out the certification data from the blob that doesn't need to change.
-                if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
-                                 &p_seal_data_plain_text->qe3_report, sizeof(p_seal_data_plain_text->qe3_report))) {
+                if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
+                                 &p_seal_data_plain_text->qe_report, sizeof(p_seal_data_plain_text->qe_report))) {
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
-#ifndef _MSC_VER
-                if (0 != memcpy_s(&plaintext_data.qe3_id, sizeof(plaintext_data.qe3_id),
+
+                if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
                     g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
-#endif
+
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1596,18 +1591,18 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 plaintext_data.raw_pce_info.pce_isv_svn = pce_isv_svn;
                 plaintext_data.raw_pce_info.pce_id = p_seal_data_plain_text->cert_pce_info.pce_id;
                 // For recertification, pull out out the certification data from the blob that doesn't need to change.
-                if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
-                                 &p_seal_data_plain_text->qe3_report, sizeof(p_seal_data_plain_text->qe3_report))){
+                if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
+                                 &p_seal_data_plain_text->qe_report, sizeof(p_seal_data_plain_text->qe_report))){
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
-#ifndef _MSC_VER
-                if (0 != memcpy_s(&plaintext_data.qe3_id, sizeof(plaintext_data.qe3_id),
+
+                if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
                     g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
-#endif
+
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1677,7 +1672,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
-#ifndef _MSC_VER
+
         if (NULL == g_ql_global_data.m_qe_id)
         {
 
@@ -1693,20 +1688,14 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 goto CLEANUP;
             }
         }
-#endif
+
         // Certify the key
         // Get the certification data from the platform, if available
         p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
-        p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
         cert_data_size = 0;
         memset(&plaintext_data, 0, sizeof(plaintext_data));
-#ifndef _MSC_VER
         pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
-#else
-        pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-        pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
-#endif
         pck_cert_id.p_platform_cpu_svn = &qe3_report.body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &g_ql_global_data.m_pce_info.pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1747,7 +1736,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
         plaintext_data.raw_pce_info.pce_isv_svn = g_ql_global_data.m_pce_info.pce_isv_svn;
         plaintext_data.raw_pce_info.pce_id = g_ql_global_data.m_pce_info.pce_id;
-        if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
+        if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
                          &qe3_report, sizeof(qe3_report))) {
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
@@ -1770,8 +1759,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             SE_TRACE(SE_TRACE_DEBUG, "Failed to cerify key.\n");
             goto CLEANUP;
         }
-        SE_TRACE(SE_TRACE_DEBUG, "QE3_ID:\n");
-        PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &p_seal_data_plain_text->qe3_id, sizeof(p_seal_data_plain_text->qe3_id));
 
         SE_TRACE(SE_TRACE_DEBUG, "Generated and certified a new key.  ECDSA_ID:\n");
         PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &qe3_report.body.report_data, sizeof(sgx_sha256_hash_t));
@@ -1952,8 +1939,8 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
     p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
     p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
     cert_data_size = 0;
-    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
+    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
     pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
     pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
@@ -2197,8 +2184,8 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
     p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
     p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
     cert_data_size = 0;
-    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
+    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
     pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
     pck_cert_id.p_platform_pce_isv_svn = &cur_pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
