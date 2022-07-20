@@ -271,7 +271,7 @@ quote3_error_t sgx_dcap_free_qve_identity(
  **/
 quote3_error_t tdx_dcap_retrieve_verification_collateral(
     const char *fmspc,
-    __attribute__((unused))uint16_t fmspc_size,
+    uint16_t fmspc_size,
     const char *pck_ca,
     struct _sgx_ql_qve_collateral_t **pp_quote_collateral)
 {
@@ -293,7 +293,11 @@ quote3_error_t tdx_dcap_retrieve_verification_collateral(
         pck_ca,
         pp_quote_collateral);
 #else
-    return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    return tdx_ql_get_quote_verification_collateral(
+        (const uint8_t *)fmspc,
+        fmspc_size,
+        pck_ca,
+        pp_quote_collateral);
 #endif
 }
 
@@ -323,6 +327,6 @@ quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
     //
     return p_tdx_ql_free_quote_verification_collateral(p_quote_collateral);
 #else
-    return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    return tdx_ql_free_quote_verification_collateral(p_quote_collateral);
 #endif
 }
