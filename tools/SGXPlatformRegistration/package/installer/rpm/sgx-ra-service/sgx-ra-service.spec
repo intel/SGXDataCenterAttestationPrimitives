@@ -62,7 +62,7 @@ sed -i 's#^/etc/mpa_registration.conf#%config &#' %{_specdir}/list-%{name}
 
 %debug_package
 
-%post
+%posttrans
 if [ -x %{_install_path}/startup.sh ]; then %{_install_path}/startup.sh; fi
 
 %preun
