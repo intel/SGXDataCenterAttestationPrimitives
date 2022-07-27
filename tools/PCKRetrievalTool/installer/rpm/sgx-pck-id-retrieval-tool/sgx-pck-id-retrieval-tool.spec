@@ -62,7 +62,7 @@ sed -i 's#^/etc/rad.conf#%config &#' %{_specdir}/list-%{name}
 
 %debug_package
 
-%post
+%posttrans
 ################################################################################
 # Set up SGX pck cert id retrieve tool                                         #
 ################################################################################
