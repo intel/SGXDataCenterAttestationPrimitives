@@ -74,15 +74,12 @@ CNL_Lib_Name_Static := $(CNL_Lib_Name).a
 
 all: install_lib
 
-install_lib: $(BUILD_DIR)
-ifeq ($(GEN_DYNAMIC),1)
-	@$(MAKE) $(CNL_Lib_Name_Dynamic)
-	@$(CP) $(CNL_Lib_Name_Dynamic) $(BUILD_DIR)
-endif
+install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
+	@$(CP) $(CNL_Lib_Name_Dynamic) $|
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(CNL_Lib_Name_Static)
-	@$(CP) $(CNL_Lib_Name_Static) $(BUILD_DIR)
+	@$(CP) $(CNL_Lib_Name_Static) $|
 endif
 
 run: all
