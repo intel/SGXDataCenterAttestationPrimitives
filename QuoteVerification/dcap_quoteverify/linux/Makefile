@@ -86,16 +86,13 @@ all: install_lib
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
-install_lib: $(BUILD_DIR)
-ifeq ($(GEN_DYNAMIC),1)
-	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Dynamic)
-	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $(BUILD_DIR)
-	ln -sf $(BUILD_DIR)/$(QVL_VERIFY_LIB_NAME_Dynamic) $(BUILD_DIR)/$(QVL_VERIFY_LIB_NAME_Dynamic).1
-endif
+install_lib: $(QVL_VERIFY_LIB_NAME_Dynamic) | $(BUILD_DIR)
+	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $|
+	ln -sf $|/$(QVL_VERIFY_LIB_NAME_Dynamic) $|/$(QVL_VERIFY_LIB_NAME_Dynamic).1
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Static)
-	@$(CP) $(QVL_VERIFY_LIB_NAME_Static) $(BUILD_DIR)
+	@$(CP) $(QVL_VERIFY_LIB_NAME_Static) $|
 endif
 
 

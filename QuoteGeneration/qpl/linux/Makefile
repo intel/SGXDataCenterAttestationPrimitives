@@ -74,15 +74,12 @@ QPL_SO_VERSION:= $(shell echo $(QPL_VERSION) |awk -F. '{print $$1}')
 
 all: install_lib
 
-install_lib: $(BUILD_DIR)
-ifeq ($(GEN_DYNAMIC),1)
-	@$(MAKE) $(QPL_Lib_Name_Dynamic)
-	@$(CP) $(QPL_Lib_Name_Dynamic) $(BUILD_DIR)
-endif
+install_lib: $(QPL_Lib_Name_Dynamic) | $(BUILD_DIR)
+	@$(CP) $(QPL_Lib_Name_Dynamic) $|
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(QPL_Lib_Name_Static)
-	@$(CP) $(QPL_Lib_Name_Static) $(BUILD_DIR)
+	@$(CP) $(QPL_Lib_Name_Static) $|
 endif
 
 run: all
