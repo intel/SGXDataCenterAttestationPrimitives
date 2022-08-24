@@ -23,20 +23,20 @@
     <ProjectGuid>{977019E4-F963-49D2-B3CD-B0CE2FFB3FD0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>dcap_quoteverify</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
@@ -44,14 +44,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>Spectre</SpectreMitigation>
@@ -104,7 +104,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -113,13 +113,14 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>OneCore.lib;ucrtd.lib;user32.lib;Ws2_32.lib;sgx_urts.lib;sgx_uae_service.lib;sgx_dcap_qvl_parser.lib;sgx_dcap_qvl_attestation.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OneCore.lib;ucrtd.lib;user32.lib;Ws2_32.lib;sgx_dcap_qvl_parser.lib;sgx_dcap_qvl_attestation.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(VC_LibraryPath_VC_x64_OneCore);$(SGXSDKInstallPath)bin\$(Platform)\Debug;$(OutDir);$(SolutionDir)prebuilt\openssl\lib\win64</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;libucrt.lib;libucrtd.lib</IgnoreSpecificDefaultLibraries>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -135,7 +136,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -148,6 +149,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\Debug;$(OutDir)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -165,7 +167,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -179,6 +181,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\Release;$(OutDir)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -196,7 +199,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SGXSDKInstallPath)include;../inc;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\/../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\/../QuoteGeneration/common/inc/internal;../../QvE/Include;$(SolutionDir)prebuilt\openssl\inc;$(ProjectDir)..\..\QVL/Src;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL\Src\AttestationParsers\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\include;$(ProjectDir)..\..\QVL\Src\AttestationLibrary\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -206,16 +209,20 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>OneCore.lib;ucrt.lib;user32.lib;Ws2_32.lib;sgx_urts.lib;sgx_uae_service.lib;sgx_dcap_qvl_parser.lib;sgx_dcap_qvl_attestation.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OneCore.lib;ucrt.lib;user32.lib;Ws2_32.lib;sgx_dcap_qvl_parser.lib;sgx_dcap_qvl_attestation.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(VC_LibraryPath_VC_x64_OneCore);$(SGXSDKInstallPath)bin\$(Platform)\Release;$(OutDir);$(SolutionDir)prebuilt\openssl\lib\win64</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>sgx_dcap_quoteverify.def</ModuleDefinitionFile>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;libucrt.lib</IgnoreSpecificDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+      <CETCompat>true</CETCompat>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PostBuildEvent>
+      <Command>xcopy /FY "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)..\..\PSW_installer\InstallBinaries\$(Platform)\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\QuoteGeneration\common\src\se_thread.c" />
@@ -223,6 +230,7 @@
     <ClCompile Include="..\..\QvE\Enclave\qve.cpp" />
     <ClCompile Include="..\sgx_dcap_quoteverify.cpp" />
     <ClCompile Include="..\sgx_dcap_pcs_com.cpp" />
+    <ClCompile Include="..\tee_qv_class.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="qve_parser.cpp" />
     <ClCompile Include="qve_u.c">
@@ -257,6 +265,7 @@
     <ClInclude Include="..\inc\sgx_dcap_pcs_com.h" />
     <ClInclude Include="..\inc\sgx_dcap_quoteverify.h" />
     <ClInclude Include="..\inc\sgx_dcap_qv_internal.h" />
+    <ClInclude Include="..\inc\tee_qv_class.h" />
     <ClInclude Include="qve_u.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,42 +29,51 @@
  *
  */
 
-const { platforms_registered }= require('./models/');
-const Constants = require('../constants/index.js');
+import { PlatformsRegistered } from './models/index.js';
+import Constants from '../constants/index.js';
 
-exports.findRegisteredPlatform = async function(regDataJson) {
-    return await platforms_registered.findOne({where: {
-        qe_id: regDataJson.qe_id,
-        pce_id: regDataJson.pce_id,
-        cpu_svn: regDataJson.cpu_svn,
-        pce_svn: regDataJson.pce_svn,
-        platform_manifest: regDataJson.platform_manifest,
-        state: Constants.PLATF_REG_NEW
-    }});
+export async function findRegisteredPlatform(regDataJson) {
+  return await PlatformsRegistered.findOne({
+    where: {
+      qe_id: regDataJson.qe_id,
+      pce_id: regDataJson.pce_id,
+      cpu_svn: regDataJson.cpu_svn,
+      pce_svn: regDataJson.pce_svn,
+      platform_manifest: regDataJson.platform_manifest,
+      state: Constants.PLATF_REG_NEW,
+    },
+  });
 }
 
-exports.findRegisteredPlatforms = async function() {
-    return await platforms_registered.findAll({
-        attributes: ['qe_id', 'pce_id', 'cpu_svn', 'pce_svn', 'platform_manifest', 'enc_ppid'],
-        where:{state: Constants.PLATF_REG_NEW}
-    });
+export async function findRegisteredPlatforms(state) {
+  return await PlatformsRegistered.findAll({
+    attributes: [
+      'qe_id',
+      'pce_id',
+      'cpu_svn',
+      'pce_svn',
+      'platform_manifest',
+      'enc_ppid',
+    ],
+    where: { state: state },
+  });
 }
 
-exports.registerPlatform = async function(regDataJson, state) {
-    return await platforms_registered.upsert({
-        qe_id: regDataJson.qe_id,
-        pce_id: regDataJson.pce_id,
-        cpu_svn: regDataJson.cpu_svn,
-        pce_svn: regDataJson.pce_svn,
-        enc_ppid: regDataJson.enc_ppid,
-        platform_manifest: regDataJson.platform_manifest,
-        state: state 
-    });
+export async function registerPlatform(regDataJson, state) {
+  return await PlatformsRegistered.upsert({
+    qe_id: regDataJson.qe_id,
+    pce_id: regDataJson.pce_id,
+    cpu_svn: regDataJson.cpu_svn,
+    pce_svn: regDataJson.pce_svn,
+    enc_ppid: regDataJson.enc_ppid,
+    platform_manifest: regDataJson.platform_manifest,
+    state: state,
+  });
 }
 
-exports.deleteRegisteredPlatforms = async function() {
-    await platforms_registered.update(
-        {state: Constants.PLATF_REG_DELETED},
-        {where:{state: Constants.PLATF_REG_NEW}}
-    );
+export async function deleteRegisteredPlatforms(state) {
+  await PlatformsRegistered.update(
+    { state: Constants.PLATF_REG_DELETED },
+    { where: { state: state } }
+  );
 }

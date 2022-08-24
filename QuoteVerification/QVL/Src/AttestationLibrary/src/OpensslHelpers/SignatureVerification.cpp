@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 #include "SignatureVerification.h"
 #include "KeyUtils.h"
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 bool verifySignature(const pckparser::CrlStore& crl, const std::vector<uint8_t>& pubKey)
 {
@@ -131,4 +131,4 @@ bool verifySha256EcdsaSignature(const dcap::parser::x509::Signature &signature, 
     return verifySha256Signature(signature.getRawDer(), message, *pubKey);
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {

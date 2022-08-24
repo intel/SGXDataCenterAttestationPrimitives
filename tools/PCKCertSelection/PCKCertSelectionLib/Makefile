@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -70,22 +70,25 @@ JSON_INC		:= $(QVL_DIR)/ThirdParty/rapidjson/include
 
 # QVL Attestation Parsers include directory
 PARSERS_INC 		:= $(QVL_DIR)/AttestationParsers/include
+PARSERS_COMM_INC 		:= $(QVL_DIR)/AttestationCommons/include
+PARSERS_UTIL_INC 		:= $(QVL_DIR)/AttestationCommons/include/Utils
 
 ######## Library Settings ########
 
 # QVL Attestation Parsers source dirs
 PARSERS_DIR 		:= $(QVL_DIR)/AttestationParsers/src
+PARSERS_COMM_DIR 		:= $(QVL_DIR)/AttestationCommons/src
 JSON_DIR		:= $(PARSERS_DIR)/Json
 X509_DIR 		:= $(PARSERS_DIR)/X509
 HELPERS_DIR 		:= $(PARSERS_DIR)/OpensslHelpers
-UTILS_DIR 		:= $(PARSERS_DIR)/Utils
+UTILS_DIR 		:= $(PARSERS_COMM_DIR)/Utils
 VER_DIR       := $(QG_DIR)/common/inc/internal
 
 # source files from QVL Attestation Parsers dirs 
 PARSER_CPP_FILES	:= ParserUtils.cpp
 X509_CPP_FILES		:= Certificate.cpp DistinguishedName.cpp Extension.cpp PckCertificate.cpp Signature.cpp Tcb.cpp Validity.cpp
-HELPERS_CPP_FILES	:= OidUtils.cpp OpensslInit.cpp
-JSON_CPP_FILES		:= JsonParser.cpp TcbInfo.cpp TcbLevel.cpp
+HELPERS_CPP_FILES	:= OidUtils.cpp
+JSON_CPP_FILES		:= JsonParser.cpp TcbInfo.cpp TcbLevel.cpp TdxModule.cpp TcbComponent.cpp
 UTILS_CPP_FILES		:= GMTime.cpp TimeUtils.cpp
 
 # source files from local dir
@@ -110,7 +113,7 @@ LIB_CPP_OBJECTS 	:= \
 	$(UTILS_CPP_FILES:.cpp=.o)
 
 # include paths, local, parser and openssl
-LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include -I$(OPENSSL_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_DIR) -I$(VER_DIR)
+LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include -I$(OPENSSL_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_COMM_INC) -I$(PARSERS_DIR) -I$(VER_DIR) -I$(PARSERS_UTIL_INC)
 
 # the library shared object name
 LIB_NAME		:= libPCKCertSelection.so

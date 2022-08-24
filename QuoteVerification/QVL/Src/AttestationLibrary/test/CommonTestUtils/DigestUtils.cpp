@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 namespace intel{
 namespace sgx{
-namespace qvl{
+namespace dcap{
 namespace DigestUtils{
 
 
@@ -135,7 +135,7 @@ Bytes signMessageSha256(const Bytes& message, EVP_PKEY& privateKey)
 
 bool verifySig(const Bytes& signature, const Bytes& message, EC_KEY& pubKey)
 {
-    const auto digest = qvl::DigestUtils::sha256Digest(message);
+    const auto digest = dcap::DigestUtils::sha256Digest(message);
     return 1 == ECDSA_verify(0, digest.data(), static_cast<int>(digest.size()), signature.data(), static_cast<int>(signature.size()), &pubKey);
 }
 

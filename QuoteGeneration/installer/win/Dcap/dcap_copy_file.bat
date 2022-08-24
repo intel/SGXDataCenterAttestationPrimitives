@@ -27,6 +27,7 @@ echo * Copy needed files *
 echo **************************************************
 copy /y "%PREBUILTFILEFOLDER%\pce.signed.dll" "%~dp0output\pce.signed.dll"
 copy /y "%PREBUILTFILEFOLDER%\qe3.signed.dll" "%~dp0output\qe3.signed.dll"
+copy /y "%PREBUILTFILEFOLDER%\id_enclave.signed.dll" "%~dp0output\id_enclave.signed.dll"
 copy /y "%RELEASEFILEFOLDER%\sgx_dcap_ql.dll" "%~dp0output\sgx_dcap_ql.dll"
 
 copy /y "%PREBUILTFILEFOLDER%\qve.signed.dll" "%~dp0output\qve.signed.dll"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,66 +29,63 @@
  *
  */
 
-const { pck_cert }= require('./models/');
-const Constants = require('../constants/index.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const {Sequelize, sequelize} = require('./models/');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import { PckCert, sequelize } from './models/index.js';
 
 // Query a PCK Certificate
-exports.getCert = async function(qe_id, cpu_svn, pce_svn, pce_id){
-    const sql = 'select b.*,' +
-              ' (select cert from pcs_certificates e where e.id=d.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates e where e.id=d.intmd_cert_id) as intmd_cert' +
-              ' from platform_tcbs a, pck_cert b, platforms c left join pck_certchain d on c.ca=d.ca ' +
-              ' where a.qe_id=$qe_id and a.pce_id=$pce_id and a.cpu_svn=$cpu_svn and a.pce_svn=$pce_svn' +
-              ' and a.qe_id=b.qe_id and a.pce_id=b.pce_id and a.tcbm=b.tcbm' +
-              ' and a.qe_id=c.qe_id and a.pce_id=c.pce_id';
-    const pckcert = await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT,
-            bind: {
-                    qe_id : qe_id,
-                    pce_id : pce_id,
-                    cpu_svn : cpu_svn,
-                    pce_svn : pce_svn
-                  }
-        });
-    if (pckcert.length == 0)
-        return null;
-    else if (pckcert.length == 1 ){
-        if (pckcert[0].root_cert != null && pckcert[0].intmd_cert != null)
-            return pckcert[0];
-        else return null;
-    }
-    else 
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+export async function getCert(qe_id, cpu_svn, pce_svn, pce_id) {
+  const sql =
+    'select b.*,' +
+    ' (select cert from pcs_certificates e where e.id=d.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates e where e.id=d.intmd_cert_id) as intmd_cert' +
+    ' from platform_tcbs a, pck_cert b, platforms c left join pck_certchain d on c.ca=d.ca ' +
+    ' where a.qe_id=$qe_id and a.pce_id=$pce_id and a.cpu_svn=$cpu_svn and a.pce_svn=$pce_svn' +
+    ' and a.qe_id=b.qe_id and a.pce_id=b.pce_id and a.tcbm=b.tcbm' +
+    ' and a.qe_id=c.qe_id and a.pce_id=c.pce_id';
+  const pckcert = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+    bind: {
+      qe_id: qe_id,
+      pce_id: pce_id,
+      cpu_svn: cpu_svn,
+      pce_svn: pce_svn,
+    },
+  });
+  if (pckcert.length == 0) return null;
+  else if (pckcert.length == 1) {
+    if (pckcert[0].root_cert != null && pckcert[0].intmd_cert != null)
+      return pckcert[0];
+    else return null;
+  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }
 
 // Query all PCK Certificates for certain platform
-exports.getCerts = async function(qe_id, pce_id){
-    return await pck_cert.findAll({where:{
-        qe_id: qe_id,
-        pce_id: pce_id
-    }});
+export async function getCerts(qe_id, pce_id) {
+  return await PckCert.findAll({
+    where: {
+      qe_id: qe_id,
+      pce_id: pce_id,
+    },
+  });
 }
 
 // Update or insert a record
-exports.upsertPckCert = async function(qe_id, pce_id, tcbm, cert) {
-    return await pck_cert.upsert({
-        qe_id: qe_id,
-        pce_id: pce_id,
-        tcbm: tcbm,
-        pck_cert: cert
-    });
+export async function upsertPckCert(qe_id, pce_id, tcbm, cert) {
+  return await PckCert.upsert({
+    qe_id: qe_id,
+    pce_id: pce_id,
+    tcbm: tcbm,
+    pck_cert: cert,
+  });
 }
 
 // delete certs for a platform
-exports.deleteCerts = async function(qe_id, pce_id) {
-    return await pck_cert.destroy(
-        {where:{
-            qe_id: qe_id,
-            pce_id: pce_id
-        }}
-    );
+export async function deleteCerts(qe_id, pce_id) {
+  return await PckCert.destroy({
+    where: {
+      qe_id: qe_id,
+      pce_id: pce_id,
+    },
+  });
 }

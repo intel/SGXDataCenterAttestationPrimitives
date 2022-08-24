@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,6 +98,9 @@ private:
     string m_serverAddress;
     string m_subscriptionKey;
     LogLevel m_logLevel;
+    MPNetwork& operator=(const MPNetwork&) {return *this;}
+    MPNetwork(const MPNetwork& src) {(void) src; }
+
 };
 
 #endif // #ifndef __MPNETWORK_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,6 @@
  */
 
 #include <string.h>
-//#include <stdio.h>
 #include <stdlib.h>
 #include "sgx_pce.h"
 #include "sgx_quote_provider.h"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,27 +39,34 @@
 #include <vector>
 #include <ctime>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class JsonParser
 {
 public:
+    enum ParseStatus {
+        OK,
+        Missing,
+        Invalid
+    };
+
     bool parse(const std::string& json);
     const rapidjson::Value* getRoot() const;
     const rapidjson::Value* getField(const std::string& fieldName) const;
-    std::pair<std::vector<uint8_t>, bool> getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const;
-    std::pair<tm, bool> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    bool checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<unsigned int, bool> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<int, bool> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
-    std::pair<std::string, bool> getStringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<std::vector<uint8_t>, ParseStatus> getHexstringFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName, size_t length) const;
+    std::pair<std::string, ParseStatus> getStringFieldOf(const ::rapidjson::Value &parent, const std::string &fieldName) const;
+    std::pair<tm, ParseStatus> getDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    JsonParser::ParseStatus checkDateFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<uint32_t, ParseStatus> getUintFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+    std::pair<int, ParseStatus> getIntFieldOf(const ::rapidjson::Value& parent, const std::string& fieldName) const;
+
 private:
     bool isValidHexstring(const std::string& hexString) const;
 
     rapidjson::Document jsonDocument;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 
 #endif //SGXECDSAATTESTATION_JSONPARSER_H

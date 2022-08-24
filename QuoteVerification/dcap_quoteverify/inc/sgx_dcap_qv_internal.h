@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,12 +38,21 @@
 #ifndef _SGX_DCAP_QV_INTERNAL_H_
 #define _SGX_DCAP_QV_INTERNAL_H_
 
-#include "qve_header.h"
+#include "sgx_qve_header.h"
+#include "sgx_qve_def.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+typedef enum {
+	    SGX_EVIDENCE = 0,
+	    TDX_EVIDENCE,
+        UNKNOWN_QUOTE_TYPE
+} tee_evidence_type_t;
+
+//SGX&TDX untrusted quote verification related APIs
+//
 quote3_error_t sgx_qvl_verify_quote(
     const uint8_t *p_quote,
     uint32_t quote_size,
@@ -62,7 +71,7 @@ quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
     uint32_t *p_version);
 
 
- quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
+quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
      unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
      unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size);
 
@@ -71,5 +80,3 @@ quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
 #endif
 
 #endif /* !_SGX_DCAP_QV_INTERNAL_H_*/
-
-

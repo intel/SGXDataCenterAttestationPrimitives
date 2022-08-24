@@ -29,13 +29,15 @@
 #
 #
 
+%define _license_file COPYING
 
 Name:           libsgx-dcap-ql
 Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions Data Center Attestation Primitives
 Group:          Development/Libraries
-Requires:       libsgx-qe3-logic >= %{version}-%{release} libsgx-pce-logic >= %{version}-%{release} libsgx-ae-qve >= %{version}-%{release}
+Requires:       libsgx-qe3-logic >= %{version}-%{release} libsgx-pce-logic >= %{version}-%{release}
+Recommends:     libsgx-dcap-quote-verify >= %{version}-%{release} libsgx-quote-ex >= 2.17
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
@@ -47,7 +49,7 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives
 %package devel
 Summary:        Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers
 Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name} = %{version}-%{release} libsgx-headers >= 2.17
 
 %description devel
 Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers
@@ -57,6 +59,8 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives for Develo
 
 %install
 make DESTDIR=%{?buildroot} install
+install -d %{?buildroot}/%{name}%{_docdir}/%{name}
+find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?buildroot}/%{name}%{_docdir}/%{name}/%{_license_file}
 rm -f %{_specdir}/list-%{name}
 for f in $(find %{?buildroot}/%{name} -type f -o -type l); do
     echo $f | sed -e "s#%{?buildroot}/%{name}##" >> %{_specdir}/list-%{name}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #include "AppOptionsParser.h"
 #include <chrono>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
     static const std::string quoteDefaultPath = "quote.dat";
@@ -41,8 +41,8 @@ namespace {
     static const std::string pckSigningChainDefaultPath = "pckSignChain.pem";
     static const std::string tcbSignChainDefaultPath = "tcbSignChain.pem";
     static const std::string tcbInfoDefaultPath = "tcbInfo.json";
-    static const std::string rootCaCrlDefaultPath = "rootCaCrl.pem";
-    static const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
+    static const std::string rootCaCrlDefaultPath = "rootCaCrl.der";
+    static const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.der";
     static const std::string qeIdentityDefaultPath = "";
     static const std::string qveIdentityDefaultPath = "";
     static const std::string expirationDateDefault = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
@@ -57,8 +57,8 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     auto tcbInfoFile = arg_str0(NULL, "tcbInfo", NULL, "TCB Info file path, JSON format [=tcbInfo.json]");
     auto qeIdentityFile = arg_str0(NULL, "qeIdentity", NULL, "QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]");
     auto qveIdentityFile = arg_str0(NULL, "qveIdentity", NULL, "QveIdentity file path, JSON format. QveIdentity verification is optional, will not run by default [=]");
-    auto rootCaCrlFile = arg_str0(NULL, "rootCaCrl", NULL, "Root Ca CRL file path, PEM format [=rootCaCrl.pem]");
-    auto intermediateCaCrlFile = arg_str0(NULL, "intermediateCaCrl", NULL, "Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]");
+    auto rootCaCrlFile = arg_str0(NULL, "rootCaCrl", NULL, "Root Ca CRL file path, PEM or DER format [=rootCaCrl.der]");
+    auto intermediateCaCrlFile = arg_str0(NULL, "intermediateCaCrl", NULL, "Intermediate Ca CRL file path, PEM or DER format [=intermediateCaCrl.der]");
     auto quoteFile = arg_str0(NULL, "quote", NULL, "Quote file path, binary format [=quote.dat]");
     auto expirationDate = arg_str0(NULL, "expirationDate", NULL, "Expiration date in timestamp seconds [=seconds]");
     struct arg_lit* help = arg_lit0("h", "help", "Print this message");
@@ -113,8 +113,18 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
     options->rootCaCrlFile = std::string(rootCaCrlFile->sval[0]);
     options->intermediateCaCrlFile = std::string(intermediateCaCrlFile->sval[0]);
     options->quoteFile = std::string(quoteFile->sval[0]);
-    options->expirationDate = std::stol(expirationDate->sval[0]);
 
+    try
+    {
+        options->expirationDate = std::stol(expirationDate->sval[0]);
+    }
+    catch(std::exception& ex)
+    {
+        printf("Can't parse expirationDate: %s\n\n", ex.what());
+        printHelp(argtable);
+        arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+        return nullptr;
+    }
     arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
 
     return options;

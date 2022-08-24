@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 #define SGXECDSAATTESTATION_FORMATEXCEPTION_H
 
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 class FormatException : public std::logic_error
 {
@@ -41,6 +41,6 @@ public:
     using std::logic_error::logic_error;
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif //SGXECDSAATTESTATION_FORMATEXCEPTION_H

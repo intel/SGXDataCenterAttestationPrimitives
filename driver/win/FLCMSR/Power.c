@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,6 +76,8 @@ void WriteMsrRoutine(
         {
             if (UsePLEOptIn)
             {
+                TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "Writing MSRs %llx %llx %llx %llx",
+                    MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_3);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_0, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_0);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_1, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_1);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_2, MSR_IA32_SGX_LE_PUBKEYHASH_VALUE_2);
@@ -83,6 +85,8 @@ void WriteMsrRoutine(
             }
             else
             {
+                TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_UTILITY, "Writing legacypubKeyHash %llx %llx %llx %llx",
+                    legacypubKeyHash.pubKeyHash_Value_0, legacypubKeyHash.pubKeyHash_Value_1, legacypubKeyHash.pubKeyHash_Value_2, legacypubKeyHash.pubKeyHash_Value_3);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_0, legacypubKeyHash.pubKeyHash_Value_0);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_1, legacypubKeyHash.pubKeyHash_Value_1);
                 __writemsr(MSR_IA32_SGX_LE_PUBKEYHASH_2, legacypubKeyHash.pubKeyHash_Value_2);

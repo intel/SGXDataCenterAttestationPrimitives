@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,24 +33,23 @@
 #define SGXECDSAATTESTATION_ENCLAVEREPORTVERIFIER_H
 
 #include "QuoteVerification/Quote.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 
 #include <vector>
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class EnclaveReportVerifier {
 
 public:
     virtual ~EnclaveReportVerifier() = default;
-    virtual Status verify(const EnclaveIdentity *enclaveIdentity, const Quote::EnclaveReport& enclaveReport) const;
+    virtual Status verify(const EnclaveIdentityV2 *enclaveIdentity, const EnclaveReport& enclaveReport) const;
 
 private:
-    std::vector<uint8_t> applyMask(const std::vector<uint8_t>& base, const std::vector<uint8_t>& mask) const;
     uint32_t vectorToUint32(const std::vector<uint8_t>& input) const;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_ENCLAVEREPORTVERIFIER_H

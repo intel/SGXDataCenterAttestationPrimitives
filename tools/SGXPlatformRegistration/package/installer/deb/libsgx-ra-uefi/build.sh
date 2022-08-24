@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ LINUX_INSTALLER_COMMON_RA_UEFI_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-ra-uefi
 source ${LINUX_INSTALLER_COMMON_RA_UEFI_DIR}/installConfig
 DEB_FOLDER=${RA_UEFI_PACKAGE_NAME}-${RA_UEFI_VERSION}
 
-SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/ra_version.h|sed 's/^\"\(.*\)\"$/\1/')
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/../../QuoteGeneration/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 DEB_BUILD_FOLDER=${RA_UEFI_PACKAGE_NAME}-${SGX_VERSION}
 
 main() {
@@ -96,6 +96,7 @@ get_os_code() {
     if [ -z ${OS_CODE} ]; then
         OS_CODE=$(grep "VERSION_CODENAME" /etc/os-release 2> /dev/null | cut -d= -f2)
     fi
+    echo ${OS_CODE}
 }
 
 update_version() {

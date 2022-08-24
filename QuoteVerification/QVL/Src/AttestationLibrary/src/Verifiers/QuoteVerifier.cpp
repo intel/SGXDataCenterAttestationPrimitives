@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
  */
 
 #include "QuoteVerifier.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include "Utils/RuntimeException.h"
 
 #include <algorithm>
@@ -43,7 +43,7 @@
 #include <OpensslHelpers/SignatureVerification.h>
 #include <Verifiers/PckCertVerifier.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
 
@@ -53,7 +53,7 @@ constexpr int CPUSVN_EQUAL_OR_HIGHER = true;
 bool isCpuSvnHigherOrEqual(const dcap::parser::x509::PckCertificate& pckCert,
                            const dcap::parser::json::TcbLevel& tcbLevel)
 {
-    for(unsigned int index = 0; index < constants::CPUSVN_BYTE_LEN; ++index)
+    for(uint32_t index = 0; index < constants::CPUSVN_BYTE_LEN; ++index)
     {
         const auto componentValue = pckCert.getTcb().getSgxTcbComponentSvn(index);
         const auto otherComponentValue = tcbLevel.getSgxTcbComponentSvn(index);
@@ -67,16 +67,46 @@ bool isCpuSvnHigherOrEqual(const dcap::parser::x509::PckCertificate& pckCert,
     return CPUSVN_EQUAL_OR_HIGHER;
 }
 
-const std::string& getMatchingTcbLevel(const std::set<dcap::parser::json::TcbLevel, std::greater<dcap::parser::json::TcbLevel>> &tcbs,
-                                      const dcap::parser::x509::PckCertificate &pckCert)
+bool isTdxTcbHigherOrEqual(const dcap::quote::TDReport& tdReport,
+                           const dcap::parser::json::TcbLevel& tcbLevel)
 {
+    for(uint32_t index = 0; index < constants::CPUSVN_BYTE_LEN; ++index)
+    {
+        const auto componentValue = tdReport.teeTcbSvn[index];
+        const auto otherComponentValue = tcbLevel.getTdxTcbComponent(index);
+        if(componentValue < otherComponentValue.getSvn())
+        {
+            // If *ANY* SVN is lower then TCB level is considered lower
+            return false;
+        }
+    }
+    // but for TCB level to be considered higher it requires *EVERY* SVN to be higher or equal
+    return true;
+}
+const parser::json::TcbLevel& getMatchingTcbLevel(const dcap::parser::json::TcbInfo &tcbInfo,
+                                       const dcap::parser::x509::PckCertificate &pckCert,
+                                       const Quote &quote)
+{
+    const auto &tcbs = tcbInfo.getTcbLevels();
     const auto certPceSvn = pckCert.getTcb().getPceSvn();
 
     for (const auto& tcb : tcbs)
     {
         if(isCpuSvnHigherOrEqual(pckCert, tcb) && certPceSvn >= tcb.getPceSvn())
         {
-            return tcb.getStatus();
+            if (tcbInfo.getVersion() >= 3 &&
+                tcbInfo.getId() == parser::json::TcbInfo::TDX_ID &&
+                quote.getHeader().teeType == constants::TEE_TYPE_TDX)
+            {
+                if (isTdxTcbHigherOrEqual(quote.getTdReport(), tcb))
+                {
+                    return tcb;
+                }
+            }
+            else
+            {
+                return tcb;
+            }
         }
     }
 
@@ -84,10 +114,19 @@ const std::string& getMatchingTcbLevel(const std::set<dcap::parser::json::TcbLev
     throw RuntimeException(STATUS_TCB_NOT_SUPPORTED);
 }
 
-Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert)
+Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert,
+        const Quote& quote)
 {
     /// 4.1.2.4.17.1 & 4.1.2.4.17.2
-    const auto& tcbLevelStatus = getMatchingTcbLevel(tcbInfoJson.getTcbLevels(), pckCert);
+    const auto& tcbLevel = getMatchingTcbLevel(tcbInfoJson, pckCert, quote);
+
+    if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID
+        && tcbLevel.getTdxTcbComponent(1).getSvn() != quote.getTdReport().teeTcbSvn[1])
+    {
+        return STATUS_TCB_INFO_MISMATCH;
+    }
+
+    const auto& tcbLevelStatus = tcbLevel.getStatus();
 
     if (tcbLevelStatus == "OutOfDate")
     {
@@ -119,7 +158,7 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
         return STATUS_TCB_SW_HARDENING_NEEDED;
     }
 
-    if(tcbInfoJson.getVersion() == 2 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
+    if(tcbInfoJson.getVersion() > 1 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
     {
         return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
     }
@@ -158,6 +197,7 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
         case STATUS_OK:
             return tcbLevelStatus;
         default:
+            /// 4.1.2.4.16.4
             return STATUS_TCB_UNRECOGNIZED_STATUS;
     }
 }
@@ -168,7 +208,7 @@ Status QuoteVerifier::verify(const Quote& quote,
                              const dcap::parser::x509::PckCertificate& pckCert,
                              const pckparser::CrlStore& crl,
                              const dcap::parser::json::TcbInfo& tcbInfoJson,
-                             const EnclaveIdentity *enclaveIdentity,
+                             const EnclaveIdentityV2 *enclaveIdentity,
                              const EnclaveReportVerifier& enclaveReportVerifier)
 {
     Status qeIdentityStatus = STATUS_QE_IDENTITY_MISMATCH;
@@ -190,6 +230,26 @@ Status QuoteVerifier::verify(const Quote& quote,
     }
 
     /// 4.1.2.4.9
+    if(tcbInfoJson.getVersion() >= 3)
+    {
+        if(tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID && quote.getHeader().teeType != dcap::constants::TEE_TYPE_TDX)
+        {
+            return STATUS_TCB_INFO_MISMATCH;
+        }
+        if(tcbInfoJson.getId() == parser::json::TcbInfo::SGX_ID && quote.getHeader().teeType != dcap::constants::TEE_TYPE_SGX)
+        {
+            return STATUS_TCB_INFO_MISMATCH;
+        }
+    }
+    else
+    {
+        if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_TDX)
+        {
+            return STATUS_TCB_INFO_MISMATCH;
+        }
+    }
+
+    /// 4.1.2.4.10
     if(pckCert.getFmspc() != tcbInfoJson.getFmspc())
     {
         return STATUS_TCB_INFO_MISMATCH;
@@ -200,12 +260,10 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_TCB_INFO_MISMATCH;
     }
 
-    /// 4.1.2.4.10 ?
-    const auto qeCertData = quote.getQuoteAuthData().qeCertData;
-    auto qeCertDataVerificationStatus = verifyQeCertData(qeCertData);
-    if(qeCertDataVerificationStatus != STATUS_OK)
+    const auto certificationDataVerificationStatus = verifyCertificationData(quote.getCertificationData());
+    if(certificationDataVerificationStatus != STATUS_OK)
     {
-        return qeCertDataVerificationStatus;
+        return certificationDataVerificationStatus;
     }
 
     auto pubKey = crypto::rawToP256PubKey(pckCert.getPubKey());
@@ -214,38 +272,90 @@ Status QuoteVerifier::verify(const Quote& quote,
         return STATUS_INVALID_PCK_CERT; // if there were issues with parsing public key it means cert was invalid.
                                         // Probably it will never happen because parsing cert should fail earlier.
     }
-    /// 4.1.2.4.13
-    if(!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().qeReportSignature.signature,
-                                           quote.getQuoteAuthData().qeReport.rawBlob(),
-                                           *pubKey))
+
+    /// 4.1.2.4.11
+    if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID)
+    {
+        const auto& tdxModule = tcbInfoJson.getTdxModule();
+
+        const auto quoteMrSignerSeam = quote.getTdReport().mrSignerSeam;
+        const auto& tdxModuleMrSigner = tdxModule.getMrSigner();
+
+        if (quoteMrSignerSeam.size() != tdxModuleMrSigner.size())
+        {
+            return STATUS_TDX_MODULE_MISMATCH;
+        }
+
+        for(uint32_t i = 0; i < tdxModuleMrSigner.size(); i++)
+        {
+            if (tdxModuleMrSigner[i] != quoteMrSignerSeam[i])
+            {
+                return STATUS_TDX_MODULE_MISMATCH;
+            }
+        }
+
+        std::vector<uint8_t> quoteSeamAttributes(quote.getTdReport().seamAttributes.begin(), quote.getTdReport().seamAttributes.end());
+        if (applyMask(quoteSeamAttributes, tdxModule.getAttributesMask()) != tdxModule.getAttributes())
+        {
+            return STATUS_TDX_MODULE_MISMATCH;
+        }
+    }
+
+    /// 4.1.2.4.12
+    if (!crypto::verifySha256EcdsaSignature(quote.getQeReportSignature(), quote.getQeReport().rawBlob(), *pubKey))
     {
         return STATUS_INVALID_QE_REPORT_SIGNATURE;
     }
 
-    /// 4.1.2.4.14
+    /// 4.1.2.4.13
     const auto hashedConcatOfAttestKeyAndQeReportData = [&]() -> std::vector<uint8_t>
     {
-        const auto attestKeyData = quote.getQuoteAuthData().ecdsaAttestationKey.pubKey;
-        const auto qeAuthData = quote.getQuoteAuthData().qeAuthData.data;
         std::vector<uint8_t> ret;
-        ret.reserve(attestKeyData.size() + qeAuthData.size());
-        std::copy(attestKeyData.begin(), attestKeyData.end(), std::back_inserter(ret));
-        std::copy(qeAuthData.begin(), qeAuthData.end(), std::back_inserter(ret));
+        ret.reserve(quote.getAttestKeyData().size() + quote.getQeAuthData().size());
+        std::copy(quote.getAttestKeyData().begin(), quote.getAttestKeyData().end(), std::back_inserter(ret));
+        std::copy(quote.getQeAuthData().begin(), quote.getQeAuthData().end(), std::back_inserter(ret));
 
         return crypto::sha256Digest(ret);
     }();
 
     if(hashedConcatOfAttestKeyAndQeReportData.empty() || !std::equal(hashedConcatOfAttestKeyAndQeReportData.begin(),
                                                                      hashedConcatOfAttestKeyAndQeReportData.end(),
-                                                                     quote.getQuoteAuthData().qeReport.reportData.begin()))
+                                                                     quote.getQeReport().reportData.begin()))
     {
         return STATUS_INVALID_QE_REPORT_DATA;
     }
 
-    /// 4.1.2.4.15
     if (enclaveIdentity)
     {
-        qeIdentityStatus = enclaveReportVerifier.verify(enclaveIdentity, quote.getQuoteAuthData().qeReport);
+        /// 4.1.2.4.14
+        if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_TDX)
+        {
+            if(enclaveIdentity->getVersion() == 1)
+            {
+                return STATUS_QE_IDENTITY_MISMATCH;
+            }
+            else if(enclaveIdentity->getVersion() == 2)
+            {
+                if(enclaveIdentity->getID() != EnclaveID::TD_QE)
+                {
+                    return STATUS_QE_IDENTITY_MISMATCH;
+                }
+            }
+        }
+        else if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_SGX)
+        {
+            if(enclaveIdentity->getID() != EnclaveID::QE)
+            {
+                return STATUS_QE_IDENTITY_MISMATCH;
+            }
+        }
+        else
+        {
+            return STATUS_QE_IDENTITY_MISMATCH;
+        }
+
+        /// 4.1.2.4.15
+        qeIdentityStatus = enclaveReportVerifier.verify(enclaveIdentity, quote.getQeReport());
         switch(qeIdentityStatus) {
             case STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT:
                 return STATUS_UNSUPPORTED_QUOTE_FORMAT;
@@ -265,14 +375,14 @@ Status QuoteVerifier::verify(const Quote& quote,
         }
     }
 
-    const auto attestKey = crypto::rawToP256PubKey(quote.getQuoteAuthData().ecdsaAttestationKey.pubKey);
+    const auto attestKey = crypto::rawToP256PubKey(quote.getAttestKeyData());
     if(!attestKey)
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
     /// 4.1.2.4.16
-    if (!crypto::verifySha256EcdsaSignature(quote.getQuoteAuthData().ecdsa256BitSignature.signature,
+    if (!crypto::verifySha256EcdsaSignature(quote.getQuoteSignature(),
                                             quote.getSignedData(),
                                             *attestKey))
     {
@@ -282,7 +392,12 @@ Status QuoteVerifier::verify(const Quote& quote,
     try
     {
         /// 4.1.2.4.17
-        const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert);
+        const auto tcbLevelStatus = checkTcbLevel(tcbInfoJson, pckCert, quote);
+
+        if (tcbLevelStatus == STATUS_TCB_INFO_MISMATCH)
+        {
+            return STATUS_TCB_INFO_MISMATCH;
+        }
 
         if (enclaveIdentity)
         {
@@ -297,13 +412,14 @@ Status QuoteVerifier::verify(const Quote& quote,
     }
 }
 
-Status QuoteVerifier::verifyQeCertData(const Quote::QeCertData& qeCertData) const
+Status QuoteVerifier::verifyCertificationData(const CertificationData& certificationData) const
 {
-    if(qeCertData.parsedDataSize != qeCertData.data.size())
+    if (certificationData.parsedDataSize != certificationData.data.size())
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
+
     return STATUS_OK;
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

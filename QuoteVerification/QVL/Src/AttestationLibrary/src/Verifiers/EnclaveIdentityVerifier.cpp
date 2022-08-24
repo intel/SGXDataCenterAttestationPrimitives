@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,13 @@
  */
 
 #include "EnclaveIdentityVerifier.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include "Utils/TimeUtils.h"
 
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 EnclaveIdentityVerifier::EnclaveIdentityVerifier()
         : _commonVerifier(new CommonVerifier()),
@@ -51,7 +51,7 @@ EnclaveIdentityVerifier::EnclaveIdentityVerifier(std::unique_ptr<CommonVerifier>
 }
 
 Status EnclaveIdentityVerifier::verify(
-            const EnclaveIdentity &enclaveIdentity,
+            const EnclaveIdentityV2 &enclaveIdentity,
             const CertificateChain &chain,
             const pckparser::CrlStore &rootCaCrl,
             const dcap::parser::x509::Certificate &trustedRoot,
@@ -94,4 +94,4 @@ Status EnclaveIdentityVerifier::verify(
     return STATUS_OK;
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

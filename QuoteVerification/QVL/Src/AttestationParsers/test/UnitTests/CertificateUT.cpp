@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 #include <gtest/gtest.h>
 
-#include <gmock/gmock-generated-matchers.h>
+#include <gmock/gmock-matchers.h>
 
 using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::parser;
@@ -77,7 +77,7 @@ struct CertificateUT: public testing::Test {
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                              constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                             ppid, cpusvn, pcesvn, pceId, fmspc);
+                                             ppid, cpusvn, pcesvn, pceId, fmspc, 0);
 
         pemPckCert = certGenerator.x509ToString(cert.get());
         pemIntCert = certGenerator.x509ToString(intCert.get());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 #include <OpensslHelpers/OpensslTypes.h>
 #include <OpensslHelpers/Bytes.h>
 
-namespace intel{ namespace sgx{ namespace qvl{ namespace test{
+namespace intel{ namespace sgx{ namespace dcap{ namespace test{
 
 enum CRLVersion {
     CRL_VERSION_1 = 0,
@@ -52,7 +52,8 @@ public:
     crypto::X509_CRL_uptr generateCRL(CRLVersion version, long notBeforeOffset, long notAfterOffset,
                                       const crypto::X509_uptr &issuerCert, const std::vector<Bytes> &revokedSerials = std::vector<Bytes>{}) const;
 
-    static std::string x509CrlToString(const X509_CRL *crl);
+    static std::string x509CrlToPEMString(const X509_CRL *crl);
+    static std::string x509CrlToDERString(const X509_CRL *crl);
 
 private:
     void revokeSerialNumber(const crypto::X509_CRL_uptr &crl, const Bytes &serialNumber) const;

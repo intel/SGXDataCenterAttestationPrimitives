@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,220 +28,315 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('../utils/Logger.js');
-const pckcertDao = require('../dao/pckcertDao.js');
-const qeidentityDao = require('../dao/qeidentityDao.js');
-const qveidentityDao = require('../dao/qveidentityDao.js');
-const pckcrlDao = require('../dao/pckcrlDao.js');
-const platformTcbsDao = require('../dao/platformTcbsDao.js');
-const platformsDao = require('../dao/platformsDao.js');
-const fmspcTcbDao = require('../dao/fmspcTcbDao.js');
-const pckCertchainDao = require('../dao/pckCertchainDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const pckcertService = require('./pckcertService.js')
-const {sequelize, Sequelize} = require('../dao/models/');
-const X509 = require('../x509/x509.js');
-const PckLib = require('../lib_wrapper/pcklib_wrapper.js');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
+import logger from '../utils/Logger.js';
+import X509 from '../x509/x509.js';
+import * as pckcertDao from '../dao/pckcertDao.js';
+import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
+import * as pckcrlDao from '../dao/pckcrlDao.js';
+import * as platformTcbsDao from '../dao/platformTcbsDao.js';
+import * as platformsDao from '../dao/platformsDao.js';
+import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
+import * as pckCertchainDao from '../dao/pckCertchainDao.js';
+import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as crlCacheDao from '../dao/crlCacheDao.js';
+import * as pcsClient from '../pcs_client/pcs_client.js';
+import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
+import * as appUtil from '../utils/apputil.js';
+import { sequelize } from '../dao/models/index.js';
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
-// Refresh the QE IDENTITY table
-var refresh_qe_identity=async function(){
-    const pck_server_res = await PcsClient.getQEIdentity();
+// Refresh the enclave_identities table
+async function refresh_enclave_identities() {
+  let enclave_id_list;
+  if (global.PCS_VERSION == 3) {
+    enclave_id_list = [
+      [Constants.QE_IDENTITY_ID, 3],
+      [Constants.QVE_IDENTITY_ID, 3],
+    ];
+  } else if (global.PCS_VERSION == 4) {
+    enclave_id_list = [
+      [Constants.QE_IDENTITY_ID, 3],
+      [Constants.QVE_IDENTITY_ID, 3],
+      [Constants.QE_IDENTITY_ID, 4],
+      [Constants.QVE_IDENTITY_ID, 4],
+      [Constants.TDQE_IDENTITY_ID, 4],
+    ];
+  }
+  let issuer_chain_updated = false;  // Update issuer chain only once
+  for (const enclave_id of enclave_id_list) {
+    const pck_server_res = await pcsClient.getEnclaveIdentity(
+      enclave_id[0],
+      enclave_id[1]
+    );
     if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-        // Then refresh cache DB
-        await qeidentityDao.upsertQEIdentity(pck_server_res.body);
+      // Then refresh cache DB
+      await enclaveIdentityDao.upsertEnclaveIdentity(
+        enclave_id[0],
+        pck_server_res.rawBody,
+        enclave_id[1]
+      );
+      if (!issuer_chain_updated) {
         await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-            pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
+          pcsClient.getHeaderValue(
+            pck_server_res.headers,
+            Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
+          )
+        );
+        issuer_chain_updated = true;
+      }
+    } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
     }
-    else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);
-    }
-}
-
-// Refresh the QVE IDENTITY table
-var refresh_qve_identity=async function(){
-    const pck_server_res = await PcsClient.getQvEIdentity();
-    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-        // Then refresh cache DB
-        await qveidentityDao.upsertQvEIdentity(pck_server_res.body);
-        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-            pck_server_res.headers[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]);
-    }
-    else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);
-    }
+  }
 }
 
 function sorter(key1, key2) {
-    return function(a, b) {  
-        if (a[key1] > b[key1]) return -1;  
-        else if (a[key1] < b[key1]) return 1;  
-        else {
-            if (a[key2] > b[key2]) return 1;  
-            else if (a[key2] < b[key2]) return -1;  
-            else return 0;
-        } 
-    }  
+  return function (a, b) {
+    if (a[key1] > b[key1]) return -1;
+    else if (a[key1] < b[key1]) return 1;
+    else {
+      if (a[key2] > b[key2]) return 1;
+      else if (a[key2] < b[key2]) return -1;
+      else return 0;
+    }
+  };
 }
 
-// Refresh all PCK certs in the database 
-var refresh_all_pckcerts = async function(fmspc){
-    const platformTcbs = await platformTcbsDao.getPlatformTcbs(fmspc);
-    platformTcbs.sort(sorter("qe_id", "pce_id"));
-    let last_qe_id = '';
-    let last_pce_id = '';
-    let tcbinfo_str;
-    let pckcerts;
-    let pem_certs;
-    let pck_certchain = null;
-    for (const platformTcb of platformTcbs) {
-        if (platformTcb.qe_id != last_qe_id || platformTcb.pce_id != last_pce_id) {
-            // new platform detected
-            const platform = await platformsDao.getPlatform(platformTcb.qe_id, platformTcb.pce_id);
+// Refresh all PCK certs in the database
+async function refresh_all_pckcerts(fmspc_array) {
+  const platformTcbs = await platformTcbsDao.getPlatformTcbs(fmspc_array);
+  platformTcbs.sort(sorter('qe_id', 'pce_id'));
+  let last_qe_id = '';
+  let last_pce_id = '';
+  let tcbinfo_str;
+  let pckcerts;
+  let pem_certs;
+  let pck_certchain = null;
+  let fmspc;
+  let ca_type;
+  for (const platformTcb of platformTcbs) {
+    if (platformTcb.qe_id != last_qe_id || platformTcb.pce_id != last_pce_id) {
+      // new platform detected
+      const platform = await platformsDao.getPlatform(
+        platformTcb.qe_id,
+        platformTcb.pce_id
+      );
+      // contact Intel PCS server to get PCK certs
+      let pck_server_res;
+      if (platform.platform_manifest) {
+        pck_server_res = await pcsClient.getCertsWithManifest(
+          platform.platform_manifest,
+          platformTcb.pce_id
+        );
+      } else {
+        pck_server_res = await pcsClient.getCerts(
+          platform.enc_ppid,
+          platformTcb.pce_id
+        );
+      }
 
-            // contact Intel PCS server to get PCK certs
-            let pck_server_res = await PcsClient.getCerts(platform.enc_ppid, platformTcb.pce_id);
+      // check HTTP status
+      if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+      }
 
-            // check HTTP status
-            if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-            }
+      pck_certchain = pcsClient.getHeaderValue(
+        pck_server_res.headers,
+        Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN
+      );
 
-            pck_certchain = pck_server_res.headers[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN];
+      // Parse the response body
+      pckcerts = JSON.parse(pck_server_res.body);
+      if (pckcerts.length == 0) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+      }
 
-            // Parse the response body
-            pckcerts = JSON.parse(pck_server_res.body);
-            if (pckcerts.length == 0) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-            }
+      // Get fmspc and ca type from response header
+      fmspc = pcsClient
+        .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
+        .toUpperCase();
+      ca_type = pcsClient
+        .getHeaderValue(
+          pck_server_res.headers,
+          Constants.SGX_PCK_CERTIFICATE_CA_TYPE
+        )
+        .toUpperCase();
 
-            // parse arbitary cert to get fmspc value
-            const x509 = new X509();
-            if (!x509.parseCert(unescape(pckcerts[0].cert))) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
-            }
+      if (fmspc == null || ca_type == null) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+      }
 
-            const fmspc = x509.fmspc;
-            if (fmspc == null) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
-            }
+      // get tcbinfo for this fmspc
+      pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
+      if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+      }
 
-            // get tcbinfo for this fmspc
-            pck_server_res = await PcsClient.getTcb(fmspc);
-            if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-                throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-            }
+      const tcbinfo = pck_server_res.rawBody;
+      tcbinfo_str = pck_server_res.body;
 
-            const tcbinfo = JSON.parse(pck_server_res.body);
-            tcbinfo_str = JSON.stringify(tcbinfo);
+      pem_certs = pckcerts.map((o) => decodeURIComponent(o.cert));
 
-            pem_certs = pckcerts.map(o => unescape(o.cert));
+      // flush and add PCK certs
+      await pckcertDao.deleteCerts(platformTcb.qe_id, platformTcb.pce_id);
+      for (const pckcert of pckcerts) {
+        await pckcertDao.upsertPckCert(
+          platformTcb.qe_id,
+          platformTcb.pce_id,
+          pckcert.tcbm,
+          decodeURIComponent(pckcert.cert)
+        );
+      }
+    }
+    // get the best cert with PCKCertSelectionTool
+    let cert_index = pckLibWrapper.pck_cert_select(
+      platformTcb.cpu_svn,
+      platformTcb.pce_svn,
+      platformTcb.pce_id,
+      tcbinfo_str,
+      pem_certs,
+      pem_certs.length
+    );
+    if (cert_index == -1) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+    }
+    await platformTcbsDao.upsertPlatformTcbs(
+      platformTcb.qe_id,
+      platformTcb.pce_id,
+      platformTcb.cpu_svn,
+      platformTcb.pce_svn,
+      pckcerts[cert_index].tcbm
+    );
 
-            // flush and add PCK certs
-            await pckcertDao.deleteCerts(platformTcb.qe_id, platformTcb.pce_id);
-            for (const pckcert of pckcerts) {
-                await pckcertDao.upsertPckCert(platformTcb.qe_id, 
-                    platformTcb.pce_id, 
-                    pckcert.tcbm, 
-                    unescape(pckcert.cert));
-            } 
-        }
-
-        // get the best cert with PCKCertSelectionTool
-        let cert_index = PckLib.pck_cert_select(platformTcb.cpu_svn, platformTcb.pce_svn, platformTcb.pce_id, 
-            tcbinfo_str, pem_certs, pem_certs.length);
-        if (cert_index == -1) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
-        await platformTcbsDao.upsertPlatformTcbs(platformTcb.qe_id, 
-            platformTcb.pce_id, 
-            platformTcb.cpu_svn, 
-            platformTcb.pce_svn, 
-            pckcerts[cert_index].tcbm);
-        
-        last_qe_id = platformTcb.qe_id;
-        last_pce_id = platformTcb.pce_id;
+    if (pck_certchain) {
+      // Update pck_certchain
+      await pckCertchainDao.upsertPckCertchain(ca_type);
+      // Update or insert SGX_PCK_CERTIFICATE_ISSUER_CHAIN
+      await pcsCertificatesDao.upsertPckCertificateIssuerChain(
+        ca_type,
+        pck_certchain
+      );
     }
 
-    if (pck_certchain != null) {
-        // Update pck_certchain
-        await pckCertchainDao.upsertPckCertchain();
-        // Update or insert SGX_PCK_CERTIFICATE_ISSUER_CHAIN
-        await pcsCertificatesDao.upsertPckCertificateIssuerChain(pck_certchain);
-    }
+    last_qe_id = platformTcb.qe_id;
+    last_pce_id = platformTcb.pce_id;
+  }
 }
 
 // Refresh the crl record for the specified ca
-var refresh_one_crl=async function(ca){
-    const pck_server_res = await PcsClient.getPckCrl(ca);
-    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-        // Then refresh cache DB
-        await pckcrlDao.upsertPckCrl(ca, pck_server_res.body);
-        await pcsCertificatesDao.upsertPckCrlCertchain(ca, pck_server_res.headers[Constants.SGX_PCK_CRL_ISSUER_CHAIN]);
-    }
-    else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);
-    }
+async function refresh_one_crl(ca) {
+  const pck_server_res = await pcsClient.getPckCrl(ca);
+  if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
+    // Then refresh cache DB
+    await pckcrlDao.upsertPckCrl(ca, pck_server_res.rawBody);
+    await pcsCertificatesDao.upsertPckCrlCertchain(
+      ca,
+      pcsClient.getHeaderValue(
+        pck_server_res.headers,
+        Constants.SGX_PCK_CRL_ISSUER_CHAIN
+      )
+    );
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+  }
 }
 
-// Refresh all CRLs in the table
-var refresh_all_crls = async function(){
-    const pckcrls = await pckcrlDao.getAllPckCrls();
-    for (var pckcrl of pckcrls){
-        // refresh each crl
-        await refresh_one_crl(pckcrl.ca);
-    }
+// Refresh all PCK CRLs
+async function refresh_pck_crls() {
+  const pckcrls = await pckcrlDao.getAllPckCrls();
+  for (let pckcrl of pckcrls) {
+    // refresh each crl
+    await refresh_one_crl(pckcrl.ca);
+  }
+}
+
+// Refresh root CA CRL
+async function refresh_rootca_crl() {
+  let rootca = await pcsCertificatesDao.getCertificateById(
+    Constants.PROCESSOR_ROOT_CERT_ID
+  );
+  if (!rootca) throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+
+  const x509 = new X509();
+  if (!x509.parseCert(decodeURIComponent(rootca.cert)) || !x509.cdp_uri) {
+    // Certificate is invalid
+    throw new Error('Invalid PCS certificate!');
+  }
+
+  rootca.crl = await pcsClient.getFileFromUrl(x509.cdp_uri);
+
+  await pcsCertificatesDao.upsertPcsCertificates({
+    id: rootca.id,
+    crl: rootca.crl,
+  });
+}
+
+// Refresh crl_cache table
+async function refresh_cached_crls() {
+  const crl_caches = await crlCacheDao.getAllCrls();
+  for (let crl_cache of crl_caches) {
+    // refresh each crl
+    const crl = await pcsClient.getFileFromUrl(crl_cache.cdp_url);
+    await crlCacheDao.upsertCrl(crl_cache.cdp_url, crl);
+  }
 }
 
 // Refresh the TCB info for the specified fmspc value
-var refresh_one_tcb = async function(fmspc){
-    const pck_server_res = await PcsClient.getTcb(fmspc);
-    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-        // Then refresh cache DB
-        await fmspcTcbDao.upsertFmspcTcb({
-            "fmspc": fmspc,
-            "tcbinfo": JSON.parse(pck_server_res.body)
-        });
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertTcbInfoIssuerChain(pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
-    }
-    else {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);
-    }
+async function refresh_one_tcb(fmspc, type, version) {
+  const pck_server_res = await pcsClient.getTcb(type, fmspc, version);
+  if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
+    // Then refresh cache DB
+    await fmspcTcbDao.upsertFmspcTcb({
+      type: type,
+      fmspc: fmspc,
+      version: version,
+      tcbinfo: pck_server_res.rawBody,
+    });
+    // update or insert certificate chain
+    await pcsCertificatesDao.upsertTcbInfoIssuerChain(
+      pcsClient.getHeaderValue(
+        pck_server_res.headers,
+        appUtil.getTcbInfoIssuerChainName(version)
+      )
+    );
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+  }
 }
 
 // Refresh all TCBs in the table
-var refresh_all_tcbs=async function(){
-    const tcbs = await fmspcTcbDao.getAllTcbs();
-    for (var tcb of tcbs){
-        // refresh each tcb
-        await refresh_one_tcb(tcb.fmspc);
-    }
+async function refresh_all_tcbs() {
+  // hotfix : delete type==null records
+  await fmspcTcbDao.deleteInvalidTcbs();
+
+  const tcbs = await fmspcTcbDao.getAllTcbs();
+  for (let tcb of tcbs) {
+    // refresh each tcb
+    await refresh_one_tcb(tcb.fmspc, tcb.type, tcb.version);
+  }
 }
 
-exports.refreshCache=async function(type, fmspc) {
-    if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_OFFLINE) {
-        // Refresh is not supported in OFFLINE mode
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_SERVICE_UNAVAILABLE);
-    }
+export async function refreshCache(type, fmspc) {
+  if (!cachingModeManager.isRefreshable()) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+  }
 
-    if (type == "certs") {
-        await sequelize.transaction(async (t)=>{
-            await refresh_all_pckcerts(fmspc);
-        });
-    }
-    else {
-        await sequelize.transaction(async (t)=>{
-            await refresh_all_crls();
-            await refresh_all_tcbs(); 
-            await refresh_qe_identity();
-            await refresh_qve_identity();
-        });
-    }
+  if (type == 'certs') {
+    await sequelize.transaction(async (t) => {
+      await refresh_all_pckcerts(fmspc);
+    });
+  } else {
+    await sequelize.transaction(async (t) => {
+      await refresh_pck_crls();
+      await refresh_all_tcbs();
+      await refresh_enclave_identities();
+      await refresh_rootca_crl();
+      await refresh_cached_crls();
+    });
+  }
 }
 
 // Schedule the refresh job in cron-style
@@ -256,22 +351,20 @@ exports.refreshCache=async function(type, fmspc) {
 // # * * * * * command to execute
 //
 
-exports.scheduledRefresh = async function() {
-    try {
-            if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_OFFLINE) {
-                // Refresh is not supported in OFFLINE mode
-                return;
-            }
-            await sequelize.transaction(async (t)=>{
-            await refresh_all_crls();
-            await refresh_all_tcbs(); 
-            await refresh_qe_identity();
-            await refresh_qve_identity();
-        });
+export async function scheduledRefresh() {
+  try {
+    if (!cachingModeManager.isRefreshable()) return;
 
-        logger.info('Scheduled cache refresh is completed successfully.')
-    }
-    catch(error) {
-        logger.error('Scheduled cache refresh failed.')
-    }
+    await sequelize.transaction(async (t) => {
+      await refresh_pck_crls();
+      await refresh_all_tcbs();
+      await refresh_enclave_identities();
+      await refresh_rootca_crl();
+      await refresh_cached_crls();
+    });
+
+    logger.info('Scheduled cache refresh is completed successfully.');
+  } catch (error) {
+    logger.error('Scheduled cache refresh failed.');
+  }
 }

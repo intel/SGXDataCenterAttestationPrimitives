@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,9 @@
 #include <OpensslHelpers/Bytes.h>
 #include <iostream>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+using namespace intel::sgx::dcap;
+
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 struct Subject;
 struct Issuer
@@ -134,7 +136,7 @@ void cleanUpOpenSSL();
 //
 ////////////////////////////////////////////////////////////////////////////
 
-crypto::X509_CRL_uptr pemBuff2X509Crl(const std::string& data);
+crypto::X509_CRL_uptr str2X509Crl(const std::string& data);
 long getVersion(const X509_CRL& crl);
 Issuer getIssuer(const X509_CRL& crl);
 int getExtensionCount(const X509_CRL& crl);
@@ -146,6 +148,6 @@ int getRevokedCount(X509_CRL& crl);
 std::vector<Revoked> getRevoked(X509_CRL& crl);
 long getCrlNum(X509_CRL& crl);
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif // SGX_INTEL_PCKLIB_PCKPARSER_H_

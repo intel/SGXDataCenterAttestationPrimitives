@@ -30,12 +30,14 @@
 #
 
 %define _install_path @install_path@
+%define _license_file COPYING
 
 Name:           sgx-dcap-pccs
 Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions PCK Caching Service
 Group:          Applications/Internet
+Requires:       gcc gcc-c++ make
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
@@ -49,35 +51,36 @@ Intel(R) Software Guard Extensions PCK Caching Service
 
 %install
 make DESTDIR=%{?buildroot} install
-echo "%{_install_path}" > %{_specdir}/listfiles
-echo "%config %{_install_path}/config/production-0.json" >> %{_specdir}/listfiles
+install -d %{?buildroot}%{_docdir}/%{name}
+find linux/installer/common/sdk/output/package/licenses/ -type f -print0 | \
+xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
+find %{?buildroot} -type d -links 2 | \
+sed -e "s#^%{?buildroot}##" | \
+grep -v "^%{_libdir}" | \
+grep -v "^%{_bindir}" | \
+grep -v "^%{_sysconfdir}" | \
+grep -v "^%{_install_path}" | \
+sed -e "s#^#%dir #" > %{_specdir}/listfiles
+for f in $(find %{?buildroot}); do
+    if [ -d ${f} ]; then
+        echo ${f} | \
+        sed -e "s#^%{?buildroot}##" | \
+        grep "^%{_install_path}" | \
+        sed -e "s#^#%dir #" >> %{_specdir}/listfiles
+    else
+        echo ${f} | \
+        sed -e "s#^%{?buildroot}##" >> %{_specdir}/listfiles
+    fi
+done
+sed -i 's#^%{_install_path}/config/default.json#%config &#' %{_specdir}/listfiles
 
 %files -f %{_specdir}/listfiles
 
 %post
-chown -R $(logname):$(logname) %{_install_path}
-if which pm2 > /dev/null; then
-    echo "pm2 is installed, continue ..."
-else
-    npm install -g pm2
-fi
-/bin/su -c "%{_install_path}/install.sh postinst" $(logname)
-pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" $(logname)` || true
-eval $pm2cfg 
+if [ -x %{_install_path}/startup.sh ]; then %{_install_path}/startup.sh; fi
 
-%postun
-if which pm2 > /dev/null; then
-    pm2 stop pccs || true
-    pm2 delete pccs || true
-    pm2cfg=`/bin/su -c "pm2 unstartup | grep 'sudo'" - $(logname)` || true
-    eval $pm2cfg || true
-fi
-
-if [ -d %{_install_path} ]; then
-    pushd %{_install_path} &> /dev/null
-    rm -rf node_modules || true
-    popd &> /dev/null
-fi
+%preun
+if [ $1 == 0 -a -x %{_install_path}/cleanup.sh ]; then %{_install_path}/cleanup.sh; fi
 
 %changelog
 * Mon Mar 10 2020 SGX Team

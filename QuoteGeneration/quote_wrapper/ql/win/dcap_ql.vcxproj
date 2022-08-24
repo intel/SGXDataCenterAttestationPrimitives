@@ -22,34 +22,34 @@
     <ProjectGuid>{13CFD463-5174-47C5-904C-B49F5E6231CD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>dcap_ql</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -94,6 +94,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,6 +104,7 @@
       <AdditionalLibraryDirectories>$(OutDir);$(SGXSDKInstallPath)bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>dcap_ql.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -115,6 +118,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -123,6 +128,7 @@
       <AdditionalLibraryDirectories>$(OutDir);$(SGXSDKInstallPath)bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>dcap_ql.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -142,6 +148,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -152,6 +159,7 @@
       <AdditionalLibraryDirectories>$(OutDir);$(SGXSDKInstallPath)bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>dcap_ql.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>"C:\Program Files (x86)\Windows Kits\10\bin\$(PlatformTarget)\apivalidator.exe"  -driverpackagepath:"$(TargetPath)" -SupportedApiXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\UniversalDDIs.xml" -ModuleWhiteListXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\ModuleWhiteList.xml" &gt;"$(OutDir)api_validator_log.txt"  2&gt;&amp;1</Command>
@@ -170,6 +178,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -180,13 +189,15 @@
       <AdditionalLibraryDirectories>$(OutDir);$(SGXSDKInstallPath)bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>dcap_ql.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>"C:\Program Files (x86)\Windows Kits\10\bin\$(PlatformTarget)\apivalidator.exe"  -driverpackagepath:"$(TargetPath)" -SupportedApiXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\UniversalDDIs.xml" -ModuleWhiteListXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\ModuleWhiteList.xml" &gt;"$(OutDir)api_validator_log.txt"  2&gt;&amp;1</Command>
+      <Command>"C:\Program Files (x86)\Windows Kits\10\bin\$(PlatformTarget)\apivalidator.exe"  -driverpackagepath:"$(TargetPath)" -SupportedApiXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\UniversalDDIs.xml" -ModuleWhiteListXmlFiles:"C:\Program Files (x86)\Windows Kits\10\build\universalDDIs\$(PlatformTarget)\ModuleWhiteList.xml" &gt;"$(OutDir)api_validator_log.txt"  2&gt;&amp;1
+      xcopy /FY "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)..\..\PSW_installer\InstallBinaries\$(Platform)\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,11 +37,11 @@
 #include <openssl/ossl_typ.h>
 #include <map>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 std::string obj2Str(const ASN1_OBJECT* obj);
 std::string getLastError();
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif //SGXECDSAATTESTATION_PCKPARSERUTILS_H

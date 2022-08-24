@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const platformsRegService = require('./platformsRegService.js');
-const platformCollateralService = require('./platformCollateralService.js');
-const pckcertService = require('./pckcertService.js');
-const pckcrlService = require('./pckcrlService.js');
-const tcbinfoService = require('./tcbinfoService.js');
-const identityService = require('./identityService.js');
-const rootcacrlService = require('./rootcacrlService.js');
-const refreshService = require('./refreshService.js');
-const platformsService = require('./platformsService.js');
+import * as platformsRegService from './platformsRegService.js';
+import * as platformCollateralService from './platformCollateralService.js';
+import * as pckcertService from './pckcertService.js';
+import * as pckcrlService from './pckcrlService.js';
+import * as tcbinfoService from './tcbinfoService.js';
+import * as identityService from './identityService.js';
+import * as rootcacrlService from './rootcacrlService.js';
+import * as refreshService from './refreshService.js';
+import * as platformsService from './platformsService.js';
+import * as crlService from './crlService.js';
 
-module.exports = { 
-    platformsRegService : platformsRegService,
-    platformCollateralService: platformCollateralService,
-    pckcertService: pckcertService,
-    pckcrlService: pckcrlService,
-    tcbinfoService: tcbinfoService,
-    identityService: identityService,
-    rootcacrlService: rootcacrlService,
-    refreshService: refreshService,
-    platformsService: platformsService
+export {
+  platformsRegService,
+  platformCollateralService,
+  pckcertService,
+  pckcrlService,
+  tcbinfoService,
+  identityService,
+  rootcacrlService,
+  refreshService,
+  platformsService,
+  crlService
 };
-

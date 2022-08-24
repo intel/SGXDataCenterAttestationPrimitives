@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 TCBInfoVerifier::TCBInfoVerifier()
         : _commonVerifier(new CommonVerifier()),
@@ -93,4 +93,4 @@ Status TCBInfoVerifier::verify(
     return STATUS_OK;
 }
 
-}}} //namespace intel { namespace sgx { namespace qvl {
+}}} //namespace intel { namespace sgx { namespace dcap {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,10 @@
  * Description: Definitions of network access interfaces
  *
  */
+
 #ifndef _NETWORK_WRAPPER_H_
 #define _NETWORK_WRAPPER_H_
+
 
 typedef enum  _cache_server_delivery_status_t {
     DELIVERY_SUCCESS = 0,
@@ -51,9 +53,9 @@ typedef enum  _network_post_error_t {
     POST_NETWORK_ERROR
 } network_post_error_t;
 
-network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size);
+network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t raw_data_size, const uint16_t platform_id_length, const bool non_enclave_mode);
 
-bool is_server_url_avaiable();
+bool is_server_url_available();
 
 #endif /* !_NETWORK_WRAPPER_H_ */
 

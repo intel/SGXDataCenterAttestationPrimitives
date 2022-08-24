@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,9 @@
  */
 
 #include "X509CrlGenerator.h"
-#include "X509CertGenerator.h"
 #include <algorithm>
-#include <CertVerification/X509Constants.h>
 
-namespace intel{ namespace sgx{ namespace qvl{ namespace test{
+namespace intel{ namespace sgx{ namespace dcap{ namespace test{
 
 crypto::X509_CRL_uptr X509CrlGenerator::generateCRL(CRLVersion version, long lastUpdateOffset, long nextUpdateOffset,
                                                     const crypto::X509_uptr &issuerCert, const std::vector<Bytes> &revokedSerials) const {
@@ -86,7 +84,7 @@ void X509CrlGenerator::revokeSerialNumber(const crypto::X509_CRL_uptr &crl, cons
     X509_CRL_add0_revoked(crl.get(), revoked.release());
 }
 
-std::string X509CrlGenerator::x509CrlToString(const X509_CRL *crl)
+std::string X509CrlGenerator::x509CrlToPEMString(const X509_CRL *crl)
 {
     if (nullptr == crl)
     {
@@ -116,6 +114,25 @@ std::string X509CrlGenerator::x509CrlToString(const X509_CRL *crl)
     std::string ret;
     std::copy_n(dataStart, nameLength, std::back_inserter(ret));
     return ret;
+}
+
+std::string X509CrlGenerator::x509CrlToDERString(const X509_CRL *crl)
+{
+    if (nullptr == crl)
+    {
+        return "";
+    }
+    auto crlMutable = const_cast<X509_CRL*>(crl);
+    unsigned char *buf = nullptr;
+    const auto len = i2d_X509_CRL(crlMutable, &buf);
+    if (0 == len)
+    {
+        return "";
+    }
+
+    std::vector<uint8_t> ret(buf, buf + len);
+    OPENSSL_free(buf);
+    return bytesToHexString(ret);
 }
 
 void X509CrlGenerator::addStandardCrlExtensions(const crypto::X509_CRL_uptr& crl, const crypto::X509_uptr& issuerCert) const

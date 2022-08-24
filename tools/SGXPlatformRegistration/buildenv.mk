@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,48 +29,19 @@
 #
 #
 
-ifeq ($(SGX_SDK),)
-$(error Error!!! Please make sure SGX-SDK is installed and environment script have been executed by: `source /opt/intel/sgxsdk/environment`. Stopping now)
-endif 
+include ../../../QuoteGeneration/buildenv.mk
 
-
-# -----------------------------------------------------------------------------
-# Function : parent-dir
-# Arguments: 1: path
-# Returns  : Parent dir or path of $1, with final separator removed.
-# -----------------------------------------------------------------------------
-parent-dir = $(patsubst %/,%,$(dir $(1:%/=%)))
-
-# -----------------------------------------------------------------------------
-# Macro    : my-dir
-# Returns  : the directory of the current Makefile
-# Usage    : $(my-dir)
-# -----------------------------------------------------------------------------
-my-dir = $(realpath $(call parent-dir,$(lastword $(MAKEFILE_LIST))))
-
-
-ROOT_DIR              := $(call my-dir)
-COMMON_DIR            := $(ROOT_DIR)/common
-
+ROOT_DIR := ./..
 
 LOCAL_COMMON_DIR  := $(ROOT_DIR)/common
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBS_DIR := $(ROOT_DIR)/build/lib64
 BINS_DIR := $(ROOT_DIR)/build/bin
-CP := /bin/cp -f
+CP := cp -f
 
-CXXFLAGS := -fPIC
 
-RA_VERSION= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(LOCAL_COMMON_DIR)/inc/internal/ra_version.h)
+RA_VERSION= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(ROOT_DIR)/../../QuoteGeneration/common/inc/internal/se_version.h)
 SPLIT_VERSION=$(word $2,$(subst ., ,$1))
-
-# turn on stack protector
-CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
-ifeq ($(CC_BELOW_4_9), 1)
-    COMMON_FLAGS += -fstack-protector
-else
-    COMMON_FLAGS += -fstack-protector-strong
-endif
 
 # turn on cet
 CC_GREAT_EQUAL_8 := $(shell expr "`$(CC) -dumpversion`" \>= "8")
@@ -78,37 +49,14 @@ ifeq ($(CC_GREAT_EQUAL_8), 1)
     COMMON_FLAGS += -fcf-protection
 endif
 
-ifdef DEBUG
-    COMMON_FLAGS += -ggdb -DDEBUG -UNDEBUG
-    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
-else
-    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
-endif
+CXXFLAGS += -fPIC 
 
-COMMON_FLAGS += -ffunction-sections -fdata-sections -fstack-clash-protection
-
-# turn on compiler warnings as much as possible
-COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
-		-Waddress -Wsequence-point -Wformat-security \
-		-Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
-		-Wcast-align -Wconversion -Wredundant-decls
-
-# additional warnings flags for C
-CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
-
-# additional warnings flags for C++
-CXXFLAGS += -Wnon-virtual-dtor
-
-CXXFLAGS += -std=c++11
-
-CFLAGS   += $(COMMON_FLAGS)
-CXXFLAGS += $(COMMON_FLAGS)
-
-LDFLAGS += -shared
+LDFLAGS += -shared -Wl,-z,relro,-z,now,-z,noexecstack
 
 INCLUDE += -I$(INCLUDE_DIR)
 INCLUDE += -I$(INCLUDE_DIR)/c_wrapper
 INCLUDE += -I$(LOCAL_COMMON_DIR)/inc
+INCLUDE += -I$(ROOT_DIR)/../../QuoteGeneration/common/inc/internal
 INCLUDE += -Iinc
 
 CPP_OBJS := $(CPP_SRCS:%.cpp=%.o)
@@ -124,7 +72,7 @@ $(TARGET_LIB).so : $(CPP_OBJS)
 	$(CP) $@ $(LIBS_DIR)
 
 $(CPP_OBJS): %.o: %.cpp
-	$(CXX) -c $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) -MMD $< -o $@
+	$(CXX) -c $(CXXFLAGS) $(INCLUDE) -MMD $< -o $@
 
 clean:
 	@$(RM) $(CPP_OBJS) $(TARGET_LIB).a $(TARGET_LIB).so $(CPP_DEPS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -290,7 +290,7 @@ typedef struct _wl_cert_t                           // All fields except the mr_
     uint16_t                version;                // ( 0) White List Cert format version. For 2015, only valid version is 1
     uint16_t                cert_type;              // ( 2) White List Cert Type. For Enclave Signing Key White List Cert, must be 1
     uint16_t                provider_id;            // ( 4) Enclave Signing Key White List Provider ID to identify the key used to sign this Enclave signing Key White List Certificate. For 2015, only one White List Provider is approved: WLProviderID-ISecG = 0
-    uint16_t                le_prod_id;             // ( 6) Launch Enclave ProdID the White List Cert applies to.  Launch Enclave for different OS might be assigned with different ProdID. Attackers can’t simply use a White List for one OS in another OS. Windows LE-ProdID = 0x00; Android LE-ProdID = 0x10; Linux LE-ProdID = 0x20
+    uint16_t                le_prod_id;             // ( 6) Launch Enclave ProdID the White List Cert applies to.  Launch Enclave for different OS might be assigned with different ProdID. Attackers can't simply use a White List for one OS in another OS. Windows LE-ProdID = 0x00; Android LE-ProdID = 0x10; Linux LE-ProdID = 0x20
     uint32_t                wl_version;             // ( 8) Version of the Enclave Signing Key White List. For a specific LE-ProdID, should increase on every WL Cert signing request
     uint32_t                entry_number;           // (12) Number of MRSIGNER entries in the Cert. If the White List Certificate allows enclave signed by any key to launch, the White List Cert must only contain one all-0 MRSIGNER entry.
 #ifdef _MSC_VER

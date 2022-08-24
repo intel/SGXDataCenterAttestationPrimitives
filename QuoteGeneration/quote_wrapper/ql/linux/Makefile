@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -51,10 +51,10 @@ QL_Lib_Include_Paths += -I../../quote/inc -I../../../pce_wrapper/inc -I../inc
 QL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(QL_Lib_Include_Paths)
 
 LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
-LDUFLAGS += -Wl,--version-script=dcap_ql_wrapper.lds -Wl,--gc-sections -Wl,-rpath=.
+LDUFLAGS += -Wl,--version-script=dcap_ql_wrapper.lds -Wl,--gc-sections
 
 QL_Lib_Cpp_Flags := $(QL_Lib_C_Flags) -std=c++11
-QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(Quote_Library_Dir) -lsgx_qe3_logic -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
+QL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(Quote_Library_Dir) -lsgx_qe3_logic -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl
 
 QL_Lib_Cpp_Flags += -DDISABLE_TRACE
 QL_Lib_Link_Flags += -DDISABLE_TRACE
@@ -63,6 +63,8 @@ QL_Lib_Cpp_Objects := $(QL_Lib_Cpp_Files:.cpp=.o)
 QL_Lib_C_Objects := $(QL_Lib_C_Files:.c=.o)
 
 QL_Lib_Name_Dynamic  := libsgx_dcap_ql.so
+QL_VERSION:= $(shell awk '$$2 ~ /QUOTE_LOADER_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
+QL_SO_VERSION:= $(shell echo $(QL_VERSION) |awk -F. '{print $$1}') 
 
 .PHONY: all run
 
@@ -84,7 +86,7 @@ $(QL_Lib_Cpp_Objects): %.o: %.cpp
 	@echo "CXX  <=  $<"
 
 $(QL_Lib_Name_Dynamic): $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) $(PCE_Library) $(Quote_Library)
-	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
+	$(CXX) $(CXXFLAGS) $(QL_Lib_Cpp_Objects) $(QL_Lib_C_Objects) -shared -Wl,-soname=$@.$(QL_SO_VERSION) $(LDUFLAGS) $(QL_Lib_Link_Flags) -o $@
 
 $(Quote_Library): force_look
 	@make -C $(Quote_Library_Dir)

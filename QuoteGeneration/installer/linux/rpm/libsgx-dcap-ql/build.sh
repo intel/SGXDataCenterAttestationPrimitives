@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -66,8 +66,15 @@ post_build() {
 }
 
 update_spec() {
+    min_version="4.12"
+    rpm_version=$(rpmbuild --version 2> /dev/null | awk '{print $NF}')
+    cur_version=$(echo -e "${rpm_version}\n${min_version}" | sort -V | head -n 1)
+
     pushd ${SCRIPT_DIR}/${RPM_BUILD_FOLDER}
     sed -i "s/@version@/${SGX_VERSION}/" SPECS/${DCAP_QL_PACKAGE_NAME}.spec
+    if [ "${min_version}" != "${cur_version}" ]; then
+        sed -i "s/^Recommends:/Requires:  /" SPECS/${DCAP_QL_PACKAGE_NAME}.spec
+    fi
     popd
 }
 

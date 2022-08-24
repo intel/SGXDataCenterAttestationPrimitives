@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -51,15 +51,15 @@ CXXFLAGS  += $(ENCLAVE_CXXFLAGS)
 CFLAGS    += $(ENCLAVE_CFLAGS)
 
 LDTFLAGS  = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \
-            -Wl,--start-group $(EXTERNAL_LIB) -Wl,--end-group                    \
+            -Wl,--start-group $(EXTERNAL_LIB) -Wl,--end-group -Wl,--build-id            \
             -Wl,--version-script=$(WORK_DIR)/enclave.lds $(ENCLAVE_LDFLAGS)
 
 LDTFLAGS_NO_CRYPTO = -L$(SGX_LIBRARY_PATH) -Wl,--whole-archive $(TRTSLIB) -Wl,--no-whole-archive \
             -Wl,--start-group $(EXTERNAL_LIB_NO_CRYPTO) -Wl,--end-group                    \
             -Wl,--version-script=$(WORK_DIR)/enclave.lds $(ENCLAVE_LDFLAGS)
 
-LDTFLAGS += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
-LDTFLAGS_NO_CRYPTO += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
+LDTFLAGS += -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
+LDTFLAGS_NO_CRYPTO += -Wl,-Map=out.map -Wl,--undefined=version -Wl,--gc-sections
 
 
 vpath %.cpp $(COMMON_DIR)/src:$(LINUX_PSW_DIR)/ae/common

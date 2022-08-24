@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -51,11 +51,15 @@ export BIN_DIR
 PROJECTS := 		PCKCertSelectionLib \
 			PCKSelectionSample
 
+ZIPFILE := PCKCertSelectionLinux.zip
+
 # targets
 
 .PHONY: all clean $(PROJECTS)
 
-all: $(PROJECTS)
+.NOTPARALLEL: $(PROJECTS) $(ZIPFILE)
+
+all: $(PROJECTS) $(ZIPFILE)
 	$(VERBOSE)echo projects all: done
 
 debug:
@@ -65,6 +69,7 @@ release:
 	$(VERBOSE)$(MAKE) all
 
 clean: $(PROJECTS)
+	$(VERBOSE)rm -rf out/*.zip
 	$(VERBOSE)echo projects clean: done
 
 PCKSelectionSample : PCKCertSelectionLib
@@ -76,4 +81,9 @@ $(PROJECTS): $(BIN_DIR)
 
 $(BIN_DIR):
 	$(VERBOSE)mkdir -p $@
+
+$(ZIPFILE):
+	bash pack.sh
+	$(VERBOSE)echo "$@ : done"
+	$(VERBOSE)echo
 

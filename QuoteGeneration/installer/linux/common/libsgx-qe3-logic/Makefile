@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -41,7 +41,6 @@ default:
 install: $(PACKAGES)
 
 $(PACKAGES):
-	install -d $(shell readlink -m $(DESTDIR)/$@)
 	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
 		install -d $(shell readlink -m $(DESTDIR)/$(USR_LIB_PATH)) && \
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$(USR_LIB_PATH))

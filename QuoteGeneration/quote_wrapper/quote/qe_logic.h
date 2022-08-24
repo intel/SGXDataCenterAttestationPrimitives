@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,6 +57,8 @@ typedef quote3_error_t (*sgx_write_persistent_data_func_t)(const uint8_t *p_buf,
 typedef quote3_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
                                                           uint32_t *p_buf_size,  
                                                           const char *p_label);
+
+typedef quote3_error_t (*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t logger);
 
 #endif
 

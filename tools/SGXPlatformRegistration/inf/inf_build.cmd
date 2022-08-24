@@ -42,9 +42,10 @@ CALL :COPY_FILE %SRC_DIR%\license.txt %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\events.dll %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\mp_uefi.dll %DST_DIR%\
 CALL :COPY_FILE %BIN_DIR%\mp_network.dll %DST_DIR%\
-CALL :COPY_FILE %BIN_DIR%\mpa.exe %DST_DIR%\
+
 CALL :COPY_FILE %BIN_DIR%\mpa_manage.exe %DST_DIR%\
 CALL :COPY_FILE %SDK_DIR%\bin\x64\Release\sgx_capable.dll %DST_DIR%\
+CALL :COPY_FILE %BIN_DIR%\mpa.exe %DST_DIR%\
 
 echo ========== Stamping INF file ================
 %STAMPINF% -f "%DST_DIR%\sgx_mpa.inf" -k "1.9" -d "*" -a "amd64" -v "%VERSION%"
@@ -61,7 +62,7 @@ IF /I "%ERRORLEVEL%" NEQ "0" (
 )
 echo:
 echo ========= Creating The Catalog File ==============
-%INF2CAT% /driver:%DST_DIR% /os:10_x64 /VERBOSE 
+%INF2CAT% /driver:%DST_DIR% /os:10_x64 /uselocaltime /VERBOSE 
 IF /I "%ERRORLEVEL%" NEQ "0" (
     goto exit
 )
@@ -73,6 +74,7 @@ call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mpa.exe
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mpa_manage.exe
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mp_network.dll
 call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\mp_uefi.dll
+call "%TOOLSFOLDER%\Sign.bat" %DST_DIR%\events.dll
 
 echo:
 echo *** SGX MPRA INF Installer Build Succesful. Bye bye.***

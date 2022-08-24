@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 #include <CertVerification/X509Constants.h>
 
 using namespace testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace intel::sgx;
 
 struct VerifyTcbSigningChainUT : public Test

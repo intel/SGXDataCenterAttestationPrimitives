@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,16 +29,16 @@
  *
  */
 
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const logger = require('../utils/Logger.js');
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import logger from '../utils/Logger.js';
 
-exports.errorHandling = function (err,req,res,next) {
-    if (err instanceof PccsError)
-        res.status(err.status).send(err.message);
-    else {
-        logger.error(err.stack);
-        res.status(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR[0])
-                .send(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR[1]);
-    }
+export function errorHandling(err, req, res, next) {
+  if (err instanceof PccsError) res.status(err.status).send(err.message);
+  else {
+    logger.error(err.stack);
+    res
+      .status(PccsStatus.PCCS_STATUS_INTERNAL_ERROR[0])
+      .send(PccsStatus.PCCS_STATUS_INTERNAL_ERROR[1]);
+  }
 }

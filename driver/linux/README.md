@@ -8,6 +8,10 @@ Introduction
 ------------
 This Intel(R) SGX driver package is for Intel(R) SGX DCAP and is derived from the upstream version of the SGX driver.
 
+**Note:** As of the Kernel release 5.11, the SGX patches are merged into the mainline kernel. To avoid future
+incompatibilities, it is recommended that existing solutions using this driver be transitioned to directly using
+kernel 5.11 or higher. Guidelines for the transition can be found [here](./README.kernel.md).  
+
 
 Documentation
 -------------
@@ -16,6 +20,16 @@ Documentation
 
 Change Log
 ----------
+### V1.41
+- Sync with upstream patch v41, the last one before merged to mainline 5.11 release.
+### V1.36
+- Sync with upstream patch v36, rebased for kernel release 5.8.
+### V1.35
+- Sync with upstream patch v32, mostly stability fixes, documentation improvement, code re-org.
+### V1.34
+- Fix build for RHEL 8.2
+### V1.33
+- Fix incorrect usage of X86_FEATURE_SGX1 which is not supported by current kernel
 ### V1.32
 - Port the upstream candidate patch version 28.
 - Impact to [installation](#install):
@@ -43,11 +57,12 @@ Build and Install the Intel(R) SGX Driver
 -----------------------------------------
 ### Prerequisites
 - Ensure that you have the following required operating systems:
-  * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.10
-  * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.10
+  * Ubuntu* 16.04 LTS Desktop 64bits - minimal kernel 4.15
+  * Ubuntu* 16.04 LTS Server 64bits - minimal kernel 4.15
   * Ubuntu* 18.04 LTS Desktop 64bits
   * Ubuntu* 18.04 LTS Server 64bits
   * Red Hat Enterprise Linux Server 8 (RHEL 8) 64bits
+  * CentOS 8 64bits
 - Ensure that you have the following required hardware:
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** and **Intel(R) AES New Instructions** support*
@@ -122,21 +137,13 @@ $ sudo groupadd sgx_prv
 $ sudo udevadm trigger
 ```
 
-- To automatically load the driver at boot time:
-```
-$ sudo sh -c "cat /etc/modules | grep -Fxq intel_sgx || echo intel_sgx >> /etc/modules"
-```
 ### Uninstall the Intel(R) SGX Driver
 
 ```
 $ sudo /sbin/modprobe -r intel_sgx
 $ sudo dkms remove -m sgx -v <version> --all
 $ sudo rm -rf /usr/src/sgx-<version>
-```
-
-To remove intel_sgx from /etc/modules:
-```
-$ sudo /bin/sed -i '/^intel_sgx$/d' /etc/modules
+$ sudo dracut --force   # only needed on RHEL/CentOS 8
 ```
 
 You should also remove the udev rules and sgx_prv user group.
@@ -146,7 +153,11 @@ Launching an Enclave with Provision Bit Set
 ### Background
 An enclave may set the provision bit in its attributes to be able to request provision key. Acquiring provision key may have privacy implications and should be limited. Such enclaves are referred to as provisioning enclaves below.
 
-The current Intel(R) SGX driver allows Intel(R)’s provisioning enclaves to be launched with provision bit set without any additional permissions. But, for 3rd party signed provisioning enclaves, the platform owner (administrator) must modify the permissions of the process loading the provisioning enclaves as described below.
+For applications loading provisioning enclaves, the platform owner (administrator) must grant provisioning access to the app process as described below.
+
+**Note for Intel Signed Provisioning Enclaves:** The Intel(R) SGX driver before V1.41 allows Intel(R)’s provisioning enclaves to be launched without any additional permissions. But the special treatment for Intel signed enclaves is removed in the driver starting from V1.41 release to be aligned with the upstream kernel changes. If you upgrade driver from versions older than V1.41 or switch to the mainline kernel (5.11 or above), please make sure apps loading Intel signed provisioning enclaves have the right permissions as described below. 
+
+
 
 ### Driver Settings
 The Intel(R) SGX driver installation process described above creates 2 new devices on the platform, and setup these devices with the following permissions:
@@ -176,3 +187,20 @@ To summarize, the following flow is required by the platform admin and a process
 	 - Add pages and initialize the enclave
 
 **Note:** The Enclave Common Loader library is following the above flow and launching enclave based on it, failure to grant correct access to the launching process will cause a failure in the enclave initialization.
+
+Compatibility with Intel(R) SGX PSW releases
+----------------------------------------------
+This table lists the equivalent upstream kernel patch for each version of the driver and summarizes compatibility between driver versions and PSW releases. 
+
+  
+| Driver version | Equivalent kernel patch | PSW 2.7 | PSW 2.8 | PSW 2.9/2.9.1 |PSW 2.10-2.12 |PSW 2.13 |
+| -------------- | ------------------------| ------- | ------- | ------------- |------------- |-------- |
+| 1.21           | N/A                     | YES     | YES     | YES           | YES          | YES     |
+| 1.22           | V14(approximate)        | NO      | YES     | YES           | YES          | YES     |
+| 1.32/1.33      | V28                     | NO      | NO\*    | YES           | YES          | YES     |
+| 1.34           | V29                     | NO      | NO      | NO            | YES          | YES     |
+| 1.35           | V32                     | NO      | NO      | NO            | YES          | YES     |
+| 1.36           | V36                     | NO      | NO      | NO            | YES          | YES     |
+| 1.41           | V41, kernel 5.11        | NO      | NO      | NO            | YES\*        | YES     |
+
+\* Requires updated [udev rules](./10-sgx.rules)

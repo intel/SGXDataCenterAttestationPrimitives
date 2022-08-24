@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,7 +37,12 @@ include $(TOP_DIR)/buildenv.mk
 
 CNL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
 
-CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc -I../inc -I$(SGX_SDK)/include -I../../common/inc/internal -I../../pce_wrapper/inc
+######## Include path -- Don't forget to update AESM CMakefile ########
+CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
+                         -I../inc -I$(SGX_SDK)/include          \
+                         -I../../common/inc/internal            \
+                         -I../../pce_wrapper/inc                \
+                         -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson
 
 CNL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(CNL_Lib_Include_Paths)
 
@@ -61,19 +66,13 @@ CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 
 CNL_Lib_Name_Dynamic  := libsgx_default_qcnl_wrapper.so
-ifndef DEBUG
-CNL_Lib_Name_Dynamic_Debug := libsgx_default_qcnl_wrapper.so.debug
-endif
 
 .PHONY: all run
 
 all: $(CNL_Lib_Name) install_lib
 
-install_lib: $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic_Debug) | $(BUILD_DIR)
+install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(CNL_Lib_Name_Dynamic) $|
-ifndef DEBUG
-	@$(CP) $(CNL_Lib_Name_Dynamic_Debug) $|
-endif
 
 run: all
 
@@ -87,18 +86,6 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 
 $(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects)
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
-
-$(CNL_Lib_Name_Dynamic_Debug): $(CNL_Lib_Name_Dynamic)
-	((test -f $(CNL_Lib_Name_Dynamic_Debug)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig
-	$(OBJCOPY) --only-keep-debug $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic_Debug)
-	$(STRIP) -g $(CNL_Lib_Name_Dynamic)
-	$(OBJCOPY) --add-gnu-debuglink=$(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Dynamic)
-endif
 
 force_look:
 	true

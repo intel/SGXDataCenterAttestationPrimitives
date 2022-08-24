@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,16 +37,13 @@
 #include <curl/curl.h>
 #include <sstream>
 #include <cstring>
-
-#ifdef _WIN32
-#include <winhttp.h>
-#include "atlstr.h"
-#endif
+#include <unistd.h>
 
 #include "network_logger.h"
 #include "MPSynchronicSender.h"
 
 #define ERROR_CODE_STR_RESPONSE_HEADER "Error-Code: "
+#define NETWORK_RETRY_COUNT 12 //this service will try 1 minute(12*5 =60s) if network is not ready.
 
 using namespace std;
 
@@ -104,10 +101,11 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
     CURL *curl = NULL;
     struct curl_slist* header_list = NULL;
     CURLcode cret = CURLE_OK;
-    char errbuf[CURL_ERROR_SIZE];
+    char errbuf[CURL_ERROR_SIZE] = {0};
     long response_code = 0;
     uint8_t internalBuff[MAX_RESPONSE_SIZE];
     struct Buffer responseBuff;
+    uint8_t retry = NETWORK_RETRY_COUNT;
 
     responseBuff.buff = internalBuff;
     responseBuff.size = MAX_RESPONSE_SIZE;
@@ -180,7 +178,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
 
     cret = curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
     if (CURLE_OK != cret) {
-        network_log_message(MP_REG_LOG_LEVEL_INFO, "curl_easy_setopt for setting protocols, error: %d\n", cret);
+        network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_setopt for setting protocols, error: %d\n", cret);
         res = MP_UNEXPECTED_ERROR;
         goto out;
     }
@@ -203,7 +201,7 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
         break;
         default:
             if (MP_REG_PROXY_TYPE_DIRECT_ACCESS != m_proxy.proxy_type) {
-                network_log_message(MP_REG_LOG_LEVEL_INFO, "Unrecognized proxy type, using no proxy. %d\n", m_proxy.proxy_type);
+                network_log_message(MP_REG_LOG_LEVEL_ERROR, "Unrecognized proxy type, using no proxy. %d\n", m_proxy.proxy_type);
             }
             cret = curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
             if (CURLE_OK != cret) {
@@ -285,16 +283,31 @@ MpResult MPSynchronicSender::sendBinaryRequest(const string& serverURL, const st
         network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_setopt for setting the request failed with the error: %d\n", cret);
         goto out;
     }
-
-    /* Send request and get response */
-    cret = curl_easy_perform(curl);
-    if (CURLE_OK != cret) {
-        if (CURLE_WRITE_ERROR == cret) {
-            res = MP_MEM_ERROR;
+    
+    /* this service will be started ASAS when OS power on, it is possible that network is not ready, so we will retry network */
+    do {    
+        /* Send request and get response */
+        cret = curl_easy_perform(curl);
+	if (CURLE_OK == cret) {
+            break;
+        } else if (CURLE_COULDNT_RESOLVE_HOST == cret) {
+            retry--;
+            if (0 == retry) {
+                network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: CURLE_COULDNT_RESOLVE_HOST.");
+                goto out;
+            } else {
+                network_log_message(MP_REG_LOG_LEVEL_INFO, "curl_easy_perform failed with CURLE_COULDNT_RESOLVE_HOST... retrying in 5 seconds\n");
+                sleep(5);
+                continue;
+            }
+	} else {
+            if (CURLE_WRITE_ERROR == cret) {
+                res = MP_MEM_ERROR;
+            }
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: %d\n", cret);
+            goto out;
         }
-        network_log_message(MP_REG_LOG_LEVEL_ERROR, "curl_easy_perform failed with the error: %d\n", cret);
-        goto out;
-    }
+    }while (retry > 0);
 
     /* Get the HTTP response code */
     cret = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
@@ -319,13 +332,13 @@ out:
     responseSize = responseBuff.pos;
 
     if (CURLE_OK != cret) {
-        size_t len = strlen(errbuf);
+        size_t len = strnlen(errbuf, CURL_ERROR_SIZE);
         if (len) {
-            network_log_message(MP_REG_LOG_LEVEL_INFO, "Detailed curl error: %s%s", errbuf,
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "Detailed curl error: %s%s", errbuf,
                 ((errbuf[len - 1] != '\n') ? "\n" : ""));
         }
         else {
-            network_log_message(MP_REG_LOG_LEVEL_INFO, "Readable curl error: %s\n", curl_easy_strerror(cret));
+            network_log_message(MP_REG_LOG_LEVEL_ERROR, "Readable curl error: %s\n", curl_easy_strerror(cret));
         }
         network_log_message(MP_REG_LOG_LEVEL_INFO, "libcurl version: %s\n", curl_version());
     }
@@ -336,6 +349,5 @@ out:
         curl_easy_cleanup(curl);
     }
     curl_global_cleanup();
-	//TODO: if init is out of this function, this should be also out
     return res;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,10 +56,10 @@
 #define REF_ECP256_KEY_SIZE     32
 #define REF_NISTP_ECP256_KEY_SIZE       (REF_ECP256_KEY_SIZE/sizeof(uint32_t))
 #define REF_SHA256_HASH_SIZE            32
-#define REF_RSA_OAEP_2048_MOD_SIZE   256 //hardcode n size to be 256
-#define REF_RSA_OAEP_2048_EXP_SIZE     4 //hardcode e size to be 4
-#define REF_RSA_OAEP_3072_MOD_SIZE   384 //hardcode n size to be 384
-#define REF_RSA_OAEP_3072_EXP_SIZE     4 //hardcode e size to be 4
+#define REF_RSA_OAEP_2048_MOD_SIZE      256 //hardcode n size to be 256
+#define REF_RSA_OAEP_2048_EXP_SIZE      4   //hardcode e size to be 4
+#define REF_RSA_OAEP_3072_MOD_SIZE      384 //hardcode n size to be 384
+#define REF_RSA_OAEP_3072_EXP_SIZE      4   //hardcode e size to be 4
 
 #pragma pack(push, 1)
 typedef uint8_t ref_sha256_hash_t[REF_SHA256_HASH_SIZE];
@@ -87,10 +87,15 @@ typedef struct _sgx_psvn_t {
 typedef int errno_t;
 #endif
 
+#ifndef _MSC_VER
 #define STATIC_ASSERT_UNUSED_ATTRIBUTE __attribute__((unused)) 
+#else
+#define STATIC_ASSERT_UNUSED_ATTRIBUTE
+#endif
 #define _ASSERT_CONCAT(a, b) a##b
 #define ASSERT_CONCAT(a, b) _ASSERT_CONCAT(a, b)
-#define ref_static_assert(e) typedef char ASSERT_CONCAT(assert_line, __LINE__)[(e)?1:-1]
+#define ref_static_assert(e) typedef char ASSERT_CONCAT(assert_line, __LINE__)[(e)?1:-1] \
+        STATIC_ASSERT_UNUSED_ATTRIBUTE
 #define MIN(x, y) (((x)>(y))?(y):(x))
 #define MAX(x, y) (((x)>(y))?(x):(y))
 #define ARRAY_LENGTH(x) (sizeof(x)/sizeof(x[0]))

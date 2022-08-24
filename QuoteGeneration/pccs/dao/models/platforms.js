@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+import Sequelize from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
-    const Platforms = sequelize.define('platforms', {
-      qe_id: { type: DataTypes.STRING, primaryKey: true},
-      pce_id: { type: DataTypes.STRING, primaryKey: true },
-      platform_manifest: { type: DataTypes.BLOB, get(){
-          let platform_manifest = this.getDataValue('platform_manifest');
-          if (platform_manifest != null)
-            return platform_manifest.toString('utf8');
-          else return "";}
+export default class Platforms extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        qe_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        pce_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        platform_manifest: {
+          type: Sequelize.DataTypes.BLOB,
+          // store binary data in DB
+          get() {
+            return (this.getDataValue('platform_manifest') || '').toString('hex');
+          },
+          set(value) {
+            this.setDataValue('platform_manifest', Buffer.from(value, 'hex'));
+          },
+        },
+        enc_ppid: {
+          type: Sequelize.DataTypes.BLOB,
+          // store binary data in DB
+          get() {
+            return (this.getDataValue('enc_ppid') || '').toString('hex');
+          },
+          set(value) {
+            this.setDataValue('enc_ppid', Buffer.from(value, 'hex'));
+          },
+        },
+        fmspc: { type: Sequelize.DataTypes.STRING },
+        ca: { type: Sequelize.DataTypes.STRING },
       },
-      enc_ppid: { type: DataTypes.BLOB, get(){return this.getDataValue('enc_ppid').toString('utf8');}  },
-      fmspc: { type: DataTypes.STRING },
-      ca: { type: DataTypes.STRING }
-    },{
+      {
+        tableName: 'platforms',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return Platforms;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

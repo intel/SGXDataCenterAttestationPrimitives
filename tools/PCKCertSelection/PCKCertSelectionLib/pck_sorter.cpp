@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -381,12 +381,14 @@ pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 	// read raw CPUSVN into vector and decompose to TCB Components
 	const vector<uint8_t> rawCPUSVN ( this->platformSvn.bytes, this->platformSvn.bytes + CPUSVN_SIZE );
 	
-	// for TcbInfo::V1, TcbType field not present, default to 0
+	// only tcbInfo::V2,tcbInfo::v3 supported. TcbType field not present, default to 0
 	int tcbType = 0;
-	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V1 ) )
+	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V2 ) &&
+	  this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V3 ) )
 	{
-		tcbType = this->tcbInfo.getTcbType ();
+		return PCK_CERT_SELECT_INVALID_TCB;
 	}
+	tcbType = this->tcbInfo.getTcbType ();
 	vector < uint8_t > components;
 	this->tcbmgr.decompose_cpusvn_components(rawCPUSVN, components);
 	

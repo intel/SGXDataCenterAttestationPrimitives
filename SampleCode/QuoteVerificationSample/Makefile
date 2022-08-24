@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -35,11 +35,6 @@ SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
-#DCAP_DIR  ?= ../..
-#DCAP_QG_DIR  ?= $(DCAP_DIR)/QuoteGeneration
-
-PREBUILT_QVL_PATH := prebuilt/QVL
-PREBUILT_SGXSSL_PATH := prebuilt/sgxssl/linux64
 
 # Don't support 32bit in this sample
 SGX_COMMON_FLAGS := -m64
@@ -64,10 +59,9 @@ SGX_COMMON_FLAGS += -DSGX_TRUSTED -Wall -Wextra -Winit-self -Wpointer-arith -Wre
                     -Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
                     -Wcast-align -Wcast-qual -Wconversion -Wredundant-decls
 SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
-SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++14
+SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
 ######## App Settings ########
-DCAP_Library_Name := sgx_dcap_ql
 ifneq ($(SGX_MODE), HW)
 	Urts_Library_Name := sgx_urts_sim
 else
@@ -92,7 +86,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags)
-App_Link_Flags := -L$(SGX_LIBRARY_PATH) -L../dcap_quoteverify/linux -lsgx_dcap_quoteverify -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -lpthread -ldl
+App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_dcap_quoteverify -l$(Urts_Library_Name) -lpthread -ldl
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -118,7 +112,7 @@ DCAP_DIR  ?= ../../
 DCAP_QG_DIR  ?= $(DCAP_DIR)/QuoteGeneration/
 
 Enclave_Cpp_Files := Enclave/Enclave.cpp
-Enclave_Include_Paths := -IEnclave -I$(PREBUILT_QVL_PATH)/inc -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
+Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
 Enclave_C_Flags := $(Enclave_Include_Paths) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
@@ -141,8 +135,8 @@ Enclave_Security_Link_Flags := -Wl,-z,relro,-z,now,-z,noexecstack
 # Do NOT move the libraries linked with `--start-group' and `--end-group' within `--whole-archive' and `--no-whole-archive' options.
 # Otherwise, you may get some undesirable errors.
 Enclave_Link_Flags := $(Enclave_Security_Link_Flags) -fPIC \
-    -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) -L$(PREBUILT_QVL_PATH)/lib/linux64 -L$(PREBUILT_SGXSSL_PATH) \
-	-Wl,--whole-archive -lQuoteVerification -lAttestationParser -lsgx_tsgxssl -lsgx_tsgxssl_crypto -l$(Trts_Library_Name) -Wl,--no-whole-archive \
+    -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -lsgx_dcap_tvl -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
@@ -251,8 +245,8 @@ Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
 	@echo "CXX  <=  $<"
 
 $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
-	@echo "LINK =>  $@"
+	$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+	echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private_sample.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)

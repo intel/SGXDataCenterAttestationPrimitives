@@ -18,5 +18,5 @@ $csharp = @"
 "@
 Add-Type -TypeDefinition "$csharp"
 
-$version = [Reader]::ReadCDefine("$PSScriptRoot\..\common\inc\internal\ra_version.h", "STRPRODUCTVER")
+$version = [Reader]::ReadCDefine("$PSScriptRoot\..\..\..\QuoteGeneration\common\inc\internal\se_version.h", "STRPRODUCTVER")
 Write-Output $version

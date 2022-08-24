@@ -22,34 +22,34 @@
     <ProjectGuid>{E5E3F636-634B-402F-B05C-111D1D7BDCAD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>qe3_core_wrapper_static</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -98,6 +98,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -108,7 +110,8 @@
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\external\sgxssl\Windows\package\include;..\..\..\common\inc --untrusted </Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted
+"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\id_enclave\id_enclave.edl --search-path ..\..\..\common\inc --untrusted</Command>
     </PreBuildEvent>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -129,6 +132,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -139,7 +144,8 @@
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\external\sgxssl\Windows\package\include;..\..\..\common\inc --untrusted </Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted
+"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\id_enclave\id_enclave.edl --search-path ..\..\..\common\inc --untrusted</Command>
     </PreBuildEvent>
     <Lib>
       <AdditionalDependencies>sgx_urts.lib;sgx_pce_wrapper_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -162,6 +168,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -181,7 +188,8 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
     <PreBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted </Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted
+"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\id_enclave\id_enclave.edl --search-path ..\..\..\common\inc --untrusted</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -197,6 +205,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -209,7 +218,8 @@
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted </Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\enclave\qe3.edl --search-path ..\..\..\common\inc --untrusted
+"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" ..\id_enclave\id_enclave.edl --search-path ..\..\..\common\inc --untrusted</Command>
     </PreBuildEvent>
     <Lib>
       <AdditionalDependencies>sgx_urts.lib;sgx_pce_wrapper_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -221,11 +231,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\inc\ecdsa_quote.h" />
+    <ClInclude Include="id_enclave_u.h" />
     <ClInclude Include="qe3_u.h" />
     <ClInclude Include="..\qe_logic.h" />
     <ClInclude Include="..\inc\sgx_ql_core_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="id_enclave_u.c" />
     <ClCompile Include="qe3_u.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -258,6 +270,9 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Creating untrusted proxy/bridge routines</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)%(Filename)_u.h;$(ProjectDir)%(Filename)_u.c;%(Outputs)</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\id_enclave\id_enclave.edl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

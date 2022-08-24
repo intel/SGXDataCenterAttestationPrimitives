@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,19 +28,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('./Logger.js');
+import logger from './Logger.js';
 
 class PccsError extends Error {
-    constructor(obj){
-        super(obj[1]);
+  constructor(obj) {
+    super(obj[1]);
 
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, PccsError);
-            logger.error(this.stack);
-        }
-
-        this.status = obj[0];
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, PccsError);
+      logger.error(this.stack);
     }
+
+    this.status = obj[0];
+  }
 }
 
-module.exports = PccsError;
+export default PccsError;

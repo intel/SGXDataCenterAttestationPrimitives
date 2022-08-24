@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,14 +40,22 @@ rel_dir_base=PCKIDRetrievalTool_v$SGX_VERSION
 rel_dir_name=$rel_dir_base$1
 
 rm -rf $rel_dir_base*
+make clean
+make STANDALONE=1
 
 mkdir $rel_dir_name
-cp enclave.signed.so $rel_dir_name
-cp libdcap_quoteprov.so.1 $rel_dir_name
 cp PCKIDRetrievalTool $rel_dir_name
 cp network_setting.conf $rel_dir_name
-cp README.txt $rel_dir_name
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_pce.signed.so $rel_dir_name/libsgx_pce.signed.so.1
+cp ../../QuoteGeneration/psw/ae/data/prebuilt/libsgx_id_enclave.signed.so $rel_dir_name/libsgx_id_enclave.signed.so.1
+cp ../SGXPlatformRegistration/build/lib64/libmpa_uefi.so $rel_dir_name/libmpa_uefi.so.1
+cp ../../../../build/linux/libsgx_enclave_common.so $rel_dir_name/libsgx_enclave_common.so.1
+cp ../../../../build/linux/libsgx_urts.so $rel_dir_name/libsgx_urts.so
+cp README_standalone.txt $rel_dir_name/README.txt
 cp License.txt $rel_dir_name
+cd $rel_dir_name
+ln -s libsgx_urts.so libsgx_urts.so.1
+cd ..
 
 tar cvpzf $rel_dir_name.tar.gz $rel_dir_name
 

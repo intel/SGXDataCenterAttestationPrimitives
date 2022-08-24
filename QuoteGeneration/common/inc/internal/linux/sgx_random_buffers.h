@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,9 +53,16 @@ template <class R = unsigned>
 inline R rdrand(void)
 {
     R r;
-    __asm__ volatile ("rdrand %0" : "=r"(r));
+    __asm__ volatile (
+        "1: rdrand  %0\n"
+        "   jnc     1b\n"
+        : "=r" (r)
+    );
+
     return r;
+
 }
+
 
 /*
  * To invoke somefunc(arg1, arg2,...), use

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -100,10 +100,10 @@ uint8_t oidToByte(const ASN1_TYPE *oidValue)
     return static_cast<uint8_t>(ret);
 }
 
-unsigned int oidToUInt(const ASN1_TYPE *oidValue)
+uint32_t oidToUInt(const ASN1_TYPE *oidValue)
 {
     long ret = ASN1_INTEGER_get(oidValue->value.integer);
-    return static_cast<unsigned int>(ret);
+    return static_cast<uint32_t>(ret);
 }
 
 int oidToEnum(const ASN1_TYPE *oidValue)

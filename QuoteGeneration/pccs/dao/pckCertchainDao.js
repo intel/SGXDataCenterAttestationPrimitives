@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,35 +29,42 @@
  *
  */
 
-const { pck_certchain }= require('./models/');
-const Constants = require('../constants/index.js');
-const {Sequelize, sequelize} = require('./models/');
+import Constants from '../constants/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import { PckCertchain, sequelize } from './models/index.js';
 
-exports.upsertPckCertchain = async function(ca) {
-    return await pck_certchain.upsert({
-        ca: ca,
-        root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-        intmd_cert_id: (ca == Constants.CA_PROCESSOR)? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID
-    });
+export async function upsertPckCertchain(ca) {
+  if (typeof ca == 'undefined') {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+
+  return await PckCertchain.upsert({
+    ca: ca,
+    root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
+    intmd_cert_id:
+      ca == Constants.CA_PROCESSOR
+        ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID
+        : Constants.PLATFORM_INTERMEDIATE_CERT_ID,
+  });
 }
 
-exports.getPckCertChain = async function(ca) {
-    const sql = 'select a.*,' +
-              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
-              ' from pck_certchain a ' +
-              ' where a.ca=$ca';
-    const certchain = await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT,
-            bind: { ca : ca }
-        });
-    if (certchain.length == 0)
-        return null;
-    else if (certchain.length == 1 ){
-        return certchain[0];
-    }
-    else 
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
-
+export async function getPckCertChain(ca) {
+  const sql =
+    'select a.*,' +
+    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
+    ' from pck_certchain a ' +
+    ' where a.ca=$ca';
+  const certchain = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+    bind: { ca: ca },
+  });
+  if (certchain.length == 0) return null;
+  else if (certchain.length == 1) {
+    return certchain[0];
+  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }

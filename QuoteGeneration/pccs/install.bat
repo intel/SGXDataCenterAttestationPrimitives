@@ -1,11 +1,13 @@
 @ echo off
 
+call mkdir logs
+
 echo Install npm packages ......
 
 call npm install
 
-call npm install pm2 -g
+call npm install node-windows@1.0.0-beta.6 -g
 
-call pm2 update
+call npm link node-windows
 
-call pm2 start pccs_server.config.js
+call node pccs.service.win

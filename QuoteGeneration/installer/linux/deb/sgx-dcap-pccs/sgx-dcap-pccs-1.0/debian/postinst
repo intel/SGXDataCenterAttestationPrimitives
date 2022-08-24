@@ -17,22 +17,11 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+PACKAGE_PATH=@pkg_path@
 
 case "$1" in
     configure)
-        chown -R $(logname):$(logname) /opt/intel/sgx-dcap-pccs/
-        if which pm2 > /dev/null
-        then
-            echo "pm2 is installed, continue ..."
-        else
-            npm install -g pm2
-        fi
-        if [ "${DEBIAN_FRONTEND}" != "noninteractive" ]
-        then
-            /bin/su -c "/opt/intel/sgx-dcap-pccs/install.sh postinst" $(logname)
-            pm2cfg=`/bin/su -c "pm2 startup systemd | grep 'sudo'" $(logname)` || true
-            eval $pm2cfg
-        fi
+        if [ -x ${PACKAGE_PATH}/startup.sh ]; then ${PACKAGE_PATH}/startup.sh debian; fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

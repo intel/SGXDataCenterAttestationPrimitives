@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +99,7 @@ hvhNAQ0BBQoBADAKBggqhkjOPQQDAgNIADBFAiEAmj9y/KmgcvH/0CsUUO/BnAyk
 SruGvu3DJ+zdTvm/0EgCIChm9INugpWJOqwLz/qFnK6nBKl3joq2VKFrj71kUguQ
 )cert";
 
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 using namespace intel::sgx;
 using namespace testing;
 
@@ -293,6 +293,82 @@ TEST_F(PckCertChainParserTests, emptyString)
     // GIVEN
     // WHEN
     ASSERT_EQ(certChain.parse(""), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingOneCertificateWithBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingTwoCertificatesWithFirstBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT
+        + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingTwoCertificatesWithSecondBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingThreeCertificatesWithLastBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
+
+    // THEN
+    EXPECT_EQ(0, certChain.length());
+    EXPECT_EQ(certChain.getRootCert(), nullptr);
+    EXPECT_EQ(certChain.getTopmostCert(), nullptr);
+}
+
+TEST_F(PckCertChainParserTests, parsingThreeCertificatesWithMiddleBegAndEndCertInverted)
+{
+    // GIVEN
+    const std::string txt = CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT
+            + CORRECT_END_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_BEG_CERT
+            + CORRECT_BEG_CERT + CORRECT_ROOT_CERT_BODY + CORRECT_END_CERT;
+
+    // WHEN
+    ASSERT_EQ(certChain.parse(txt.c_str()), STATUS_UNSUPPORTED_CERT_FORMAT);
 
     // THEN
     EXPECT_EQ(0, certChain.length());

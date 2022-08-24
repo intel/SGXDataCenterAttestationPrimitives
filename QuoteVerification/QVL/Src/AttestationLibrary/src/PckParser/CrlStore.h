@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,9 @@
 
 #include <OpensslHelpers/OpensslTypes.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+using namespace intel::sgx::dcap;
+
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 class CrlStore
 {
@@ -53,7 +55,7 @@ public:
     bool operator==(const CrlStore& other) const;
     bool operator!=(const CrlStore& other) const;
 
-    virtual bool parse(const std::string& pemCrl);
+    virtual bool parse(const std::string& crlString);
 
     virtual bool expired(const time_t& expirationDate) const;
     virtual const Issuer& getIssuer() const;
@@ -76,6 +78,6 @@ private:
     long _crlNum;
 };
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 #endif // SGX_INTEL_QVL_CRLSTORE_H_

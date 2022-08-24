@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -55,6 +55,8 @@ python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-ae-qve-package.txt  --clean
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
+SGX_VERSION=$(awk '/QVE_VERSION/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 pushd ${INSTALL_PATH} &> /dev/null
+sed -i "s/USR_LIB_VER=.*/USR_LIB_VER=${SGX_VERSION}/" Makefile
 tar -zcvf ${TARBALL_NAME} *
 popd &> /dev/null

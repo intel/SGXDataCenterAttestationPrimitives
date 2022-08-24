@@ -1,4 +1,0 @@
-DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/dcap_quoteverify/inc/sgx_dcap_pcs_com.h	<installdir>/include/sgx_dcap_pcs_com.h	0	main	STP
-<deliverydir>/dcap_quoteverify/inc/sgx_dcap_quoteverify.h	<installdir>/include/sgx_dcap_quoteverify.h	0	main	STP
-<deliverydir>/QvE/Include/qve_header.h	<installdir>/include/qve_header.h	0	main	STP

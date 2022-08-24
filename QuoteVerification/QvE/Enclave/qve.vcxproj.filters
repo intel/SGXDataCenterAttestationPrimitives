@@ -5,14 +5,11 @@
     <ClCompile Include="qve_t.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Include\collateral_files.h" />
-    <ClInclude Include="..\Include\qve_header.h" />
+    <ClInclude Include="..\Include\sgx_qve_header.h" />
+    <ClInclude Include="..\Include\sgx_qve_def.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qve.edl" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="qve.config.xml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="qve_test_key.pem" />

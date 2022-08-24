@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,15 +74,20 @@ pck_cert_selection_res_t TCBManager::tcb_parse_wrapper()
 	}
 
 	// TCB Type check, currently only type 0 is supported
-	// for TcbInfo::V1, TcbType field not present, default to 0
+	// TCbInfo::v1 was unsupported and current only TcbType::v2 and 
+	// TcbType::v3 are supported
 
-	if (this->tcbInfo.getVersion() != static_cast<unsigned int>(TcbInfo::Version::V1))
+	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V2 ) &&
+      this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V3 ) )
+
 	{
-		this->tcb_type = this->tcbInfo.getTcbType();
-		if (this->tcb_type != 0)
-		{
-			return PCK_CERT_SELECT_UNSUPPORTED_TCB_TYPE;
-		}
+		   return PCK_CERT_SELECT_INVALID_TCB;
+    }
+
+	this->tcb_type = this->tcbInfo.getTcbType();
+	if (this->tcb_type != 0)
+	{
+		return PCK_CERT_SELECT_UNSUPPORTED_TCB_TYPE;
 	}
 	return PCK_CERT_SELECT_SUCCESS;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,11 @@
 #include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include "QuoteGenerator.h"
+#include "QuoteV3Generator.h"
 #include <numeric>
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 
 struct GetQECertificationDataSizeTests : public Test
 {
@@ -75,9 +75,9 @@ TEST_F(GetQECertificationDataSizeTests, invalidQuoteFormatShouldReturnUnsupporte
 TEST_F(GetQECertificationDataSizeTests, positiveValidParametersShouldReturnOkStatusAndUpdateQeCertificationDataSize)
 {
     // GIVEN
-    test::QuoteGenerator generator;
+    test::QuoteV3Generator generator;
     const Bytes pckData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-    generator.withQeCertData(2, pckData)
+    generator.withCertificationData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
 
     auto quote = generator.buildQuote();
@@ -90,12 +90,12 @@ TEST_F(GetQECertificationDataSizeTests, positiveValidParametersShouldReturnOkSta
     EXPECT_EQ(pckData.size(), qeCertificationDataSize) << "'qeCertificationDataSize' extracted from quote differs from expected";
 }
 
-TEST_F(GetQECertificationDataSizeTests, positiveEmptyQeCertDataShouldReturnOkStatusAndUpdateQeCertificationDataSize)
+TEST_F(GetQECertificationDataSizeTests, positiveEmptycertificationDataShouldReturnOkStatusAndUpdateQeCertificationDataSize)
 {
     // GIVEN
-    test::QuoteGenerator generator;
+    test::QuoteV3Generator generator;
     const Bytes pckData; // empty
-    generator.withQeCertData(2, pckData)
+    generator.withCertificationData(2, pckData)
              .withAuthDataSize((uint32_t) (generator.getAuthSize() + pckData.size()));
     const auto quote = generator.buildQuote();
 

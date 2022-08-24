@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,38 +29,42 @@
  *
  */
 
-const { identityService }= require('../services');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { identityService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
+import * as appUtil from '../utils/apputil.js';
 
-exports.getQEIdentity = async function(req,res,next) {
-    try {
-        // call service
-        let qeidJson = await identityService.getQEIdentity();
+async function getEnclaveIdentity(req, res, next, enclave_id) {
+  try {
+    // call service
+    let version = appUtil.get_api_version_from_url(req.originalUrl);
+    let enclaveIdentityJson = await identityService.getEnclaveIdentity(
+      enclave_id,
+      version
+    );
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN, qeidJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])
-           .json(qeidJson.qeid);
-    }
-    catch(err) {
-        next(err);
-    }
-};
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(
+        Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN,
+        enclaveIdentityJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN]
+      )
+      .header('Content-Type', 'application/json')
+      .send(enclaveIdentityJson['identity']);
+  } catch (err) {
+    next(err);
+  }
+}
 
-exports.getQvEIdentity = async function(req,res,next) {
-    try {
-        // call service 
-        let qveidJson = await identityService.getQvEIdentity();
+export async function getEcdsaQeIdentity(req, res, next) {
+  return getEnclaveIdentity(req, res, next, Constants.QE_IDENTITY_ID);
+}
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN, qveidJson[Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN])
-           .json(qveidJson.qveid);
-    }
-    catch(err) {
-        next(err);
-    }
-};
+export async function getQveIdentity(req, res, next) {
+  return getEnclaveIdentity(req, res, next, Constants.QVE_IDENTITY_ID);
+}
 
-
+export async function getTdQeIdentity(req, res, next) {
+  return getEnclaveIdentity(req, res, next, Constants.TDQE_IDENTITY_ID);
+}

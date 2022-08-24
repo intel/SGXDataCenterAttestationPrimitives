@@ -23,10 +23,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-cmake_minimum_required(VERSION 3.10)
-if (POLICY CMP0074)
-	cmake_policy(SET CMP0074 NEW) # this is required to surpress wrong policy set in older CMake release
-endif()
+cmake_minimum_required(VERSION 3.12)
 
 set(ATTESTATION_PARSERS_ROOT_DIR "") # Optional path to Attestation Parsers library
 set(ATTESTATION_LIBRARY_ROOT_DIR "") # Optional path to Attestation library
@@ -154,10 +151,10 @@ set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
-include("ThirdParty/hunter/HunterGate.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.23.240.tar.gz"
-		SHA1 "ca19f3769e6c80cfdd19d8b12ba5102c27b074e0"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.23.316.tar.gz"
+		SHA1 "167a33c4cc398504826a1a3014ef66f9ccc35db3"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
@@ -177,7 +174,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
 			message(FATAL_ERROR "Clang 5.0 or above required.")
 		endif()
-
 		set(IGNORED_WARNINGS
 				"-Wno-gnu-statement-expression" #warns about __FILE__, __LINE__, etc. compiler macros
 				"-Wno-c++98-compat"             #family of warnings indicating this code may cause errors if compiled with C++98 compiler
@@ -189,14 +185,22 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 				)
 		set(CMAKE_CXX_FLAGS_CLANG
 				"-fcolor-diagnostics"           #clang coloured output
+				"-fwrapv"                       #Treat signed integer overflow as two’s complement
 				"-Wno-unused-command-line-argument"
 				)
-		set(CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG "-fsanitize=safe-stack")
+        # implicit-conversion: Checks for suspicious behavior of implicit conversions. Enables implicit-unsigned-integer-truncation, implicit-signed-integer-truncation, and implicit-integer-sign-change.
+		# nullability: Enables nullability-arg, nullability-assign, and nullability-return. While violating nullability does not have undefined behavior, it is often unintentional, so UBSan offers to catch it.
+		set(CMAKE_EXE_LINKER_FLAGS_RELEASE_CLANG "-fsanitize=undefined,safe-stack,implicit-conversion,nullability")
 	endif()
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
 			message(FATAL_ERROR "GCC 5.0 or above required.")
 		endif()
+        set(CMAKE_CXX_FLAGS_GCC
+                "-fno-strict-overflow"            # tells the compiler NOT to assume that signed overflow does not occur.
+                "-fno-delete-null-pointer-checks" # tells the compiler NOT to assume that null pointer deference does not exist.
+                "-fwrapv"                         # tells the compiler that # signed overflow always wraps.
+                )
 	endif()
 	set(CMAKE_C_FLAGS
 			"-fpic"                         #Position Independent Execution (PIE)
@@ -234,6 +238,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 			"-std=c++14"                    #currently used C++ standard
 			"-Wnon-virtual-dtor"
 			"${CMAKE_CXX_FLAGS_CLANG}"
+			"${CMAKE_CXX_FLAGS_GCC}"
 			"${IGNORED_WARNINGS}"           #but ignore some unimportant ones
 			"${SANITIZE_FLAGS}"
 			)
@@ -263,6 +268,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 			"/MP" # Multi processor compilation
 			"/guard:cf"
 			"/INCREMENTAL"
+			"/sdl"  # superset of the baseline security checks
 			"${SANITIZE_FLAGS}"
 			)
 
@@ -292,14 +298,16 @@ else()
 	message(FATAL_ERROR "Unsupported compiler '${CMAKE_CXX_COMPILER_ID}'. Clang 5.0, GCC and MSVC are supported")
 endif()
 
-# Settings for coverage support in CLion (version 2019.3 and up)
-if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang"
-		OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
-	message("Building with llvm Code Coverage Tools")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-	message("Building with lcov Code Coverage Tools")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+if(NOT BUILD_ENCLAVE)
+	# Settings for coverage support in CLion (version 2019.3 and up)
+	if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang"
+			OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
+		message("Building with llvm Code Coverage Tools")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+	elseif(CMAKE_COMPILER_IS_GNUCXX)
+		message("Building with lcov Code Coverage Tools")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+	endif()
 endif()
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/lib)
@@ -308,6 +316,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QVL_BUILD_DIR}/out/bin)
 
 # Order matters!
 add_subdirectory(ThirdParty)
+add_subdirectory(AttestationCommons)
 if("${ATTESTATION_PARSERS_ROOT_DIR}" STREQUAL "")
 	add_subdirectory(AttestationParsers)
 endif()
@@ -326,7 +335,9 @@ add_custom_target(install_${PROJECT_NAME}
 if (BUILD_TESTS)
 	if(UNIX)
 		add_custom_target(runTests
-				COMMAND cd ${QVL_DIST_DIR}/bin && LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
+				COMMAND cd ${QVL_DIST_DIR}/bin &&
+				LD_LIBRARY_PATH=../lib ./AttestationCommons_UT --gtest_output="xml:../results/AttestationCommons_UTResults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationParsers_IT --gtest_output="xml:../results/AttestationParsers_ITResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTesults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationLibrary_IT --gtest_output="xml:../results/AttestationLibrary_ITResults.xml" &&
@@ -337,6 +348,8 @@ if (BUILD_TESTS)
 
 	if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		if(UNIX)
+            include(ProcessorCount)
+            ProcessorCount(N)
 			set(COVFILE "${CMAKE_SOURCE_DIR}/sgx.cov")
 
 			add_custom_target(cov_on
@@ -355,7 +368,7 @@ if (BUILD_TESTS)
 					COMMAND ${BULLSEYE_COV_XML} -f${COVFILE} -o${PROJECT_SOURCE_DIR}/code-coverage-report/coverage.xml  --no-banner)
 
 			add_custom_target(code-coverage
-					COMMAND COVFILE=${COVFILE} ${CMAKE_MAKE_PROGRAM} -C ${QVL_BUILD_DIR} -j1 cov_on runTests cov_off cov_html cov_xml)
+					COMMAND COVFILE=${COVFILE} $(MAKE) -j${N} -C ${QVL_BUILD_DIR} cov_on runTests cov_off cov_html cov_xml)
 		else()
 			message(FATAL_ERROR "Coverage build is only supported on Linux")
 		endif()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -120,9 +120,9 @@ int main(int argc, char* argv[])
 
 
 #if !defined(_MSC_VER)
-    // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process. 
+    // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process.
     // the other is out-of-proc mode, the QE3 and PCE are managed by a daemon. If you want to use in-proc
-    // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the 
+    // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the
     // out-of-proc mode, you need to install libsgx-quote-ex as well. This sample is built to demo both 2
     // modes, so you need to install libsgx-quote-ex to enable the out-of-proc mode.
     if(!is_out_of_proc)
@@ -137,33 +137,29 @@ int main(int argc, char* argv[])
             goto CLEANUP;
         }
         printf("succeed!\n");
-        #if defined(UBUNTU)
-        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so");
-        #else // This is for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in set PCE directory: 0x%04x.\n", qe3_ret);
-            ret = -1;
-            goto CLEANUP;
+
+        // Try to load PCE and QE3 from Ubuntu-like OS system path
+        if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so.1") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1")) {
+
+            // Try to load PCE and QE3 from RHEL-like OS system path
+            if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so.1") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so.1") ||
+                SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib64/libsgx_id_enclave.signed.so.1")) {
+                printf("Error in set PCE/QE3/IDE directory.\n");
+                ret = -1;
+                goto CLEANUP;
+            }
         }
-        #if defined(UBUNTU)
-        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so");
-        #else // This for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in set QE3 directory: 0x%04x.\n", qe3_ret);
-            ret = -1;
-            goto CLEANUP;
-        }
-        #if defined(UBUNTU)
+
         qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1");
-        #else // This for RHEL
-        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
-        #endif
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Info: /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1 not found.\n");
+        if (SGX_QL_SUCCESS != qe3_ret) {
+            qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
+            if(SGX_QL_SUCCESS != qe3_ret) {
+                // Ignore the error, because user may want to get cert type=3 quote
+                printf("Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
+            }
         }
     }
 #endif
@@ -213,7 +209,7 @@ int main(int argc, char* argv[])
     }
     printf("succeed!");
 
-    p_quote = (_sgx_quote3_t*)p_quote_buffer;
+    p_quote = (sgx_quote3_t*)p_quote_buffer;
     p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
     p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
     p_cert_data = (sgx_ql_certification_data_t *)((uint8_t *)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,12 +48,12 @@
 #define OS_PATH "[[:blank:]]*(\\(.*[\\])?)"
 #define strncasecmp _strnicmp
 #else
-#define OS_PATH "[[:blank:]]*(/(.*[/])?)"
+#define OS_PATH "[[:blank:]]*(/(.*[/])?)[[:blank:]]*"
 #define fopen_s(pf,filename,mode) (((*(pf))=fopen((filename),(mode)))==NULL?1:0)
 #endif
 #define URL_PATH_PATTERN "([[:blank:]])*([/]{1}.*/?)([[:blank:]])*"  
-#define SUBSCRIPTION_KEY_PATTERN "([[:blank:]])*[0-9a-fA-F]{32}([[:blank:]])*"
-#define WORD_PATTERN "([[:blank:]])*[a-z]+([[:blank:]])*"
+#define SUBSCRIPTION_KEY_PATTERN "[[:blank:]]*([0-9a-fA-F]{32})([[:blank:]])*"
+#define WORD_PATTERN "[[:blank:]]*([a-z]*)+([[:blank:]])*"
 #define OPTION_COMMENT "(#.*)?"
 
 typedef struct _config_entry_t{
@@ -79,7 +79,7 @@ struct _config_patterns_t{
     {config_comment, "^[[:blank:]]*#"},   //matching a line with comments only (It is started by #)
     {config_space, "^[[:blank:]]*$"},   //matching empty line
     {config_proxy_url,"^[[:blank:]]*proxy[[:blank:]]*url[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: proxy url= ...
-    {config_proxy_type, "^[[:blank:]]*proxy[[:blank:]]*type[[:blank:]]*=[[:blank:]]([^[:blank:]]+)[[:blank:]]*" OPTION_COMMENT "$"},//matching line in format: proxy type = [direct|default|manual]
+    {config_proxy_type, "^[[:blank:]]*proxy[[:blank:]]*type[[:blank:]]*=[[:blank:]]*([^[:blank:]]+)[[:blank:]]*" OPTION_COMMENT "$"},//matching line in format: proxy type = [direct|default|manual]
     {config_uefi_path, "^[[:blank:]]*uefi[[:blank:]]*path[[:blank:]]*=" OS_PATH OPTION_COMMENT "$"}, //matching line in format: uefi path= ...
     {config_server_subscription_key, "^[[:blank:]]*subscription key[[:blank:]]*=" SUBSCRIPTION_KEY_PATTERN OPTION_COMMENT "$"}, //matching line in format: dd package subscription key = hexval
     {config_log_level, "^[[:blank:]]*log level[[:blank:]]*=" WORD_PATTERN OPTION_COMMENT "$"} //matching line in format: log level = info
@@ -190,7 +190,7 @@ bool config_process_one_line(const char *line, config_entry_t entries[], MPConfi
                 conf.proxy.proxy_type = read_proxy_type(line+matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
                 break;
             case config_log_level: //It is a log level, we need change the string to integer by calling function read_log_level
-                conf.log_level = read_log_level(line+matches[1].rm_eo, matches[0].rm_eo-matches[1].rm_eo);
+                conf.log_level = read_log_level(line+matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
                 break;
             case config_uefi_path:
                 if(matches[1].rm_eo-matches[1].rm_so>= MAX_PATH_SIZE){
@@ -201,10 +201,10 @@ bool config_process_one_line(const char *line, config_entry_t entries[], MPConfi
                 }
                 break;
             case config_server_subscription_key:
-                if(matches[0].rm_eo-matches[1].rm_eo != SUBSCRIPTION_KEY_SIZE){
+                if(matches[1].rm_eo-matches[1].rm_so != SUBSCRIPTION_KEY_SIZE){
                     agent_log_message(MP_REG_LOG_LEVEL_ERROR, "too long subscription key in config file %d\n", SUBSCRIPTION_KEY_SIZE);
                 } else {
-                    memcpy(conf.server_add_package_subscription_key, line+matches[1].rm_eo, matches[0].rm_eo-matches[1].rm_eo);
+                    memcpy(conf.server_add_package_subscription_key, line+matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
                 }
                 break;
             default:
@@ -242,17 +242,17 @@ bool AgentConfiguration::read(MPConfigurations& conf)
 
 	FILE *f = NULL;
 	if (fopen_s(&f, conf_file_path.c_str(), "r") != 0 || f == NULL) {
-         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Cannot read configuration file %s\n", conf_file_path.c_str());
+         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Cannot read configuration file %s\n", conf_file_path.c_str());
          return false;
     }
 
     init_config_patterns(entries);
     while(fgets(line, MAX_LINE, f)!=NULL){
-        size_t len=strlen(line);
+        size_t len=strnlen(line, MAX_LINE);
         if(len>0&&line[len-1]=='\n')line[len-1]='\0';//remove the line ending
         line_no++;
         if(!config_process_one_line(line, entries, conf)){
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "format error in file %s:%d [%s]\n", conf_file_path.c_str(), line_no, line);
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "format error in file %s:%d [%s]\n", conf_file_path.c_str(), line_no, line);
             ret = false;//continue process the file but save the error status
         }
     }
@@ -260,7 +260,7 @@ bool AgentConfiguration::read(MPConfigurations& conf)
     fclose(f);
     if(conf.proxy.proxy_type>=NUM_PROXY_TYPE||
           (conf.proxy.proxy_type==MP_REG_PROXY_TYPE_MANUAL_PROXY&&conf.proxy.proxy_url[0]=='\0')){
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "Invalid proxy type %d\n",conf.proxy.proxy_type);
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Invalid proxy type %d\n",conf.proxy.proxy_type);
             conf.proxy.proxy_type = MP_REG_PROXY_TYPE_DEFAULT_PROXY;
             ret = false;
     }

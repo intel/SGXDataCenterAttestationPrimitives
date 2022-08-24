@@ -36,12 +36,6 @@
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\DigestUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\OpensslInit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\EnclaveIdentity.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\TCBSigningChain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -58,9 +52,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\QuoteVerifier.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\EnclaveIdentityV1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\TCBInfoVerifier.cpp">
@@ -84,12 +75,6 @@
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\CertVerification\CertificateChain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\TimeUtils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\GMTime.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Utils\JsonParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -100,6 +85,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\PckParser\PckParserUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\GMTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\QuoteVerification\QuoteStructures.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

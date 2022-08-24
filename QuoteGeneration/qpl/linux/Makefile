@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,12 +32,18 @@
 ######## SGX SDK Settings ########
 TOP_DIR  = ../..
 include $(TOP_DIR)/buildenv.mk
+PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
 
 ######## SGX QPL Library Settings ########
 
-QPL_Lib_Cpp_Files := $(wildcard ../*.cpp)
+QPL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
 
-QPL_Lib_Include_Paths := -I../../quote_wrapper/common/inc -I../inc -I$(SGX_SDK)/include -I../../common/inc/internal -I../../qcnl/inc 
+######## Include path -- Don't forget to update AESM CMakefile ########
+QPL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
+                         -I../inc -I$(SGX_SDK)/include          \
+                         -I../../common/inc/internal            \
+                         -I../../qcnl/inc                       \
+                         -I$(PREBUILD_OPENSSL_PATH)/inc
 
 QPL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(QPL_Lib_Include_Paths)
 
@@ -46,7 +52,8 @@ LDUFLAGS += -Wl,--version-script=sgx_default_quote_provider.lds -Wl,--gc-section
 
 QPL_Lib_Cpp_Flags := $(QPL_Lib_C_Flags) -std=c++11
 
-QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_default_qcnl_wrapper -lpthread -ldl
+QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
+        -lcrypto -lsgx_default_qcnl_wrapper -lpthread -ldl
  
 ifndef DEBUG
 QPL_Lib_Cpp_Flags += -DDISABLE_TRACE
@@ -57,19 +64,15 @@ QPL_Lib_Cpp_Objects := $(QPL_Lib_Cpp_Files:.cpp=.o)
 QPL_Lib_Cpp_Deps := $(QPL_Lib_Cpp_Objects:%.o=%.d)
 
 QPL_Lib_Name_Dynamic  := libdcap_quoteprov.so
-ifndef DEBUG
-QPL_Lib_Name_Dynamic_Debug := libdcap_quoteprov.so.debug
-endif
+QPL_VERSION:= $(shell awk '$$2 ~ /DEFAULT_QPL_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
+QPL_SO_VERSION:= $(shell echo $(QPL_VERSION) |awk -F. '{print $$1}') 
 
 .PHONY: all run
 
 all: $(QPL_Lib_Name) install_lib
 
-install_lib: $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic_Debug) | $(BUILD_DIR)
+install_lib: $(QPL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(QPL_Lib_Name_Dynamic) $|
-ifndef DEBUG
-	@$(CP) $(QPL_Lib_Name_Dynamic_Debug) $|
-endif
 
 run: all
 
@@ -82,19 +85,7 @@ $(QPL_Lib_Cpp_Objects): %.o: %.cpp
 	@echo "CXX  <=  $<"
 
 $(QPL_Lib_Name_Dynamic): $(QPL_Lib_Cpp_Objects)
-	$(CXX) $(CXXFLAGS) $(QPL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(QPL_Lib_Link_Flags) -o $@
-
-$(QPL_Lib_Name_Dynamic_Debug): $(QPL_Lib_Name_Dynamic)
-	((test -f $(QPL_Lib_Name_Dynamic_Debug)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
-ifndef DEBUG
-	$(CP) $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic).orig
-	$(OBJCOPY) --only-keep-debug $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic_Debug)
-	$(STRIP) -g $(QPL_Lib_Name_Dynamic)
-	$(OBJCOPY) --add-gnu-debuglink=$(QPL_Lib_Name_Dynamic_Debug) $(QPL_Lib_Name_Dynamic)
-endif
+	$(CXX) $(CXXFLAGS) $(QPL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(QPL_SO_VERSION) $(LDUFLAGS) $(QPL_Lib_Link_Flags) -o $@
 
 force_look:
 	true

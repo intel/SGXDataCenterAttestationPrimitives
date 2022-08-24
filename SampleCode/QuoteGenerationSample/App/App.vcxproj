@@ -14,19 +14,19 @@
     <ProjectGuid>{49AE83E7-4F40-421E-A6E6-B5EC50586E3D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>App</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -68,6 +68,7 @@
       <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -99,6 +100,7 @@
       <AdditionalLibraryDirectories>$(SGXDCAPComponentsPath)\lib\native\Libraries;$(SGXSDKInstallPath)\bin\x64\Release;$(VC_LibraryPath_VC_x64_OneCore)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OneCore.lib;sgx_dcap_ql.lib;sgx_urts.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>kernel32.lib;user32.lib</IgnoreSpecificDefaultLibraries>
+      <CETCompat>true</CETCompat>
     </Link>
     <PostBuildEvent>
       <Command>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,47 +28,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const Config = require('config');
-const Crypto = require('crypto');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants');
+import Config from 'config';
+import Crypto from 'crypto';
+import PccsStatus from '../constants/pccs_status_code.js';
+import PccsError from '../utils/PccsError.js';
 
-exports.validateUser = function (req,res,next) {
-    const token = req.headers[Constants.HTTP_HEADER_USER_TOKEN];
-    if (token) {
-        let hash = Crypto.createHash('sha512');
-        hash.update(token);
-        let UserToken = hash.digest('hex');
-        
-        if (UserToken != Config.get('UserToken')) {
-            return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-                PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
-        }
-        else {
-            next()
-        }
-    }else {
-        res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-            PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
+export function validateUser(req, res, next) {
+  const HTTP_HEADER_USER_TOKEN = 'user-token';
+  const token = req.headers[HTTP_HEADER_USER_TOKEN];
+  if (token) {
+    let hash = Crypto.createHash('sha512');
+    hash.update(token);
+    let user_token_hash = hash.digest('hex');
+
+    if (user_token_hash != Config.get('UserTokenHash')) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
+    } else {
+      next();
     }
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
+  }
 }
 
-exports.validateAdmin = function (req,res,next) {
-    const token = req.headers[Constants.HTTP_HEADER_ADMIN_TOKEN];
-    if (token) {
-        let hash = Crypto.createHash('sha512');
-        hash.update(token);
-        let AdminToken = hash.digest('hex');
+export function validateAdmin(req, res, next) {
+  const HTTP_HEADER_ADMIN_TOKEN = 'admin-token';
+  const token = req.headers[HTTP_HEADER_ADMIN_TOKEN];
+  if (token) {
+    let hash = Crypto.createHash('sha512');
+    hash.update(token);
+    let admin_token_hash = hash.digest('hex');
 
-        if (AdminToken != Config.get('AdminToken')) {
-            return res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-                PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
-        }
-        else {
-            next()
-        }
-    }else {
-        res.status(PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[0]).send(
-            PCCS_STATUS.PCCS_STATUS_UNAUTHORIZED[1]);
+    if (admin_token_hash != Config.get('AdminTokenHash')) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
+    } else {
+      next();
     }
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_UNAUTHORIZED);
+  }
 }

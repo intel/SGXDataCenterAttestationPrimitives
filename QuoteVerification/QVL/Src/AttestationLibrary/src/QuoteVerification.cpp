@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,12 @@
 #include <string>
 #include <memory>
 #include <algorithm>
-#include <iostream>
-#include <iomanip>
 
-#include "OpensslHelpers/OpensslInit.h"
 #include "PckParser/CrlStore.h"
 #include "CertVerification/CertificateChain.h"
 #include "QuoteVerification/Quote.h"
 #include "QuoteVerification/QuoteConstants.h"
+#include "QuoteVerification/QuoteParsers.h"
 
 #include "Verifiers/PckCertVerifier.h"
 #include "Verifiers/PckCrlVerifier.h"
@@ -49,7 +47,7 @@
 #include "Verifiers/EnclaveReportVerifier.h"
 #include "Verifiers/QuoteVerifier.h"
 #include "Verifiers/EnclaveIdentityParser.h"
-#include "Verifiers/EnclaveIdentity.h"
+#include "Verifiers/EnclaveIdentityV2.h"
 #include "Utils/TimeUtils.h"
 #include "Utils/SafeMemcpy.h"
 
@@ -60,27 +58,6 @@ static constexpr size_t EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN = 3;
 static constexpr size_t EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN = 2;
 
 using namespace intel::sgx;
-
-class OpensslGuard
-{
-public:
-    OpensslGuard()
-    {
-        qvl::crypto::init();
-    }
-
-    ~OpensslGuard()
-    {
-        qvl::crypto::clear();
-    }
-
-    OpensslGuard(const OpensslGuard&) = delete;
-    OpensslGuard(OpensslGuard&&) = delete;
-    OpensslGuard& operator=(const OpensslGuard&) = delete;
-    OpensslGuard& operator=(OpensslGuard&&) = delete;
-};
-
-static const OpensslGuard opensslGuard;
 
 const char* sgxAttestationGetVersion()
 {
@@ -103,7 +80,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -119,7 +96,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
 
     if(status != STATUS_OK)
@@ -132,7 +109,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl, intermediateCrl;
+    dcap::pckparser::CrlStore rootCaCrl, intermediateCrl;
     if(!rootCaCrl.parse(crls[0]) || !intermediateCrl.parse(crls[1]))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
@@ -141,7 +118,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     try
     {
         auto rootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
+        return dcap::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -157,13 +134,13 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
-    qvl::pckparser::CrlStore x509Crl;
+    dcap::pckparser::CrlStore x509Crl;
     if(!x509Crl.parse(crl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCACertChain);
     if (status != STATUS_OK)
     {
@@ -173,7 +150,7 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
     try
     {
         auto trustedRootCACert = dcap::parser::x509::Certificate::parse(pemTrustedRootCaCert);
-        return qvl::PckCrlVerifier{}.verify(x509Crl, chain, trustedRootCACert);
+        return dcap::PckCrlVerifier{}.verify(x509Crl, chain, trustedRootCACert);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -185,13 +162,13 @@ Status sgxAttestationVerifyPCKRevocationList(const char* crl, const char *pemCAC
     }
 }
 
-Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl,
+Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *stringRootCaCrl,
         const char *pemRootCaCertificate, const time_t* expirationDate)
 {
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -200,7 +177,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
 
     if(!tcbInfo ||
        !pemCertChain ||
-       !pemRootCaCrl ||
+       !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
@@ -220,7 +197,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         return STATUS_SGX_TCB_INFO_INVALID;
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
     if (status != STATUS_OK)
     {
@@ -232,8 +209,8 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl;
-    if(!rootCaCrl.parse(pemRootCaCrl))
+    dcap::pckparser::CrlStore rootCaCrl;
+    if(!rootCaCrl.parse(stringRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
@@ -241,7 +218,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     try
     {
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
+        return dcap::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -253,14 +230,14 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     }
 }
 
-Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *pemRootCaCrl,
+Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *stringRootCaCrl,
         const char *pemRootCaCertificate, const time_t* expirationDate)
 {
 
     time_t currentTime;
     try
     {
-        currentTime = qvl::getCurrentTime(expirationDate);
+        currentTime = dcap::getCurrentTime(expirationDate);
     }
     catch (const std::runtime_error&)
     {
@@ -269,24 +246,24 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
 
     if(!enclaveIdentityString ||
        !pemCertChain ||
-       !pemRootCaCrl ||
+       !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentity;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentity;
     try
     {
         enclaveIdentity = parser.parse(enclaveIdentityString);
     }
-    catch (const qvl::ParserException &e)
+    catch (const dcap::ParserException &e)
     {
         return e.getStatus();
     }
 
-    qvl::CertificateChain chain;
+    dcap::CertificateChain chain;
     const auto status = chain.parse(pemCertChain);
     if(status != STATUS_OK)
     {
@@ -298,8 +275,8 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
-    qvl::pckparser::CrlStore rootCaCrl;
-    if(!rootCaCrl.parse(pemRootCaCrl))
+    dcap::pckparser::CrlStore rootCaCrl;
+    if(!rootCaCrl.parse(stringRootCaCrl))
     {
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
@@ -307,7 +284,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     try
     {
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
-        return qvl::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
+        return dcap::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -332,18 +309,18 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     }
    
     // We totally trust user on this, it should be explicitly and clearly
-    // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ? 
+    // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
     /// 4.1.2.4.2
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
     /// 4.1.2.4.5
-    qvl::pckparser::CrlStore pckCrlStore;
+    dcap::pckparser::CrlStore pckCrlStore;
     if(!pckCrlStore.parse(pckCrl))
     {
         return STATUS_UNSUPPORTED_PCK_RL_FORMAT;
@@ -364,14 +341,14 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
 
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentity;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentity;
     if (qeIdentityJson != nullptr)
     {
         try {
             enclaveIdentity = parser.parse(qeIdentityJson);
         }
-        catch (const qvl::ParserException&)
+        catch (const dcap::ParserException&)
         {
             return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
         }
@@ -380,7 +357,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     try
     {
         auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate); /// 4.1.2.4.3
-        return qvl::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), qvl::EnclaveReportVerifier());
+        return dcap::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), dcap::EnclaveReportVerifier());
     }
     catch (const dcap::parser::FormatException&)
     {
@@ -400,26 +377,36 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
     }
 
     /// 4.1.2.9.1
-    const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + qvl::constants::ENCLAVE_REPORT_BYTE_LEN);
-    qvl::Quote quote;
-    if(!quote.parseEnclaveReport(vecEnclaveReport))
+    const std::vector<uint8_t> vecEnclaveReport(enclaveReport, enclaveReport + dcap::constants::ENCLAVE_REPORT_BYTE_LEN);
+    dcap::EnclaveReport eReport{};
+    auto from = vecEnclaveReport.cbegin();
+    auto end = vecEnclaveReport.cend();
+    if (!dcap::copyAndAdvance(eReport,
+                                     from,
+                                     dcap::constants::ENCLAVE_REPORT_BYTE_LEN,
+                                     end))
+    {
+        return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
+    }
+
+    if(from != end)
     {
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
     /// 4.1.2.9.2
-    qvl::EnclaveIdentityParser parser;
-    std::unique_ptr<qvl::EnclaveIdentity> enclaveIdentityParsed;
+    dcap::EnclaveIdentityParser parser;
+    std::unique_ptr<dcap::EnclaveIdentityV2> enclaveIdentityParsed;
     try
     {
         enclaveIdentityParsed = parser.parse(enclaveIdentity);
     }
-    catch(const qvl::ParserException &e)
+    catch(const dcap::ParserException &e)
     {
         return e.getStatus();
     }
 
-    return qvl::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), quote.getBody());
+    return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), eReport);
 }
 
 Status sgxAttestationGetQECertificationDataSize(
@@ -437,13 +424,13 @@ Status sgxAttestationGetQECertificationDataSize(
     // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
-    *qeCertificationDataSize = static_cast<uint32_t>(quote.getQuoteAuthData().qeCertData.parsedDataSize);
+    *qeCertificationDataSize = static_cast<uint32_t>(quote.getCertificationData().parsedDataSize);
 
     return STATUS_OK;
 }
@@ -466,23 +453,24 @@ Status sgxAttestationGetQECertificationData(
     // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
     const std::vector<uint8_t> vecQuote(rawQuote, std::next(rawQuote, quoteSize));
 
-    qvl::Quote quote;
-    if(!quote.parse(vecQuote) || quote.getHeader().version != qvl::constants::QUOTE_VERSION)
+    dcap::Quote quote;
+
+    if(!quote.parse(vecQuote) || !quote.validate())
     {
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
-    const auto& quoteQeCertData = quote.getQuoteAuthData().qeCertData;
+    const auto& quoteCertificationData = quote.getCertificationData();
 
-    if(qeCertificationDataSize != quoteQeCertData.parsedDataSize)
+    if(qeCertificationDataSize != quoteCertificationData.parsedDataSize)
     {
         return STATUS_INVALID_QE_CERTIFICATION_DATA_SIZE;
     }
 
-    *qeCertificationDataType = quoteQeCertData.type;
+    *qeCertificationDataType = quoteCertificationData.type;
 
     // buffer pointed to by 'qeCertificationData' must be at least 'qeCertificationDataSize' long
-    std::copy(std::begin(quoteQeCertData.data), std::end(quoteQeCertData.data), qeCertificationData);
+    std::copy(std::begin(quoteCertificationData.data), std::end(quoteCertificationData.data), qeCertificationData);
 
     return STATUS_OK;
 }

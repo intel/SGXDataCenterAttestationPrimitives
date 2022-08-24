@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,7 +98,8 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
         }
         else if(MPA_RS_BAD_REQUEST == statusCode)
         {
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "Registration errorCode = 0x%02x\n", errorCode);
+            /* RS reports a bad request.  */
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "RS reports a '400 Bad Request'.\n");
             
             /* Set the error code to the SgxRegistrationStatus*/
             status.registrationStatus = MP_TASK_COMPLETED;
@@ -107,18 +108,27 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
         }
         else if(MPA_RS_INTERNAL_SERVER_ERROR == statusCode)//do we need to complete here?
         {
-            /* RS reports a bad request.  */
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "RS reports a '500 Internal Server Error'.\n");
+            /* RS reports Internal Server Error.  */
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "RS reports a '500 Internal Server Error'.\n");
     
             /* Set the error code to the SgxRegistrationStatus*/
             status.registrationStatus = MP_TASK_COMPLETED;
             status.errorCode = MPA_AG_INTERNAL_SERVER_ERROR;
             retryCnt = 0;
         }
+        else if(MPA_RS_FAIL_UNAUTHORIZED == statusCode)
+        {
+            /* RS reports the request is unauthorized.  */
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "RS reports a '401 Failed to authenticate or authorize the request'.\n");
+    
+            /* Set the error code to the SgxRegistrationStatus*/
+            status.errorCode = MPA_AG_UNAUTHORIZED_ERROR;
+            retryCnt = 0;
+        }
         else if(MPA_RS_SERVICE_UNAVAILABLE == statusCode)
         {
-            /* RS reports a bad request. */
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "RS reports a '503 Service Unavailable'.\n");
+            /* RS reports:Server is currently unable to process the request. */
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "RS reports a '503 Service Unavailable'.\n");
             /* Retry until retry count runs out */
             retryCnt--;
             if(0 == retryCnt)
@@ -130,7 +140,7 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
         else
         {
             /* RS reports an unknown error. */
-            agent_log_message(MP_REG_LOG_LEVEL_INFO, "RS reports an unknown error'.\n");
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "RS reports an unknown error'.\n");
 
             /* Set the error code to the SgxRegistrationStatus. */
             status.registrationStatus = MP_TASK_COMPLETED;

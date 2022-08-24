@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,16 +32,16 @@
 #ifndef SGXECDSAATTESTATION_ENCLAVEIDENTITYPARSER_H
 #define SGXECDSAATTESTATION_ENCLAVEIDENTITYPARSER_H
 
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include "Utils/JsonParser.h"
 
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
     class EnclaveIdentityParser
     {
     public:
-        std::unique_ptr<qvl::EnclaveIdentity> parse(const std::string &input);
+        std::unique_ptr<dcap::EnclaveIdentityV2> parse(const std::string &input);
     protected:
         JsonParser jsonParser;
     };

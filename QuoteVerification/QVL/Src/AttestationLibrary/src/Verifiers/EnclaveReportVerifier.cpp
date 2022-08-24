@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,7 @@
 
 #include "EnclaveReportVerifier.h"
 #include "QuoteVerification/ByteOperands.h"
-#include "EnclaveIdentity.h"
-#include "EnclaveIdentityV1.h"
+#include "EnclaveIdentityV2.h"
 #include "EnclaveIdentityV2.h"
 #include <algorithm>
 #include <functional>
@@ -41,9 +40,9 @@
 #include <memory>
 
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
-Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, const Quote::EnclaveReport& enclaveReport) const
+Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, const EnclaveReport& enclaveReport) const
 {
     const auto miscselectMask = vectorToUint32(enclaveIdentity->getMiscselectMask());
     const auto miscselect = vectorToUint32(enclaveIdentity->getMiscselect());
@@ -62,20 +61,23 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
         return STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH;
     }
 
-    /// 4.1.2.9.8
+    /// 4.1.2.9.7
     std::vector<uint8_t> mrSigner(enclaveReport.mrSigner.begin(), enclaveReport.mrSigner.end());
-    if(!enclaveIdentity->getMrsigner().empty() && enclaveIdentity->getMrsigner() != mrSigner)
+
+    const std::vector<uint8_t>& enclaveIdentityMrSigner = enclaveIdentity->getMrsigner();
+
+    if(!enclaveIdentityMrSigner.empty() && enclaveIdentityMrSigner != mrSigner)
     {
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
 
-    /// 4.1.2.9.9
+    /// 4.1.2.9.8
     if(enclaveReport.isvProdID != enclaveIdentity->getIsvProdId())
     {
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
 
-    /// 4.1.2.9.10 & 4.1.2.9.11
+    /// 4.1.2.9.9 & 4.1.2.9.10
     auto enclaveIdentityStatus = enclaveIdentity->getTcbStatus(enclaveReport.isvSvn);
     if(enclaveIdentityStatus != TcbStatus::UpToDate)
     {
@@ -86,25 +88,8 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentity *enclaveIdentity, con
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;
     }
 
-    /// 4.1.2.9.12
+    /// 4.1.2.9.11
     return STATUS_OK;
-}
-
-std::vector<uint8_t> EnclaveReportVerifier::applyMask(const std::vector<uint8_t>& base, const std::vector<uint8_t>& mask) const
-{
-    std::vector<uint8_t> result;
-
-    if(base.size() != mask.size())
-    {
-        return result;
-    }
-
-    auto mask_it = mask.cbegin();
-    std::transform(base.cbegin(), base.cend(), std::back_inserter(result), [&mask_it](auto &base_it) {
-        return (uint8_t)((base_it) & (*(mask_it++)));
-    });
-
-    return result;
 }
 
 uint32_t EnclaveReportVerifier::vectorToUint32(const std::vector<uint8_t>& input) const
@@ -113,4 +98,4 @@ uint32_t EnclaveReportVerifier::vectorToUint32(const std::vector<uint8_t>& input
     return swapBytes(toUint32(*position, *(std::next(position)), *(std::next(position, 2)), *(std::next(position, 3))));
 }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

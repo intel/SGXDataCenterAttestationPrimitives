@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,56 +28,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const logger = require('../utils/Logger.js');
-const fmspcTcbDao = require('../dao/fmspcTcbDao.js');
-const pcsCertificatesDao = require('../dao/pcsCertificatesDao.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Config = require('config');
-const Constants = require('../constants/index.js');
-const PcsClient = require('../pcs_client/pcs_client.js');
-const {sequelize, Sequelize} = require('../dao/models/');
+import * as fmspcTcbDao from '../dao/fmspcTcbDao.js';
+import * as appUtil from '../utils/apputil.js';
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
-exports.getTcbInfoFromPCS=async function(fmspc) {
-    const pck_server_res = await PcsClient.getTcb(fmspc);
 
-    if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-    }
+export async function getTcbInfo(type, fmspc, version) {
+  // query tcbinfo from local database first
+  const tcbinfo = await fmspcTcbDao.getTcbInfo(type, fmspc, version);
+  let result = {};
+  if (tcbinfo == null) {
+    result = await cachingModeManager.getTcbInfoFromPCS(type, fmspc, version);
+  } else {
+    result[appUtil.getTcbInfoIssuerChainName(version)] =
+      tcbinfo.signing_cert + tcbinfo.root_cert;
+    result['tcbinfo'] = tcbinfo.tcbinfo;
+  }
 
-    let result = {};
-    result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] = pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN];
-    result["tcbinfo"] = JSON.parse(pck_server_res.body);
-
-    await sequelize.transaction(async (t)=>{
-        // update or insert TCB Info 
-        await fmspcTcbDao.upsertFmspcTcb({
-            "fmspc": fmspc,
-            "tcbinfo": result["tcbinfo"]
-        });
-        // update or insert certificate chain
-        await pcsCertificatesDao.upsertTcbInfoIssuerChain(pck_server_res.headers[Constants.SGX_TCB_INFO_ISSUER_CHAIN]);
-    });
-
-    return result;
-}
-
-exports.getTcbInfo=async function(fmspc) {
-    // query tcbinfo from local database first
-    const tcbinfo = await fmspcTcbDao.getTcbInfo(fmspc);
-    let result = {};
-    if (tcbinfo == null) {
-        if (Config.get(Constants.CONFIG_OPTION_CACHE_FILL_MODE) == Constants.CACHE_FILL_MODE_LAZY) {
-            result = await this.getTcbInfoFromPCS(fmspc);    
-        }
-        else {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_NO_CACHE_DATA);
-        }
-    }
-    else {
-        result[Constants.SGX_TCB_INFO_ISSUER_CHAIN] = tcbinfo.signing_cert + tcbinfo.root_cert;
-        result["tcbinfo"] = JSON.parse(tcbinfo.tcbinfo);
-    }
-
-    return result;
+  return result;
 }

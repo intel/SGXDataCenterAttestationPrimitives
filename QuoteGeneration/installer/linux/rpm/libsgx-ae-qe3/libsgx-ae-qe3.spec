@@ -29,6 +29,8 @@
 #
 #
 
+%define _license_file COPYING
+
 Name:           libsgx-ae-qe3
 Version:        @version@
 Release:        1%{?dist}
@@ -39,6 +41,8 @@ License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
 Source0:        %{name}-%{version}.tar.gz
 
+AutoProv:       no
+
 %description
 Intel(R) Software Guard Extensions QE3
 
@@ -47,6 +51,8 @@ Intel(R) Software Guard Extensions QE3
 
 %install
 make DESTDIR=%{?buildroot} install
+install -d %{?buildroot}%{_docdir}/%{name}
+find %{?_sourcedir}/package/licenses/ -type f -print0 | xargs -0 -n1 cat >> %{?buildroot}%{_docdir}/%{name}/%{_license_file}
 rm -f %{_specdir}/list-%{name}
 for f in $(find %{?buildroot} -type f -o -type l); do
     echo $f | sed -e "s#%{?buildroot}##" >> %{_specdir}/list-%{name}

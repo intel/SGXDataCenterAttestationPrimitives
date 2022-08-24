@@ -22,34 +22,34 @@
     <ProjectGuid>{7A7054A9-BBEC-45A8-A1E5-0F0998CB3A9C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pce_wrapper</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -93,6 +93,8 @@
       <InterproceduralOptimization>NoIPO</InterproceduralOptimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -101,6 +103,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration);$(SolutionDir)Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>pce_wrapper.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" --untrusted ..\..\ae\pce\pce.edl --search-path "$(SGXSDKInstallPath)\include; ..\..\ae\pce" --untrusted </Command>
@@ -116,6 +119,8 @@
       <InterproceduralOptimization>NoIPO</InterproceduralOptimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -124,6 +129,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration);$(SolutionDir)x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>pce_wrapper.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" --untrusted ..\..\ae\pce\pce.edl --search-path "$(SGXSDKInstallPath)\include; ..\..\ae\pce" --untrusted </Command>
@@ -141,6 +147,7 @@
       <InterproceduralOptimization>NoIPO</InterproceduralOptimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -151,6 +158,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration);$(SolutionDir)Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>pce_wrapper.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" --untrusted ..\..\ae\pce\pce.edl --search-path "$(SGXSDKInstallPath)\include; ..\..\ae\pce" --untrusted </Command>
@@ -168,6 +176,7 @@
       <InterproceduralOptimization>NoIPO</InterproceduralOptimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -178,6 +187,7 @@
       <AdditionalLibraryDirectories>$(SGXSDKInstallPath)\bin\$(Platform)\$(Configuration);$(SolutionDir)x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>pce_wrapper.def</ModuleDefinitionFile>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <CETCompat>true</CETCompat>
     </Link>
     <PreBuildEvent>
       <Command>"$(SGXSDKInstallPath)\bin\win32\Release\sgx_edger8r.exe" --untrusted ..\..\ae\pce\pce.edl --search-path "$(SGXSDKInstallPath)\include; ..\..\ae\pce" --untrusted </Command>

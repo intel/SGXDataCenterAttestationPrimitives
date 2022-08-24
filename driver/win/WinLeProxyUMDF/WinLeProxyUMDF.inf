@@ -53,7 +53,7 @@ HKR,,,,%ClassName%
 HKR,,Icon,,"-10"
 
 [SourceDisksFiles]
-sgx_launch.dll=1
+sgx_lc.dll=1
 
 [SourceDisksNames]
 1 = %DiskName%
@@ -77,7 +77,7 @@ UmdfServiceOrder=WinLeProxyUMDF
 
 [WinLeProxyUMDF_Install]
 UmdfLibraryVersion=$UMDFVERSION$ 
-ServiceBinary=%12%\UMDF\sgx_launch.dll
+ServiceBinary=%12%\UMDF\sgx_lc.dll
 
 [WUDFRD_ServiceInstall]
 DisplayName = %WudfRdDisplayName%
@@ -93,7 +93,7 @@ HKR,,CoInstallers32,0x00010000,"WUDFCoinstaller.dll"
 UMDriverCopy=12,UMDF ; copy to drivers\umdf
 
 [UMDriverCopy]
-sgx_launch.dll
+sgx_lc.dll
 
 ; =================== Generic ==================================
 

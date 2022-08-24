@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -35,13 +35,18 @@ PACKAGE_ROOT_FOLDER=pkgroot
 PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
 USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
+USR_LIB_VER=1.0.0
+SPLIT_VERSION=$(word $2,$(subst ., ,$1))
 
 default:
 
 install: $(PACKAGES)
 
 $(PACKAGES):
-	install -d $(shell readlink -m $(DESTDIR)/$@)
 	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so), \
 		install -d $(shell readlink -m $(DESTDIR)/$(USR_LIB_PATH)) && \
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$(USR_LIB_PATH))
+		cd $(DESTDIR)/$(USR_LIB_PATH) && \
+		mv libsgx_pce_logic.so libsgx_pce_logic.so.$(USR_LIB_VER) && \
+		ln -fs libsgx_pce_logic.so.$(USR_LIB_VER) libsgx_pce_logic.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
+		ln -fs libsgx_pce_logic.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_pce_logic.so

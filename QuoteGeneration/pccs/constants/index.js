@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,60 +29,52 @@
  *
  */
 
+class Constants {}
+
 function define(name, value) {
-    Object.defineProperty(exports, name, {
-        value:      value,
-        enumerable: true
-    });
+  Object.defineProperty(Constants, name, {
+    value: value,
+    enumerable: true,
+  });
 }
 
-define("PLATF_REG_NEW", 0);
-define("PLATF_REG_DELETED", 9);
+define('DB_VERSION', 2);
 
-define("HTTP_SUCCESS", 200);
+define('PLATF_REG_NEW', 0);
+define('PLATF_REG_NOT_AVAILABLE', 1);
+define('PLATF_REG_DELETED', 9);
+
+define('HTTP_SUCCESS', 200);
 
 //
-define("QEID_SIZE", 32);
-define("CPUSVN_SIZE", 32);
-define("PCESVN_SIZE", 4);
-define("PCEID_SIZE", 4);
-define("ENC_PPID_SIZE", 768);
-define("FMSPC_SIZE", 12);
-define("SGX_TCBM", 'sgx-tcbm');
+define('SGX_TCBM', 'SGX-TCBm');
+define('SGX_FMSPC', 'SGX-FMSPC');
+define('SGX_PCK_CERTIFICATE_CA_TYPE', 'SGX-PCK-Certificate-CA-Type');
 
 // Certificate IDs
-define("PROCESSOR_ROOT_CERT_ID", 1);
-define("PROCESSOR_INTERMEDIATE_CERT_ID", 2);
-define("PROCESSOR_SIGNING_CERT_ID", 3);
-define("PLATFORM_INTERMEDIATE_CERT_ID", 4);
+define('PROCESSOR_ROOT_CERT_ID', 1);
+define('PROCESSOR_INTERMEDIATE_CERT_ID', 2);
+define('PROCESSOR_SIGNING_CERT_ID', 3);
+define('PLATFORM_INTERMEDIATE_CERT_ID', 4);
+
+// Product Type : SGX or TDX
+define('PROD_TYPE_SGX', 0);
+define('PROD_TYPE_TDX', 1);
+
+// Enclave Identity IDs
+define('QE_IDENTITY_ID', 1);
+define('QVE_IDENTITY_ID', 2);
+define('TDQE_IDENTITY_ID', 3);
 
 //CAs
-define("CA_PROCESSOR", "PROCESSOR");
-define("CA_PLATFORM", "PLATFORM");
+define('CA_PROCESSOR', 'PROCESSOR');
+define('CA_PLATFORM', 'PLATFORM');
 
 //Certchain names
-define("SGX_PCK_CERTIFICATE_ISSUER_CHAIN", "sgx-pck-certificate-issuer-chain");
-define("SGX_TCB_INFO_ISSUER_CHAIN", "sgx-tcb-info-issuer-chain");
-define("SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN", "sgx-enclave-identity-issuer-chain");
-define("SGX_PCK_CRL_ISSUER_CHAIN", "sgx-pck-crl-issuer-chain");
+define('SGX_PCK_CERTIFICATE_ISSUER_CHAIN', 'SGX-PCK-Certificate-Issuer-Chain');
+define('TCB_INFO_ISSUER_CHAIN', 'TCB-Info-Issuer-Chain');
+define('SGX_TCB_INFO_ISSUER_CHAIN', 'SGX-TCB-Info-Issuer-Chain');
+define('SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN', 'SGX-Enclave-Identity-Issuer-Chain');
+define('SGX_PCK_CRL_ISSUER_CHAIN', 'SGX-PCK-CRL-Issuer-Chain');
 
-//HTTP headers
-define("HTTP_HEADER_PLATFORM_COUNT", "platform-count");
-define("HTTP_HEADER_USER_TOKEN", "user-token");
-define("HTTP_HEADER_ADMIN_TOKEN", "admin-token");
-
-//Config Options
-define("CONFIG_OPTION_CACHE_FILL_MODE", "CachingFillMode");
-
-//Config values
-define("CACHE_FILL_MODE_LAZY", "LAZY");
-define("CACHE_FILL_MODE_REQ", "REQ");
-define("CACHE_FILL_MODE_OFFLINE", "OFFLINE");
-
-//Platform info keys
-define("KEY_QE_ID", "qe_id");
-define("KEY_PCE_ID", "pce_id");
-define("KEY_CPU_SVN", "cpu_svn");
-define("KEY_PCE_SVN", "pce_svn");
-define("KEY_ENC_PPID", "enc_ppid");
-define("KEY_MANIFEST", "platform_manifest");
+export default Constants;

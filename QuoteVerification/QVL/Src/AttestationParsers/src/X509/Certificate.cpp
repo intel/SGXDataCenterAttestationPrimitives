@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,8 @@
 #include "X509Constants.h"
 #include "ParserUtils.h"
 
+#include <OpensslHelpers/OpensslTypes.h>
+
 #include <algorithm>
 #include <iterator>
 
@@ -63,7 +65,7 @@ bool Certificate::operator==(const Certificate& other) const
            _info == other._info;
 }
 
-unsigned int Certificate::getVersion() const
+uint32_t Certificate::getVersion() const
 {
     return _version;
 }
@@ -108,7 +110,7 @@ const std::vector<uint8_t>& Certificate::getPubKey() const
     return _pubKey;
 }
 
-const std::string Certificate::getPem() const
+const std::string& Certificate::getPem() const
 {
     return _pem;
 }
@@ -157,7 +159,7 @@ void Certificate::setInfo(X509 *x509)
 void Certificate::setVersion(const X509 *x509)
 {
     // version is zero-indexed thus +1
-    _version = static_cast<unsigned int>(X509_get_version(x509) + 1);
+    _version = static_cast<uint32_t>(X509_get_version(x509) + 1);
 }
 
 void Certificate::setSerialNumber(const X509 *x509)

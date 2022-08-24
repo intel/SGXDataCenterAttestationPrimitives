@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,416 +28,855 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-exports.PLATFORM_REG_SCHEMA={
-    "title": "Platform Registration",
-    "description": "Platform Registration Data Format",
-    "type": "object",
-    "properties": {
-        "qe_id": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{32}$"
-        },
-        "pce_id": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{4}$"
-        },
-        "cpu_svn": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{32}$"
-        },
-        "pce_svn": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{4}$"
-        },
-        "enc_ppid": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{768}$"
-        },
-        "platform_manifest": {
-            "type": "string"
-        }
+export const PLATFORM_REG_SCHEMA = {
+  title: 'Platform Registration',
+  description: 'Platform Registration Data Format',
+  type: 'object',
+  properties: {
+    qe_id: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 260,
     },
-    "required": [ "qe_id", "pce_id", "cpu_svn", "pce_svn", "enc_ppid" ]
+    pce_id: {
+      type: 'string',
+      pattern: '^[a-fA-F0-9]{4}$',
+    },
+    cpu_svn: {
+      type: 'string',
+      pattern: '^[a-fA-F0-9]{32}$',
+    },
+    pce_svn: {
+      type: 'string',
+      pattern: '^[a-fA-F0-9]{4}$',
+    },
+    enc_ppid: {
+      type: 'string',
+      pattern: '^[a-fA-F0-9]{768}$',
+    },
+    platform_manifest: {
+      type: 'string',
+    },
+  },
+  required: ['qe_id', 'pce_id'],
 };
 
-exports.PLATFORM_COLLATERAL_SCHEMA={
-    "title": "Platform Registration",
-    "description": "Platform Registration Data Format",
-    "type": "object",
-    "properties": {
-        "platforms": {
-            "type": "array",
-            "items": {
-                "type:": "object",
-                "properties": {
-                    "qe_id": {
-                        "type": "string",
-                        "pattern": "^[a-fA-F0-9]{32}$"
-                    },
-                    "pce_id": {
-                        "type": "string",
-                        "pattern": "^[a-fA-F0-9]{4}$"
-                    },
-                    "cpu_svn": {
-                        "type": "string",
-                        "pattern": "^[a-fA-F0-9]{32}$"
-                    },
-                    "pce_svn": {
-                        "type": "string",
-                        "pattern": "^[a-fA-F0-9]{4}$"
-                    },
-                    "enc_ppid": {
-                        "type": "string",
-                        "pattern": "^[a-fA-F0-9]{768}$"
-                    },
-                    "platform_manifest": {
-                        "type": "string"
-                    }
-                },
-                "required": [ "qe_id", "pce_id", "cpu_svn", "pce_svn", "enc_ppid" ]
-            }
+export const PLATFORM_COLLATERAL_SCHEMA_V3 = {
+  title: 'Platform Registration',
+  description: 'Platform Registration Data Format',
+  type: 'object',
+  properties: {
+    platforms: {
+      type: 'array',
+      items: {
+        'type:': 'object',
+        properties: {
+          qe_id: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 260,
+          },
+          pce_id: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{4}$',
+          },
+          cpu_svn: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{32}$|^$',
+          },
+          pce_svn: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{4}$|^$',
+          },
+          enc_ppid: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{768}$|^$',
+          },
+          platform_manifest: {
+            type: 'string',
+          },
         },
-        "collaterals": {
-            "type": "object",
-            "properties": {
-                "pck_certs": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties" :{
-                            "qe_id": {
-                                "type": "string",
-                                "pattern": "^[a-fA-F0-9]{32}$"
-                            },
-                            "pce_id": {
-                                "type": "string",
-                                "pattern": "^[a-fA-F0-9]{4}$"
-                            },
-                            "enc_ppid": {
-                                "type": "string",
-                                "pattern": "^[a-fA-F0-9]{768}$"
-                            },
-                            "platform_manifest": {
-                                "type": "string"
-                            },
-                            "certs" : {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "tcb":{
-                                            "type": "object",
-                                            "properties": {
-                                                "sgxtcbcomp01svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp02svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp03svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp04svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp05svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp06svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp07svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp08svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp09svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp10svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp11svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp12svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp13svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp14svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp15svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "sgxtcbcomp16svn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 255
-                                                },
-                                                "pcesvn": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 65535
-                                                }
-                                            }
-                                        },
-                                        "tcbm":{
-                                            "type": "string",
-                                            "pattern": "^[0-9a-fA-F]{36}$"
-
-                                        },
-                                        "cert":{
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [ "tcb", "tcbm", "cert" ]
-                                }
-                            }
-                        },
-                        "required": [ "qe_id", "pce_id", "enc_ppid", "certs" ]
-                    }
-                },
-                "tcbinfos": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "fmspc":{
-                                "type": "string"
-                            },
-                            "tcbinfo":{
-                                "type": "object",
-                                "properties":{
-                                    "tcbInfo": {
-                                        "type": "object",
-                                        "properties": {
-                                            "version": {
-                                                "type": "integer"
-                                            },
-                                            "issueDate": {
-                                                "type": "string",
-                                                "format": "date-time"
-                                            },
-                                            "nextUpdate": {
-                                                "type": "string",
-                                                "format": "date-time"
-                                            },
-                                            "fmspc": {
-                                                "type": "string",
-                                                "pattern": "^[0-9a-fA-F]{12}$"
-                                            },
-                                            "pceId": {
-                                                "type": "string",
-                                                "pattern": "^[0-9a-fA-F]{4}$"
-                                            },
-                                            "tcbType": {
-                                                "type": "integer"
-                                            },
-                                            "tcbEvaluationDataNumber": {
-                                                "type": "integer"
-                                            },
-                                            "tcbLevels": {
-                                                "type" : "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "tcb": {
-                                                            "type": "object",
-                                                            "properties": {
-                                                                "pcesvn": {
-                                                                    "type": "integer"
-                                                                },
-                                                                "sgxtcbcomp01svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp02svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp03svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp04svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp05svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp06svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp07svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp08svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp09svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp10svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp11svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp12svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp13svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp14svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp15svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                },
-                                                                "sgxtcbcomp16svn": {
-                                                                    "type": "integer",
-                                                                    "minimum": 0,
-                                                                    "maximum": 255
-                                                                }
-                                                            }
-                                                        },
-                                                        "tcbDate": {
-                                                            "type": "string",
-                                                            "format": "date-time"
-                                                        },
-                                                        "tcbStatus": {
-                                                            "type": "string"
-                                                        },
-                                                        "advisoryIDs": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "signature": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [ "tcbInfo", "signature" ]
-                            }
-                        },
-                        "required": [ "fmspc", "tcbinfo" ]
-                    }
-                },
-                "pckcacrl": {
-                    "type": "object",
-                    "properties": {
-                        "processorCrl":{
-                            "type": "string"
-                        },
-                        "platformCrl":{
-                            "type": "string"
-                        }
-                    }
-                },
-                "qeidentity": {
-                    "type": "string"
-                },
-                "qveidentity": {
-                    "type": "string"
-                },
-                "certificates": {
-                    "type": "object",
-                    "properties": {
-                        "sgx-pck-certificate-issuer-chain": {
-                            "type": "object",
-                            "properties": {
-                                "PROCESSOR":{
-                                    "type": "string"
-                                },
-                                "PLATFORM":{
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "sgx-tcb-info-issuer-chain": {
-                            "type": "string"
-                        },
-                        "sgx-enclave-identity-issuer-chain": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [ "sgx-pck-certificate-issuer-chain"]
-                },
-                "rootcacrl": {
-                    "type": "string"
-                }
-            },
-            "required": [ "pck_certs", "tcbinfos", "certificates" ]
-        }
+        required: ['qe_id', 'pce_id'],
+      },
     },
-    "required": [ "platforms", "collaterals" ]
+    collaterals: {
+      type: 'object',
+      properties: {
+        pck_certs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              qe_id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 260,
+              },
+              pce_id: {
+                type: 'string',
+                pattern: '^[a-fA-F0-9]{4}$',
+              },
+              enc_ppid: {
+                type: 'string',
+                pattern: '^[a-fA-F0-9]{768}$|^$',
+              },
+              platform_manifest: {
+                type: 'string',
+              },
+              certs: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    tcb: {
+                      type: 'object',
+                      properties: {
+                        sgxtcbcomp01svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp02svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp03svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp04svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp05svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp06svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp07svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp08svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp09svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp10svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp11svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp12svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp13svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp14svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp15svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp16svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        pcesvn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 65535,
+                        },
+                      },
+                    },
+                    tcbm: {
+                      type: 'string',
+                      pattern: '^[0-9a-fA-F]{36}$',
+                    },
+                    cert: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['tcb', 'tcbm', 'cert'],
+                },
+              },
+            },
+            required: ['qe_id', 'pce_id', 'enc_ppid', 'certs'],
+          },
+        },
+        tcbinfos: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              fmspc: {
+                type: 'string',
+              },
+              tcbinfo: {
+                type: 'object',
+                properties: {
+                  tcbInfo: {
+                    type: 'object',
+                    properties: {
+                      version: {
+                        type: 'integer',
+                      },
+                      issueDate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      nextUpdate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      fmspc: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{12}$',
+                      },
+                      pceId: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{4}$',
+                      },
+                      tcbType: {
+                        type: 'integer',
+                      },
+                      tcbEvaluationDataNumber: {
+                        type: 'integer',
+                      },
+                      tcbLevels: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            tcb: {
+                              type: 'object',
+                              properties: {
+                                pcesvn: {
+                                  type: 'integer',
+                                },
+                                sgxtcbcomp01svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp02svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp03svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp04svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp05svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp06svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp07svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp08svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp09svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp10svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp11svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp12svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp13svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp14svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp15svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                                sgxtcbcomp16svn: {
+                                  type: 'integer',
+                                  minimum: 0,
+                                  maximum: 255,
+                                },
+                              },
+                            },
+                            tcbDate: {
+                              type: 'string',
+                              format: 'date-time',
+                            },
+                            tcbStatus: {
+                              type: 'string',
+                            },
+                            advisoryIDs: {
+                              type: 'array',
+                              items: {
+                                type: 'string',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  signature: {
+                    type: 'string',
+                  },
+                },
+                required: ['tcbInfo', 'signature'],
+              },
+            },
+            required: ['fmspc', 'tcbinfo'],
+          },
+        },
+        pckcacrl: {
+          type: 'object',
+          properties: {
+            processorCrl: {
+              type: 'string',
+            },
+            platformCrl: {
+              type: 'string',
+            },
+          },
+        },
+        qeidentity: {
+          type: 'string',
+        },
+        qveidentity: {
+          type: 'string',
+        },
+        certificates: {
+          type: 'object',
+          properties: {
+            'SGX-PCK-Certificate-Issuer-Chain': {
+              type: 'object',
+              properties: {
+                PROCESSOR: {
+                  type: 'string',
+                },
+                PLATFORM: {
+                  type: 'string',
+                },
+              },
+            },
+            'SGX-TCB-Info-Issuer-Chain': {
+              type: 'string',
+            },
+            'SGX-Enclave-Identity-Issuer-Chain': {
+              type: 'string',
+            },
+          },
+          required: ['SGX-PCK-Certificate-Issuer-Chain'],
+        },
+        rootcacrl: {
+          type: 'string',
+        },
+      },
+      required: ['pck_certs', 'tcbinfos', 'certificates'],
+    },
+  },
+  required: ['platforms', 'collaterals'],
+};
+
+export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
+  title: 'Platform Registration',
+  description: 'Platform Registration Data Format',
+  type: 'object',
+  properties: {
+    platforms: {
+      type: 'array',
+      items: {
+        'type:': 'object',
+        properties: {
+          qe_id: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 260,
+          },
+          pce_id: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{4}$',
+          },
+          cpu_svn: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{32}$|^$',
+          },
+          pce_svn: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{4}$|^$',
+          },
+          enc_ppid: {
+            type: 'string',
+            pattern: '^[a-fA-F0-9]{768}$|^$',
+          },
+          platform_manifest: {
+            type: 'string',
+          },
+        },
+        required: ['qe_id', 'pce_id'],
+      },
+    },
+    collaterals: {
+      type: 'object',
+      properties: {
+        pck_certs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              qe_id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 260,
+              },
+              pce_id: {
+                type: 'string',
+                pattern: '^[a-fA-F0-9]{4}$',
+              },
+              enc_ppid: {
+                type: 'string',
+                pattern: '^[a-fA-F0-9]{768}$|^$',
+              },
+              platform_manifest: {
+                type: 'string',
+              },
+              certs: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    tcb: {
+                      type: 'object',
+                      properties: {
+                        sgxtcbcomp01svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp02svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp03svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp04svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp05svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp06svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp07svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp08svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp09svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp10svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp11svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp12svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp13svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp14svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp15svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        sgxtcbcomp16svn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 255,
+                        },
+                        pcesvn: {
+                          type: 'integer',
+                          minimum: 0,
+                          maximum: 65535,
+                        },
+                      },
+                    },
+                    tcbm: {
+                      type: 'string',
+                      pattern: '^[0-9a-fA-F]{36}$',
+                    },
+                    cert: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['tcb', 'tcbm', 'cert'],
+                },
+              },
+            },
+            required: ['qe_id', 'pce_id', 'enc_ppid', 'certs'],
+          },
+        },
+        tcbinfos: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              fmspc: {
+                type: 'string',
+              },
+              sgx_tcbinfo: {
+                type: 'object',
+                properties: {
+                  tcbInfo: {
+                    type: 'object',
+                    properties: {
+                      id: {
+                        const: 'SGX',
+                      },
+                      version: {
+                        type: 'integer',
+                      },
+                      issueDate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      nextUpdate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      fmspc: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{12}$',
+                      },
+                      pceId: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{4}$',
+                      },
+                      tcbType: {
+                        type: 'integer',
+                      },
+                      tcbEvaluationDataNumber: {
+                        type: 'integer',
+                      },
+                      tcbLevels: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            tcb: {
+                              type: 'object',
+                              properties: {
+                                sgxtcbcomponents: {
+                                  type: 'array',
+                                  items: {
+                                    type: 'object',
+                                    properties: {
+                                      svn: {
+                                        type: 'integer',
+                                      },
+                                      category: {
+                                        type: 'string',
+                                      },
+                                      type: {
+                                        type: 'string',
+                                      },
+                                    },
+                                    required: ['svn'],
+                                  },
+                                },
+                                pcesvn: {
+                                  type: 'integer',
+                                },
+                              },
+                              required: ['sgxtcbcomponents'],
+                            },
+                            tcbDate: {
+                              type: 'string',
+                              format: 'date-time',
+                            },
+                            tcbStatus: {
+                              type: 'string',
+                            },
+                            advisoryIDs: {
+                              type: 'array',
+                              items: {
+                                type: 'string',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  signature: {
+                    type: 'string',
+                  },
+                },
+                required: ['tcbInfo', 'signature'],
+              },
+              tdx_tcbinfo: {
+                type: 'object',
+                properties: {
+                  tcbInfo: {
+                    type: 'object',
+                    properties: {
+                      id: {
+                        const: 'TDX',
+                      },
+                      version: {
+                        type: 'integer',
+                      },
+                      issueDate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      nextUpdate: {
+                        type: 'string',
+                        format: 'date-time',
+                      },
+                      fmspc: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{12}$',
+                      },
+                      pceId: {
+                        type: 'string',
+                        pattern: '^[0-9a-fA-F]{4}$',
+                      },
+                      tcbType: {
+                        type: 'integer',
+                      },
+                      tcbEvaluationDataNumber: {
+                        type: 'integer',
+                      },
+                      mrsignerseam: {
+                        type: 'string',
+                      },
+                      tcbLevels: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            tcb: {
+                              type: 'object',
+                              properties: {
+                                sgxtcbcomponents: {
+                                  type: 'array',
+                                  items: {
+                                    type: 'object',
+                                    properties: {
+                                      svn: {
+                                        type: 'integer',
+                                      },
+                                      category: {
+                                        type: 'string',
+                                      },
+                                      type: {
+                                        type: 'string',
+                                      },
+                                    },
+                                    required: ['svn'],
+                                  },
+                                },
+                                pcesvn: {
+                                  type: 'integer',
+                                },
+                                tdxtcbcomponents: {
+                                  type: 'array',
+                                  items: {
+                                    type: 'object',
+                                    properties: {
+                                      svn: {
+                                        type: 'integer',
+                                      },
+                                      category: {
+                                        type: 'string',
+                                      },
+                                      type: {
+                                        type: 'string',
+                                      },
+                                    },
+                                    required: ['svn'],
+                                  },
+                                },
+                              },
+                              required: ['sgxtcbcomponents'],
+                            },
+                            tcbDate: {
+                              type: 'string',
+                              format: 'date-time',
+                            },
+                            tcbStatus: {
+                              type: 'string',
+                            },
+                            advisoryIDs: {
+                              type: 'array',
+                              items: {
+                                type: 'string',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  signature: {
+                    type: 'string',
+                  },
+                },
+                required: ['tcbInfo', 'signature'],
+              },
+            },
+            required: ['fmspc'],
+          },
+        },
+        pckcacrl: {
+          type: 'object',
+          properties: {
+            processorCrl: {
+              type: 'string',
+            },
+            platformCrl: {
+              type: 'string',
+            },
+          },
+        },
+        qeidentity: {
+          type: 'string',
+        },
+        tdqeidentity: {
+          type: 'string',
+        },
+        qveidentity: {
+          type: 'string',
+        },
+        certificates: {
+          type: 'object',
+          properties: {
+            'SGX-PCK-Certificate-Issuer-Chain': {
+              type: 'object',
+              properties: {
+                PROCESSOR: {
+                  type: 'string',
+                },
+                PLATFORM: {
+                  type: 'string',
+                },
+              },
+            },
+            'SGX-TCB-Info-Issuer-Chain': {
+              type: 'string',
+            },
+            'SGX-Enclave-Identity-Issuer-Chain': {
+              type: 'string',
+            },
+          },
+          required: ['SGX-PCK-Certificate-Issuer-Chain'],
+        },
+        rootcacrl: {
+          type: 'string',
+        },
+      },
+      required: ['pck_certs', 'tcbinfos', 'certificates'],
+    },
+  },
+  required: ['platforms', 'collaterals'],
 };

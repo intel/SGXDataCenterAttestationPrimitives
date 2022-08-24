@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -46,11 +46,8 @@ install: $(PACKAGES)
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libsgx_dcap_ql.so libsgx_dcap_ql.so.$(USR_LIB_VER) && \
 	ln -fs libsgx_dcap_ql.so.$(USR_LIB_VER) libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
-	mv libsgx_dcap_quoteverify.so libsgx_dcap_quoteverify.so.$(USR_LIB_VER) && \
-	ln -fs libsgx_dcap_quoteverify.so.$(USR_LIB_VER) libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
-	ln -fs libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_ql.so && \
-	ln -fs libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_quoteverify.so
+	ln -fs libsgx_dcap_ql.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_ql.so
 
 $(PACKAGES):
 	install -d $(shell readlink -m $(DESTDIR)/$@)

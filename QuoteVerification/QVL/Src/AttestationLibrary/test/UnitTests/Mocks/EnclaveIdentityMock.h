@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,16 @@
 #define SGXECDSAATTESTATION_QEIDENTITY_JSON_VERIFIER_MOCK_H_
 
 #include <gmock/gmock.h>
-#include <Verifiers/EnclaveIdentityV1.h>
+#include <Verifiers/EnclaveIdentityV2.h>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class EnclaveIdentityV1Mock: public qvl::EnclaveIdentityV1
+class EnclaveIdentityMock: public dcap::EnclaveIdentityV2
 {
 public:
+    MOCK_CONST_METHOD0(getID, EnclaveID());
     MOCK_CONST_METHOD0(getStatus, Status());
+    MOCK_CONST_METHOD0(getVersion, int());
     MOCK_CONST_METHOD0(getNextUpdate, time_t());
 };
 

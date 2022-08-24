@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,45 +28,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-const express = require('express');
-const {platformsController, 
-       platformCollateralController,
-       pckcertController,
-       pckcrlController,
-       tcbinfoController,
-       identityController,
-       rootcacrlController,
-       refreshController} = require('../controllers');
+import Router from 'express';
+import {
+  platformsController,
+  platformCollateralController,
+  pckcertController,
+  pckcrlController,
+  tcbinfoController,
+  identityController,
+  rootcacrlController,
+  refreshController,
+  crlController,
+} from '../controllers/index.js';
 
 // express routes for our API
-const router = express.Router();
+const sgxRouter = Router();
+const tdxRouter = Router();
 
-router.route('/platforms')
-    .post(platformsController.postPlatforms)
-    .get(platformsController.getPlatforms);
+//---------------- Routes for SGX APIs-------------------------------
+sgxRouter
+  .route('/platforms')
+  .post(platformsController.postPlatforms)
+  .get(platformsController.getPlatforms);
 
-router.route('/platformcollateral')
-    .put(platformCollateralController.putPlatformCollateral);
+sgxRouter
+  .route('/platformcollateral')
+  .put(platformCollateralController.putPlatformCollateral);
 
-router.route('/pckcert')
-    .get(pckcertController.getPckCert);
+sgxRouter.route('/pckcert').get(pckcertController.getPckCert);
 
-router.route('/pckcrl')
-    .get(pckcrlController.getPckCrl);
+sgxRouter.route('/pckcrl').get(pckcrlController.getPckCrl);
 
-router.route('/tcb')
-    .get(tcbinfoController.getTcbInfo);
+sgxRouter.route('/tcb').get(tcbinfoController.getSgxTcbInfo);
 
-router.route('/qe/identity')
-    .get(identityController.getQEIdentity);
+sgxRouter.route('/qe/identity').get(identityController.getEcdsaQeIdentity);
 
-router.route('/qve/identity')
-    .get(identityController.getQvEIdentity);
+sgxRouter.route('/qve/identity').get(identityController.getQveIdentity);
 
-router.route('/rootcacrl')
-    .get(rootcacrlController.getRootCACrl);
+sgxRouter.route('/rootcacrl').get(rootcacrlController.getRootCaCrl);
 
-router.route('/refresh')
-    .get(refreshController.refreshCache);
+sgxRouter.route('/crl').get(crlController.getCrl);
 
-module.exports = router;
+sgxRouter
+  .route('/refresh')
+  .post(refreshController.refreshCache)
+  .get(refreshController.refreshCache);
+
+//---------------- Routes for TDX APIs-------------------------------
+tdxRouter.route('/tcb').get(tcbinfoController.getTdxTcbInfo);
+
+tdxRouter.route('/qe/identity').get(identityController.getTdQeIdentity);
+
+export { sgxRouter, tdxRouter };

@@ -67,7 +67,7 @@ UmdfServiceOrder = WinLeProxyUMDF
 
 [WinLeProxyUMDF_Install]
 UmdfLibraryVersion = $UMDFVERSION$
-ServiceBinary      = %12%\UMDF\sgx_launch.dll
+ServiceBinary      = %12%\UMDF\sgx_lc.dll
 
 [WUDFRD_ServiceInstall]
 DisplayName    = %WudfRdDisplayName%
@@ -88,7 +88,7 @@ AddReg         = sgx_lc_msr_reg
 HKR,Parameters,SGX_Launch_Config_Optin,0x00010003,0     ;FLG_ADDREG_TYPE_DWORD|FLG_ADDREG_NOCLOBBER
 
 [UMDriver_CopyFiles]
-sgx_launch.dll
+sgx_lc.dll
 
 [SGXLCDrv_CopyFiles]
 sgx_lc_msr.sys
@@ -99,7 +99,7 @@ ThirdPartyLicenses.txt
 
 [SourceDisksFiles]
 sgx_lc_msr.sys         = 1,,
-sgx_launch.dll = 1
+sgx_lc.dll = 1
 License.txt = 1
 ThirdPartyLicenses.txt = 1
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 #include "PckParserUtils.h"
 
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 std::string obj2Str(const ASN1_OBJECT* obj)
 {
@@ -45,7 +45,7 @@ std::string obj2Str(const ASN1_OBJECT* obj)
 
     constexpr size_t size = 1024;
     char extname[size];
-    std::memset(extname, 0x00, size);
+    OPENSSL_cleanse(extname, size);
     OBJ_obj2txt(extname, size, obj, 1);
 
     return std::string(extname);
@@ -55,7 +55,7 @@ std::string getLastError()
 {
     constexpr size_t size = 1024;
     char buff[size];
-    std::memset(buff, 0x00, size);
+    OPENSSL_cleanse(buff, size);
 
     const auto code = ERR_get_error();
 
@@ -64,5 +64,5 @@ std::string getLastError()
     return std::string(buff);
 }
 
-}}}} //namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} //namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 

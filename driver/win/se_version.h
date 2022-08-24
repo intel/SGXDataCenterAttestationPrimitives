@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,5 +35,5 @@
 #define STRPRODUCTVER  "1.0.0.0\0"
 #define COMPANYNAME    "Intel Corporation"
 #define COPYRIGHT      "Copyright (C) 2019 Intel Corporation"
-#define PRODUCTNAME    "Intel® Software Guard Extensions"
+#define PRODUCTNAME    "IntelÂ® Software Guard Extensions"
 

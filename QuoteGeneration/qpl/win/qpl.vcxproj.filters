@@ -21,6 +21,12 @@
     <ClCompile Include="..\sgx_default_quote_provider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="x509.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sgx_base64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="qpl.def">

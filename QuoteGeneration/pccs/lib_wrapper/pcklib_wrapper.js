@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,42 +29,76 @@
  *
  */
 
-const ref = require("ref-napi");
-const ffi = require('ffi-napi');
-const Struct = require('ref-struct-napi');
-const refArray = require('ref-array-napi');
-const path = require('path');
+import refNAPI from 'ref-napi';
+import ffi from 'ffi-napi';
+import StructType from 'ref-struct-di';
+import ArrayType from 'ref-array-di';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+import logger from '../utils/Logger.js';
 
-const intPtr = ref.refType('int');
-const StringArray = refArray('string');
-const ByteArray = refArray('byte', 16);
-const cpu_svn_t = Struct({
-  'bytes': ByteArray 
+const NAPIStructType = StructType(refNAPI);
+const NAPIArrayType = ArrayType(refNAPI);
+const intPtr = refNAPI.refType('int');
+const StringArray = NAPIArrayType('string');
+const ByteArray = NAPIArrayType('byte', 16);
+const cpu_svn_t = NAPIStructType({
+  bytes: ByteArray,
 });
-const cpu_svn_ptr = ref.refType(cpu_svn_t);
+const cpu_svn_ptr = refNAPI.refType(cpu_svn_t);
 
-exports.pck_cert_select = function(cpu_svn, pce_svn, pce_id, tcb_info, pem_certs, ncerts){
-	let dllpath = 'PCKCertSelectionLib.dll';
-	if (process.platform === "linux") {
-		dllpath = path.join(__dirname , '../lib/libPCKCertSelection.so');
-	}
-    let pcklib = ffi.Library(dllpath,
-        {'pck_cert_select': [ 'int', [ cpu_svn_ptr, 'uint16', 'uint16', 'string', StringArray, 'uint32', intPtr]]});
-    var my_cpu_svn = new cpu_svn_t;
-    var buf = Buffer.from(cpu_svn, 'hex');
-    my_cpu_svn.bytes = new ByteArray;
-    for (let i = 0; i < buf.length; i++)
-        my_cpu_svn.bytes[i] = buf[i];
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-    var my_pce_svn = Buffer.from(pce_svn, 'hex').readInt16LE();
-    var my_pce_id = Buffer.from(pce_id, 'hex').readInt16LE();
-    var best_index_ptr = ref.alloc('int');
-    let ret = pcklib.pck_cert_select(my_cpu_svn.ref(), my_pce_svn, my_pce_id, tcb_info, pem_certs, ncerts, best_index_ptr);
-    if (ret == 0) {
-        var best_index = best_index_ptr.deref();
-        return best_index;
-    }
-    else {
-        return -1;
-    }
+////////////// Load library ////////////////////////////////
+let dllpath = 'PCKCertSelectionLib.dll';
+if (process.platform === 'linux') {
+  dllpath = path.join(__dirname, '../lib/libPCKCertSelection.so');
+}
+const pcklib = ffi.Library(dllpath, {
+  pck_cert_select: [
+    'int',
+    [
+      cpu_svn_ptr,
+      'uint16',
+      'uint16',
+      'string',
+      StringArray,
+      'uint32',
+      intPtr,
+    ],
+  ],
+});
+
+export function pck_cert_select(
+  cpu_svn,
+  pce_svn,
+  pce_id,
+  tcb_info,
+  pem_certs,
+  ncerts
+) {
+  let my_cpu_svn = new cpu_svn_t();
+  let buf = Buffer.from(cpu_svn, 'hex');
+  my_cpu_svn.bytes = new ByteArray();
+  for (let i = 0; i < buf.length; i++) my_cpu_svn.bytes[i] = buf[i];
+
+  let my_pce_svn = Buffer.from(pce_svn, 'hex').readInt16LE();
+  let my_pce_id = Buffer.from(pce_id, 'hex').readInt16LE();
+  let best_index_ptr = refNAPI.alloc('int');
+  let ret = pcklib.pck_cert_select(
+    my_cpu_svn.ref(),
+    my_pce_svn,
+    my_pce_id,
+    tcb_info,
+    pem_certs,
+    ncerts,
+    best_index_ptr
+  );
+  if (ret == 0) {
+    let best_index = best_index_ptr.deref();
+    return best_index;
+  } else {
+    logger.error('PCK selection library returned ' + ret);
+    return -1;
+  }
 }

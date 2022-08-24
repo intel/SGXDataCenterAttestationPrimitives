@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class CertificateChain
 {
@@ -123,6 +123,6 @@ private:
     std::shared_ptr<const dcap::parser::x509::PckCertificate> pckCert{};
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGX_ECDSA_CERTIFICATECHAIN_H_

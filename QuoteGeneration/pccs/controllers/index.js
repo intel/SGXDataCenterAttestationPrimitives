@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,23 +29,24 @@
  *
  */
 
-const platformsController = require('./platformsController.js');
-const platformCollateralController = require('./platformCollateralController.js');
-const pckcertController = require('./pckcertController.js');
-const pckcrlController = require('./pckcrlController.js');
-const tcbinfoController = require('./tcbinfoController.js');
-const identityController = require('./identityController.js');
-const rootcacrlController = require('./rootcacrlController.js');
-const refreshController = require('./refreshController.js');
+import * as platformsController from './platformsController.js';
+import * as platformCollateralController from './platformCollateralController.js';
+import * as pckcertController from './pckcertController.js';
+import * as pckcrlController from './pckcrlController.js';
+import * as tcbinfoController from './tcbinfoController.js';
+import * as identityController from './identityController.js';
+import * as rootcacrlController from './rootcacrlController.js';
+import * as refreshController from './refreshController.js';
+import * as crlController from './crlController.js';
 
-module.exports = { 
-    platformsController : platformsController,
-    platformCollateralController : platformCollateralController,
-    pckcertController : pckcertController,
-    pckcrlController : pckcrlController,
-    tcbinfoController : tcbinfoController,
-    identityController : identityController,
-    rootcacrlController : rootcacrlController,
-    refreshController : refreshController
+export {
+  platformsController,
+  platformCollateralController,
+  pckcertController,
+  pckcrlController,
+  tcbinfoController,
+  identityController,
+  rootcacrlController,
+  refreshController,
+  crlController,
 };
-

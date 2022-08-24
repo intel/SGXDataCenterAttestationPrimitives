@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <array>
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey)
 {
@@ -92,4 +92,4 @@ crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey)
     return rawToP256PubKey(raw);
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {

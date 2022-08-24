@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,13 +37,13 @@
 #include <string>
 #include <vector>
 
-namespace intel { namespace sgx { namespace qvl { namespace test {
+namespace intel { namespace sgx { namespace dcap { namespace test {
 
-class EnclaveReportVerifierMock: public virtual qvl::EnclaveReportVerifier
+class EnclaveReportVerifierMock: public virtual dcap::EnclaveReportVerifier
 {
 public:
-    MOCK_CONST_METHOD3(verify, Status(const EnclaveIdentity*, const Quote::EnclaveReport&, const time_t& expirationTime));
-    MOCK_CONST_METHOD2(verify, Status(const EnclaveIdentity*, const Quote::EnclaveReport&));
+    MOCK_CONST_METHOD3(verify, Status(const EnclaveIdentityV2*, const EnclaveReport&, const time_t& expirationTime));
+    MOCK_CONST_METHOD2(verify, Status(const EnclaveIdentityV2*, const EnclaveReport&));
 };
 
 }}}}

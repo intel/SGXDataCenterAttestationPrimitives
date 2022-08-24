@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+namespace intel { namespace sgx { namespace dcap { namespace pckparser {
 
 CrlStore::CrlStore()
     : _crl{crypto::make_unique(X509_CRL_new())},
@@ -62,11 +62,11 @@ bool CrlStore::operator!=(const CrlStore& other) const
     return !(*this == other);
 }
 
-bool CrlStore::parse(const std::string& pemCrl)
+bool CrlStore::parse(const std::string& crlString)
 {
     try
     {
-        _crl = pckparser::pemBuff2X509Crl(pemCrl);
+        _crl = pckparser::str2X509Crl(crlString);
         QVL_ASSERT(_crl);
 
         _issuer = pckparser::getIssuer(*_crl);
@@ -134,4 +134,4 @@ bool CrlStore::isRevoked(const dcap::parser::x509::Certificate& cert) const
             }) != getRevoked().cend();
 }
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace pckparser {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace pckparser {

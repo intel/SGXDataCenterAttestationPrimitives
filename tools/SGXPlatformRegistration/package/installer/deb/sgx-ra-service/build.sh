@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ LINUX_INSTALLER_COMMON_SGX_RA_SERVICE_DIR="${LINUX_INSTALLER_COMMON_DIR}/sgx-ra-
 source ${LINUX_INSTALLER_COMMON_SGX_RA_SERVICE_DIR}/installConfig
 DEB_FOLDER=${SGX_RA_SERVICE_PACKAGE_NAME}-${SGX_RA_SERVICE_VERSION}
 
-SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/ra_version.h|sed 's/^\"\(.*\)\"$/\1/')
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/../../QuoteGeneration/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 DEB_BUILD_FOLDER=${SGX_RA_SERVICE_PACKAGE_NAME}-${SGX_VERSION}
 
 main() {
@@ -92,6 +92,7 @@ get_os_code() {
     if [ -z ${OS_CODE} ]; then
         OS_CODE=$(grep "VERSION_CODENAME" /etc/os-release 2> /dev/null | cut -d= -f2)
     fi
+    echo ${OS_CODE}
 }
 
 update_version() {
@@ -108,6 +109,7 @@ update_version() {
 update_install_path() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
     sed -i "s#@pkg_path@#${SGX_RA_SERVICE_PACKAGE_PATH}/${SGX_RA_SERVICE_PACKAGE_NAME}#" debian/postinst
+    sed -i "s#@pkg_path@#${SGX_RA_SERVICE_PACKAGE_PATH}/${SGX_RA_SERVICE_PACKAGE_NAME}#" debian/prerm
     popd
 }
 

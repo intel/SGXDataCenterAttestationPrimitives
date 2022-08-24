@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 #include "BaseVerifier.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
     bool BaseVerifier::commonNameContains(const pckparser::Subject &subject, const std::string& pattern) const
     {
@@ -48,4 +48,4 @@ namespace intel { namespace sgx { namespace qvl {
         return name.getCommonName().find(pattern) != std::string::npos;
     }
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {

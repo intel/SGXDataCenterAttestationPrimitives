@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -164,7 +164,8 @@ typedef enum _status
     STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED,
     STATUS_TCB_SW_HARDENING_NEEDED,
     STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED,
-    STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED
+    STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED,
+    STATUS_TDX_MODULE_MISMATCH
 } Status;
 
 /**
@@ -173,9 +174,9 @@ typedef enum _status
  * @param quote - Buffer with serialized quote structure.
  * @param quoteSize - Size of quote buffer. Function heavily relies on this input as internal buffer is allocated based on it without boundaries check! It's user responsibility to provide proper validation.
  * @param pemPckCertificate - Null terminated Intel SGX PCK certificate in PEM format.
- * @param intermediateCrl - Null terminated, PEM formatted x.509 Intel SGX PCK Processor/Platform CRL
+ * @param intermediateCrl - Null terminated, PEM or DER(hex encoded) formatted x.509 Intel SGX PCK Processor/Platform CRL
  * @param tcbInfoJson - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
- * @param qeIdenityJson - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
+ * @param qeIdentityJson - QE Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
  * @return Status code of the operation, one of:
  *      - STATUS_OK
  *      - STATUS_MISSING_PARAMETERS
@@ -195,8 +196,6 @@ typedef enum _status
  *      - STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED
  *      - STATUS_TCB_NOT_SUPPORTED
  *      - STATUS_TCB_UNRECOGNIZED_STATUS
- *      - STATUS_UNSUPPORTED_QE_CERTIFICATION
- *      - STATUS_PCK_CERT_MISMATCH
  *      - STATUS_INVALID_QE_REPORT_SIGNATURE
  *      - STATUS_INVALID_QE_REPORT_DATA
  *      - STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT
@@ -273,7 +272,6 @@ QVL_API Status sgxAttestationGetQECertificationDataSize(
  *      - STATUS_MISSING_PARAMETERS
  *      - STATUS_UNSUPPORTED_QUOTE_FORMAT
  *      - STATUS_INVALID_QE_CERTIFICATION_DATA_SIZE
- *      - STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE
  */
 QVL_API Status sgxAttestationGetQECertificationData(
         const uint8_t *quote,
@@ -290,8 +288,8 @@ QVL_API Status sgxAttestationGetQECertificationData(
  *      - Intel SGX PCK Platform or Processor CA certificate
  *      - Intel SGX PCK certificate
  * @param crls - Table with two, null terminated PEM formatted x.509 CRLs. Function will try to access two indexes:
- *      - crls[0] - CRL issued by root CA
- *      - crls[1] - CRL issued by intermediate certificate.
+ *      - crls[0] - PEM or DER(hex encoded) formatted CRL issued by root CA
+ *      - crls[1] - PEM or DER(hex encoded) formatted CRL issued by intermediate certificate.
  * @param pemRootCaCertificate - Null terminated Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
  * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
  *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
@@ -331,7 +329,7 @@ QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, cons
  *
  * @param tcbInfo - TCB Info structure in JSON format signed by Intel SGX TCB Signing Certificate.
  * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided TCBInfo) in PEM format concatenated together.
- * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
+ * @param rootCaCrl - x.509 SGX Root CA CRL in PEM or DER(hex encoded) format.
  * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
  * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
  *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
@@ -363,14 +361,14 @@ QVL_API Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, cons
  *      - STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED
  *      - STATUS_SGX_CRL_EXPIRED
  */
-QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
+QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain, const char *rootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
 
 /**
  * This function is responsible for verifying Enclave Identity structure.
  *
  * @param enclaveIdentityString - Enclave Identity structure in JSON format signed by Intel SGX TCB Signing Certificate.
  * @param pemCertChain - x.509 TCB Signing Certificate chain (that signed provided QE Identity) in PEM format concatenated together.
- * @param pemRootCaCrl - x.509 SGX Root CA CRL in PEM format.
+ * @param rootCaCrl - x.509 SGX Root CA CRL in PEM or DER(hex encoded) format.
  * @param pemRootCaCertificate - Intel SGX Root CA certificate (x.509, self-signed) in PEM format.
  * @param expirationCheckDate - Time stamp used to verify if the certificates & CRLs have not expired
  *        (i.e. if the expiration date specified in the certificate/CRL has not exceeded provided Expiration Check Date).
@@ -402,7 +400,7 @@ QVL_API Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemC
  *      - STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED
  *      - STATUS_SGX_CRL_EXPIRED
  */
-QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *pemRootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
+QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *rootCaCrl, const char *pemRootCaCertificate, const time_t* expirationCheckDate);
 
 /**
  * This function is responsible for verifying Certificate Revocation Lists issued by one of the CA certificates in

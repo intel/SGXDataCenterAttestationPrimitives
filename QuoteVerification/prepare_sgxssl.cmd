@@ -1,6 +1,6 @@
 
 Rem
-Rem Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
+Rem Copyright (C) 2011-2022 Intel Corporation. All rights reserved.
 Rem
 Rem Redistribution and use in source and binary forms, with or without
 Rem modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@ Rem OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Rem
 Rem
 
+setlocal enabledelayedexpansion
+
 set PFM=%1
 set CFG=%2
 
@@ -37,15 +39,18 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1d
+set openssl_ver_name=openssl-1.1.1o
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.4_1.1.1d
-set sgxssl_ver=win_2.4_1.1.1d
+set sgxssl_ver_name=win_2.16_1.1.1o
+set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
+
 set server_url_path=https://www.openssl.org/source/
+
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=ABADC61C92C0488027DCB0A3681C6BE0316C931461E887A728F64D3178149098
-set openssl_chksum=1E3A91BC1F9DFCE01AF26026F856E064EAB4C8EE0A8F457B5AE30B40B8B711F2
+set sgxssl_chksum=E25CF02BF48FA279CFCB6B134ACB0A1FB04B84F680B40F32EF03AFF7368BE1E6
+set openssl_chksum=9384A2B0570DD80358841464677115DF785EDB941C71211F75076D72FE6B438F
+
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -53,7 +58,14 @@ if not exist %sgxssl_dir% (
 
 if not exist %build_script% (
 	call powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;Invoke-WebRequest -URI %sgxssl_github_archive%/%sgxssl_ver_name%.zip -OutFile %sgxssl_dir%\%sgxssl_ver_name%.zip"
-	7z.exe x -y %sgxssl_dir%\%sgxssl_ver_name%.zip -o%sgxssl_dir%
+	call powershell -Command "$sgxsslfilehash = Get-FileHash %sgxssl_dir%\%sgxssl_ver_name%.zip; Write-Output $sgxsslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_sgxssl.txt -encoding ascii"
+	findstr /i %sgxssl_chksum% %sgxssl_dir%\check_sum_sgxssl.txt>nul
+	if !errorlevel! NEQ 0  (
+	echo "File %sgxssl_dir%\%sgxssl_ver_name%.zip checksum failure"
+	del /f /q %sgxssl_dir%\%sgxssl_ver_name%.zip
+	exit /b 1
+	)
+	call powershell -Command "Expand-Archive -LiteralPath '%sgxssl_dir%\%sgxssl_ver_name%.zip' -DestinationPath %sgxssl_dir%"
     xcopy /y "%sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%" %sgxssl_dir% /e
 	del /f /q %sgxssl_dir%\%sgxssl_ver_name%.zip
 	rmdir /s /q %sgxssl_dir%\intel-sgx-ssl-%sgxssl_ver%
@@ -62,13 +74,21 @@ if not exist %build_script% (
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
 	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
 )
+call powershell -Command " $opensslfilehash = Get-FileHash %openssl_out_dir%\%openssl_ver_name%.tar.gz; Write-Output $opensslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_openssl.txt -encoding ascii"
+findstr /i %openssl_chksum% %sgxssl_dir%\check_sum_openssl.txt>nul
+if !errorlevel! NEQ 0  (
+	echo "File %openssl_out_dir%\%openssl_ver_name%.tar.gz checksum failure"
+	del /f /q %openssl_out_dir%\%openssl_ver_name%.tar.gz
+	exit /b 1
+)
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
-	call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean || exit /b 1
+	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 
 	cd ..\
 )
 
+cd %top_dir%
 exit /b 0

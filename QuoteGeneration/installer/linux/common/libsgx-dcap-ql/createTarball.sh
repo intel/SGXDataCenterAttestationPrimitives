@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@ LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 
 INSTALL_PATH=${SCRIPT_DIR}/output
 
-LINUX_QV_DIR="${ROOT_DIR}/../QuoteVerification"
 [[ -z "${SGX_SDK}" ]] && SGX_SDK=/opt/intel/sgxsdk
 
 # Cleanup
@@ -55,13 +54,11 @@ cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 # Copy the files according to the BOM
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql.txt --installdir=pkgroot/libsgx-dcap-ql
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-dev.txt  --cleanup=false --installdir=pkgroot/libsgx-dcap-ql-dev
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-dev-qvinc.txt --deliverydir=${LINUX_QV_DIR}  --cleanup=false --installdir=pkgroot/libsgx-dcap-ql-dev
-python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-dev-commoninc.txt --deliverydir=${SGX_SDK}/include  --cleanup=false --installdir=pkgroot/libsgx-dcap-ql-dev
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-ql-package.txt  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
-SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
+SGX_VERSION=$(awk '/QUOTE_LOADER_VERSION/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
 pushd ${INSTALL_PATH} &> /dev/null
 sed -i "s/USR_LIB_VER=.*/USR_LIB_VER=${SGX_VERSION}/" Makefile
 tar -zcvf ${TARBALL_NAME} *

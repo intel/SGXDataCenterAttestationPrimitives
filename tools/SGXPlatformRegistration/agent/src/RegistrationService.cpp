@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,8 +93,7 @@ void RegistrationService::registerPlatformIfNeeded() {
         m_uefi = new MPUefi(string(m_conf.uefi_path), m_gLogLevel);
         if (!m_uefi) {
             agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Allocation error during uefi initiation.\n");
-            errorCode = MPA_AG_OUT_OF_MEMORY;
-            goto error;
+            return;
         }
     }
 
@@ -106,11 +105,13 @@ void RegistrationService::registerPlatformIfNeeded() {
         goto error;
     }
 
-    // Check status.errorCode for errors.
-    if (MP_BIOS_SRC_ERROR & status.errorCode) {
+    // Check status.errorCode: 
+    //          when BIOS/MCHECK reported error, the registration will be aborted
+    //          when Agent itself reported error, the registration will continue.
+    if ((status.errorCode != 0)  && !(MP_BIOS_SRC_ERROR & status.errorCode)) {
         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Registration Flow - BIOS/MCHECK failed, reported error: 0x%02X\n", status.errorCode);
-        res = MP_UEFI_INTERNAL_ERROR;
-        goto error;
+        // since it is one BIOS/MCHECK error, the Multi-package Agent server can't do anything, so just log the message and return
+        return;
     }
 
     // Check that the RegistrationStatus.RegistrationComplete flag
@@ -218,7 +219,13 @@ void RegistrationService::registerPlatformIfNeeded() {
     }
     else
     {
-        agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration Flow - Registration status indicates registration is complete.  Nothing to do.\n");
+        if(status.errorCode == MPA_SUCCESS) {
+            agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration Flow - Registration status indicates registration is completed successfully. MPA has nothing to do.\n");
+        }
+        else
+        {
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Registration Flow - Registration status indicates registration is completed unsuccessfully, and the error code is %d. \n", status.errorCode);
+        }
     }
     return;
     

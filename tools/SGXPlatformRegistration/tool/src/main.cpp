@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,6 @@
 #define MANAGMENT_TOOL_GET_REG_STATUS           "-get_registration_status"
 #define MANAGMENT_TOOL_GET_REG_ERROR_CODE       "-get_last_registration_error_code"
 #define MANAGMENT_TOOL_GET_SGX_STATUS           "-get_sgx_status"
-#define MANAGMENT_TOOL_ENABLE_SGX               "-enable_sgx"
 
 #define COVERT_TO_NEG(num)      num * (-1)
 
@@ -116,7 +115,6 @@ int usage() {
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\n-get_registration_status\t\t\t\t Prints and returns registration status.");
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\n-get_last_registration_error_code\t\t\t Prints and returns last registration error code.");
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\n-get_sgx_status\t\t\t\t\t\t Prints SGX status.");
-    management_log_message(MP_REG_LOG_LEVEL_FUNC, "\n-enable_sgx\t\t\t\t\t\t Tries to enable SGX. Prints the result SGX status.");
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\n");
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\nIn case of a tool error a negative number will be returned.");
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "\nA positive return value defines as MpResult.");
@@ -150,6 +148,7 @@ int performGetPlatformManifest(const char *fileName) {
     
     ret = writeBufferToFile(fileName, buffer, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to write to file:  \"%s\"\n", fileName);
         goto out;
     }
     
@@ -178,6 +177,7 @@ int performGetKeyBlob(const char *fileName) {
     
     ret = writeBufferToFile(fileName, buffer, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to write to file:  \"%s\"\n", fileName);
         goto out;
     }
     
@@ -206,8 +206,8 @@ int performSetServerInfo(const char *fileName) {
     MpResult res = MP_UNEXPECTED_ERROR;
     memset(&serverId, 0, sizeof(serverId));
     
-    param1 = (char*)fileName+strlen(fileName)+1;
-    param2 = (char*)fileName+strlen(fileName)+1+(FLAGS_PARAM_SIZE+1);
+    param1 = (char*)fileName+strnlen(fileName, MAX_PATH_SIZE)+1;
+    param2 = (char*)fileName+strnlen(fileName, MAX_PATH_SIZE)+1+(FLAGS_PARAM_SIZE+1);
     
     if (gargc - 2 != 3) {
         management_log_message(MP_REG_LOG_LEVEL_ERROR, "Invalid number of parameters, please use the following syntax:\n");
@@ -249,11 +249,11 @@ int performSetServerInfo(const char *fileName) {
 
     ret = readFileToBuffer(fileName, (uint8_t*)&serverId, buffSize);
     if (ret != 0) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "Unable to read the server id file: \"%s\"\n", fileName);
         goto out;
     }
 
-    management_log_message(MP_REG_LOG_LEVEL_ERROR, "strlen(param2): %d\n", strlen(param2));
-    res = manage->setRegistrationServerInfo(flags, string(param2, strlen(param2)), (uint8_t*)&serverId, buffSize);
+    res = manage->setRegistrationServerInfo(flags, string(param2, strnlen(param2, MAX_PATH_SIZE)), (uint8_t*)&serverId, (uint16_t)buffSize);
     if (MP_SUCCESS != res) {
         ret = (int)res;
         goto out;
@@ -327,27 +327,6 @@ out:
     return ret;
 }
 
-int performEnableSgx() {
-    int ret = 0;
-    MpResult res = MP_UNEXPECTED_ERROR;
-    MpSgxStatus status;
-
-    memset(&status, 0, sizeof(status));
-    
-    res = manage->enableSgx(status);
-    if (MP_SUCCESS != res) {
-        ret = COVERT_TO_NEG((int)res);
-        goto out;
-    }
-    
-    management_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX enablement request has been set.\n");
-    management_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX status: %s, which means: %s.\n", MpSgxStatusValues[(unsigned int)status], MpSgxStatusStr[(unsigned int)status]);
-    ret = (int)res;
-out:
-    return ret;
-}
-
-
 int main(int argc, char * argv[]) {
     int ret = 0;
     int foundCommands = 0;
@@ -356,6 +335,12 @@ int main(int argc, char * argv[]) {
     MPConfigurations conf;
 
     gargc = argc;
+    if(gargc ==1 ) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "No input commands found.\n");
+        usage();
+        ret = COVERT_TO_NEG(MP_INVALID_PARAMETER);
+        return ret;
+    }
 
     do {
 #ifndef _WIN32
@@ -374,7 +359,7 @@ int main(int argc, char * argv[]) {
         manage = new MPManagement(string(conf.uefi_path));
 
         // Count given commands
-        numOfCommands = numOfCommandLineCommands(argv, argv + argc, '-');
+        numOfCommands = numOfCommandLineCommands(argv + 1, argv + argc, '-');
         if (!numOfCommands) {
             management_log_message(MP_REG_LOG_LEVEL_ERROR, "No input commands found.\n");
             usage();
@@ -391,20 +376,20 @@ int main(int argc, char * argv[]) {
         optionsNoArgs[MANAGMENT_TOOL_GET_REG_ERROR_CODE] = performGetRegErrorCode;
         optionsNoArgs[MANAGMENT_TOOL_GET_REG_STATUS] = performGetRegStatus;
         optionsNoArgs[MANAGMENT_TOOL_GET_SGX_STATUS] = performGetSgxStatus;
-        optionsNoArgs[MANAGMENT_TOOL_ENABLE_SGX] = performEnableSgx;
 
         std::map<const string, handle_func_with_args>::iterator itWithArgs = optionsWithArgs.begin();
         std::map<const string, handle_func>::iterator itNoArgs = optionsNoArgs.begin();
 
         // Set verbose log level if needed
-        if (cmdOptionExists(argv, argv + argc, MANAGMENT_TOOL_VERBOSE_LOG)) {
+        if (cmdOptionExists(argv + 1, argv + argc, MANAGMENT_TOOL_VERBOSE_LOG)) {
             foundCommands++;
             setVerboseLog();
+            gargc--; // "-v" has been processed, so remove it.
         }
 
         // Iterate over all options without arguments
         while (itNoArgs != optionsNoArgs.end()) {
-            if (cmdOptionExists(argv, argv + argc, itNoArgs->first)) {
+            if (cmdOptionExists(argv + 1, argv + argc, itNoArgs->first)) {
                 foundCommands++;
                 ret = itNoArgs->second();
                 if (MP_SUCCESS != ret) {
@@ -416,7 +401,7 @@ int main(int argc, char * argv[]) {
 
         // Iterate over all options with arguments
         while (itWithArgs != optionsWithArgs.end()) {
-            filename = getCmdOption(argv, argv + argc, itWithArgs->first);
+            filename = getCmdOption(argv + 1, argv + argc, itWithArgs->first);
             if (filename)
             {
                 foundCommands++;

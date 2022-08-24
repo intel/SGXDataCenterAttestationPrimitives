@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,33 +29,48 @@
  *
  */
 
-const { tcbinfoService }= require('../services');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { tcbinfoService } from '../services/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
+import * as appUtil from '../utils/apputil.js';
 
-exports.getTcbInfo = async function(req,res,next) {
-    try {
-        // validate request parameters
-        let fmspc = req.query.fmspc;
-        if (fmspc == null || fmspc.length != Constants.FMSPC_SIZE) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
+async function getTcbInfo(req, res, next, type) {
+  const FMSPC_SIZE = 12;
 
-        // normalize request parameters
-        fmspc = fmspc.toUpperCase();
-
-        // call service
-        let tcbinfoJson = await tcbinfoService.getTcbInfo(fmspc);
-
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_TCB_INFO_ISSUER_CHAIN, tcbinfoJson[Constants.SGX_TCB_INFO_ISSUER_CHAIN])
-           .json(tcbinfoJson.tcbinfo);
+  try {
+    // validate request parameters
+    let version = appUtil.get_api_version_from_url(req.originalUrl);
+    let fmspc = req.query.fmspc;
+    if (fmspc == null || fmspc.length != FMSPC_SIZE) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-    catch(err) {
-        next(err);
-    }
-};
 
+    // normalize request parameters
+    fmspc = fmspc.toUpperCase();
 
+    // call service
+    let tcbinfoJson = await tcbinfoService.getTcbInfo(type, fmspc, version);
+    let issuerChainName = appUtil.getTcbInfoIssuerChainName(version);
+
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(
+        issuerChainName,
+        tcbinfoJson[issuerChainName]
+      )
+      .header('Content-Type', 'application/json')
+      .send(tcbinfoJson['tcbinfo']);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getSgxTcbInfo(req, res, next) {
+  await getTcbInfo(req, res, next, Constants.PROD_TYPE_SGX);
+}
+
+export async function getTdxTcbInfo(req, res, next) {
+  await getTcbInfo(req, res, next, Constants.PROD_TYPE_TDX);
+}

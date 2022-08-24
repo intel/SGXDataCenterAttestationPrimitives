@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,68 +35,117 @@
 #include <sstream>
 #include "EnclaveIdentityGenerator.h"
 
-static std::string createEnclaveIdentityJSON(const std::string &version,
-                                             const std::string &issueDate,
-                                             const std::string &nextUpdate,
-                                             const std::string &miscselect,
-                                             const std::string &miscselectMask,
-                                             const std::string &attributes,
-                                             const std::string &attributesMask,
-                                             const std::string &mrsigner,
-                                             const std::string &isvprodid,
-                                             const std::string &isvsvn)
+namespace intel { namespace sgx { namespace dcap { namespace test {
+
+
+static std::string createEnclaveIdentityV2JSON(const std::string &id,
+                                               const std::string &version,
+                                               const std::string &issueDate,
+                                               const std::string &nextUpdate,
+                                               const std::string &tcbEvaluationDataNumber,
+                                               const std::string &miscselect,
+                                               const std::string &miscselectMask,
+                                               const std::string &attributes,
+                                               const std::string &attributesMask,
+                                               const std::string &mrsigner,
+                                               const std::string &isvprodid,
+                                               const std::vector<EnclaveIdentityTcbLevelStringModel> &tcbLevels)
 {
     std::string result;
-    result =  R"({"version":)" + version + R"(,"issueDate":")" + issueDate + R"(","nextUpdate":")" + nextUpdate;
-    result += R"(","miscselect":")" + miscselect + R"(","miscselectMask":")" + miscselectMask;
+    result = R"({"id":")" + id;
+    result += R"(","version":)" + version + R"(,"issueDate":")" + issueDate + R"(","nextUpdate":")" + nextUpdate;
+    result += R"(","tcbEvaluationDataNumber":)" + tcbEvaluationDataNumber;
+    result += R"(,"miscselect":")" + miscselect + R"(","miscselectMask":")" + miscselectMask;
     result += R"(","attributes":")" + attributes + R"(","attributesMask":")" + attributesMask;
     result += R"(","mrsigner":")" + mrsigner + R"(","isvprodid":)" + isvprodid;
-    result += R"(,"isvsvn":)" + isvsvn + R"(})";
+    result += R"(,"tcbLevels":[)";
+    for(auto tcbLevel : tcbLevels)
+    {
+        result += R"({"tcb":{"isvsvn":)" + tcbLevel.isvsvn + R"(},"tcbDate":")" + tcbLevel.tcbDate + R"(","tcbStatus":")" + tcbLevel.tcbStatus + R"("},)";
+
+    }
+    if (!tcbLevels.empty()) {
+        // if tcblevels is not empty we remove last colon that was added by above loop
+        result.pop_back();
+    }
+    result += R"(]})";
     return result;
 }
 
-std::string EnclaveIdentityVectorModel::toJSON()
+std::string EnclaveIdentityVectorModel::toV2JSON()
 {
-    return createEnclaveIdentityJSON(std::to_string(version),
-                                     issueDate,
-                                     nextUpdate,
-                                     toHexString(miscselect),
-                                     toHexString(miscselectMask),
-                                     toHexString(attributes),
-                                     toHexString(attributesMask),
-                                     toHexString(mrsigner),
-                                     std::to_string(isvprodid),
-                                     std::to_string(isvsvn)
+    std::vector<EnclaveIdentityTcbLevelStringModel> tcbLevelsString;
+    for(const auto& tcbLevel : tcbLevels)
+    {
+        tcbLevelsString.push_back({
+                std::to_string(tcbLevel.isvsvn),
+                tcbLevel.tcbDate,
+                tcbLevel.tcbStatus
+        });
+    }
+    return createEnclaveIdentityV2JSON(id,
+                                       std::to_string(version),
+                                       issueDate,
+                                       nextUpdate,
+                                       std::to_string(tcbEvaluationDataNumber),
+                                       bytesToHexString(miscselect),
+                                       bytesToHexString(miscselectMask),
+                                       bytesToHexString(attributes),
+                                       bytesToHexString(attributesMask),
+                                       bytesToHexString(mrsigner),
+                                       std::to_string(isvprodid),
+                                       tcbLevelsString
+
     );
 }
 
-void EnclaveIdentityVectorModel::applyTo(intel::sgx::qvl::test::QuoteGenerator::EnclaveReport& enclaveReport)
+void EnclaveIdentityVectorModel::applyTo(intel::sgx::dcap::test::QuoteV3Generator::EnclaveReport& enclaveReport)
 {
     std::copy_n(attributes.begin(), enclaveReport.attributes.size(), enclaveReport.attributes.begin());
     std::copy_n(mrsigner.begin(), enclaveReport.mrSigner.size(), enclaveReport.mrSigner.begin());
     enclaveReport.miscSelect = vectorToUint32(miscselect);
-    enclaveReport.isvSvn = isvsvn;
+    if (!tcbLevels.empty())
+    {
+        enclaveReport.isvSvn = tcbLevels.front().isvsvn;
+    }
+    else
+    {
+        enclaveReport.isvSvn = 0;
+    }
+    enclaveReport.isvProdID = isvprodid;
+}
+
+void EnclaveIdentityVectorModel::applyTo(intel::sgx::dcap::test::QuoteV4Generator::EnclaveReport& enclaveReport)
+{
+    std::copy_n(attributes.begin(), enclaveReport.attributes.size(), enclaveReport.attributes.begin());
+    std::copy_n(mrsigner.begin(), enclaveReport.mrSigner.size(), enclaveReport.mrSigner.begin());
+    enclaveReport.miscSelect = vectorToUint32(miscselect);
+    if (!tcbLevels.empty())
+    {
+        enclaveReport.isvSvn = tcbLevels.front().isvsvn;
+    }
+    else
+    {
+        enclaveReport.isvSvn = 0;
+    }
     enclaveReport.isvProdID = isvprodid;
 }
 
 std::string EnclaveIdentityStringModel::toJSON()
 {
-    return createEnclaveIdentityJSON(version,
-                                     issueDate,
-                                     nextUpdate,
-                                     miscselect,
-                                     miscselectMask,
-                                     attributes,
-                                     attributesMask,
-                                     mrsigner,
-                                     isvprodid,
-                                     isvsvn
+    return createEnclaveIdentityV2JSON(id,
+                                       version,
+                                       issueDate,
+                                       nextUpdate,
+                                       tcbEvaluationDataNumber,
+                                       miscselect,
+                                       miscselectMask,
+                                       attributes,
+                                       attributesMask,
+                                       mrsigner,
+                                       isvprodid,
+                                       tcbLevels
     );
-}
-
-std::string qeIdentityJsonWithSignature(const std::string &qeIdentityBody, const std::string &signature)
-{
-    return R"({"qeIdentity":)" + qeIdentityBody + R"(,"signature":")" + signature + R"("})";
 }
 
 std::string enclaveIdentityJsonWithSignature(const std::string &enclaveIdentityBody, const std::string &signature)
@@ -104,26 +153,9 @@ std::string enclaveIdentityJsonWithSignature(const std::string &enclaveIdentityB
     return R"({"enclaveIdentity":)" + enclaveIdentityBody + R"(,"signature":")" + signature + R"("})";
 }
 
-std::string toHexString(const std::vector<uint8_t> &vector)
-{
-    std::string result;
-    result.reserve(vector.size() * 2);   // two digits per character
-
-    static constexpr char hex[] = "0123456789ABCDEF";
-
-    for (uint8_t c : vector)
-    {
-        result.push_back(hex[c / 16]);
-        result.push_back(hex[c % 16]);
-    }
-
-    return result;
-}
-
-uint32_t vectorToUint32(const std::vector<uint8_t> &input)
-{
+uint32_t vectorToUint32(const std::vector<uint8_t> &input) {
     auto position = input.cbegin();
-    return intel::sgx::qvl::swapBytes(intel::sgx::qvl::toUint32(*position, *(std::next(position)),
+    return intel::sgx::dcap::swapBytes(intel::sgx::dcap::toUint32(*position, *(std::next(position)),
                                                                 *(std::next(position, 2)), *(std::next(position, 3))));
 }
 
@@ -133,3 +165,4 @@ void removeWordFromString(std::string word, std::string &input)
         input.replace(input.find(word), word.length(), "");
 }
 
+}}}}

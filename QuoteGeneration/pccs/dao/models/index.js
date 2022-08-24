@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,48 +29,63 @@
  *
  */
 
-const fs = require('fs');
-const path = require('path');
-const config = require('config');
-const Sequelize = require('sequelize');
-const logger = require('../../utils/Logger.js');
-const cls = require('cls-hooked');
+import Config from 'config';
+import Sequelize from 'sequelize';
+import logger from '../../utils/Logger.js';
+import clshooked from 'cls-hooked';
+import FmspcTcbs from './fmspc_tcbs.js';
+import PckCert from './pck_cert.js';
+import PckCertchain from './pck_certchain.js';
+import PckCrl from './pck_crl.js';
+import PcsCertificates from './pcs_certificates.js';
+import PcsVersion from './pcs_version.js';
+import PlatformTcbs from './platform_tcbs.js';
+import PlatformsRegistered from './platforms_registered.js';
+import Platforms from './platforms.js';
+import EnclaveIdentities from './enclave_identities.js';
+import CrlCache from './crl_cache.js';
 
-const pccs_namespace = cls.createNamespace('pccs-namespace');
+const pccs_namespace = clshooked.createNamespace('pccs-namespace');
 Sequelize.useCLS(pccs_namespace);
 
-const basename = path.basename(module.filename);
-const db = {};
-const initialize_db = false;
-
-var db_conf = config.get(config.get('DB_CONFIG'));
-var db_opt = JSON.parse(JSON.stringify(db_conf.options));
+// initialize sequelize instance
+let db_conf = Config.get(Config.get('DB_CONFIG'));
+let db_opt = JSON.parse(JSON.stringify(db_conf.options));
 if (db_opt.logging == true) {
-    // Enable sequelize logging through logger.info
-    db_opt.logging = (msg)=>logger.info(msg);
+  // Enable sequelize logging through logger.info
+  db_opt.logging = (msg) => logger.info(msg);
 }
+const sequelize = new Sequelize(
+  db_conf.database,
+  db_conf.username,
+  db_conf.password,
+  db_opt
+);
 
-const sequelize = new Sequelize(db_conf.database, db_conf.username, db_conf.password, db_opt);
+FmspcTcbs.init(sequelize);
+PckCert.init(sequelize);
+PckCertchain.init(sequelize);
+PckCrl.init(sequelize);
+PcsCertificates.init(sequelize);
+PcsVersion.init(sequelize);
+PlatformTcbs.init(sequelize);
+PlatformsRegistered.init(sequelize);
+Platforms.init(sequelize);
+EnclaveIdentities.init(sequelize);
+CrlCache.init(sequelize);
 
-fs
-  .readdirSync(__dirname)
-  .filter(file =>
-    (file.indexOf('.') !== 0) &&
-    (file !== basename) &&
-    (file.slice(-3) === '.js'))
-  .forEach(file => {
-    const model = sequelize.import(path.join(__dirname, file));
-    model.sync({force:initialize_db});
-    db[model.name] = model;
-  });
-
-Object.keys(db).forEach(modelName => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
-});
-
-db.Sequelize = Sequelize;
-db.sequelize = sequelize;
-
-module.exports = db;
+export {
+  Sequelize,
+  sequelize,
+  FmspcTcbs,
+  PckCert,
+  PckCertchain,
+  PckCrl,
+  PcsCertificates,
+  PcsVersion,
+  PlatformTcbs,
+  PlatformsRegistered,
+  Platforms,
+  EnclaveIdentities,
+  CrlCache,
+};

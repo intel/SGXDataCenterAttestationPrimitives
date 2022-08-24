@@ -13,16 +13,16 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4AEA12E8-6CD7-42DD-AC2F-1FB822B11638}</ProjectGuid>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -57,7 +57,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)Enclave.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private_sample.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)Enclave.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -80,7 +80,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)Enclave.config.xml"</Command>
+      <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private_sample.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)Enclave.config.xml"</Command>
       <Message>signing the enclave</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -102,7 +102,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_t.h;%(Filename)_t.c;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Enclave.config.xml;%(AdditionalInputs)</AdditionalInputs>
     </CustomBuild>
-    <None Include="Enclave_private.pem" />
+    <None Include="Enclave_private_sample.pem" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Enclave.config.xml" />

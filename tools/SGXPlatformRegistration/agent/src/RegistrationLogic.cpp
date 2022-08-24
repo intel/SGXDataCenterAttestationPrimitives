@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,7 @@
 #include "RegistrationService.h"
 #include "AgentConfiguration.h"
 #include "agent_logger.h"
+#include "se_version.h"
 
 #ifdef _WIN32
 extern bool SvcUninstall();
@@ -53,7 +54,7 @@ void RegistrationLogic::registerPlatform() {
 
     // Create RegistrationService instance with the required configurations
     RegistrationService registrationService(conf);
-    agent_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX Registration Agent version: %s\n", MPA_STRVER);
+    agent_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX Registration Agent version: %s\n", STRPRODUCTVER);
 
 #ifdef _WIN32
     if (!registrationService.isMultiPackageCapable()) {

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,6 +31,9 @@
 
 include ../../buildenv.mk
 
+PCE_WRAPPER_VER:= $(shell awk '$$2 ~ /PCE_WRAPPER_VERSION/ { print substr($$3, 2, length($$3) - 2); }'\
+	$(COMMON_DIR)/inc/internal/se_version.h)
+
 INCLUDE += -I. -I../inc
 INCLUDE += -I$(SGX_SDK)/include         \
            -I$(COMMON_DIR)/inc/internal \
@@ -43,7 +46,7 @@ INCLUDE += -I$(ROOT_DIR)/ae/common \
 CXXFLAGS += -fPIC -Werror -g
 
 CFLAGS += -fPIC -Werror -g
-Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl
+Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
 
 vpath %.cpp ..
 vpath %.c   $(COMMON_DIR)/src
@@ -64,6 +67,7 @@ LDUFLAGS += -Wl,--version-script=pce_wrapper.lds -Wl,--gc-sections
 
 LIBNAME  = libsgx_pce_logic.so
 STATIC_LIBNAME  = libsgx_pce_logic.a
+PCE_WRAPPER_SONAME:= $(LIBNAME).$(call SPLIT_VERSION,$(PCE_WRAPPER_VER),1)
 
 .PHONY: all
 all:  install_lib
@@ -71,9 +75,11 @@ all:  install_lib
 .PHONY: install_lib
 install_lib: $(LIBNAME) $(STATIC_LIBNAME) | $(BUILD_DIR)
 	@$(CP) $(LIBNAME) $|
+	@ln -fs $(LIBNAME) $(BUILD_DIR)/$(PCE_WRAPPER_SONAME)
 
 $(LIBNAME): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(Link_Flags) -o $@
+	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(Link_Flags) \
+	-Wl,-soname=$(PCE_WRAPPER_SONAME) -o $@
 
 $(STATIC_LIBNAME): $(OBJ)
 	$(AR) rcsD $@ $^

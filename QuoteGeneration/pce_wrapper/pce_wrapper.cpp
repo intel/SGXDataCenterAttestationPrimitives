@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -87,9 +87,12 @@ extern "C" sgx_status_t sgx_get_metadata(const TCHAR* enclave_file, metadata_t *
 #include <limits.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #define PATH_SEPARATOR '/'
 extern "C" sgx_status_t sgx_get_metadata(const char* enclave_file, metadata_t *metadata);
-#define PCE_ENCLAVE_NAME "libsgx_pce.signed.so"
+#define PCE_ENCLAVE_NAME "libsgx_pce.signed.so.1"
+#define PCE_ENCLAVE_NAME_LEGACY "libsgx_pce.signed.so"
 bool get_pce_path(
     char *p_file_path,
     size_t buf_size)
@@ -131,6 +134,16 @@ bool get_pce_path(
     if(strnlen(p_file_path,buf_size)+strnlen(PCE_ENCLAVE_NAME,buf_size)+sizeof(char)>buf_size)
         return false;
     (void)strncat(p_file_path,PCE_ENCLAVE_NAME, strnlen(PCE_ENCLAVE_NAME,buf_size));
+    struct stat info;
+    if(stat(p_file_path, &info) != 0 ||
+        ((info.st_mode & S_IFREG) == 0 && (info.st_mode & S_IFLNK) == 0)) {
+        if ( p_last_slash != NULL )
+        {
+            *p_last_slash = '\0';  //null terminate the string
+        }
+        else p_file_path[0] = '\0';
+        (void)strncat(p_file_path,PCE_ENCLAVE_NAME_LEGACY, strnlen(PCE_ENCLAVE_NAME_LEGACY,buf_size));
+    }
     return true;
 }
 #endif
@@ -172,7 +185,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
                 p_pce_attributes);
             if (SGX_SUCCESS != sgx_status)
             {
-                SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                SE_PROD_LOG("Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
             }
 
             // Retry in case there was a power transition that resulted is losing the enclave.

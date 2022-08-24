@@ -46,10 +46,9 @@ Build the Intel(R) SGX Multi-package Registration Agent and Libraries
 ```
     $ sudo apt-get install build-essential debhelper zip
 ```
-  * GCC 8.3 (support for fstack-clash-protection)
   
 - Windows Prerequisites list:
-  * Visual Studio 2017
+  * Visual Studio 2019
   * SGX-SDK
 
 ### Build Intel(R) SGX Multi-package Registration Agent, libraries, tool and installer in Linux

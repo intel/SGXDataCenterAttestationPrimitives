@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
-// Copyright(c) 2016-18 Intel Corporation.
+/*  Copyright(c) 2016-21 Intel Corporation. */
 
 #include <linux/acpi.h>
 #include <linux/miscdevice.h>
@@ -18,12 +18,9 @@ MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_VERSION(DRV_VERSION);
 
-u64 sgx_encl_size_max_32;
-u64 sgx_encl_size_max_64;
-u32 sgx_misc_reserved_mask;
 u64 sgx_attributes_reserved_mask;
 u64 sgx_xfrm_reserved_mask = ~0x3;
-u32 sgx_xsave_size_tbl[64];
+u32 sgx_misc_reserved_mask;
 
 static int sgx_open(struct inode *inode, struct file *file)
 {
@@ -34,11 +31,14 @@ static int sgx_open(struct inode *inode, struct file *file)
 	if (!encl)
 		return -ENOMEM;
 
-	atomic_set(&encl->flags, 0);
 	kref_init(&encl->refcount);
-	INIT_LIST_HEAD(&encl->va_pages);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	xa_init(&encl->page_array);
+#else
 	INIT_RADIX_TREE(&encl->page_tree, GFP_KERNEL);
+#endif
 	mutex_init(&encl->lock);
+	INIT_LIST_HEAD(&encl->va_pages);
 	INIT_LIST_HEAD(&encl->mm_list);
 	spin_lock_init(&encl->mm_lock);
 
@@ -58,6 +58,12 @@ static int sgx_release(struct inode *inode, struct file *file)
 	struct sgx_encl *encl = file->private_data;
 	struct sgx_encl_mm *encl_mm;
 
+	/*
+	 * Drain the remaining mm_list entries. At this point the list contains
+	 * entries for processes, which have closed the enclave file but have
+	 * not exited yet. The processes, which have exited, are gone from the
+	 * list by sgx_mmu_notifier_release().
+	 */
 	for ( ; ; )  {
 		spin_lock(&encl->mm_lock);
 
@@ -71,38 +77,25 @@ static int sgx_release(struct inode *inode, struct file *file)
 
 		spin_unlock(&encl->mm_lock);
 
-		/* The list is empty, ready to go. */
+		/* The enclave is no longer mapped by any mm. */
 		if (!encl_mm)
 			break;
 
 		synchronize_srcu(&encl->srcu);
 		mmu_notifier_unregister(&encl_mm->mmu_notifier, encl_mm->mm);
 		kfree(encl_mm);
-	};
-
-	mutex_lock(&encl->lock);
-	atomic_or(SGX_ENCL_DEAD, &encl->flags);
-	mutex_unlock(&encl->lock);
+	}
 
 	kref_put(&encl->refcount, sgx_encl_release);
 	return 0;
 }
-
-#ifdef CONFIG_COMPAT
-static long sgx_compat_ioctl(struct file *filep, unsigned int cmd,
-			      unsigned long arg)
-{
-	return sgx_ioctl(filep, cmd, arg);
-}
-#endif
 
 static int sgx_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct sgx_encl *encl = file->private_data;
 	int ret;
 
-	ret = sgx_encl_may_map(encl, vma->vm_start, vma->vm_end,
-			       vma->vm_flags & (VM_READ | VM_WRITE | VM_EXEC));
+	ret = sgx_encl_may_map(encl, vma->vm_start, vma->vm_end, vma->vm_flags);
 	if (ret)
 		return ret;
 
@@ -123,7 +116,7 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 					   unsigned long pgoff,
 					   unsigned long flags)
 {
-	if (flags & MAP_PRIVATE)
+	if ((flags & MAP_TYPE) == MAP_PRIVATE)
 		return -EINVAL;
 
 	if (flags & MAP_FIXED)
@@ -131,6 +124,14 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
 
 	return current->mm->get_unmapped_area(file, addr, len, pgoff, flags);
 }
+
+#ifdef CONFIG_COMPAT
+static long sgx_compat_ioctl(struct file *filep, unsigned int cmd,
+			      unsigned long arg)
+{
+	return sgx_ioctl(filep, cmd, arg);
+}
+#endif
 
 static const struct file_operations sgx_encl_fops = {
 	.owner			= THIS_MODULE,
@@ -150,25 +151,24 @@ const struct file_operations sgx_provision_fops = {
 
 static struct miscdevice sgx_dev_enclave = {
 	.minor = MISC_DYNAMIC_MINOR,
-	.name = "enclave",
-	.nodename = "sgx/enclave",
+	.name = "sgx_enclave",
+	.nodename = "sgx_enclave",
 	.fops = &sgx_encl_fops,
 };
 
 static struct miscdevice sgx_dev_provision = {
 	.minor = MISC_DYNAMIC_MINOR,
-	.name = "provision",
-	.nodename = "sgx/provision",
+	.name = "sgx_provision",
+	.nodename = "sgx_provision",
 	.fops = &sgx_provision_fops,
 };
-
 
 int __init sgx_drv_init(void)
 {
 	unsigned int eax, ebx, ecx, edx;
-	u64 attr_mask, xfrm_mask;
+	u64 attr_mask;
+	u64 xfrm_mask;
 	int ret;
-	int i;
 
 	if (!boot_cpu_has(X86_FEATURE_SGX_LC)) {
 		pr_info("The public key MSRs are not writable.\n");
@@ -176,9 +176,13 @@ int __init sgx_drv_init(void)
 	}
 
 	cpuid_count(SGX_CPUID, 0, &eax, &ebx, &ecx, &edx);
+
+	if (!(eax & 1))  {
+		pr_err("SGX disabled: SGX1 instruction support not available.\n");
+		return -ENODEV;
+	}
+
 	sgx_misc_reserved_mask = ~ebx | SGX_MISC_RESERVED_MASK;
-	sgx_encl_size_max_64 = 1ULL << ((edx >> 8) & 0xFF);
-	sgx_encl_size_max_32 = 1ULL << (edx & 0xFF);
 
 	cpuid_count(SGX_CPUID, 1, &eax, &ebx, &ecx, &edx);
 
@@ -187,29 +191,21 @@ int __init sgx_drv_init(void)
 
 	if (boot_cpu_has(X86_FEATURE_OSXSAVE)) {
 		xfrm_mask = (((u64)edx) << 32) + (u64)ecx;
-
-		for (i = 2; i < 64; i++) {
-			cpuid_count(0x0D, i, &eax, &ebx, &ecx, &edx);
-			if ((1 << i) & xfrm_mask)
-				sgx_xsave_size_tbl[i] = eax + ebx;
-		}
-
 		sgx_xfrm_reserved_mask = ~xfrm_mask;
 	}
 
 	ret = misc_register(&sgx_dev_enclave);
 	if (ret) {
-		pr_err("Creating /dev/sgx/enclave failed with %d.\n", ret);
+		pr_err("Creating /dev/sgx_enclave failed with %d.\n", ret);
 		return ret;
 	}
 
 	ret = misc_register(&sgx_dev_provision);
 	if (ret) {
-		pr_err("Creating /dev/sgx/provision failed with %d.\n", ret);
+		pr_err("Creating /dev/sgx_provision failed with %d.\n", ret);
 		misc_deregister(&sgx_dev_enclave);
 		return ret;
 	}
-
 
 	return 0;
 }
@@ -221,3 +217,11 @@ int __exit sgx_drv_exit(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_ACPI
+static struct acpi_device_id sgx_device_ids[] = {
+	{"INT0E0C", 0},
+	{"", 0},
+};
+MODULE_DEVICE_TABLE(acpi, sgx_device_ids);
+#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,11 +76,6 @@ class MPManagement {
         // If failed returns an appropriate error.
         virtual MpResult getSgxStatus(MpSgxStatus &status);
         
-        // Sets SGX status
-        // If the platform supports SGX, sets SGX status. A reboot could be required.
-        // Returns SGX status after enablement. 
-        // If failed returns an appropriate error.
-        virtual MpResult enableSgx(MpSgxStatus &status);
 
         // Sets registration server info.
         // If registration is completed successfully, error_code will be set to 0.
@@ -89,6 +84,10 @@ class MPManagement {
         virtual ~MPManagement();
     private:
         MPUefi *m_mpuefi;
+
+        MPManagement& operator=(const MPManagement&) {return *this;}
+        MPManagement(const MPManagement& src) {(void) src; }
+
 };
 
 #endif  // #ifndef __MPMANAGEMENT_H

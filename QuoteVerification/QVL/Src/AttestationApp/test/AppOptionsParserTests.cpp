@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 #include <ctime>
 
 using namespace ::testing;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
 
 struct AppOptionsParserTests: public Test
 {
@@ -49,8 +49,8 @@ struct AppOptionsParserTests: public Test
     const std::string pckSigningChainDefaultPath = "pckSignChain.pem";
     const std::string tcbSignChainDefaultPath = "tcbSignChain.pem";
     const std::string tcbInfoDefaultPath = "tcbInfo.json";
-    const std::string rootCaCrlDefaultPath = "rootCaCrl.pem";
-    const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.pem";
+    const std::string rootCaCrlDefaultPath = "rootCaCrl.der";
+    const std::string intermediateCaCrlDefaultPath = "intermediateCaCrl.der";
     const std::string qeIdentityDefaultPath = "qeIdentity.json";
 
     const std::string helpOutput = "Usage: [-h] [--trustedRootCaCert=<string>] [--pckSignChain=<string>] [--pckCert=<string>] [--tcbSignChain=<string>] [--tcbInfo=<string>] [--qeIdentity=<string>] [--qveIdentity=<string>] [--rootCaCrl=<string>] [--intermediateCaCrl=<string>] [--quote=<string>] [--expirationDate=<string>]\n\n"
@@ -61,8 +61,8 @@ struct AppOptionsParserTests: public Test
             "--tcbInfo=<string>                       TCB Info file path, JSON format [=tcbInfo.json]\n"
             "--qeIdentity=<string>                    QeIdentity file path, JSON format. QeIdentity verification is optional, will not run by default [=]\n"
             "--qveIdentity=<string>                   QveIdentity file path, JSON format. QveIdentity verification is optional, will not run by default [=]\n"
-            "--rootCaCrl=<string>                     Root Ca CRL file path, PEM format [=rootCaCrl.pem]\n"
-            "--intermediateCaCrl=<string>             Intermediate Ca CRL file path, PEM format [=intermediateCaCrl.pem]\n"
+            "--rootCaCrl=<string>                     Root Ca CRL file path, PEM or DER format [=rootCaCrl.der]\n"
+            "--intermediateCaCrl=<string>             Intermediate Ca CRL file path, PEM or DER format [=intermediateCaCrl.der]\n"
             "--quote=<string>                         Quote file path, binary format [=quote.dat]\n"
             "--expirationDate=<string>                Expiration date in timestamp seconds [=seconds]\n"
             "-h, --help                               Print this message\n";
@@ -208,5 +208,22 @@ TEST_F(AppOptionsParserTests, ReturnsNothingWhenUnsupportedParamPrintsErrorAndHe
     EXPECT_TRUE(options == nullptr);
     EXPECT_TRUE(logger.str().empty());
     EXPECT_TRUE(output.find("Sample app: invalid option \"--unsupportedParam\"") != std::string::npos);
+    EXPECT_TRUE(output.find(helpOutput) != std::string::npos);
+}
+
+TEST_F(AppOptionsParserTests, ReturnsCantParseExpirationDateWhenProvidedInvalidTimestamp)
+{
+    std::vector<const char*> vec {"./AppCommand", "--expirationDate=test"};
+    std::ostringstream logger;
+
+    testing::internal::CaptureStdout();
+
+    auto options = parser.parse((int32_t) vec.size(), const_cast<char**>(vec.data()), logger);
+
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_TRUE(options == nullptr);
+    EXPECT_TRUE(logger.str().empty());
+    EXPECT_TRUE(output.find("Can't parse expirationDate:") != std::string::npos);
     EXPECT_TRUE(output.find(helpOutput) != std::string::npos);
 }

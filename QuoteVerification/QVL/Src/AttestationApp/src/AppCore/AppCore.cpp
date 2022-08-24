@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,18 +29,30 @@
  *
  */
 
-#include <fstream>
-#include <sstream>
 #include "AppCore.h"
 #include "AppOptions.h"
 #include "IAttestationLibraryAdapter.h"
 #include "StatusPrinter.h"
-#include <ctime>
-#include <chrono>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 namespace {
+inline std::string bytesToHexString(const std::vector<uint8_t> &vector)
+{
+    std::string result;
+    result.reserve(vector.size() * 2);   // two digits per character
+
+    static constexpr char hex[] = "0123456789ABCDEF";
+
+    for (const uint8_t c : vector)
+    {
+        result.push_back(hex[c / 16]);
+        result.push_back(hex[c % 16]);
+    }
+
+    return result;
+}
+
 void outputResult(const std::string& step, Status status, std::ostream& logger)
 {
     if (status != STATUS_OK)
@@ -68,12 +80,21 @@ bool AppCore::runVerification(const AppOptions& options, std::ostream& logger) c
 {
     try
     {
+        static constexpr char PEM_HEADER_STRING_X509_CRL[] = "-----BEGIN X509 CRL-----";
         const auto expirationDate = options.expirationDate;
         const auto pckCert = fileReader->readContent(options.pckCertificateFile);
         const auto pckSigningChain = fileReader->readContent(options.pckSigningChainFile);
         const auto pckCertChain = pckSigningChain + pckCert;
-        const auto rootCaCrl = fileReader->readContent(options.rootCaCrlFile);
-        const auto intermediateCaCrl = fileReader->readContent(options.intermediateCaCrlFile);
+        auto rootCaCrl = fileReader->readContent(options.rootCaCrlFile);
+        if (rootCaCrl.rfind(PEM_HEADER_STRING_X509_CRL, 0) == std::string::npos)
+        {
+            rootCaCrl = bytesToHexString(fileReader->readBinaryContent(options.rootCaCrlFile));
+        }
+        auto intermediateCaCrl = fileReader->readContent(options.intermediateCaCrlFile);
+        if (intermediateCaCrl.rfind(PEM_HEADER_STRING_X509_CRL, 0) == std::string::npos)
+        {
+            intermediateCaCrl = bytesToHexString(fileReader->readBinaryContent(options.intermediateCaCrlFile));
+        }
         const auto trustedRootCACert = fileReader->readContent(options.trustedRootCACertificateFile);
         const auto pckVerifyStatus = attestationLib->verifyPCKCertificate(pckCertChain, rootCaCrl, intermediateCaCrl, trustedRootCACert, expirationDate);
         outputResult("PCK certificate chain", pckVerifyStatus, logger);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,45 +29,57 @@
  *
  */
 
-const config = require('config');
-var winston = require('winston');
+import Config from 'config';
+import winston from 'winston';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-var options = {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { createLogger, format, transports } = winston;
+
+const options = {
   file: {
-    level: config.has('LogLevel') ? config.get('LogLevel') : "info",
+    level: Config.has('LogLevel') ? Config.get('LogLevel') : 'info',
     filename: __dirname + `/../logs/pccs_server.log`,
     handleExceptions: true,
     json: false,
     colorize: true,
   },
   console: {
-    level: config.has('LogLevel') ? config.get('LogLevel') : "info",
+    level: Config.has('LogLevel') ? Config.get('LogLevel') : 'info',
     handleExceptions: true,
     json: false,
     colorize: true,
-  }
+  },
 };
 
-const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf } = format;
-var logger = winston.createLogger({
+let logger = createLogger({
   format: combine(
-    timestamp(),
-      printf(info=>{
-          return `${info.timestamp} [${info.level}]: ${info.message}`;
-      })
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+    printf((info) => {
+      return `${info.timestamp} [${info.level}]: ${info.message}`;
+    })
   ),
   transports: [
-    new winston.transports.File(options.file),
-    new winston.transports.Console(options.console)
+    new transports.File(options.file),
+    new transports.Console(options.console),
   ],
   exitOnError: false, // do not exit on handled exceptions
 });
 
 logger.stream = {
-  write: function(message, encoding) {
+  write: function (message, encoding) {
     logger.info(message);
   },
 };
 
-module.exports = logger;
+logger.on('finish', function() {
+  setTimeout(()=>process.exit(1), 2000);
+})
+
+logger.endAndExitProcess = () => {
+  logger.end();
+}
+
+export default logger;

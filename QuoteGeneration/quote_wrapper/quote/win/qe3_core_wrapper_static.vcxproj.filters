@@ -26,6 +26,9 @@
     <ClInclude Include="..\inc\ecdsa_quote.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="id_enclave_u.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\qe_logic.cpp">
@@ -37,10 +40,18 @@
     <ClCompile Include="qe3_u.c">
       <Filter>Generated Files</Filter>
     </ClCompile>
+    <ClCompile Include="id_enclave_u.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\enclave\qe3.edl">
       <Filter>Source Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\id_enclave\id_enclave.edl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

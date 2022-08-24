@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,5 +48,20 @@ typedef struct sgx_launch_request
 } sgx_launch_request_t;
 
 extern void *entry;
-void *start_launch_enclave(void);
-void sgx_get_token(struct sgx_launch_request *req, void *entry);
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    // Load the LE and return its address
+    void* start_launch_enclave(void);
+    
+    // Given an LE address in the parameter entry,
+    // this function will obtain a launch token 
+    // and fill in that field of the output variable req.
+    void sgx_get_token(struct sgx_launch_request* req, void* entry);
+
+#ifdef __cplusplus
+}
+#endif

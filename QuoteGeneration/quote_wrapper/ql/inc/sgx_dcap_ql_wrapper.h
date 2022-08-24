@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,7 +63,8 @@ typedef enum
 {
     SGX_QL_QE3_PATH,
     SGX_QL_PCE_PATH,
-    SGX_QL_QPL_PATH
+    SGX_QL_QPL_PATH,
+    SGX_QL_IDE_PATH,
 } sgx_ql_path_type_t;
 quote3_error_t sgx_ql_set_path(sgx_ql_path_type_t path_type, const char *p_path);
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,51 +29,75 @@
  *
  */
 
-const { pckcertService }= require('../services');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const Constants = require('../constants/');
+import { pckcertService } from '../services/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-exports.getPckCert = async function(req,res,next) {
-    try {
-        let qeid = req.query.qeid;
-        let cpusvn = req.query.cpusvn;
-        let pcesvn = req.query.pcesvn;
-        let pceid = req.query.pceid;
-        let enc_ppid = req.query.encrypted_ppid;
+export async function getPckCert(req, res, next) {
+  const QEID_MAX_SIZE = 260;
+  const CPUSVN_SIZE = 32;
+  const PCESVN_SIZE = 4;
+  const PCEID_SIZE = 4;
+  const ENC_PPID_SIZE = 768;
 
-        // validate request parameters
-        if (qeid == null || cpusvn == null || pcesvn == null || pceid == null) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-        if (qeid.length != Constants.QEID_SIZE || cpusvn.length != Constants.CPUSVN_SIZE 
-            || pcesvn.length != Constants.PCESVN_SIZE || pceid.length != Constants.PCEID_SIZE){
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
-        if (enc_ppid != null && enc_ppid.length != Constants.ENC_PPID_SIZE) {
-            throw new PccsError(PCCS_STATUS.PCCS_STATUS_INVALID_REQ);
-        }
+  try {
+    let qeid = req.query.qeid;
+    let cpusvn = req.query.cpusvn;
+    let pcesvn = req.query.pcesvn;
+    let pceid = req.query.pceid;
+    let enc_ppid = req.query.encrypted_ppid;
 
-        // normalize the request parameters
-        qeid = qeid.toUpperCase();
-        cpusvn = cpusvn.toUpperCase();
-        pcesvn = pcesvn.toUpperCase();
-        pceid = pceid.toUpperCase();
-        if (enc_ppid)  // can be null
-            enc_ppid = enc_ppid.toUpperCase();
-
-        // call service
-        const pckcertJson = await pckcertService.getPckCert(qeid, cpusvn, pcesvn, pceid, enc_ppid);
-
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0])
-           .header(Constants.SGX_TCBM, pckcertJson[Constants.SGX_TCBM])
-           .header(Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN, pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN])
-           .send(pckcertJson.cert);
+    // validate request parameters
+    if (!qeid || !cpusvn || !pcesvn || !pceid) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-    catch(err) {
-        next(err);
+    if (
+      qeid.length > QEID_MAX_SIZE ||
+      cpusvn.length != CPUSVN_SIZE ||
+      pcesvn.length != PCESVN_SIZE ||
+      pceid.length != PCEID_SIZE
+    ) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
-};
+    if (enc_ppid != null && enc_ppid.length != ENC_PPID_SIZE) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
 
+    // normalize the request parameters
+    qeid = qeid.toUpperCase();
+    cpusvn = cpusvn.toUpperCase();
+    pcesvn = pcesvn.toUpperCase();
+    pceid = pceid.toUpperCase();
+    if (enc_ppid)
+      // enc_ppid can be null
+      enc_ppid = enc_ppid.toUpperCase();
 
+    // call service
+    const pckcertJson = await pckcertService.getPckCert(
+      qeid,
+      cpusvn,
+      pcesvn,
+      pceid,
+      enc_ppid
+    );
+
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .header(Constants.SGX_TCBM, pckcertJson[Constants.SGX_TCBM])
+      .header(Constants.SGX_FMSPC, pckcertJson[Constants.SGX_FMSPC])
+      .header(
+        Constants.SGX_PCK_CERTIFICATE_CA_TYPE,
+        pckcertJson[Constants.SGX_PCK_CERTIFICATE_CA_TYPE]
+      )
+      .header(
+        Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN,
+        pckcertJson[Constants.SGX_PCK_CERTIFICATE_ISSUER_CHAIN]
+      )
+      .header('Content-Type', 'application/x-pem-file')
+      .send(pckcertJson['cert']);
+  } catch (err) {
+    next(err);
+  }
+}

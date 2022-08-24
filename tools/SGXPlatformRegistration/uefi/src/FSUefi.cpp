@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,7 +111,7 @@ uint8_t* FSUefi::readUEFIVar(const char* varName, size_t &dataSize)
     if (entire_var) {
         delete entire_var;
     }
-    if (fd) {
+    if (fd != -1) {
         close(fd);
     }
     return var_data;
@@ -208,9 +208,9 @@ int FSUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataSi
     } while (0);
 
     if (buffer) {
-        delete(buffer);
+        delete[] buffer;
     }
-    if (fd) {
+    if (fd != -1) {
         close(fd);
     }
     return (int)bytesWrote;

@@ -50,7 +50,7 @@ Parameters
         Base 16-encoded representation of FMSPC.
     fmspc_size [In]
         Length of fmspc.
-    ca [In]
+    pck_ca [In]
         Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
     pp_quote_collateral [Out]
         Pointer to a pointer to the PCK quote collateral data needed for quote verifcation. 
@@ -65,8 +65,64 @@ Return Values:
     SGX_QL_NO_QUOTE_COLLATERAL_DATA:
         The platform does not have the quote verification collateral data available.
 */
-quote3_error_t sgx_ql_get_quote_verification_collateral( const char *fmspc, uint16_t fmspc_size, const char *pck_ca,
-                          sgx_ql_qve_collateral_t **pp_quote_collateral);
+quote3_error_t sgx_ql_get_quote_verification_collateral( const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
+                        sgx_ql_qve_collateral_t **pp_quote_collateral);
+
+/**
+Parameters
+    fmspc [In]
+        Base 16-encoded representation of FMSPC.
+    fmspc_size [In]
+        Length of fmspc.
+    pck_ca [In]
+        Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
+    pp_quote_collateral [Out]
+        Pointer to a pointer to the PCK quote collateral data needed for quote verifcation. 
+
+Return Values:
+    SGX_QL_SUCCESS: 
+        The platform has the certification data available and has returned it in the p_quote_config buffer.
+    SGX_QL_INVALID_PARRAMETER: 
+        The parameters are incorrect.
+    SGX_QL_OUT_OF_MEMORY: 
+        Out of memory error.
+    SGX_QL_NO_QUOTE_COLLATERAL_DATA:
+        The platform does not have the quote verification collateral data available.
+*/
+quote3_error_t tdx_ql_get_quote_verification_collateral( const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
+                        tdx_ql_qve_collateral_t **pp_quote_collateral);                          
+
+/**
+Parameters
+    fmspc [In]
+        Base 16-encoded representation of FMSPC.
+    fmspc_size [In]
+        Length of fmspc.
+    pck_ca [In]
+        Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
+    custom_param [In]
+        Custom parameter that will be appended to request URL in Base64 format ( ...&customParameters=Base64(custom_param) )
+    custom_param_length [In]
+        Length of custom_param.
+    pp_quote_collateral [Out]
+        Pointer to a pointer to the PCK quote collateral data needed for quote verifcation. 
+
+Return Values:
+    SGX_QL_SUCCESS: 
+        The platform has the certification data available and has returned it in the p_quote_config buffer.
+    SGX_QL_INVALID_PARRAMETER: 
+        The parameters are incorrect.
+    SGX_QL_OUT_OF_MEMORY: 
+        Out of memory error.
+    SGX_QL_NO_QUOTE_COLLATERAL_DATA:
+        The platform does not have the quote verification collateral data available.
+*/
+quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc,
+                                                                    const uint16_t fmspc_size,
+                                                                    const char *pck_ca,
+                                                                    const void* custom_param,
+                                                                    const uint16_t custom_param_length,
+                                                                    sgx_ql_qve_collateral_t **pp_quote_collateral);
 
 /**
 Parameters:
@@ -77,6 +133,16 @@ Return Values:
         The buffer was freed successfully.
 */
 quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t *p_quote_collateral);
+
+/**
+Parameters:
+    p_quote_collateral [In]
+        Pointer to the PCK certification that the tdx_ql_get_quote_verification_collateral() API returns.
+Return Values:
+    SGX_QL_SUCCESS: 
+        The buffer was freed successfully.
+*/
+quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qve_collateral_t *p_quote_collateral);
 
 /**
 Parameters:
@@ -146,7 +212,14 @@ typedef struct _sgx_ql_config_t {
 /** This is the data provided to the quote verifier by the verifying platform software. */
 typedef struct _sgx_ql_qve_collateral_t
 {
-    uint32_t version;                      /// version = 1.  PCK Cert chain is in the Quote.
+    union {
+        uint32_t version;           ///< 'version' is the backward compatible legacy representation
+        struct {                    ///< For PCS V1 and V2 APIs, the major_version = 1 and minor_version = 0 and
+            uint16_t major_version; ///< the CRLs will be formatted in PEM. For PCS V3 APIs, the major_version = 3 and the
+            uint16_t minor_version; ///< minor_version can be either 0 or 1. minor_verion of 0 indicates the CRL’s are formatted
+                                    ///< in Base16 encoded DER.  A minor version of 1 indicates the CRL’s are formatted in raw binary DER.
+        };
+    };
     char *pck_crl_issuer_chain;
     uint32_t pck_crl_issuer_chain_size;
     char *root_ca_crl;                     /// Root CA CRL
@@ -162,3 +235,5 @@ typedef struct _sgx_ql_qve_collateral_t
     char *qe_identity;                     /// QE Identity Structure
     uint32_t qe_identity_size;
 }sgx_ql_qve_collateral_t;
+
+typedef sgx_ql_qve_collateral_t tdx_ql_qve_collateral_t;

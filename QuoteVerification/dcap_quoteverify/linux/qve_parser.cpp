@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,17 +44,19 @@
 #include <string.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "se_trace.h"
 #include "sgx_urts.h"
 #include "sgx_dcap_pcs_com.h"
 
-#define QvE_ENCLAVE_NAME "libsgx_qve.signed.so"
+#define QvE_ENCLAVE_NAME "libsgx_qve.signed.so.1"
+#define QvE_ENCLAVE_NAME_LEGACY "libsgx_qve.signed.so"
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
 #endif
 static char g_qve_path[MAX_PATH];
-
 
 extern "C" bool sgx_qv_set_qve_path(const char* p_path)
 {
@@ -111,5 +113,15 @@ bool get_qve_path(
     if(strnlen(p_file_path,buf_size)+strnlen(QvE_ENCLAVE_NAME,buf_size)+sizeof(char)>buf_size)
         return false;
     (void)strncat(p_file_path,QvE_ENCLAVE_NAME, strnlen(QvE_ENCLAVE_NAME,buf_size));
+    struct stat info;
+    if(stat(p_file_path, &info) != 0 ||
+        ((info.st_mode & S_IFREG) == 0 && (info.st_mode & S_IFLNK) == 0)) {
+        if ( p_last_slash != NULL )
+        {
+            *p_last_slash = '\0';  //null terminate the string
+        }
+        else p_file_path[0] = '\0';
+        (void)strncat(p_file_path, QvE_ENCLAVE_NAME_LEGACY, strnlen(QvE_ENCLAVE_NAME_LEGACY, buf_size));
+    }
     return true;
 }

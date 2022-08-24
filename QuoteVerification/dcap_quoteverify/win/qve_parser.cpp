@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include <windows.h>
 
 #define QvE_ENCLAVE_NAME _T("qve.signed.dll")
+
 bool get_qve_path(
     TCHAR *p_file_path,
     size_t buf_size)
@@ -67,9 +68,11 @@ bool get_qve_path(
     }
     else
         return false;
+
     if (_tcsnlen(QvE_ENCLAVE_NAME, MAX_PATH) + _tcsnlen(p_file_path, MAX_PATH) + sizeof(TCHAR) > buf_size)
         return false;
     if (_tcscat_s(p_file_path, buf_size, QvE_ENCLAVE_NAME))
         return false;
+
     return true;
 }

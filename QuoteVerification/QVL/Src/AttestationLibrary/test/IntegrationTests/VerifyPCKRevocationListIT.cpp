@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,8 +38,9 @@
 #include "X509CrlGenerator.h"
 
 using namespace testing;
-using namespace intel::sgx::qvl;
-using namespace intel::sgx::qvl::test;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 using namespace std;
 
 struct VerifyPCKRevocationListIT : public Test
@@ -76,24 +77,44 @@ struct VerifyPCKRevocationListIT : public Test
     }
 };
 
-TEST_F(VerifyPCKRevocationListIT, shouldVerifyRootCaCrlPositive)
+TEST_F(VerifyPCKRevocationListIT, shouldVerifyRootCaCrlPositiveWhenCrlIsPem)
 {
     const auto rootCaCertPEM = certGenerator.x509ToString(rootCaCert.get());
-    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
     EXPECT_EQ(STATUS_OK,
             sgxAttestationVerifyPCKRevocationList(rootCaCrlPEM.c_str(), rootCaCertPEM.c_str(), rootCaCertPEM.c_str()));
 }
 
-TEST_F(VerifyPCKRevocationListIT, shouldVerifyIntermediateCaCrlPositive)
+TEST_F(VerifyPCKRevocationListIT, shouldVerifyRootCaCrlPositiveWhenCrlIsDer)
+{
+    const auto rootCaCertPEM = certGenerator.x509ToString(rootCaCert.get());
+    const auto rootCaCrlDER = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
+
+    EXPECT_EQ(STATUS_OK,
+              sgxAttestationVerifyPCKRevocationList(rootCaCrlDER.c_str(), rootCaCertPEM.c_str(), rootCaCertPEM.c_str()));
+}
+
+TEST_F(VerifyPCKRevocationListIT, shouldVerifyIntermediateCaCrlPositiveWhenCrlIsPem)
 {
     const auto rootCaCertPEM = certGenerator.x509ToString(rootCaCert.get());
     const auto intermediateCaCertPEM = certGenerator.x509ToString(intermediateCaCert.get());
-    const auto intermediateCaCrlPEM = X509CrlGenerator::x509CrlToString(intermediateCaCrl.get());
+    const auto intermediateCaCrlPEM = X509CrlGenerator::x509CrlToPEMString(intermediateCaCrl.get());
     const auto certChain = rootCaCertPEM + intermediateCaCertPEM;
 
     EXPECT_EQ(STATUS_OK,
               sgxAttestationVerifyPCKRevocationList(intermediateCaCrlPEM.c_str(), certChain.c_str(), rootCaCertPEM.c_str()));
+}
+
+TEST_F(VerifyPCKRevocationListIT, shouldVerifyIntermediateCaCrlPositiveWhenCrlIsDer)
+{
+    const auto rootCaCertPEM = certGenerator.x509ToString(rootCaCert.get());
+    const auto intermediateCaCertPEM = certGenerator.x509ToString(intermediateCaCert.get());
+    const auto intermediateCaCrlDER = X509CrlGenerator::x509CrlToDERString(intermediateCaCrl.get());
+    const auto certChain = rootCaCertPEM + intermediateCaCertPEM;
+
+    EXPECT_EQ(STATUS_OK,
+              sgxAttestationVerifyPCKRevocationList(intermediateCaCrlDER.c_str(), certChain.c_str(), rootCaCertPEM.c_str()));
 }
 
 TEST_F(VerifyPCKRevocationListIT, shouldReturnCrlUnsupportedFormatWhenInvalidInput)
@@ -116,7 +137,7 @@ TEST_F(VerifyPCKRevocationListIT, shouldReturnCaCertUnsupportedFormatWhenInvalid
 {
     const auto trustedRootCaCert = certGenerator.x509ToString(rootCaCert.get());
     const auto invalidCertChainPEM = "No a valid X509 CERT CHAIN PEM";
-    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
     EXPECT_EQ(STATUS_SGX_CA_CERT_UNSUPPORTED_FORMAT,
               sgxAttestationVerifyPCKRevocationList(rootCaCrlPEM.c_str(), invalidCertChainPEM, trustedRootCaCert.c_str()));
@@ -126,7 +147,7 @@ TEST_F(VerifyPCKRevocationListIT, shouldReturnTrustedRootCaCertUnsupportedFormat
 {
     const auto certChain = certGenerator.x509ToString(rootCaCert.get());
     const auto invalidTrustedRootCaCert = "No a valid X509 CERT PEM";
-    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+    const auto rootCaCrlPEM = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
 
     EXPECT_EQ(STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT,
               sgxAttestationVerifyPCKRevocationList(rootCaCrlPEM.c_str(), certChain.c_str(), invalidTrustedRootCaCert));

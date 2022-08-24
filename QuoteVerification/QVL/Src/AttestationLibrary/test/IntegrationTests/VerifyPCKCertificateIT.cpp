@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,19 +30,17 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include <PckParser/PckParser.h>
 #include <CertVerification/X509Constants.h>
 #include <X509CertGenerator.h>
 #include <X509CrlGenerator.h>
-#include <iostream>
 #include <array>
 
 using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
+using namespace ::intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyPCKCertificateIT : public Test
 {
@@ -78,19 +76,27 @@ struct VerifyPCKCertificateIT : public Test
 
         cert = certGenerator.generatePCKCert(2, sn, timeNow, timeOneHour, key.get(), keyInt.get(),
                                                   constants::PCK_SUBJECT, constants::PLATFORM_CA_SUBJECT,
-                                                  ppid, cpusvn, pcesvn, pceId, fmspc);
+                                                  ppid, cpusvn, pcesvn, pceId, fmspc, 0);
     }
 
-    std::string getValidCrl(const crypto::X509_uptr &ucert)
+    std::string getValidPemCrl(const crypto::X509_uptr &ucert)
     {
         auto revokedList = std::vector<Bytes>{{0x12, 0x10, 0x13, 0x11}, {0x11, 0x33, 0xff, 0x56}};
         auto rootCaCRL = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, 0, 3600, ucert, revokedList);
 
-        return X509CrlGenerator::x509CrlToString(rootCaCRL.get());
+        return X509CrlGenerator::x509CrlToPEMString(rootCaCRL.get());
+    }
+
+    std::string getValidDerCrl(const crypto::X509_uptr &ucert)
+    {
+        auto revokedList = std::vector<Bytes>{{0x12, 0x10, 0x13, 0x11}, {0x11, 0x33, 0xff, 0x56}};
+        auto rootCaCRL = crlGenerator.generateCRL(CRLVersion::CRL_VERSION_2, 0, 3600, ucert, revokedList);
+
+        return X509CrlGenerator::x509CrlToDERString(rootCaCRL.get());
     }
 };
 
-TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreValid)
+TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreValidCrlAsPem)
 {
     // GIVEN
     auto rootCertPem = certGenerator.x509ToString(rootCert.get());
@@ -98,8 +104,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreVali
     auto pckPem = certGenerator.x509ToString(cert.get());
     auto certChain = rootCertPem  + intPem + pckPem;
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 
@@ -110,7 +116,47 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreVali
     EXPECT_EQ(STATUS_OK, result);
 }
 
-TEST_F(VerifyPCKCertificateIT, shouldReturnedTrustedrootCaUnsuportedFormatWhenRootCaCertPemIsWrong)
+TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreValidCrlAsDer)
+{
+    // GIVEN
+    auto rootCertPem = certGenerator.x509ToString(rootCert.get());
+    auto intPem = certGenerator.x509ToString(intCert.get());
+    auto pckPem = certGenerator.x509ToString(cert.get());
+    auto certChain = rootCertPem  + intPem + pckPem;
+
+    auto rootCaCrl = getValidDerCrl(rootCert);
+    auto intermediateCaCrl = getValidDerCrl(intCert);
+
+    const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
+
+    // WHEN
+    auto result = sgxAttestationVerifyPCKCertificate(certChain.c_str(), crls.data(), rootCertPem.c_str(), nullptr);
+
+    // THEN
+    EXPECT_EQ(STATUS_OK, result);
+}
+
+TEST_F(VerifyPCKCertificateIT, shouldReturnedStatusOkWhenPassingArgumnetsAreValidCrlFormatsMixed)
+{
+    // GIVEN
+    auto rootCertPem = certGenerator.x509ToString(rootCert.get());
+    auto intPem = certGenerator.x509ToString(intCert.get());
+    auto pckPem = certGenerator.x509ToString(cert.get());
+    auto certChain = rootCertPem  + intPem + pckPem;
+
+    auto rootCaCrl = getValidDerCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
+
+    const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
+
+    // WHEN
+    auto result = sgxAttestationVerifyPCKCertificate(certChain.c_str(), crls.data(), rootCertPem.c_str(), nullptr);
+
+    // THEN
+    EXPECT_EQ(STATUS_OK, result);
+}
+
+TEST_F(VerifyPCKCertificateIT, shouldReturnedTrustedrootCaUnsuportedFormatWhenRootCaCertDerIsWrong)
 {
     // GIVEN
     auto rootCertPem = certGenerator.x509ToString(rootCert.get());
@@ -119,8 +165,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedTrustedrootCaUnsuportedFormatWhenRo
     auto certChain = rootCertPem  + intPem + pckPem;
     auto rootCertPemWrong = "rootCertPemWrong";
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 
@@ -140,7 +186,7 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedCrlUnsuportedFormatWhenRootCaCrlIsW
     auto certChain = rootCertPem  + intPem + pckPem;
     auto rotCaCrlWrong = "rootCertPemWrong";
 
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rotCaCrlWrong, intermediateCaCrl.data()}};
 
@@ -160,7 +206,27 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedCrlUnsuportedFormatWhenIntermediate
     auto certChain = rootCertPem  + intPem + pckPem;
     auto intermediateWrong = "intermediateWrong";
 
-    auto rootCaCrl = getValidCrl(rootCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+
+    const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateWrong}};
+
+    // WHEN
+    auto result = sgxAttestationVerifyPCKCertificate(certChain.c_str(), crls.data(), rootCertPem.c_str(), nullptr);
+
+    // THEN
+    EXPECT_EQ(STATUS_SGX_CRL_UNSUPPORTED_FORMAT, result);
+}
+
+TEST_F(VerifyPCKCertificateIT, shouldReturnedCrlUnsuportedFormatWhenIntermediateCrlPEMIsWrong)
+{
+    // GIVEN
+    auto rootCertPem = certGenerator.x509ToString(rootCert.get());
+    auto intPem = certGenerator.x509ToString(intCert.get());
+    auto pckPem = certGenerator.x509ToString(cert.get());
+    auto certChain = rootCertPem  + intPem + pckPem;
+    auto intermediateWrong = "-----BEGIN X509 CRL-----\n intermediateWrong";
+
+    auto rootCaCrl = getValidPemCrl(rootCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateWrong}};
 
@@ -177,8 +243,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUnsuportedCertFormatWhenCertChainPa
     auto rootCertPem = certGenerator.x509ToString(rootCert.get());
     auto certChain = "wrongCertChain";
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 
@@ -196,8 +262,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUnsuportedCertFormatWhenCertChainLe
     auto intPem = certGenerator.x509ToString(intCert.get());
     auto certChainWithWrongSize = rootCertPem  + intPem ;
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 
@@ -217,8 +283,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUnsuportedCertFormatWhenCertChainIs
     auto pckPem = certGenerator.x509ToString(cert.get());
     auto certChainWithWrongSize = rootCertPem  + intPem ;
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 
@@ -237,7 +303,7 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUsuportedCertFormatWhenRootCaCrlIsN
     auto pckPem = certGenerator.x509ToString(cert.get());
     auto certChain = rootCertPem  + intPem + pckPem;
 
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{nullptr, intermediateCaCrl.data()}};
 
@@ -256,7 +322,7 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUsuportedCertFormatWhenIntermediate
     auto pckPem = certGenerator.x509ToString(cert.get());
     auto certChain = rootCertPem  + intPem + pckPem;
 
-    auto rootCaCrl = getValidCrl(rootCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), nullptr}};
 
@@ -290,8 +356,8 @@ TEST_F(VerifyPCKCertificateIT, shouldReturnedUsuportedCertFormatWhenRootCertIsNu
     auto pckPem = certGenerator.x509ToString(cert.get());
     auto certChain = rootCertPem  + intPem + pckPem;
 
-    auto rootCaCrl = getValidCrl(rootCert);
-    auto intermediateCaCrl = getValidCrl(intCert);
+    auto rootCaCrl = getValidPemCrl(rootCert);
+    auto intermediateCaCrl = getValidPemCrl(intCert);
 
     const std::array<const char*, 2> crls{{rootCaCrl.data(), intermediateCaCrl.data()}};
 

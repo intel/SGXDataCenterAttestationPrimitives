@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 #include <algorithm>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 
 Status CertificateChain::parse(const std::string& pemCertChain)
@@ -187,7 +187,7 @@ std::vector<std::string> CertificateChain::splitChain(const std::string &pemChai
     const size_t begPos = pemChain.find(begCert);
     const size_t endPos = pemChain.find(endCert);
 
-    if(begPos == std::string::npos || endPos == std::string::npos)
+    if(begPos == std::string::npos || endPos == std::string::npos || begPos >= endPos)
     {
         return {};
     }
@@ -216,6 +216,11 @@ std::vector<std::string> CertificateChain::splitChain(const std::string &pemChai
 
         newStartPos = newEndPos;
         foundEndPos = pemChain.find(endCert, newStartPos);
+
+        if (foundEndPos <= newStartPos)
+        {
+            return {};
+        }
     }
 
     return ret;

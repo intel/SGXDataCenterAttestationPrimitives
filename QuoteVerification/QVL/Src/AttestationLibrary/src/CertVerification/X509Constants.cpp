@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 #include "X509Constants.h"
 
-namespace intel { namespace sgx { namespace qvl { namespace constants {
+namespace intel { namespace sgx { namespace dcap { namespace constants {
 
 const dcap::parser::x509::DistinguishedName ROOT_CA_SUBJECT
 {
@@ -133,4 +133,4 @@ const std::vector<int> CRL_REQUIRED_EXTENSIONS
         NID_crl_number,
         NID_authority_key_identifier
 };
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace constants {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace constants {

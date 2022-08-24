@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,8 +37,8 @@ include $(TOP_DIR)/ae/buildenv.mk
 AENAME := qe3
 SONAME := $(AENAME).so
 
+QE3_VER:= $(shell awk '$$2 ~ /QE3_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
 
-CONFIG := config.xml
 TCRYPTO_LIB_NAME := sgx_tcrypto
 
 INCLUDE := -I$(SGX_SDK)/include                        \
@@ -65,7 +65,8 @@ OBJS := $(sort $(OBJ) version.o)
 all: $(SONAME)
 
 $(SONAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS) -fno-exceptions -fno-rtti
+	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles -Wl,-soname=libsgx_${AENAME}.signed.so.$(call SPLIT_VERSION,$(QE3_VER),1)  $(LDTFLAGS) -fno-exceptions -fno-rtti
+	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 
 quoting_enclave_3.o: $(AENAME)_t.c
 

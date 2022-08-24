@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,10 +32,11 @@
 #ifndef SGX_DCAP_PARSERS_OID_UTILS_H
 #define SGX_DCAP_PARSERS_OID_UTILS_H
 
-#include "OpensslTypes.h"
+#include "OpensslHelpers/OpensslTypes.h"
 
 #include <openssl/asn1.h>
 
+#include <string>
 #include <vector>
 
 namespace intel { namespace sgx { namespace dcap { namespace crypto {
@@ -44,7 +45,7 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
 void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expectedType, int expectedLength);
 std::vector<uint8_t> oidToBytes(const ASN1_TYPE *oidValue);
 uint8_t oidToByte(const ASN1_TYPE *oidValue);
-unsigned int oidToUInt(const ASN1_TYPE *oidValue);
+uint32_t oidToUInt(const ASN1_TYPE *oidValue);
 int oidToEnum(const ASN1_TYPE *oidValue);
 STACK_OF_ASN1TYPE_uptr oidToStack(const ASN1_TYPE *oidValue);
 

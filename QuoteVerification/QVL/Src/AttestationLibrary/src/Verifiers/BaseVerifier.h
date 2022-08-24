@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #include <PckParser/PckParser.h>
 #include <SgxEcdsaAttestation/AttestationParsers.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
             class BaseVerifier {
             public:
@@ -44,6 +44,6 @@ namespace intel { namespace sgx { namespace qvl {
                 bool commonNameContains(const dcap::parser::x509::DistinguishedName &name, const std::string& pattern) const;
             };
 
-        }}} // namespace intel { namespace sgx { namespace qvl {
+        }}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_BASEVERIFIER_H

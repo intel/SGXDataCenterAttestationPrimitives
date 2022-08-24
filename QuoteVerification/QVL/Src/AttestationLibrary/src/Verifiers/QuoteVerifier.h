@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,9 @@
 #include <QuoteVerification/Quote.h>
 #include "EnclaveReportVerifier.h"
 #include "BaseVerifier.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class QuoteVerifier
 {
@@ -50,14 +50,14 @@ public:
                   const dcap::parser::x509::PckCertificate& pckCert,
                   const pckparser::CrlStore& crl,
                   const dcap::parser::json::TcbInfo& tcbInfoJson,
-                  const EnclaveIdentity *enclaveIdentity,
+                  const EnclaveIdentityV2 *enclaveIdentity,
                   const EnclaveReportVerifier& enclaveReportVerifier);
 
 private:
-    Status verifyQeCertData(const Quote::QeCertData& qeCertData) const;
+    Status verifyCertificationData(const CertificationData& certificationData) const;
     BaseVerifier _baseVerififer;
 };
 
-}}}// namespace intel { namespace sgx { namespace qvl {
+}}}// namespace intel { namespace sgx { namespace dcap {
 
 #endif

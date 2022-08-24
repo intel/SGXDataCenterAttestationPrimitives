@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,112 +32,57 @@
 #ifndef INTEL_SGX_QVL_QUOTE_H_
 #define INTEL_SGX_QVL_QUOTE_H_
 
-#include <cstdint>
-#include <array>
-#include <vector>
+#include "QuoteStructures.h"
 
-namespace intel { namespace sgx { namespace qvl {
-
+namespace intel { namespace sgx { namespace dcap {
+using namespace intel::sgx::dcap::quote;
 
 class Quote
 {
 public:
-
-    struct Header
-    {
-        uint16_t version;
-        uint16_t attestationKeyType;
-        std::array<uint8_t, 4> reserved;
-        uint16_t qeSvn;
-        uint16_t pceSvn;
-        std::array<uint8_t, 16> uuid;
-        std::array<uint8_t, 20> userData;
-
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    };
-
-    struct EnclaveReport
-    {
-        std::array<uint8_t, 16> cpuSvn;
-        uint32_t miscSelect;
-        std::array<uint8_t, 28> reserved1;
-        std::array<uint8_t, 16> attributes;
-        std::array<uint8_t, 32> mrEnclave;
-        std::array<uint8_t, 32> reserved2;
-        std::array<uint8_t, 32> mrSigner;
-        std::array<uint8_t, 96> reserved3;
-        uint16_t isvProdID;
-        uint16_t isvSvn;
-        std::array<uint8_t, 60> reserved4;
-        std::array<uint8_t, 64> reportData;
-        
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-        std::array<uint8_t,384> rawBlob() const;
-    };
-
-    struct Ecdsa256BitSignature
-    {
-        std::array<uint8_t, 64> signature;
-
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    };
-
-    struct Ecdsa256BitPubkey
-    {
-        std::array<uint8_t, 64> pubKey;
-
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    };
-
-    struct QeAuthData
-    {
-        uint16_t parsedDataSize;
-        std::vector<uint8_t> data;
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    };
-
-    struct QeCertData
-    {
-        uint16_t type;
-        uint32_t parsedDataSize;
-        std::vector<uint8_t> data;
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    };
-
-    struct Ecdsa256BitQuoteAuthData
-    {
-        Ecdsa256BitSignature ecdsa256BitSignature;
-        Ecdsa256BitPubkey ecdsaAttestationKey;
-        
-        EnclaveReport qeReport;
-        Ecdsa256BitSignature qeReportSignature;
-        QeAuthData qeAuthData;
-        QeCertData qeCertData;
-
-        bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    }; 
-
     bool parse(const std::vector<uint8_t>& rawQuote);
-    bool parseEnclaveReport(const std::vector<uint8_t>& rawQuote);
+
+    bool validate() const;
 
     const Header& getHeader() const;
-    const EnclaveReport& getBody() const;
+    const EnclaveReport& getEnclaveReport() const;
+    const TDReport& getTdReport() const;
     uint32_t getAuthDataSize() const;
-    const Ecdsa256BitQuoteAuthData& getQuoteAuthData() const;
     const std::vector<uint8_t>& getSignedData() const;
 
-private:
-    std::vector<uint8_t> getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote) const;
+    // Auth data getters
+    const Ecdsa256BitQuoteV3AuthData& getAuthDataV3() const;
+    const Ecdsa256BitQuoteV4AuthData& getAuthDataV4() const;
+    const std::array<uint8_t, constants::ECDSA_SIGNATURE_BYTE_LEN>& getQeReportSignature() const;
+    const EnclaveReport& getQeReport() const;
+    const std::array<uint8_t, constants::ECDSA_PUBKEY_BYTE_LEN>& getAttestKeyData() const;
+    const std::vector<uint8_t>& getQeAuthData() const;
+    const CertificationData& getCertificationData() const;
+    const std::array<uint8_t, constants::ECDSA_SIGNATURE_BYTE_LEN>& getQuoteSignature() const;
 
 protected:
-    std::vector<uint8_t> signedData{};
     Header header{};
-    EnclaveReport body{};
-    uint32_t authDataSize{0};
-    Ecdsa256BitQuoteAuthData authData{};
+    EnclaveReport enclaveReport{};
+    TDReport tdReport{};
+    uint32_t authDataSize;
+    std::vector<uint8_t> signedData{};
+
+    // Auth data
+    Ecdsa256BitQuoteV3AuthData authDataV3{};
+    Ecdsa256BitQuoteV4AuthData authDataV4{};
+    std::array<uint8_t, constants::ECDSA_SIGNATURE_BYTE_LEN> qeReportSignature{};
+    EnclaveReport qeReport{};
+    std::array<uint8_t, constants::ECDSA_PUBKEY_BYTE_LEN> attestKeyData{};
+    std::vector<uint8_t> qeAuthData{};
+    CertificationData certificationData{};
+    std::array<uint8_t, constants::ECDSA_SIGNATURE_BYTE_LEN> quoteSignature{};
+
+private:
+    std::vector<uint8_t> getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote,
+                                                        const std::vector<uint8_t>::difference_type) const;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl { namespace test {
+}}} // namespace intel { namespace sgx { namespace dcap { namespace test {
 
 
 #endif //SGXECDSAATTESTATION_QUOTEGENERATOR_H

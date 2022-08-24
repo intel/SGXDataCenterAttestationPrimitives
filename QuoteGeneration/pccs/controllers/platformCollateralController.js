@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,19 +29,21 @@
  *
  */
 
-const { platformCollateralService }= require('../services');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
+import { platformCollateralService } from '../services/index.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import * as appUtil from '../utils/apputil.js';
 
-exports.putPlatformCollateral = async function(req, res, next) {
-    try {
-        // call service
-        let platf = await platformCollateralService.addPlatformCollateral(req.body);
+export async function putPlatformCollateral(req, res, next) {
+  try {
+    // call service
+    let version = appUtil.get_api_version_from_url(req.originalUrl);
+    let platf = await platformCollateralService.addPlatformCollateral(req.body, version);
 
-        // send response
-        res.status(PCCS_STATUS.PCCS_STATUS_SUCCESS[0]).send(PCCS_STATUS.PCCS_STATUS_SUCCESS[1]);
-    }
-    catch(err) {
-        next(err);
-    }
-};
-
+    // send response
+    res
+      .status(PccsStatus.PCCS_STATUS_SUCCESS[0])
+      .send(PccsStatus.PCCS_STATUS_SUCCESS[1]);
+  } catch (err) {
+    next(err);
+  }
+}

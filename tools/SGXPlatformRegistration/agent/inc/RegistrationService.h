@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,8 @@ class RegistrationService {
         MPUefi *m_uefi;
         MPNetwork *m_network;
         LogLevel m_gLogLevel;
+        RegistrationService& operator=(const RegistrationService&) {return *this;}
+        RegistrationService(const RegistrationService& src) {(void) src; }
 };
 #pragma pack(pop) 
 #endif  // #ifndef __REGISTRATION_SERVICE_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
  */
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <CertVerification/X509Constants.h>
@@ -40,8 +39,9 @@
 #include "X509CrlGenerator.h"
 
 using namespace testing;
-using namespace intel::sgx::qvl::test;
-using namespace intel::sgx::qvl;
+using namespace intel::sgx::dcap;
+using namespace intel::sgx::dcap::test;
+using namespace intel::sgx::dcap::parser::test;
 
 struct VerifyEnclaveIdentityIT : public Test
 {
@@ -81,7 +81,7 @@ TEST_F(VerifyEnclaveIdentityIT, nullptrRootCertShoudReturnUnsupportedCertStatus)
                                                                              nullptr));
 }
 
-TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOk)
+TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrlAsDER)
 {
     auto keyRoot = certGenerator.generateEcKeypair();
     auto tcbSigningKey = certGenerator.generateEcKeypair();
@@ -97,14 +97,43 @@ TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOk)
     auto rootCertPem = certGenerator.x509ToString(rootCert.get());
     auto intPem = certGenerator.x509ToString(tcbSigningCert.get());
     auto certChain = rootCertPem  + intPem;
-    auto rootCaCrlPem = X509CrlGenerator::x509CrlToString(rootCaCrl.get());
+    auto rootCaCrlDer = X509CrlGenerator::x509CrlToDERString(rootCaCrl.get());
 
-    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toJSON();
+    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toV2JSON();
     auto qeIdentityBodyBytes = Bytes{};
     qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), qeIdentityBody.begin(), qeIdentityBody.end());
     auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, tcbSigningKey.get());
 
-    auto qeIdentityJson = qeIdentityJsonWithSignature(qeIdentityBody,
+    auto qeIdentityJson = enclaveIdentityJsonWithSignature(qeIdentityBody,
+                                                      EcdsaSignatureGenerator::signatureToHexString(signature));
+
+    ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveIdentity(qeIdentityJson.c_str(), certChain.c_str(), rootCaCrlDer.c_str(), rootCertPem.c_str(), nullptr));
+}
+
+TEST_F(VerifyEnclaveIdentityIT, verifyEnclaveIdentityShouldReturnStatusOkWhenCrlAsPEM)
+{
+    auto keyRoot = certGenerator.generateEcKeypair();
+    auto tcbSigningKey = certGenerator.generateEcKeypair();
+
+    auto rootCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, keyRoot.get(), keyRoot.get(),
+                                                 constants::ROOT_CA_SUBJECT, constants::ROOT_CA_SUBJECT);
+
+    auto tcbSigningCert = certGenerator.generateCaCert(2, serialNumber, timeNow, timeOneHour, tcbSigningKey.get(), keyRoot.get(),
+                                                       constants::TCB_SUBJECT, constants::ROOT_CA_SUBJECT);
+
+    auto rootCaCrl = crlGenerator.generateCRL(CRL_VERSION_2, timeNow, timeOneHour, rootCert, std::vector<Bytes>{});
+
+    auto rootCertPem = certGenerator.x509ToString(rootCert.get());
+    auto intPem = certGenerator.x509ToString(tcbSigningCert.get());
+    auto certChain = rootCertPem  + intPem;
+    auto rootCaCrlPem = X509CrlGenerator::x509CrlToPEMString(rootCaCrl.get());
+
+    auto qeIdentityBody = EnclaveIdentityVectorModel{}.toV2JSON();
+    auto qeIdentityBodyBytes = Bytes{};
+    qeIdentityBodyBytes.insert(qeIdentityBodyBytes.end(), qeIdentityBody.begin(), qeIdentityBody.end());
+    auto signature = EcdsaSignatureGenerator::signECDSA_SHA256(qeIdentityBodyBytes, tcbSigningKey.get());
+
+    auto qeIdentityJson = enclaveIdentityJsonWithSignature(qeIdentityBody,
                                                       EcdsaSignatureGenerator::signatureToHexString(signature));
 
     ASSERT_EQ(STATUS_OK, sgxAttestationVerifyEnclaveIdentity(qeIdentityJson.c_str(), certChain.c_str(), rootCaCrlPem.c_str(), rootCertPem.c_str(), nullptr));

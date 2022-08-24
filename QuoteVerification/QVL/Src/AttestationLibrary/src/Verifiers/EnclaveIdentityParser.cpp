@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,14 @@
 #include <QuoteVerification/QuoteConstants.h>
 #include <OpensslHelpers/Bytes.h>
 #include "EnclaveIdentityParser.h"
-#include "EnclaveIdentityV1.h"
 #include "EnclaveIdentityV2.h"
 
 #include <tuple>
 #include <memory>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
-    std::unique_ptr<qvl::EnclaveIdentity> EnclaveIdentityParser::parse(const std::string &input)
+    std::unique_ptr<dcap::EnclaveIdentityV2> EnclaveIdentityParser::parse(const std::string &input)
     {
         if (!jsonParser.parse(input))
         {
@@ -66,17 +65,10 @@ namespace intel { namespace sgx { namespace qvl {
 
         auto signatureBytes = hexStringToBytes(signature->GetString());
 
-        unsigned int version = 0;
-        bool status = false;
+        uint32_t version = 0;
+        auto status = JsonParser::ParseStatus::Missing;
 
-        // v1 qeidentity has a different field name for enclave identity body.
-        // First check if it exists.
-        auto identityField = jsonParser.getField("qeIdentity");
-        if (identityField == nullptr)
-        {
-            // If not take new field
-            identityField = jsonParser.getField("enclaveIdentity");
-        }
+        auto identityField = jsonParser.getField("enclaveIdentity");
 
         if (identityField == nullptr || !identityField->IsObject())
         {
@@ -84,7 +76,7 @@ namespace intel { namespace sgx { namespace qvl {
         }
 
         std::tie(version, status) = jsonParser.getIntFieldOf(*identityField, "version");
-        if (!status)
+        if (status != JsonParser::OK)
         {
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
@@ -92,20 +84,9 @@ namespace intel { namespace sgx { namespace qvl {
         /// 4.1.2.9.4
         switch(version)
         {
-            case EnclaveIdentity::V1:
+            case EnclaveIdentityV2::V2:
             {
-                std::unique_ptr<qvl::EnclaveIdentity> identity = std::unique_ptr<qvl::EnclaveIdentityV1>(new EnclaveIdentityV1(*identityField)); // TODO make std::make_unique work in SGX enclave
-                if (identity->getStatus() != STATUS_OK)
-                {
-                    throw ParserException(identity->getStatus());
-                }
-                identity->setSignature(signatureBytes);
-
-                return identity;
-            }
-            case EnclaveIdentity::V2:
-            {
-                std::unique_ptr<qvl::EnclaveIdentity> identity = std::unique_ptr<qvl::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
+                std::unique_ptr<dcap::EnclaveIdentityV2> identity = std::unique_ptr<dcap::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
                 if (identity->getStatus() != STATUS_OK)
                 {
                     throw ParserException(identity->getStatus());

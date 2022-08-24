@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
  */
 
 #include <iostream>
-#include <sstream>
 #include <memory>
 #include "AppCore/AppCore.h"
 #include "AppCore/AppOptions.h"
@@ -40,14 +39,14 @@
 
 int main(int argc, char* argv[])
 {
-    auto libAdapter = std::make_shared<intel::sgx::qvl::AttestationLibraryAdapter>();
-    auto fileReader = std::make_shared<intel::sgx::qvl::FileReader>();
-    intel::sgx::qvl::AppCore app(libAdapter, fileReader);
+    auto libAdapter = std::make_shared<intel::sgx::dcap::AttestationLibraryAdapter>();
+    auto fileReader = std::make_shared<intel::sgx::dcap::FileReader>();
+    intel::sgx::dcap::AppCore app(libAdapter, fileReader);
 
     std::stringstream logger;
 
 
-    intel::sgx::qvl::AppOptionsParser optionsParser;
+    intel::sgx::dcap::AppOptionsParser optionsParser;
     auto options = optionsParser.parse(argc, argv, logger);
     if(nullptr == options)
     {

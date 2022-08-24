@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,12 +33,12 @@
 #include <gmock/gmock.h>
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
-#include "QuoteGenerator.h"
+#include "QuoteV3Generator.h"
 #include "Constants/QuoteTestConstants.h"
 #include <numeric>
 
 using namespace testing;
-using namespace ::intel::sgx::qvl;
+using namespace ::intel::sgx::dcap;
 
 struct GetQECertificationDataTests : public Test
 {
@@ -48,9 +48,9 @@ struct GetQECertificationDataTests : public Test
 
     Bytes prepareQuoteWithCertData(const uint16_t type, const Bytes &data) const
     {
-        test::QuoteGenerator generator;
+        test::QuoteV3Generator generator;
         const Bytes pckData{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-        generator.withQeCertData(type, data)
+        generator.withCertificationData(type, data)
                  .withAuthDataSize((uint32_t)(generator.getAuthSize() + data.size()));
         return generator.buildQuote();
     }
@@ -107,7 +107,7 @@ TEST_F(GetQECertificationDataTests, qeCertificationDataSizeAsParameterDiffersFro
                       quote.data(), (uint32_t) quote.size(), placeholderSize, placeholder, &placeholderQeCertificationDataType));
 }
 
-TEST_F(GetQECertificationDataTests, positiveEmptyQeCertDataShouldReturnOkStatusAndUpdateQeCertificationDataAndType)
+TEST_F(GetQECertificationDataTests, positiveEmptycertificationDataShouldReturnOkStatusAndUpdateQeCertificationDataAndType)
 {
     // GIVEN
     const auto expectedQeCertType = test::constants::PCK_ID_PLAIN_PPID;
@@ -128,22 +128,22 @@ TEST_F(GetQECertificationDataTests, positiveEmptyQeCertDataShouldReturnOkStatusA
 
     // THEN
     EXPECT_EQ(STATUS_OK, status);
-    EXPECT_EQ(expectedQeCertType, qeCertificationDataType) << "QeCertDataType extracted from quote does not match expected";
-    EXPECT_EQ(std::vector<uint8_t>(CERT_DATA_BUFFER_SIZE), qeCertificationDataBuffer) << "QeCertData extracted from quote does not match expected";
+    EXPECT_EQ(expectedQeCertType, qeCertificationDataType) << "certificationDataType extracted from quote does not match expected";
+    EXPECT_EQ(std::vector<uint8_t>(CERT_DATA_BUFFER_SIZE), qeCertificationDataBuffer) << "CertificationData extracted from quote does not match expected";
 }
 
 struct GetQECertificationDataPositiveTests : public GetQECertificationDataTests,
     public WithParamInterface<uint16_t>
 {};
 
-TEST_P(GetQECertificationDataPositiveTests, validQeCertDataShouldReturnOkStatusAndUpdateQeCertificationDataAndType)
+TEST_P(GetQECertificationDataPositiveTests, validcertificationDataShouldReturnOkStatusAndUpdateQeCertificationDataAndType)
 {
     // GIVEN
     const auto expectedQeCertType = GetParam();
-    const auto expectedQeCertData = Bytes{'p', 'c', 'k', 'd', 'a', 't', 'a'};
-    const auto quote = prepareQuoteWithCertData(expectedQeCertType, expectedQeCertData);
+    const auto expectedcertificationData = Bytes{'p', 'c', 'k', 'd', 'a', 't', 'a'};
+    const auto quote = prepareQuoteWithCertData(expectedQeCertType, expectedcertificationData);
 
-    std::vector<uint8_t> qeCertificationDataBuffer(expectedQeCertData.size(), 0x00);  // allocate an empty vector, it should be unchanged
+    std::vector<uint8_t> qeCertificationDataBuffer(expectedcertificationData.size(), 0x00);  // allocate an empty vector, it should be unchanged
     uint16_t qeCertificationDataType = 0;
 
     // WHEN
@@ -156,8 +156,8 @@ TEST_P(GetQECertificationDataPositiveTests, validQeCertDataShouldReturnOkStatusA
 
     // THEN
     EXPECT_EQ(STATUS_OK, status);
-    EXPECT_EQ(expectedQeCertType, qeCertificationDataType) << "QeCertDataType extracted from quote does not match expected";
-    EXPECT_EQ(expectedQeCertData, qeCertificationDataBuffer) << "QeCertData extracted from quote does not match expected";
+    EXPECT_EQ(expectedQeCertType, qeCertificationDataType) << "certificationDataType extracted from quote does not match expected";
+    EXPECT_EQ(expectedcertificationData, qeCertificationDataBuffer) << "CertificationData extracted from quote does not match expected";
 }
 
 INSTANTIATE_TEST_SUITE_P(AllSupportedPckIdTypes,

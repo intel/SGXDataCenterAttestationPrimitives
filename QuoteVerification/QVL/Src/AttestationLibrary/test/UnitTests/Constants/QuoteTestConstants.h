@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 
 #include <array>
 
-namespace intel { namespace sgx { namespace qvl { namespace test{ namespace constants {
+namespace intel { namespace sgx { namespace dcap { namespace test{ namespace constants {
 
 const uint16_t QUOTE_VERSION = 3;
 
@@ -46,7 +46,8 @@ const uint16_t PCK_ID_ENCRYPTED_PPID_2048 = 2;
 const uint16_t PCK_ID_ENCRYPTED_PPID_3072 = 3;
 const uint16_t PCK_ID_PCK_CERTIFICATE = 4;
 const uint16_t PCK_ID_PCK_CERT_CHAIN = 5;
-const uint16_t UNSUPPORTED_PCK_ID = 6;
+const uint16_t PCK_ID_QE_REPORT_CERTIFICATION_DATA = 6;
+const uint16_t UNSUPPORTED_PCK_ID = 7;
 
 const size_t PPID_BYTE_LEN = 16;
 const size_t CPUSVN_BYTE_LEN = 16;
@@ -55,6 +56,6 @@ const size_t PCESVN_BYTE_LEN = 2;
 const std::array<uint16_t, 1> ALLOWED_ATTESTATION_KEY_TYPES = {{ ECDSA_256_WITH_P256_CURVE }};
 const std::array<uint8_t, 16> INTEL_QE_VENDOR_ID = {{ 0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F, 0x06, 0x07 }};
 
-}}}}} // namespace intel { namespace sgx { namespace qvl { namespace test { namespace constants {
+}}}}} // namespace intel { namespace sgx { namespace dcap { namespace test { namespace constants {
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,11 +38,11 @@ namespace intel { namespace sgx { namespace dcap { namespace parser {
 
 extern const std::vector<uint8_t> CPUSVN;
 extern const std::vector<uint8_t> CPUSVN_COMPONENTS;
-extern unsigned int PCESVN;
+extern uint32_t PCESVN;
 
 x509::Tcb createTcb(const std::vector<uint8_t>& cpusvn = CPUSVN,
                     const std::vector<uint8_t>& cpusvnComps = CPUSVN_COMPONENTS,
-                    unsigned int notAfterTime = PCESVN);
+                    uint32_t notAfterTime = PCESVN);
 
 }}}} // namespace intel { namespace sgx { namespace dcap { namespace parser {
 

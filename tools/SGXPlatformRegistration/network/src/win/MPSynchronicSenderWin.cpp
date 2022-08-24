@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,6 +81,7 @@ static MpResult http_network_init(http_network_info_t *info, const char *url, Pr
     DWORD request_flags = 0;
     DWORD temp_value = 0;
     DWORD options_flags = 0;
+    DWORD dwEnableSSLRevocOpt = 0;
     size_t count = 0;
     LogLevel m_logLevel = info->log_level;
 
@@ -187,6 +188,14 @@ static MpResult http_network_init(http_network_info_t *info, const char *url, Pr
     temp_value = DEFAULT_CONNECT_TIME_OUT_VALUE;//set default connection timeout value
     if (!WinHttpSetOption(info->http_handle, WINHTTP_OPTION_CONNECT_TIMEOUT, &temp_value, sizeof(DWORD))) {
         network_log_message(MP_REG_LOG_LEVEL_ERROR, "Fail to set timeout information, last error: %d\n", GetLastError());
+        ret = MP_NETWORK_ERROR;
+        goto out;
+    }
+
+    // Enable the certificate revocation check
+    dwEnableSSLRevocOpt = WINHTTP_ENABLE_SSL_REVOCATION;
+    if (!WinHttpSetOption(info->http_handle, WINHTTP_OPTION_ENABLE_FEATURE, &dwEnableSSLRevocOpt, sizeof(dwEnableSSLRevocOpt))) {
+        network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error enabing SSL revocation check with error code: %d\n", GetLastError());
         ret = MP_NETWORK_ERROR;
         goto out;
     }
@@ -411,10 +420,10 @@ static MpResult http_network_send_data(http_network_info_t *info, const string& 
                 size_t count_coverted = 0;
                 errno_t err_covert = wcstombs_s(&count_coverted, header_line_str_char, (const wchar_t *)header_line_str, sizeof(header_line_str_char));
                 if (0 == err_covert && wcslen((const wchar_t *)header_line_str) + 1 == count_coverted) {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Found response Error-Code: %s\n", header_line_str_char);
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Found response Error-Code: %s\n", header_line_str_char);
                     errorCodeStr = string(header_line_str_char);
                 } else {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Error during Error-Code convertion: %d, last error: %d\n", err_covert, GetLastError());
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error during Error-Code convertion: %d, last error: %d\n", err_covert, GetLastError());
                     break;
                 }
             }
@@ -429,10 +438,10 @@ static MpResult http_network_send_data(http_network_info_t *info, const string& 
                 size_t count_coverted = 0;
                 errno_t err_covert = wcstombs_s(&count_coverted, header_line_str_char, (const wchar_t *)header_line_str, sizeof(header_line_str_char));
                 if (0 == err_covert && wcslen((const wchar_t *)header_line_str) + 1 == count_coverted) {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Found response Error-Message: %s\n", header_line_str_char);
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Found response Error-Message: %s\n", header_line_str_char);
                 }
                 else {
-                    network_log_message(MP_REG_LOG_LEVEL_INFO, "Error during Error-Message convertion: %d, last error: %d\n", err_covert, GetLastError());
+                    network_log_message(MP_REG_LOG_LEVEL_ERROR, "Error during Error-Message convertion: %d, last error: %d\n", err_covert, GetLastError());
                     break;
                 }
             }

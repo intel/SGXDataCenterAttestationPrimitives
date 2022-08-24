@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,14 @@
 #define INTEL_SGX_QVL_KEY_UTILS_H_
 
 #include <vector>
-#include "OpensslTypes.h"
+#include "OpensslHelpers/OpensslTypes.h"
 
-namespace intel { namespace sgx { namespace qvl { namespace crypto {
+namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey);
 crypto::EC_KEY_uptr rawToP256PubKey(const std::array<uint8_t, 64>& rawKey);
 crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey);
 
-}}}} // namespace intel { namespace sgx { namespace qvl { namespace crypto {
+}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
 #endif // INTEL_SGX_QVL_KEY_UTILS_H_

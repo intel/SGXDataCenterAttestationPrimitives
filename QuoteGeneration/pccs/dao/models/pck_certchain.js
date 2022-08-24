@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,16 +29,23 @@
  *
  */
 
-module.exports = (sequelize, DataTypes) => {
-    const PckCertchain = sequelize.define('pck_certchain', {
-      ca: { type: DataTypes.STRING, primaryKey: true},
-      root_cert_id: { type: DataTypes.INTEGER },
-      intmd_cert_id: { type: DataTypes.INTEGER }
-    },{
+import Sequelize from 'sequelize';
+
+export default class PckCertchain extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        ca: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        root_cert_id: { type: Sequelize.DataTypes.INTEGER },
+        intmd_cert_id: { type: Sequelize.DataTypes.INTEGER },
+      },
+      {
+        tableName: 'pck_certchain',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return PckCertchain;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,55 +29,56 @@
  *
  */
 
-const { pck_crl }= require('./models/');
-const Constants = require('../constants/index.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-const {Sequelize, sequelize} = require('./models/');
+import Constants from '../constants/index.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import { PckCrl, sequelize } from './models/index.js';
 
 //Query a PCK CRL by ca
-exports.getPckCrl = async function(ca){
-    const sql = 'select a.*,' +
-              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
-              ' from pck_crl a ' +
-              ' where a.ca=$ca';
-    const pckcrl = await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT,
-            bind: { ca : ca }
-        });
-    if (pckcrl.length == 0)
-        return null;
-    else if (pckcrl.length == 1 ){
-        if (pckcrl[0].root_cert != null && pckcrl[0].intmd_cert != null)
-            return pckcrl[0];
-        else return null;
-    }
-    else 
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_INTERNAL_ERROR);
+export async function getPckCrl(ca) {
+  const sql =
+    'select a.*,' +
+    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
+    ' from pck_crl a ' +
+    ' where a.ca=$ca';
+  const pckcrl = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+    bind: { ca: ca },
+  });
+  if (pckcrl.length == 0) return null;
+  else if (pckcrl.length == 1) {
+    if (pckcrl[0].root_cert != null && pckcrl[0].intmd_cert != null)
+      return pckcrl[0];
+    else return null;
+  } else throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
 }
 
 //Query all PCK CRLs from table
-exports.getAllPckCrls = async function(){
-    const sql = 'select a.*,' +
-              ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
-              ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
-              ' from pck_crl a ';
-    return await sequelize.query(sql,
-        {
-            type:  sequelize.QueryTypes.SELECT
-        });
+export async function getAllPckCrls() {
+  const sql =
+    'select a.*,' +
+    ' (select cert from pcs_certificates where id=a.root_cert_id) as root_cert,' +
+    ' (select cert from pcs_certificates where id=a.intmd_cert_id) as intmd_cert' +
+    ' from pck_crl a ';
+  return await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
 }
-
 
 //Update or Insert a PCK CRL
-exports.upsertPckCrl = async function(ca, crl){
-    return await pck_crl.upsert({
-            ca: ca,
-            pck_crl: crl,
-            root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
-            intmd_cert_id: (ca == Constants.CA_PROCESSOR) ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID : Constants.PLATFORM_INTERMEDIATE_CERT_ID
-    });
-}
+export async function upsertPckCrl(ca, crl) {
+  if (ca != Constants.CA_PROCESSOR && ca != Constants.CA_PLATFORM) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
 
+  return await PckCrl.upsert({
+    ca: ca,
+    pck_crl: crl,
+    root_cert_id: Constants.PROCESSOR_ROOT_CERT_ID,
+    intmd_cert_id:
+      ca == Constants.CA_PROCESSOR
+        ? Constants.PROCESSOR_INTERMEDIATE_CERT_ID
+        : Constants.PLATFORM_INTERMEDIATE_CERT_ID,
+  });
+}

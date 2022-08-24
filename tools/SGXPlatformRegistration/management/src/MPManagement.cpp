@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -214,25 +214,6 @@ MpResult MPManagement::getSgxStatus(MpSgxStatus &status) {
         ret = sgx_cap_get_status(&sgxStatus);
         if (SGX_SUCCESS != ret) {
             management_log_message(MP_REG_LOG_LEVEL_ERROR, "getSgxStatus: sgx_cap_get_status failed, error: %d\n", res);
-            break;
-        }
-
-        status = (MpSgxStatus)sgxStatus;
-        res = MP_SUCCESS;
-    } while (0);
-
-    return res;
-}
-
-MpResult MPManagement::enableSgx(MpSgxStatus &status) {
-    MpResult res = MP_UNEXPECTED_ERROR;
-    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-    sgx_device_status_t sgxStatus;
-
-    do {
-        ret = sgx_cap_enable_device(&sgxStatus);
-        if (SGX_SUCCESS != ret) {
-            management_log_message(MP_REG_LOG_LEVEL_ERROR, "enableSgx: sgx_cap_enable_device failed, error: %d\n", res);
             break;
         }
 

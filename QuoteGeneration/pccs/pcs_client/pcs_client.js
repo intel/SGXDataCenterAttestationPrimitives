@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,184 +29,201 @@
  *
  */
 
+import Config from 'config';
+import got from 'got';
+import caw from 'caw';
+import logger from '../utils/Logger.js';
+import PccsError from '../utils/PccsError.js';
+import PccsStatus from '../constants/pccs_status_code.js';
+import Constants from '../constants/index.js';
 
-const config = require('config');
-const request = require('request');
-const rp = require('request-promise');
-const logger = require('../utils/Logger.js');
-const PccsError = require('../utils/PccsError.js');
-const PCCS_STATUS = require('../constants/pccs_status_code.js');
-
-const HTTP_TIMEOUT = 60000;  // 60 seconds 
-
-do_request = async function(options, src) {
-    try {
-        let response =  await rp(options);
-        logger.info('Request-ID is : ' + response.headers['request-id'] + ' ' + src);
-        return response;
-    }
-    catch(err) {
-        logger.debug(err);
-        if (err.response && err.response.headers) {
-            logger.info('Request-ID is : ' + err.response.headers['request-id'] + ' ' + src);
-        }
-        throw new PccsError(PCCS_STATUS.PCCS_STATUS_PCS_ACCESS_FAILURE);
-    }
+const HTTP_TIMEOUT = 120000; // 120 seconds
+const MAX_RETRY_COUNT = 6; // Max retry 6 times, approximate 64 seconds in total
+let HttpsAgent;
+if (Config.has('proxy') && Config.get('proxy')) {
+  // use proxy settings in config file
+  HttpsAgent = {
+    https: caw(Config.get('proxy'), { protocol: 'https' }),
+  };
+} else {
+  // use system proxy
+  HttpsAgent = {
+    https: caw({ protocol: 'https' }),
+  };
 }
 
-exports.getCert=async function(enc_ppid,cpusvn,pcesvn,pceid){
-    const options = {
-        uri: config.get('uri')+ 'pckcert',
-        proxy: config.get('proxy'),
-        qs: {
-            encrypted_ppid:enc_ppid,
-            cpusvn:cpusvn,
-            pcesvn:pcesvn,
-            pceid:pceid
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
+async function do_request(url, options) {
+  try {
+    // hide API KEY from log
+    let temp_key = null;
+    if (
+      'headers' in options &&
+      'Ocp-Apim-Subscription-Key' in options.headers
+    ) {
+      temp_key = options.headers['Ocp-Apim-Subscription-Key'];
+      options.headers['Ocp-Apim-Subscription-Key'] =
+        temp_key.substr(0, 5) + '***';
+    }
+    if (temp_key) {
+      options.headers['Ocp-Apim-Subscription-Key'] = temp_key;
+    }
+
+    // global opitons ( proxy, timeout, etc)
+    options.timeout = HTTP_TIMEOUT;
+    options.agent = HttpsAgent;
+    options.retry = {
+      limit: MAX_RETRY_COUNT,
+      methods: ['GET', 'PUT', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE', 'POST'],
     };
+    options.throwHttpErrors = false;
 
-    logger.debug('getCert......');
-    logger.debug('enc_ppid : ' + enc_ppid);
-    logger.debug('cpusvn : ' + cpusvn);
-    logger.debug('pcesvn : ' + pcesvn);
-    logger.debug('pceid : ' + pceid);
+    let response = await got(url, options);
+    logger.info('Request-ID is : ' + response.headers['request-id']);
+    logger.debug('Request URL ' + url);
 
-    return do_request(options, 'pckcert');
-};
+    if (response.statusCode != Constants.HTTP_SUCCESS) {
+      logger.error('Intel PCS server returns error(' + response.statusCode + ').' + response.body);
+    }
 
-exports.getCerts=async function(enc_ppid,pceid){
-    const options = {
-        uri: config.get('uri')+ 'pckcerts',
-        proxy: config.get('proxy'),
-        qs: {
-            encrypted_ppid:enc_ppid,
-            pceid:pceid
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
-    };
-
-    logger.debug('getCerts......');
-    logger.debug('enc_ppid : ' + enc_ppid);
-    logger.debug('pceid : ' + pceid);
-
-    return do_request(options, 'pckcerts');
-};
-
-exports.getCertsWithManifest = async function(platform_manifest, pceid){
-    const options = {
-        uri: config.get('uri')+ 'pckcerts',
-        proxy: config.get('proxy'),
-        qs: {},
-        body: {
-            platformManifest: platform_manifest,
-            pceid: pceid
-        },
-        method: 'POST',
-        json: true,
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true, 
-        headers: {'Ocp-Apim-Subscription-Key':config.get('ApiKey')}
-    };
-
-    logger.debug('getCerts......');
-    logger.debug('platform_manifest : ' + platform_manifest);
-    logger.debug('pceid : ' + pceid);
-
-    return do_request(options, 'pckcerts');
+    return response;
+  } catch (err) {
+    logger.error(err);
+    if (err.response && err.response.headers) {
+      logger.info('Request-ID is : ' + err.response.headers['request-id']);
+    }
+    throw new PccsError(PccsStatus.PCCS_STATUS_PCS_ACCESS_FAILURE);
+  }
 }
 
-exports.getPckCrl=async function(ca){
-    const options = {
-        uri: config.get('uri')+ 'pckcrl',
-        proxy: config.get('proxy'),
-        qs: {
-            ca:ca.toLowerCase()
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
-    };
+function getTdxUrl(url) {
+  return url.replace('/sgx/', '/tdx/');
+}
 
-    logger.debug('getPckCrl......');
-    logger.debug('ca : ' + ca);
+export async function getCert(enc_ppid, cpusvn, pcesvn, pceid) {
+  const options = {
+    searchParams: {
+      encrypted_ppid: enc_ppid,
+      cpusvn: cpusvn,
+      pcesvn: pcesvn,
+      pceid: pceid,
+    },
+    method: 'GET',
+    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+  };
 
-    return do_request(options, 'pckcrl');
-};
+  return do_request(Config.get('uri') + 'pckcert', options);
+}
 
-exports.getTcb=async function(fmspc){
-    const options = {
-        uri: config.get('uri')+ 'tcb',
-        proxy: config.get('proxy'),
-        qs: {
-            fmspc:fmspc
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
-    };
+export async function getCerts(enc_ppid, pceid) {
+  const options = {
+    searchParams: {
+      encrypted_ppid: enc_ppid,
+      pceid: pceid,
+    },
+    method: 'GET',
+    headers: { 'Ocp-Apim-Subscription-Key': Config.get('ApiKey') },
+  };
 
-    logger.debug('getTcb......');
-    logger.debug('fmspc : ' + fmspc);
+  return do_request(Config.get('uri') + 'pckcerts', options);
+}
 
-    return do_request(options, 'tcb');
-};
+export async function getCertsWithManifest(platform_manifest, pceid) {
+  const options = {
+    json: {
+      platformManifest: platform_manifest,
+      pceid: pceid,
+    },
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': Config.get('ApiKey'),
+      'Content-Type': 'application/json',
+    },
+  };
 
-exports.getQEIdentity=async function(){
-    const options = {
-        uri: config.get('uri')+ 'qe/identity',
-        proxy: config.get('proxy'),
-        qs: {
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
-    };
+  return do_request(Config.get('uri') + 'pckcerts', options);
+}
 
-    logger.debug('getQEIdentity......');
+export async function getPckCrl(ca) {
+  const options = {
+    searchParams: {
+      ca: ca.toLowerCase(),
+      encoding: 'der',
+    },
+    method: 'GET',
+  };
 
-    return do_request(options, 'qe/identity');
-};
+  return do_request(Config.get('uri') + 'pckcrl', options);
+}
 
-exports.getQvEIdentity=async function(){
-    const options = {
-        uri: config.get('uri')+ 'qve/identity',
-        proxy: config.get('proxy'),
-        qs: {
-        },
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        resolveWithFullResponse: true 
-    };
+export async function getTcb(type, fmspc, version) {
+  if (type != Constants.PROD_TYPE_SGX && type != Constants.PROD_TYPE_TDX) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
 
-    logger.debug('getQvEIdentity......');
+  const options = {
+    searchParams: {
+      fmspc: fmspc,
+    },
+    method: 'GET',
+  };
 
-    return do_request(options, 'qve/identity');
-};
+  let uri = Config.get('uri') + 'tcb';
+  if (type == Constants.PROD_TYPE_TDX) {
+    uri = getTdxUrl(uri);
+  }
 
-exports.getFileFromUrl=async function(uri){
-    const options = {
-        uri: uri,
-        proxy: config.get('proxy'),
-        method: 'GET',
-        timeout: HTTP_TIMEOUT,
-        encoding: null 
-    };
+  if (global.PCS_VERSION == 4 && version == 3) {
+    // A little tricky here because we need to use the v3 PCS URL though v4 is configured
+    uri = uri.replace('/v4/', '/v3/');
+  }
 
-    logger.debug('getFileFromUrl......' + uri);
+  return do_request(uri, options);
+}
 
-    try {
-        let response = await rp(options);
-        return Buffer.from(response, 'utf8');
-    }
-    catch(err) {
-        throw err;
-    }
-};
+export async function getEnclaveIdentity(enclave_id, version) {
+  if (
+    enclave_id != Constants.QE_IDENTITY_ID &&
+    enclave_id != Constants.QVE_IDENTITY_ID &&
+    enclave_id != Constants.TDQE_IDENTITY_ID
+  ) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+
+  const options = {
+    searchParams: {},
+    method: 'GET',
+  };
+
+  let uri = Config.get('uri') + 'qe/identity';
+  if (enclave_id == Constants.QVE_IDENTITY_ID) {
+    uri = Config.get('uri') + 'qve/identity';
+  } else if (enclave_id == Constants.TDQE_IDENTITY_ID) {
+    uri = getTdxUrl(uri);
+  }
+
+  if (global.PCS_VERSION == 4 && version == 3) {
+    // A little tricky here because we need to use the v3 PCS URL though v4 is configured
+    uri = uri.replace('/v4/', '/v3/');
+  }
+
+  return do_request(uri, options);
+}
+
+export async function getFileFromUrl(uri) {
+  logger.debug(uri);
+
+  const options = {
+    agent: HttpsAgent,
+    timeout: HTTP_TIMEOUT,
+  };
+
+  try {
+    return await got(uri, options).buffer();
+  } catch (err) {
+    throw err;
+  }
+}
+
+export function getHeaderValue(headers, key) {
+  return headers[key.toLowerCase()];
+}

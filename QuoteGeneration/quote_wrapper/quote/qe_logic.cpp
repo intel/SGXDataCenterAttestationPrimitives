@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,6 @@
 #include "qe_logic.h"
 #include "user_types.h"
 #include "qe3.h"
-#include "qe3_u.h"
 #include "sgx_pce.h"
 #ifdef MSFT_COM_WRAPPER
     #include "sgx_provision_certificate.h"
@@ -60,15 +59,21 @@
 #include "ecdsa_quote.h"
 #include "se_thread.h"
 #include "sgx_ql_core_wrapper.h"
+#include "se_trace.h"
 
+#include "qe3_u.h"
+#include "id_enclave_u.h"
 #ifndef _MSC_VER
-    #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so"
+    #define QE3_ENCLAVE_NAME "libsgx_qe3.signed.so.1"
+    #define QE3_ENCLAVE_NAME_LEGACY "libsgx_qe3.signed.so"
+    #define ID_ENCLAVE_NAME "libsgx_id_enclave.signed.so.1"
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "libdcap_quoteprov.so.1"
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY "libdcap_quoteprov.so"
     #define TCHAR char
     #define _T(x) (x)
 #else
     #define QE3_ENCLAVE_NAME _T("qe3.signed.dll")
+    #define ID_ENCLAVE_NAME _T("id_enclave.signed.dll")
     #define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME "dcap_quoteprov.dll"
 #endif
 #define ECDSA_BLOB_LABEL "ecdsa_data.blob"
@@ -169,13 +174,16 @@ struct ql_global_data{
     uint8_t m_ecdsa_blob[SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK];
     uint8_t *m_pencryptedppid;
     sgx_pce_info_t m_pce_info;
+    sgx_key_128bit_t* m_qe_id;
     char qe3_path[MAX_PATH];
     char qpl_path[MAX_PATH];
+    char ide_path[MAX_PATH];
 
     ql_global_data():
         m_load_policy(SGX_QL_DEFAULT),
         m_eid(0),
-        m_pencryptedppid(NULL)
+        m_pencryptedppid(NULL),
+        m_qe_id(NULL)
     {
         se_mutex_init(&m_enclave_load_mutex);
         se_mutex_init(&m_ecdsa_blob_mutex);
@@ -185,6 +193,7 @@ struct ql_global_data{
         memset(&m_pce_info, 0, sizeof(m_pce_info));
         memset(qe3_path, 0, sizeof(qe3_path));
         memset(qpl_path, 0, sizeof(qpl_path));
+        memset(ide_path, 0, sizeof(ide_path));
     }
     ql_global_data(const ql_global_data&);
     ql_global_data& operator=(const ql_global_data&);
@@ -196,6 +205,11 @@ struct ql_global_data{
         {
             free(m_pencryptedppid);
             m_pencryptedppid = NULL;
+        }
+        if (m_qe_id)
+        {
+            free(m_qe_id);
+            m_qe_id = NULL;
         }
     }
 };
@@ -220,6 +234,24 @@ quote3_error_t sgx_set_qe3_path(const char* p_path)
     return SGX_QL_SUCCESS;
 }
 
+quote3_error_t sgx_set_ide_path(const char* p_path)
+{
+    // p_path isn't NULL, caller has checked it.
+    // len <= sizeof(g_pce_status.pce_path)
+    size_t len = strnlen(p_path, sizeof(g_ql_global_data.ide_path));
+    // Make sure there is enough space for the '\0',
+    // after this line len <= sizeof(g_ql_global_data.ide_path) - 1
+    if(len > sizeof(g_ql_global_data.ide_path) - 1)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+#ifndef _MSC_VER
+    strncpy(g_ql_global_data.ide_path, p_path, sizeof(g_ql_global_data.ide_path) - 1);
+#else
+    strncpy_s(g_ql_global_data.ide_path, sizeof(g_ql_global_data.ide_path), p_path, sizeof(g_ql_global_data.ide_path));
+#endif
+    g_ql_global_data.ide_path[len] = '\0';
+    return SGX_QL_SUCCESS;
+}
+
 quote3_error_t sgx_set_qpl_path(const char* p_path)
 {
     // p_path isn't NULL, caller has checked it.
@@ -239,23 +271,29 @@ quote3_error_t sgx_set_qpl_path(const char* p_path)
 }
 
 #ifndef _MSC_VER
+extern "C"
 void * get_qpl_handle()
 {
     void * handle = NULL;
     if (g_ql_global_data.qpl_path[0]) {
         handle = dlopen(g_ql_global_data.qpl_path, RTLD_LAZY);
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s\n", g_ql_global_data.qpl_path);
+        if (NULL == handle) {
+            SE_PROD_LOG("Cannot open Quote Provider Library %s\n", g_ql_global_data.qpl_path);
+        }
         return handle;
     }
     else {
         handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME, RTLD_LAZY);
-        if (NULL == handle)
-        {
+        if (NULL == handle) {
             ///TODO:
             // This is a temporary solution to make sure the legacy library without a version suffix can be loaded.
             // We shall remove this when we have a major version change later and drop the backward compatible
             // support for old lib name.
             handle = dlopen(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY, RTLD_LAZY);
+            if (NULL == handle) {
+                SE_PROD_LOG("Cannot open Quote Provider Library %s and %s\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME,
+                        SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
+            }
         }
     }
     return handle;
@@ -337,16 +375,16 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
                 goto CLEANUP;
             }
             if(NULL == p_pck_cert_config) {
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
                 goto CLEANUP;
             }
             if(p_pck_cert_config->version != SGX_QL_CONFIG_VERSION_1) {
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
@@ -366,12 +404,12 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                     // The buffer passed in to this API is not large enouge to contain the provider library's returned cert data.
                     // This shouldn't happen since the passed in value should be the result of calling this function
                     // with the inputted p_cert_data equal to NULL just befor this caller.
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
                     ret_val = SGX_QL_ERROR_INVALID_PARAMETER;
                     goto CLEANUP;
                 }
                 if(NULL == p_pck_cert_config->p_cert_data) {
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
                     ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                     goto CLEANUP;
                 }
@@ -384,10 +422,10 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                 *p_cert_data_size = p_pck_cert_config->cert_data_size;
             }
         } else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %s\n", dlerror());
+            SE_PROD_LOG("Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %s\n", dlerror());
         }
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
 
     CLEANUP:
@@ -411,16 +449,16 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
                 goto CLEANUP;
             }
             if (NULL == p_pck_cert_config) {
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned NULL for p_pck_cert_config.\n");
                 goto CLEANUP;
             }
             if (p_pck_cert_config->version != SGX_QL_CONFIG_VERSION_1) {
-                SE_TRACE(SE_TRACE_ERROR, "p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
+                SE_PROD_LOG("p_sgx_get_quote_config returned incompatible pck_cert_config version.\n");
                 ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                 goto CLEANUP;
             }
@@ -440,12 +478,12 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
                     // The buffer passed in to this API is not large enouge to contain the provider library's returned cert data.
                     // This shouldn't happen since the passed in value should be the result of calling this function
                     // with the inputted p_cert_data equal to NULL just befor this caller.
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned a cert_data_size too large to fit in inputted buffer.\n");
                     ret_val = SGX_QL_ERROR_INVALID_PARAMETER;
                     goto CLEANUP;
                 }
                 if (NULL == p_pck_cert_config->p_cert_data) {
-                    SE_TRACE(SE_TRACE_ERROR, "sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
+                    SE_PROD_LOG("sgx_ql_get_quote_config returned NULL for p_cert_data.\n");
                     ret_val = SGX_QL_NO_PLATFORM_CERT_DATA;
                     goto CLEANUP;
                 }
@@ -459,11 +497,11 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library.\n");
+            SE_PROD_LOG("Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %d\n", GetLastError());
         }
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
     CLEANUP:
     if (NULL != p_sgx_free_quote_config) {
@@ -487,9 +525,14 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
  *
  * @return
  */
-static bool get_qe_path(const TCHAR *p_file_name,
-                        TCHAR *p_file_path,
-                        size_t buf_size)
+// use noinline here to aovid __builtin_return_address(0) returning an address outside libsgx_qe3_logic.so
+static bool
+#ifndef _MSC_VER
+__attribute__ ((noinline))
+#endif
+get_qe_path(const TCHAR *p_file_name,
+            TCHAR *p_file_path,
+            size_t buf_size)
 {
     if(!p_file_name || !p_file_path) {
         return false;
@@ -497,9 +540,15 @@ static bool get_qe_path(const TCHAR *p_file_name,
 
 #ifndef _MSC_VER
     Dl_info dl_info;
-    if(g_ql_global_data.qe3_path[0])
+    if(!strncmp(p_file_name, QE3_ENCLAVE_NAME, sizeof(QE3_ENCLAVE_NAME)) && g_ql_global_data.qe3_path[0])
     {
         strncpy(p_file_path, g_ql_global_data.qe3_path, buf_size -1);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
+        return true;
+    }
+    else if(!strncmp(p_file_name, ID_ENCLAVE_NAME, sizeof(ID_ENCLAVE_NAME)) && g_ql_global_data.ide_path[0])
+    {
+        strncpy(p_file_path, g_ql_global_data.ide_path, buf_size -1);
         p_file_path[buf_size - 1] = '\0';  //null terminate the string
         return true;
     }
@@ -510,6 +559,7 @@ static bool get_qe_path(const TCHAR *p_file_name,
             return false;
         }
         (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
+        p_file_path[buf_size - 1] = '\0';  //null terminate the string
     }
     else //not a dynamic executable
     {
@@ -563,7 +613,7 @@ static bool get_qe_path(const TCHAR *p_file_name,
 
 /**
  *
- * @param p_qe3_id
+ * @param p_qe_eid
  * @param p_qe_attributes
  * @param p_launch_token
  *
@@ -594,7 +644,7 @@ static bool get_qe_path(const TCHAR *p_file_name,
  * @return SE_ERROR_INVALID_ISVSVNLE
  * @return SGX_ERROR_INVALID_ENCLAVE_ID
  */
-
+extern "C"
 quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                               sgx_misc_attribute_t *p_qe_attributes,
                               sgx_launch_token_t *p_launch_token)
@@ -626,9 +676,26 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                                         &launch_token_updated,
                                         p_qe_eid,
                                         p_qe_attributes);
+#ifndef _MSC_VER
+         if (SGX_ERROR_ENCLAVE_FILE_ACCESS == sgx_status) {
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't open QE file %s and will find legecy QE file.\n", qe_enclave_path);
+            memset(qe_enclave_path, 0, sizeof(qe_enclave_path));
+            if (!get_qe_path(QE3_ENCLAVE_NAME_LEGACY, qe_enclave_path, MAX_PATH)) {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't find legecy QE file.\n");
+                ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+                goto CLEANUP;
+            }
+            SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
+            sgx_status = sgx_create_enclave(qe_enclave_path,
+                                            0,
+                                            p_launch_token,
+                                            &launch_token_updated,
+                                            p_qe_eid,
+                                            p_qe_attributes);
+        }
+#endif
         if (SGX_SUCCESS != sgx_status) {
-            SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_create_enclave QE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
-            SE_TRACE(SE_TRACE_ERROR, "Failed to load enclave.\n");
+            SE_PROD_LOG("Error, call sgx_create_enclave QE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
             if (sgx_status == SGX_ERROR_OUT_OF_EPC) {
                 ret_val = SGX_QL_OUT_OF_EPC;
             }
@@ -690,6 +757,89 @@ void unload_qe()
     if (0 == rc) {
         SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
     }
+}
+
+static quote3_error_t load_id_enclave(sgx_enclave_id_t* p_qe_eid)
+{
+    quote3_error_t ret_val = SGX_QL_SUCCESS;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    int launch_token_updated = 0;
+    TCHAR id_enclave_path[MAX_PATH] = _T("");
+
+    sgx_launch_token_t launch_token = { 0 };
+
+    int rc = se_mutex_lock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+        return SGX_QL_ENCLAVE_LOAD_ERROR;
+    }
+
+    // Load the ID ENCLAVE
+        if (!get_qe_path(ID_ENCLAVE_NAME, id_enclave_path, MAX_PATH)) {
+            SE_TRACE(SE_TRACE_ERROR, "Couldn't find ID_ENCLAVE file.\n");
+            ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
+            goto CLEANUP;
+        }
+        SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for ID_ENCLAVE. %s\n", id_enclave_path);
+        sgx_status = sgx_create_enclave(id_enclave_path,
+            0,
+            &launch_token,
+            &launch_token_updated,
+            p_qe_eid,
+            NULL);
+        if (SGX_SUCCESS != sgx_status) {
+            SE_PROD_LOG("Error, call sgx_create_enclave ID_ENCLAVE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+            if (sgx_status == SGX_ERROR_OUT_OF_EPC) {
+                ret_val = SGX_QL_OUT_OF_EPC;
+            }
+            else {
+                ret_val = (quote3_error_t)sgx_status;
+            }
+            goto CLEANUP;
+        }
+CLEANUP:
+    rc = se_mutex_unlock(&g_ql_global_data.m_enclave_load_mutex);
+    if (0 == rc) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex.\n");
+        ret_val = SGX_QL_ERROR_UNEXPECTED;
+    }
+
+    return ret_val;
+}
+
+static quote3_error_t load_id_enclave_get_id(sgx_key_128bit_t* p_id)
+{
+    quote3_error_t ret_val = SGX_QL_SUCCESS;
+    sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_status_t ecall_ret = SGX_SUCCESS;
+    sgx_enclave_id_t id_enclave_eid = 0;
+    ret_val = load_id_enclave(&id_enclave_eid);
+    if (ret_val != SGX_QL_SUCCESS)
+    {
+        return ret_val;
+    }
+    sgx_status = ide_get_id(id_enclave_eid, &ecall_ret, p_id);
+    if (SGX_SUCCESS != sgx_status) {
+        SE_PROD_LOG("Failed call into the ID_ENCLAVE. 0x%04x.\n", sgx_status);
+        ret_val = (quote3_error_t)sgx_status;
+        goto CLEANUP;
+    }
+
+    if (SGX_SUCCESS != ecall_ret) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to get QE_ID. 0x%04x.\n", ecall_ret);
+        ret_val = (quote3_error_t)ecall_ret;
+        goto CLEANUP;
+    }
+
+    SE_TRACE(SE_TRACE_DEBUG, "QE_ID:\n");
+    PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, p_id, sizeof(sgx_key_128bit_t));
+
+CLEANUP:
+    if (0 != id_enclave_eid) {
+        sgx_destroy_enclave(id_enclave_eid);
+    }
+
+    return ret_val;
 }
 
 /* This function output encrypted PPID which is encrypted with backend server's pub key
@@ -820,14 +970,14 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
                                                         buf_size,
                                                         p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
             SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n", dlerror());
         }
         dlclose(handle);
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
@@ -840,16 +990,16 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
                 buf_size,
                 p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n");
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %d\n", GetLastError());
         }
         FreeLibrary(handle);
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
     #endif
 
@@ -901,14 +1051,14 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
                                                     p_buf_size,
                                                     p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
             SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %s\n", dlerror());
         }
         dlclose(handle);
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
     }
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
@@ -921,16 +1071,16 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
                                                     p_buf_size,
                                                     p_label);
             if (SGX_QL_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+                SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
         }
         else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n");
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %d\n", GetLastError());
         }
         FreeLibrary(handle);
     }
     else {
-        SE_TRACE(SE_TRACE_DEBUG, "Couldn't find the platform library. %s\n");
+        SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
     }
 
     #endif
@@ -1002,7 +1152,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
     SE_TRACE(SE_TRACE_DEBUG, "\npce_cert_psvn.isv_svn = 0x%04x.\n", p_plaintext_data->cert_pce_info.pce_isv_svn);
     pce_error = sgx_pce_sign_report(&p_plaintext_data->cert_pce_info.pce_isv_svn,
                                     &p_plaintext_data->cert_cpu_svn,
-                                    &p_plaintext_data->qe3_report,
+                                    &p_plaintext_data->qe_report,
                                     (uint8_t*)&pce_sig,
                                     sizeof(pce_sig),
                                     &sig_out_size);
@@ -1013,7 +1163,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
     }
 
     // Update the signature data and the report that was signed.
-    if(0 != memcpy_s(&p_plaintext_data->qe3_report_cert_key_sig, sizeof(p_plaintext_data->qe3_report_cert_key_sig), &pce_sig, sizeof(pce_sig))) {
+    if(0 != memcpy_s(&p_plaintext_data->qe_report_cert_key_sig, sizeof(p_plaintext_data->qe_report_cert_key_sig), &pce_sig, sizeof(pce_sig))) {
         refqt_ret = SGX_QL_ERROR_UNEXPECTED;
         goto CLEANUP;
     }
@@ -1290,7 +1440,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
         //QE's TCB has increased, (a decrease would cause a blob verification failure) then catch it here and generate a
         //new key
-        if((qe3_report_body.isv_svn > p_seal_data_plain_text->cert_qe3_isv_svn) ||
+        if((qe3_report_body.isv_svn > p_seal_data_plain_text->cert_qe_isv_svn) ||
            (0 != memcmp(&p_seal_data_plain_text->raw_cpu_svn, &qe3_report_body.cpu_svn, sizeof(p_seal_data_plain_text->raw_cpu_svn)))) {
             SE_TRACE(SE_TRACE_ERROR, "Platform TCB has increased, Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
             gen_new_key = true;
@@ -1316,6 +1466,22 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
 
+        if (NULL == g_ql_global_data.m_qe_id)
+        {
+
+            g_ql_global_data.m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!g_ql_global_data.m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = SGX_QL_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+
+            refqt_ret = load_id_enclave_get_id(g_ql_global_data.m_qe_id);
+            if (SGX_QL_SUCCESS != refqt_ret) {
+                goto CLEANUP;
+            }
+        }
+
         // Determine if the raw-TCB has changed since the blob was last generated or the platform library
         // has a new TCBm. If the raw-TCB was downgraded, the ECDSA blob will not be accessible and fail
         // above.
@@ -1330,8 +1496,8 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         // sgx_ql_get_quote_config(). If it is not available or the API returns SGX_QL_NO_PLATFORM_CERT_DATA, then use
         // the platform's raw TCB to certify the key.
         cert_data_size = 0;
-        pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-        pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+        pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
+        pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
         pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1372,11 +1538,18 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 plaintext_data.raw_pce_info.pce_isv_svn = pce_isv_svn;
                 plaintext_data.raw_pce_info.pce_id = p_seal_data_plain_text->cert_pce_info.pce_id;
                 // For recertification, pull out out the certification data from the blob that doesn't need to change.
-                if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
-                                 &p_seal_data_plain_text->qe3_report, sizeof(p_seal_data_plain_text->qe3_report))) {
+                if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
+                                 &p_seal_data_plain_text->qe_report, sizeof(p_seal_data_plain_text->qe_report))) {
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
+
+                if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
+                    g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
+                    refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+                    goto CLEANUP;
+                }
+
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1418,11 +1591,18 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 plaintext_data.raw_pce_info.pce_isv_svn = pce_isv_svn;
                 plaintext_data.raw_pce_info.pce_id = p_seal_data_plain_text->cert_pce_info.pce_id;
                 // For recertification, pull out out the certification data from the blob that doesn't need to change.
-                if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
-                                 &p_seal_data_plain_text->qe3_report, sizeof(p_seal_data_plain_text->qe3_report))){
+                if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
+                                 &p_seal_data_plain_text->qe_report, sizeof(p_seal_data_plain_text->qe_report))){
                     refqt_ret = SGX_QL_ERROR_UNEXPECTED;
                     goto CLEANUP;
                 }
+
+                if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
+                    g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
+                    refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+                    goto CLEANUP;
+                }
+
                 plaintext_data.signature_scheme = p_seal_data_plain_text->signature_scheme;  ///todo: Not likely that the signature scheme changed but may want to re-get from PCE. It is just more involved.
                 if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                                  &pce_target_info, sizeof(pce_target_info))) {
@@ -1438,8 +1618,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                                         &qe3_eid);
             }
         }
-        break;
-    } while (1);
+    } while (0);
 
     if (true == gen_new_key) {
         sgx_report_t qe3_report;
@@ -1494,14 +1673,29 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
 
+        if (NULL == g_ql_global_data.m_qe_id)
+        {
+
+            g_ql_global_data.m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!g_ql_global_data.m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = SGX_QL_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+
+            refqt_ret = load_id_enclave_get_id(g_ql_global_data.m_qe_id);
+            if (SGX_QL_SUCCESS != refqt_ret) {
+                goto CLEANUP;
+            }
+        }
+
         // Certify the key
         // Get the certification data from the platform, if available
         p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
-        p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
         cert_data_size = 0;
         memset(&plaintext_data, 0, sizeof(plaintext_data));
-        pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-        pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+        pck_cert_id.p_qe3_id = (uint8_t*)g_ql_global_data.m_qe_id;
+        pck_cert_id.qe3_id_size = sizeof(*g_ql_global_data.m_qe_id);
         pck_cert_id.p_platform_cpu_svn = &qe3_report.body.cpu_svn;
         pck_cert_id.p_platform_pce_isv_svn = &g_ql_global_data.m_pce_info.pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
@@ -1542,8 +1736,13 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
         plaintext_data.raw_pce_info.pce_isv_svn = g_ql_global_data.m_pce_info.pce_isv_svn;
         plaintext_data.raw_pce_info.pce_id = g_ql_global_data.m_pce_info.pce_id;
-        if(0 != memcpy_s(&plaintext_data.qe3_report, sizeof(plaintext_data.qe3_report),
+        if(0 != memcpy_s(&plaintext_data.qe_report, sizeof(plaintext_data.qe_report),
                          &qe3_report, sizeof(qe3_report))) {
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+            goto CLEANUP;
+        }
+        if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
+                          g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
@@ -1565,8 +1764,6 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             SE_TRACE(SE_TRACE_DEBUG, "Failed to cerify key.\n");
             goto CLEANUP;
         }
-        SE_TRACE(SE_TRACE_DEBUG, "QE3_ID:\n");
-        PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &p_seal_data_plain_text->qe3_id, sizeof(p_seal_data_plain_text->qe3_id));
 
         SE_TRACE(SE_TRACE_DEBUG, "Generated and certified a new key.  ECDSA_ID:\n");
         PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &qe3_report.body.report_data, sizeof(sgx_sha256_hash_t));
@@ -1747,8 +1944,8 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
     p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
     p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
     cert_data_size = 0;
-    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
+    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
     pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
     pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
@@ -1821,6 +2018,10 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
     CLEANUP:
     if(0 != blob_mutex_rc ) {
         blob_mutex_rc = se_mutex_unlock(&g_ql_global_data.m_ecdsa_blob_mutex);
+        if (0 == blob_mutex_rc) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        }
     }
 
     unload_qe();
@@ -1988,8 +2189,8 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
     p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
     p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
     cert_data_size = 0;
-    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe3_id;
-    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe3_id);
+    pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
+    pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
     pck_cert_id.p_platform_cpu_svn = &qe3_report_body.cpu_svn;
     pck_cert_id.p_platform_pce_isv_svn = &cur_pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
@@ -2094,6 +2295,10 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
 
     if(0 != blob_mutex_rc ) {
         blob_mutex_rc = se_mutex_unlock(&g_ql_global_data.m_ecdsa_blob_mutex);
+        if (0 == blob_mutex_rc) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+        }
     }
 
     unload_qe();
@@ -2323,4 +2528,3 @@ quote3_error_t ECDSA256Quote::get_quote(const sgx_report_t *p_app_report,
 
     return(ret_val);
 }
-

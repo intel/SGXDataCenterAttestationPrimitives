@@ -2,3 +2,4 @@ requests
 asn1
 pyOpenSSL
 pypac
+keyring

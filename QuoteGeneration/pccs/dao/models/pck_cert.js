@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,17 +29,24 @@
  *
  */
 
-module.exports = (sequelize, DataTypes) => {
-    const PckCert = sequelize.define('pck_cert', {
-      qe_id: { type: DataTypes.STRING, primaryKey: true},
-      pce_id: { type: DataTypes.STRING, primaryKey: true },
-      tcbm: { type: DataTypes.STRING, primaryKey: true },
-      pck_cert: { type: DataTypes.BLOB, get(){return this.getDataValue('pck_cert').toString('utf8');}}
-    },{
+import Sequelize from 'sequelize';
+
+export default class PckCert extends Sequelize.Model {
+  static init(sequelize) {
+    super.init(
+      {
+        qe_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        pce_id: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        tcbm: { type: Sequelize.DataTypes.STRING, primaryKey: true },
+        pck_cert: { type: Sequelize.DataTypes.BLOB },
+      },
+      {
+        tableName: 'pck_cert',
         timestamps: true,
         createdAt: 'created_time',
-        updatedAt: 'updated_time'
-    });
-
-    return PckCert;
-};
+        updatedAt: 'updated_time',
+        sequelize,
+      }
+    );
+  }
+}

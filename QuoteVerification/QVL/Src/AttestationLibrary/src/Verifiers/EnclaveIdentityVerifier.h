@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,12 +34,12 @@
 
 #include "CommonVerifier.h"
 #include "TCBSigningChain.h"
-#include "EnclaveIdentity.h"
+#include "EnclaveIdentityV2.h"
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <CertVerification/CertificateChain.h>
 #include <PckParser/CrlStore.h>
 
-namespace intel { namespace sgx { namespace qvl {
+namespace intel { namespace sgx { namespace dcap {
 
 class EnclaveIdentityVerifier
 {
@@ -65,7 +65,7 @@ public:
      * @return Status code of the operation
      */
     Status verify(
-            const EnclaveIdentity &enclaveIdentity,
+            const EnclaveIdentityV2 &enclaveIdentity,
             const CertificateChain &chain,
             const pckparser::CrlStore &rootCaCrl,
             const dcap::parser::x509::Certificate &trustedRoot,
@@ -76,6 +76,6 @@ private:
     std::unique_ptr<TCBSigningChain> _tcbSigningChain;
 };
 
-}}} // namespace intel { namespace sgx { namespace qvl {
+}}} // namespace intel { namespace sgx { namespace dcap {
 
 #endif //SGXECDSAATTESTATION_ENCLAVEIDENTITYVERIFIER_H

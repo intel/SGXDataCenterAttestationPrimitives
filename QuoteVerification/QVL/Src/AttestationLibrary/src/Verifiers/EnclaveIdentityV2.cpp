@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,16 +29,19 @@
  *
  */
 
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 #include "EnclaveIdentityV2.h"
+#include "CertVerification/X509Constants.h"
+#include "Utils/TimeUtils.h"
+#include "QuoteVerification/QuoteConstants.h"
+
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 #include <tuple>
 
-namespace intel { namespace sgx { namespace qvl {
-
+namespace intel { namespace sgx { namespace dcap {
     EnclaveIdentityV2::EnclaveIdentityV2(const ::rapidjson::Value &p_body)
-        : tcbEvaluationDataNumber(0), id(QE)
+            : tcbEvaluationDataNumber(0)
     {
         if(!p_body.IsObject())
         {
@@ -66,10 +69,164 @@ namespace intel { namespace sgx { namespace qvl {
         this->body = std::vector<uint8_t>{buffer.GetString(), &buffer.GetString()[buffer.GetSize()]};
         status = STATUS_OK;
     }
+    void EnclaveIdentityV2::setSignature(std::vector<uint8_t> &p_signature)
+    {
+        signature = p_signature;
+    }
+
+    std::vector<uint8_t> EnclaveIdentityV2::getBody() const
+    {
+        return body;
+    }
+
+    std::vector<uint8_t> EnclaveIdentityV2::getSignature() const
+    {
+        return signature;
+    }
+
+    const std::vector<uint8_t>& EnclaveIdentityV2::getMiscselect() const
+    {
+        return miscselect;
+    }
+
+    const std::vector<uint8_t>& EnclaveIdentityV2::getMiscselectMask() const
+    {
+        return miscselectMask;
+    }
+
+    const std::vector<uint8_t>& EnclaveIdentityV2::getAttributes() const
+    {
+        return attributes;
+    }
+
+    const std::vector<uint8_t>& EnclaveIdentityV2::getAttributesMask() const
+    {
+        return attributesMask;
+    }
+
+    const std::vector<uint8_t>& EnclaveIdentityV2::getMrsigner() const
+    {
+        return mrsigner;
+    }
+
+    uint32_t EnclaveIdentityV2::getIsvProdId() const
+    {
+        return isvProdId;
+    }
+
+    int EnclaveIdentityV2::getVersion() const
+    {
+        return version;
+    }
+
+    time_t EnclaveIdentityV2::getIssueDate() const
+    {
+        return issueDate;
+    }
+
+    time_t EnclaveIdentityV2::getNextUpdate() const
+    {
+        return nextUpdate;
+    }
+
+    EnclaveID EnclaveIdentityV2::getID() const
+    {
+        return id;
+    }
+
+    bool EnclaveIdentityV2::parseVersion(const rapidjson::Value &input)
+    {
+        auto l_status = JsonParser::ParseStatus::Missing;
+        std::tie(version, l_status) = jsonParser.getIntFieldOf(input, "version");
+        return l_status == JsonParser::OK;
+    }
+
+    bool EnclaveIdentityV2::parseIssueDate(const rapidjson::Value &input)
+    {
+        auto l_status = JsonParser::ParseStatus::Missing;
+        struct tm issueDateTm{};
+        std::tie(issueDateTm, l_status) = jsonParser.getDateFieldOf(input, "issueDate");
+        issueDate = dcap::mktime(&issueDateTm);
+        return l_status == JsonParser::OK;
+    }
+
+    bool EnclaveIdentityV2::parseNextUpdate(const rapidjson::Value &input)
+    {
+        auto l_status = JsonParser::ParseStatus::Missing;
+        struct tm nextUpdateTm{};
+        std::tie(nextUpdateTm, l_status) = jsonParser.getDateFieldOf(input, "nextUpdate");
+        nextUpdate = dcap::mktime(&nextUpdateTm);
+        return l_status == JsonParser::OK;
+    }
+
+    bool EnclaveIdentityV2::parseMiscselect(const rapidjson::Value &input)
+    {
+        return parseHexstringProperty(input, "miscselect", constants::MISCSELECT_BYTE_LEN * 2, miscselect);
+    }
+
+    bool EnclaveIdentityV2::parseMiscselectMask(const rapidjson::Value &input)
+    {
+        return parseHexstringProperty(input, "miscselectMask", constants::MISCSELECT_BYTE_LEN * 2, miscselectMask);
+    }
+
+    bool EnclaveIdentityV2::parseAttributes(const rapidjson::Value &input)
+    {
+        return parseHexstringProperty(input, "attributes", constants::ATTRIBUTES_BYTE_LEN * 2, attributes);
+    }
+
+    bool EnclaveIdentityV2::parseAttributesMask(const rapidjson::Value &input)
+    {
+        return parseHexstringProperty(input, "attributesMask", constants::ATTRIBUTES_BYTE_LEN * 2, attributesMask);
+    }
+
+    bool EnclaveIdentityV2::parseMrsigner(const rapidjson::Value &input)
+    {
+        return parseHexstringProperty(input, "mrsigner", constants::MRSIGNER_BYTE_LEN * 2, mrsigner);
+    }
+
+    bool EnclaveIdentityV2::parseHexstringProperty(const rapidjson::Value &object, const std::string &propertyName, const size_t length, std::vector<uint8_t> &saveAs)
+    {
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
+        std::tie(saveAs, parseSuccessful) = jsonParser.getHexstringFieldOf(object, propertyName, length);
+        return parseSuccessful == JsonParser::OK;
+    }
+
+    bool EnclaveIdentityV2::parseIsvprodid(const rapidjson::Value &input)
+    {
+        return parseUintProperty(input, "isvprodid", isvProdId);
+    }
+
+    bool EnclaveIdentityV2::parseUintProperty(const rapidjson::Value &object, const std::string &propertyName, uint32_t &saveAs)
+    {
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
+        std::tie(saveAs, parseSuccessful) = jsonParser.getUintFieldOf(object, propertyName);
+        return parseSuccessful == JsonParser::OK;
+    }
+
+    bool EnclaveIdentityV2::checkDateCorrectness(const time_t expirationDate) const
+    {
+        if (expirationDate > nextUpdate)
+        {
+            return false;
+        }
+
+        if (expirationDate <= issueDate)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    Status EnclaveIdentityV2::getStatus() const
+    {
+        return status;
+    }
+
 
     bool EnclaveIdentityV2::parseID(const rapidjson::Value &input)
     {
-        bool parseSuccessful = false;
+        auto parseSuccessful = JsonParser::ParseStatus::Missing;
         std::string idString;
         std::tie(idString, parseSuccessful) = jsonParser.getStringFieldOf(input, "id");
         if (idString == "QE")
@@ -80,11 +237,15 @@ namespace intel { namespace sgx { namespace qvl {
         {
             id = QVE;
         }
+        else if (idString == "TD_QE")
+        {
+            id = TD_QE;
+        }
         else
         {
             return false;
         }
-        return parseSuccessful;
+        return parseSuccessful == JsonParser::OK;
     }
 
     bool EnclaveIdentityV2::parseTcbEvaluationDataNumber(const rapidjson::Value &input)
@@ -106,22 +267,22 @@ namespace intel { namespace sgx { namespace qvl {
             return false;
         }
 
-        auto l_status = true;
+        auto l_status = JsonParser::ParseStatus::Missing;
         for (rapidjson::Value::ConstValueIterator itr = l_tcbLevels.Begin(); itr != l_tcbLevels.End(); itr++)
         {
             struct tm tcbDate{};
             std::string tcbStatus;
-            unsigned int isvsvn = 0;
+            uint32_t isvsvn = 0;
 
             std::tie(tcbDate, l_status) = jsonParser.getDateFieldOf(*itr, "tcbDate");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
             std::tie(tcbStatus, l_status) = jsonParser.getStringFieldOf(*itr, "tcbStatus");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
 
             if (!(*itr).HasMember("tcb"))
@@ -137,9 +298,9 @@ namespace intel { namespace sgx { namespace qvl {
             }
 
             std::tie(isvsvn, l_status) = jsonParser.getUintFieldOf(tcb, "isvsvn");
-            if (!l_status)
+            if (l_status != JsonParser::OK)
             {
-                return l_status;
+                return false;
             }
 
 
@@ -155,10 +316,10 @@ namespace intel { namespace sgx { namespace qvl {
 
             this->tcbLevels.emplace_back(isvsvn, tcbDate, tcbStatusEnum);
         }
-        return l_status;
+        return true;
     }
 
-    TcbStatus EnclaveIdentityV2::getTcbStatus(unsigned int p_isvSvn) const
+    TcbStatus EnclaveIdentityV2::getTcbStatus(uint32_t p_isvSvn) const
     {
         for(const auto & tcbLevel : tcbLevels)
         {
@@ -170,23 +331,17 @@ namespace intel { namespace sgx { namespace qvl {
         return TcbStatus::Revoked;
     }
 
-    unsigned int EnclaveIdentityV2::getTcbEvaluationDataNumber() const
+    uint32_t EnclaveIdentityV2::getTcbEvaluationDataNumber() const
     {
         return tcbEvaluationDataNumber;
     }
-
 
     const std::vector<TCBLevel>& EnclaveIdentityV2::getTcbLevels() const
     {
         return tcbLevels;
     }
 
-    EnclaveID EnclaveIdentityV2::getID() const
-    {
-        return id;
-    }
-
-    unsigned int TCBLevel::getIsvsvn() const
+    uint32_t TCBLevel::getIsvsvn() const
     {
         return isvsvn;
     }
@@ -200,4 +355,5 @@ namespace intel { namespace sgx { namespace qvl {
     {
         return tcbStatus;
     }
+
 }}}
