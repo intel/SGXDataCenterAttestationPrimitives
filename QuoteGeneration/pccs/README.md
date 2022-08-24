@@ -119,11 +119,11 @@ Typical setup flow for Local Service mode (Ubuntu 18.04 as example):
 
 You can test PCCS by running QuoteGeneration sample:
 
-    1) Set USE_SECURE_CERT=FALSE in /etc/sgx_default_qcnl.conf
+    1) Set "use_secure_cert": false in /etc/sgx_default_qcnl.conf
     2) Build and run QuoteGeneration sample and verify CertType=5 quote is generated
 
 For Remote service mode, you must use a formal key and certificate pair. You should also change 'hosts' to 0.0.0.0 to accept remote connections. Also make sure the firewall is not blocking your listening port.
-In /etc/sgx_default_qcnl.conf, set USE_SECURE_CERT=TRUE (For Windows see ../qpl/README.md)
+In /etc/sgx_default_qcnl.conf, set "use_secure_cert": true (For Windows see ../qpl/README.md)
 
 ## <h3>Manage the PCCS service</h3>
 
