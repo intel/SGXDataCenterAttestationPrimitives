@@ -47,9 +47,6 @@ Intel(R) Trust Domain Extensions QE
 %prep
 %setup -qc
 
-%build
-make %{?_smp_mflags}
-
 %install
 make DESTDIR=%{?buildroot} install
 install -d %{?buildroot}%{_docdir}/%{name}
