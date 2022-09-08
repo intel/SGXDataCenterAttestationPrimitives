@@ -44,7 +44,7 @@ import * as pckCertchainDao from '../dao/pckCertchainDao.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
 import * as appUtil from '../utils/apputil.js';
-import { PLATFORM_COLLATERAL_SCHEMA_V4 } from './pccs_schemas.js';
+import { PLATFORM_COLLATERAL_SCHEMA_V3, PLATFORM_COLLATERAL_SCHEMA_V4 } from './pccs_schemas.js';
 import { sequelize } from '../dao/models/index.js';
 
 const ajv = new Ajv();
