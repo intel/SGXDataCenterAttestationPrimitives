@@ -1324,16 +1324,6 @@ quote3_error_t sgx_qve_verify_quote(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
-    //validate collateral version
-    //
-    if (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSION4) {
-
-        return SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED;
-    }
-
     //validate parameters
     //
     if (p_quote == NULL ||
@@ -1348,6 +1338,16 @@ quote3_error_t sgx_qve_verify_quote(
         //one or more invalid parameters
         //
         return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    //validate collateral version
+    //
+    if (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION4) {
+
+        return SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED;
     }
 
     //define local variables
