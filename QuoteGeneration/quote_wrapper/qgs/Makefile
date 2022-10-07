@@ -41,6 +41,7 @@ PROTOBUF_CFLAGS = `pkg-config --cflags protobuf-lite`
 QGS_INC = -I$(SGX_SDK)/include \
 		  -I$(COMMON_DIR)/inc/internal \
 		  -I$(TOP_DIR)/qpl/inc \
+		  -I$(TOP_DIR)/quote_wrapper/common/inc \
 		  -I$(TOP_DIR)/quote_wrapper/tdx_quote
 QGS_CFLAGS = -g  -MMD $(CFLAGS) $(QGS_INC) $(PROTOBUF_CFLAGS)
 QGS_CXXFLAGS = -g  -MMD $(CXXFLAGS) $(QGS_INC) $(PROTOBUF_CFLAGS)
