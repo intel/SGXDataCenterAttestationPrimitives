@@ -147,6 +147,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
 #set(HUNTER_ROOT ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
 #set(HUNTER_BINARY_DIR ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
+set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
 
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
@@ -158,6 +159,9 @@ HunterGate(
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
+message("HUNTER_GATE_ROOT: ${HUNTER_GATE_ROOT}")
+file(COPY_FILE "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/openssl.hunter.cmake"
+    "${HUNTER_GATE_ROOT}/_Base/Download/Hunter/0.23.316/167a33c/Unpacked/cmake/projects/OpenSSL/hunter.cmake")
 project(SgxEcdsaAttestation)
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
