@@ -35,6 +35,7 @@ export default class PcsCertificates extends Sequelize.Model {
   static init(sequelize) {
     super.init(
       {
+        id: { type: Sequelize.DataTypes.INTEGER, primaryKey: true },
         cert: { type: Sequelize.DataTypes.BLOB },
         crl: { type: Sequelize.DataTypes.BLOB },
       },

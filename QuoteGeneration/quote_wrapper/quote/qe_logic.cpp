@@ -528,7 +528,7 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
 // use noinline here to aovid __builtin_return_address(0) returning an address outside libsgx_qe3_logic.so
 static bool
 #ifndef _MSC_VER
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 #endif
 get_qe_path(const TCHAR *p_file_name,
             TCHAR *p_file_path,
@@ -1741,6 +1741,11 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             refqt_ret = SGX_QL_ERROR_UNEXPECTED;
             goto CLEANUP;
         }
+        if (0 != memcpy_s(&plaintext_data.qe_id, sizeof(plaintext_data.qe_id),
+                          g_ql_global_data.m_qe_id, sizeof(*g_ql_global_data.m_qe_id))) {
+            refqt_ret = SGX_QL_ERROR_UNEXPECTED;
+            goto CLEANUP;
+        }
         plaintext_data.signature_scheme = PCE_NIST_P256_ECDSA_SHA256;
         if(0 != memcpy_s(&plaintext_data.pce_target_info, sizeof(plaintext_data.pce_target_info),
                          &pce_target_info, sizeof(pce_target_info))) {
@@ -2523,4 +2528,3 @@ quote3_error_t ECDSA256Quote::get_quote(const sgx_report_t *p_app_report,
 
     return(ret_val);
 }
-

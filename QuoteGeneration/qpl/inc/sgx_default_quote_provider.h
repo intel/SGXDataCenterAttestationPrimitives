@@ -29,7 +29,7 @@
  *
  */
 /**
- * File: sgx_dcap_qpl.h 
+ * File: sgx_default_quote_provider.h 
  *  
  * Description: Definitions and prototypes for the Quote Provider Library
  *
@@ -70,7 +70,7 @@ quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
 quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
 quote3_error_t sgx_ql_get_root_ca_crl(uint8_t **pp_root_ca_crl, uint16_t *p_root_ca_crl_size);
 quote3_error_t sgx_ql_free_root_ca_crl(uint8_t *p_root_ca_crl);
-quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger);
+quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel = SGX_QL_LOG_ERROR);
 
 #if defined(__cplusplus)
 }

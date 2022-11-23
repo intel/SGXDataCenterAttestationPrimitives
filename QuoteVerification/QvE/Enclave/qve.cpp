@@ -337,11 +337,8 @@ static std::string bin2hex(char *in, uint32_t size)
     return result;
 }
 
-#define SGX_TCB_LEVEL_LOWER false
-#define SGX_TCB_LEVEL_EQUAL_OR_HIGHER true
 #define TCB_LEVELS_COUNT 16
-static bool isPCKCertSGXTCBLevelHigherOrEqual(const x509::PckCertificate& pckCert,
-    const json::TcbLevel& tcbLevel)
+static bool isPCKCertSGXTCBLevelHigherOrEqual(const x509::PckCertificate& pckCert, const json::TcbLevel& tcbLevel)
 {
     for (unsigned int index = 0; index < TCB_LEVELS_COUNT; ++index)
     {
@@ -350,29 +347,57 @@ static bool isPCKCertSGXTCBLevelHigherOrEqual(const x509::PckCertificate& pckCer
         if (componentValue < otherComponentValue)
         {
             // If *ANY* SGX_TCB_LEVEL component is lower then PCKCertSGXTCBLevel is considered lower
-            return SGX_TCB_LEVEL_LOWER;
+            return false;
         }
     }
-    return SGX_TCB_LEVEL_EQUAL_OR_HIGHER;
+    return true;
 }
 
-static time_t getMatchingTcbLevelTcbDate(const std::set<json::TcbLevel, std::greater<json::TcbLevel>> &tcbs,
-    const x509::PckCertificate &pckCert)
+static bool isPCKCertTdxTcbHigherOrEqual(const quote::TDReport& tdReport, const json::TcbLevel& tcbLevel)
 {
+    for(uint32_t index = 0; index < TCB_LEVELS_COUNT; ++index)
+    {
+        const auto componentValue = tdReport.teeTcbSvn[index];
+        const auto otherComponentValue = tcbLevel.getTdxTcbComponent(index);
+        if(componentValue < otherComponentValue.getSvn())
+        {
+            // If *ANY* SVN is lower then TCB level is considered lower
+            return false;
+         }
+     }
+    // but for TCB level to be considered higher it requires *EVERY* SVN to be higher or equal
+    return true;
+}
+
+const json::TcbLevel& getMatchingTcbLevel(const json::TcbInfo *tcbInfo,
+                            const x509::PckCertificate &pckCert,
+                            const Quote &quote)
+{
+    const auto &tcbs = tcbInfo->getTcbLevels();
     const auto certPceSvn = pckCert.getTcb().getPceSvn();
 
     for (const auto& tcb : tcbs)
     {
         if (isPCKCertSGXTCBLevelHigherOrEqual(pckCert, tcb) && certPceSvn >= tcb.getPceSvn())
         {
-            return tcb.getTcbDate();
-        }
-    }
-    return 0;
+            if (tcbInfo->getVersion() >= 3 &&
+                tcbInfo->getId() == parser::json::TcbInfo::TDX_ID &&
+                quote.getHeader().teeType == constants::TEE_TYPE_TDX)
+            {
+                if (isPCKCertTdxTcbHigherOrEqual(quote.getTdReport(), tcb))
+                {
+                    return tcb;
+                }
+            }
+            else
+            {
+                return tcb;
+            }
+         }
+     }
+
+    throw SGX_QL_TCBINFO_UNSUPPORTED_FORMAT;
 }
-
-
-
 
 /**
  * Given a quote with cert type 5, extract PCK Cert chain and return it.
@@ -529,13 +554,13 @@ quote3_error_t get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_si
         auto fmspc_from_cert = topmost_pck_cert.getFmspc();
         auto issuer = topmost_cert->getIssuer().getCommonName();
         if (issuer.find(PROCESSOR_ISSUER) != std::string::npos) {
-            if (memcpy_s(p_ca_from_quote, ca_from_quote_size, PROCESSOR_ISSUER_ID, sizeof(PROCESSOR_ISSUER_ID)) != 0) {
+            if (memcpy_s(p_ca_from_quote, sizeof(PROCESSOR_ISSUER_ID), PROCESSOR_ISSUER_ID, sizeof(PROCESSOR_ISSUER_ID)) != 0) {
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
         }
         else if (issuer.find(PLATFORM_ISSUER) != std::string::npos) {
-            if (memcpy_s(p_ca_from_quote, ca_from_quote_size, PLATFORM_ISSUER_ID, sizeof(PLATFORM_ISSUER_ID)) != 0) {
+            if (memcpy_s(p_ca_from_quote, sizeof(PLATFORM_ISSUER_ID), PLATFORM_ISSUER_ID, sizeof(PLATFORM_ISSUER_ID)) != 0) {
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
@@ -792,11 +817,15 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
 
 /**
  * Setup supplemental data.
+ * @param quote[IN] - Pointer to quote buffer.
  * @param chain[IN] - Pointer to CertificateChain object containing PCK Cert chain (for quote with cert type 5, this should be extracted from the quote).
  * @param tcb_info_obj[IN] - Pointer to TcbInfo object.
  * @param p_quote_collateral[IN] - Pointer to _sgx_ql_qve_collateral_t struct.
+ * @param crls[IN] - X.509 certificate CRL chain.
  * @param earliest_issue_date[IN] - value of the earliest issue date of all collaterals used in quote verification.
- * @param p_supplemental_data[OUT] - Pointer to a supplemental data buffer. Must be allocated by caller (untrusted code).
+ * @param latest_issue_date[IN] - value of the latest issue date of all collaterals used in quote verification.
+ * @param earliest_expiration_date[IN] - value of the earliest expiration date of all collaterals used in quote verification.
+ * @param p_supplemental_data[IN/OUT] - Pointer to a supplemental data buffer. Must be allocated by caller (untrusted code).
 
  * @return Status code of the operation, one of:
  *      - SGX_QL_SUCCESS
@@ -807,10 +836,15 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
  *      - SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED
  *      - SGX_QL_ERROR_UNEXPECTED
  **/
-static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *chain, const json::TcbInfo *tcb_info_obj,
-    uint16_t qe_report_isvsvn, const struct _sgx_ql_qve_collateral_t *p_quote_collateral, const char *crls[],
-    time_t earliest_issue_date, time_t latest_issue_date, time_t earliest_expiration_date,
-    uint8_t *p_supplemental_data) {
+static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
+                                            const CertificateChain *chain,
+                                            const json::TcbInfo *tcb_info_obj,
+                                            const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
+                                            const char *crls[],
+                                            time_t earliest_issue_date,
+                                            time_t latest_issue_date,
+                                            time_t earliest_expiration_date,
+                                            uint8_t *p_supplemental_data) {
     if (chain == NULL ||
         tcb_info_obj == NULL ||
         p_quote_collateral == NULL ||
@@ -823,10 +857,21 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
 
     quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
     int version = 0;
+    uint32_t supp_ver = 0;
     sgx_ql_qv_supplemental_t* supplemental_data = reinterpret_cast<sgx_ql_qv_supplemental_t*> (p_supplemental_data);
 
+    // the input supplemental data version should never be 0
+    if (supplemental_data->version == 0) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        // clear the memory
+        supp_ver = supplemental_data->version;
+        memset_s(supplemental_data, sizeof(sgx_ql_qv_supplemental_t), 0, sizeof(sgx_ql_qv_supplemental_t));
+    }
+
     //Set default values
-    memset_s(supplemental_data, sizeof(*supplemental_data), 0, sizeof(*supplemental_data));
+    supplemental_data->version = supp_ver;
     supplemental_data->dynamic_platform = PCK_FLAG_UNDEFINED;
     supplemental_data->cached_keys = PCK_FLAG_UNDEFINED;
     supplemental_data->smt_enabled = PCK_FLAG_UNDEFINED;
@@ -897,7 +942,8 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
         }
         auto pck_cert_tcb = chain_pck_cert->getTcb();
 
-        supplemental_data->version = SUPPLEMENTAL_DATA_VERSION;
+        //version should be set in wrapper functions
+        //
         supplemental_data->earliest_issue_date = earliest_issue_date;
         supplemental_data->latest_issue_date = latest_issue_date;
         supplemental_data->earliest_expiration_date = earliest_expiration_date;
@@ -905,39 +951,83 @@ static quote3_error_t qve_set_quote_supplemental_data(const CertificateChain *ch
 
         //get matching QE identity TCB level
         //
-        auto qe_identity_tcb_levels = qe_identity_v2->getTcbLevels();
+        try {
+            //get matching QE identity TCB level
+            //
+            auto qe_identity_tcb_levels = qe_identity_v2->getTcbLevels();
 
-        //make sure QE identity has at least one TCBLevel
-        //
-        if (qe_identity_tcb_levels.empty()) {
-            ret = SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
-            break;
-        }
-        for (const auto & tcbLevel : qe_identity_tcb_levels) {
-            if (tcbLevel.getIsvsvn() <= qe_report_isvsvn) {
-                tm matching_qe_identity_tcb_date = tcbLevel.getTcbDate();
-                qe_identity_date = intel::sgx::dcap::mktime(&matching_qe_identity_tcb_date);
+            //make sure QE identity has at least one TCBLevel
+            //
+            if (qe_identity_tcb_levels.empty()) {
+                ret = SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
                 break;
+            }
+            for (const auto & tcbLevel : qe_identity_tcb_levels) {
+                if (tcbLevel.getIsvsvn() <= quote.getQeReport().isvSvn) {
+                    tm matching_qe_identity_tcb_date = tcbLevel.getTcbDate();
+                    qe_identity_date = intel::sgx::dcap::mktime(&matching_qe_identity_tcb_date);
+                    break;
+                }
+            }
+            //get TCB date of TCB level in TCB Info
+            //
+            auto tcb = getMatchingTcbLevel(tcb_info_obj, *chain_pck_cert, quote);
+            auto matching_tcb_info_tcb_date = tcb.getTcbDate();
+
+            auto sa_list = tcb.getAdvisoryIDs();
+
+            //set SA list when version >= 3.1
+            //
+            if (supplemental_data->major_version >= SUPPLEMENTAL_DATA_VERSION &&
+                supplemental_data->minor_version >= SUPPLEMENTAL_V3_LATEST_MINOR_VERSION) {
+
+                if (!sa_list.empty()) {
+                    uint32_t sa_size = 0;
+                    const char comma = ',';
+                    const char terminator = '\0';
+                    char *p_sa = supplemental_data->sa_list;
+
+                    for (std::string sa : sa_list) {
+                        sa_size += (uint32_t)sa.length() + 1;
+
+                        // sanity check
+                        if (sa_size > MAX_SA_LIST_SIZE) {
+                            ret = SGX_QL_ERROR_UNEXPECTED;
+                            break;
+                        }
+                        memcpy_s(p_sa, sa.length(), sa.c_str(), sa.length());
+                        // add comma for each sa
+                        if (memcpy_s(p_sa + sa.length(), 1, &comma, 1) != 0) {
+                            ret = SGX_QL_ERROR_UNEXPECTED;
+                            break;
+                        }
+                        p_sa += sa.length() + 1;
+                    }
+
+                    // add null terminator in the end
+                    memset_s(p_sa - 1, 1, terminator, 1);
+                }
+            }
+
+            //sanity check for TCB dates
+            //
+            if (qe_identity_date < 0 || matching_tcb_info_tcb_date < 0) {
+                ret = SGX_QL_ERROR_UNEXPECTED;
+                break;
+            }
+            //compare TCB info TCB level date and QE identity TCB level date, return the smaller one
+            //
+            if (qe_identity_date <= matching_tcb_info_tcb_date) {
+                supplemental_data->tcb_level_date_tag = qe_identity_date;
+            }
+            else {
+                supplemental_data->tcb_level_date_tag = matching_tcb_info_tcb_date;
             }
         }
 
-        //get TCB date of TCB level in TCB Info
-        //
-        auto matching_tcb_info_tcb_date = getMatchingTcbLevelTcbDate(tcb_info_obj->getTcbLevels(), *chain_pck_cert);
-
-        //make sure none of TCBLevel dates is 0
-        //
-        if (qe_identity_date < 0 || matching_tcb_info_tcb_date < 0) {
+        catch(...) {
             ret = SGX_QL_ERROR_UNEXPECTED;
             break;
-        }
-        //compare TCB info TCB level date and QE identity TCB level date, return the smaller one
-        //
-        if (qe_identity_date <= matching_tcb_info_tcb_date) {
-            supplemental_data->tcb_level_date_tag = qe_identity_date;
-        }
-        else {
-            supplemental_data->tcb_level_date_tag = matching_tcb_info_tcb_date;
         }
 
         //make sure that long int value returned in getCrlNum doesn't overflow
@@ -1120,7 +1210,11 @@ quote3_error_t sgx_qve_get_quote_supplemental_data_version(
         (sgx_is_within_enclave(p_version, sizeof(*p_version)) == 0)) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
-    *p_version = SUPPLEMENTAL_DATA_VERSION;
+    supp_ver_t tmp;
+    tmp.major_version = SUPPLEMENTAL_DATA_VERSION;
+    tmp.minor_version = SUPPLEMENTAL_V3_LATEST_MINOR_VERSION;
+
+    *p_version = tmp.version;
     return SGX_QL_SUCCESS;
 }
 
@@ -1266,7 +1360,7 @@ static bool is_collateral_deep_copied(const struct _sgx_ql_qve_collateral_t *p_q
  * @param p_quote_verification_result[OUT] - Address of the outputted quote verification result.
  * @param p_qve_report_info[IN/OUT] - This parameter is optional.  If not NULL, the QvE will generate a report with using the target_info provided in the sgx_ql_qe_report_info_t structure.
  * @param supplemental_data_size[IN] - Size of the buffer pointed to by p_supplemental_data (in bytes).
- * @param p_supplemental_data[OUT] - The parameter is optional.  If it is NULL, supplemental_data_size must be 0.
+ * @param p_supplemental_data[IN/OUT] - The parameter is optional.  If it is NULL, supplemental_data_size must be 0.
  *
  * @return Status code of the operation, one of:
  *      - SGX_QL_SUCCESS
@@ -1314,7 +1408,6 @@ quote3_error_t sgx_qve_verify_quote(
     if (p_supplemental_data) {
         if (supplemental_data_size == sizeof(sgx_ql_qv_supplemental_t) &&
             sgx_is_within_enclave(p_supplemental_data, supplemental_data_size)) {
-            memset_s(p_supplemental_data, supplemental_data_size, 0, supplemental_data_size);
         }
         else {
             outputs_set = 0;
@@ -1322,16 +1415,6 @@ quote3_error_t sgx_qve_verify_quote(
     }
     if (outputs_set == 0) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
-    }
-
-    //validate collateral version
-    //
-    if (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31 &&
-         p_quote_collateral->version != QVE_COLLATERAL_VERSION4) {
-
-        return SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED;
     }
 
     //validate parameters
@@ -1348,6 +1431,16 @@ quote3_error_t sgx_qve_verify_quote(
         //one or more invalid parameters
         //
         return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    //validate collateral version
+    //
+    if (p_quote_collateral->version != QVE_COLLATERAL_VERSION1 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31 &&
+         p_quote_collateral->version != QVE_COLLATERAL_VERSION4) {
+
+        return SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED;
     }
 
     //define local variables
@@ -1568,8 +1661,16 @@ quote3_error_t sgx_qve_verify_quote(
             {
                 ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
             }
-            auto qe_report_isvsvn = quote.getQeReport().isvSvn;
-            ret = qve_set_quote_supplemental_data(&chain, &tcb_info_obj, qe_report_isvsvn, p_quote_collateral, crls.data(), earliest_issue_date, latest_issue_date, earliest_expiration_date, p_supplemental_data);
+
+            ret = qve_set_quote_supplemental_data(quote,
+                                            &chain,
+                                            &tcb_info_obj,
+                                            p_quote_collateral,
+                                            crls.data(),
+                                            earliest_issue_date,
+                                            latest_issue_date,
+                                            earliest_expiration_date,
+                                            p_supplemental_data);
             if (ret != SGX_QL_SUCCESS) {
                 break;
             }

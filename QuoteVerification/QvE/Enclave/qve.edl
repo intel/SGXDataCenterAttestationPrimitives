@@ -107,7 +107,7 @@ struct _sgx_ql_qve_collateral_t
                                                [out, count=1]sgx_ql_qv_result_t *p_quote_verification_result,
                                                [in, out, count=1]sgx_ql_qe_report_info_t *p_qve_report_info,
                                                uint32_t supplemental_data_size,
-                                               [out, size=supplemental_data_size] uint8_t *p_supplemental_data);
+                                               [in, out, size=supplemental_data_size] uint8_t *p_supplemental_data);
 
 
 	};

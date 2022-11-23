@@ -41,6 +41,9 @@
 #include "se_trace.h"
 
 
+#ifdef GEN_STATIC
+#include "sgx_default_quote_provider.h"
+#else
 sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
 sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
 
@@ -52,7 +55,7 @@ sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
 tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
 tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
-
+#endif
 
 /**
  * Dynamically load sgx_ql_get_quote_verification_collateral symbol and call it.
@@ -79,6 +82,7 @@ quote3_error_t sgx_dcap_retrieve_verification_collateral(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_sgx_ql_get_quote_verification_collateral) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -90,7 +94,13 @@ quote3_error_t sgx_dcap_retrieve_verification_collateral(
         fmspc_size,
         pck_ca,
         pp_quote_collateral);
-
+#else
+    return sgx_ql_get_quote_verification_collateral(
+        (const uint8_t*)fmspc,
+        fmspc_size,
+        pck_ca,
+        pp_quote_collateral);
+#endif
 }
 
 /**
@@ -110,6 +120,7 @@ quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_sgx_ql_free_quote_verification_collateral) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -117,6 +128,9 @@ quote3_error_t sgx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
     //call p_sgx_ql_free_quote_verification_collateral to free allocated memory
     //
     return p_sgx_ql_free_quote_verification_collateral(p_quote_collateral);
+#else
+    return sgx_ql_free_quote_verification_collateral(p_quote_collateral);
+#endif
 }
 
 /**
@@ -151,6 +165,7 @@ quote3_error_t sgx_dcap_retrieve_qve_identity(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_sgx_ql_get_qve_identity) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -171,7 +186,20 @@ quote3_error_t sgx_dcap_retrieve_qve_identity(
     ret = p_sgx_ql_get_root_ca_crl(
         pp_root_ca_crl,
         p_root_ca_crl_size);
+#else
+    ret = sgx_ql_get_qve_identity(
+        (char **)pp_qveid,
+        p_qveid_size,
+        (char **)pp_qveid_issue_chain,
+        p_qveid_issue_chain_size);
 
+    if (ret != SGX_QL_SUCCESS)
+        return ret;
+
+    ret = sgx_ql_get_root_ca_crl(
+        pp_root_ca_crl,
+        p_root_ca_crl_size);
+#endif
     return ret;
 }
 
@@ -204,6 +232,7 @@ quote3_error_t sgx_dcap_free_qve_identity(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_sgx_ql_free_qve_identity || !p_sgx_ql_free_root_ca_crl) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -218,7 +247,11 @@ quote3_error_t sgx_dcap_free_qve_identity(
     //ignore error
     //
     ret =  p_sgx_ql_free_root_ca_crl(p_root_ca_crl);
+#else
+    ret =  sgx_ql_free_qve_identity((char *)p_qveid, (char *)p_qveid_issue_chain);
 
+    ret =  sgx_ql_free_root_ca_crl(p_root_ca_crl);
+#endif
     return ret;
 }
 
@@ -247,6 +280,7 @@ quote3_error_t tdx_dcap_retrieve_verification_collateral(
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_tdx_ql_get_quote_verification_collateral) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -258,7 +292,13 @@ quote3_error_t tdx_dcap_retrieve_verification_collateral(
         fmspc_size,
         pck_ca,
         pp_quote_collateral);
-
+#else
+    return tdx_ql_get_quote_verification_collateral(
+        (const uint8_t *)fmspc,
+        fmspc_size,
+        pck_ca,
+        pp_quote_collateral);
+#endif
 }
 
 /**
@@ -278,6 +318,7 @@ quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
 
+#ifndef GEN_STATIC
     if (!sgx_dcap_load_qpl() || !p_tdx_ql_free_quote_verification_collateral) {
         return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
     }
@@ -285,4 +326,7 @@ quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
     //call p_sgx_ql_free_quote_verification_collateral to free allocated memory
     //
     return p_tdx_ql_free_quote_verification_collateral(p_quote_collateral);
+#else
+    return tdx_ql_free_quote_verification_collateral(p_quote_collateral);
+#endif
 }

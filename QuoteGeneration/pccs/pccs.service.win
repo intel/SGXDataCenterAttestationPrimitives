@@ -6,8 +6,6 @@ var svc = new Service({
   description: 'PCK Certificate Caching Service for Intel SGX DCAP',
   script: require('path').join(__dirname,'pccs_server.js'),
   nodeOptions: [
-    '-r',
-    'esm'
   ]
   //,workingDirectory: '...'
   //, allowServiceLogon: true

@@ -226,7 +226,7 @@ int parse_arg(int argc, const char *argv[])
         else if (strncmp(argv[i], "-platform_id", 12) == 0) {
             non_enclave_mode = true;
             if (i == argc - 1 || argv[i + 1][0] == '-') {
-                fprintf(stdout, "Please input the platform ID, and the platform ID's length should not more than 260 bytes: \n");
+                fprintf(stdout, "Please input the platform ID, and the platform ID's length should not be more than 260 bytes: \n");
                 char platform_id[MAX_PATH] = {0};
                 if (NULL == fgets(platform_id, MAX_PATH, stdin)) {
                     fprintf(stderr, "No platform id is provided for -platform_id\n");
@@ -234,7 +234,7 @@ int parse_arg(int argc, const char *argv[])
                 }
                 platform_id_string = platform_id;
                 if (platform_id_string.length() > MAX_PATH) {
-                    fprintf(stderr, "Error: the platform ID's length should not more than 260 bytes.\n");
+                    fprintf(stderr, "Error: the platform ID's length should not be more than 260 bytes.\n");
                     return -1;
                 }
                 i++;
@@ -243,7 +243,7 @@ int parse_arg(int argc, const char *argv[])
             else {
                 platform_id_string = argv[i+1];
                 if (platform_id_string.length() > MAX_PATH) {
-                    fprintf(stderr, "Error: the platform ID's length should not more than 260 bytes.\n");
+                    fprintf(stderr, "Error: the platform ID's length should not be more than 260 bytes.\n");
                     return -1;
                 }
                 i++;
@@ -414,7 +414,7 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_data_buf
         delivery_status = DELIVERY_FAIL;
     }
     else {
-        fprintf(stderr, "Error: unexpected error happend during sending data to cache server.\n");
+        fprintf(stderr, "Error: unexpected error occurred while sending data to cache server.\n");
         delivery_status = DELIVERY_FAIL;
     }
 

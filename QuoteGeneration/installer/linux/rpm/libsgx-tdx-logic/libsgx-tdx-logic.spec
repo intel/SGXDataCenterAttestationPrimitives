@@ -36,7 +36,7 @@ Version:        @version@
 Release:        1%{?dist}
 Summary:        Intel(R) Trust Domain Extensions QE logic library
 Group:          Development/Libraries
-Requires:       libsgx-urts >= 2.17 libsgx-ae-tdqe >= %{version}-%{release}  libsgx-ae-id-enclave >= %{version}-%{release} libsgx-pce-logic >= %{version}-%{release}
+Requires:       libsgx-urts >= 2.18 libsgx-ae-tdqe >= %{version}-%{release}  libsgx-ae-id-enclave >= %{version}-%{release} libsgx-pce-logic >= %{version}-%{release}
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives

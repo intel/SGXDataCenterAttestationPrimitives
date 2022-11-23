@@ -33,8 +33,8 @@
 # main make file for PCK Cert Selection sample project
 #
 
-ifndef $(VERBOSE)
-	VERBOSE:=@
+ifndef VERBOSE
+	PCKCERTSEL_VERBOSE:=@
 endif
 
 ######## Project Settings ########
@@ -102,28 +102,28 @@ all: $(BIN_DIR) $(APP_NAME)
 
 # local source files compiling
 %.o: %.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # build application - link into output dir
 $(APP_NAME): $(APP_CPP_OBJECTS)
-	$(VERBOSE)echo "Building..."
-	$(VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS)
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Building..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS)
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 debug:
-	$(VERBOSE)$(MAKE) DEBUG=1 all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) DEBUG=1 all
 
 release:
-	$(VERBOSE)$(MAKE) all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) all
 
 clean:
-	$(VERBOSE)echo -n "Clean $(APP_NAME)..."
-	$(VERBOSE)rm -f $(BIN_DIR)/$(APP_NAME) $(APP_CPP_OBJECTS)
-	$(VERBOSE)echo done
+	$(PCKCERTSEL_VERBOSE)echo -n "Clean $(APP_NAME)..."
+	$(PCKCERTSEL_VERBOSE)rm -f $(BIN_DIR)/$(APP_NAME) $(APP_CPP_OBJECTS)
+	$(PCKCERTSEL_VERBOSE)echo done
 
 # make sure output dir exist
 $(BIN_DIR):
-	$(VERBOSE)mkdir -p $@
+	$(PCKCERTSEL_VERBOSE)mkdir -p $@
 

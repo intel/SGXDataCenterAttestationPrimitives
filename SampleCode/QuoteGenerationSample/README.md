@@ -45,6 +45,9 @@ Details please refer to driver [README](https://github.com/intel/SGXDataCenterAt
 ### Build and run QuoteGenerationSample to generate SGX ECDSA quote
 
 *Note that you need to install libsgx-quote-ex-dev package and all its dependencies and recommends in order to build and run this sample. Or you can remove the `-l$(Uae_Library_Name)` in Makefile.
+*Prepare: Enclave test key(two options):
+    a. Install openssl first, then the project will generate a test key<Enclave_private_sample.pem> automatically when you build the project.
+    b. Rename your test key(3072-bit RSA private key) to <Enclave_private_sample.pem> and put it under the <Enclave> folder.
 ```
    "in-porc" Release build:
    $ make

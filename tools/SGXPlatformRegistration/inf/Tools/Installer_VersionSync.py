@@ -66,8 +66,8 @@ def SyncNuspecVersion(filename, version):
 	Identity = Metadata[0].getElementsByTagName("version")
 	Identity[0].firstChild.replaceWholeText(version)
 	
-	print vsixmanifest.toxml()
-	f =  open(filename, "wb")
+	print(vsixmanifest.toxml())
+	f =  open(filename, "w")
 	vsixmanifest.writexml(f)
 	f.close()	
 

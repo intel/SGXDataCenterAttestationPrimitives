@@ -32,14 +32,23 @@ Prerequisite:
    $ ./app
 ```
 
-2. Build and run QuoteVerificationSample to verify a given quote
+2. Build and run QuoteVerificationSample to verify a given SGX or TDX quote
 ```
    Release build:
    $ make  `#You need to sign ISV enclave with your own key in this mode`
+
    Or Debug build:
+   *Prepare: Enclave test key(two options):
+      a. Install openssl first, then the project will generate a test key<Enclave_private_sample.pem> automatically when you build the project.
+      b. Rename your test key(3072-bit RSA private key) to <Enclave_private_sample.pem> and put it under the <Enclave> folder.
    $ make SGX_DEBUG=1
    $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
+
+   Build and run inside TD VM
+   $ make TD_ENV=1 SGX_DEBUG=1
+   $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
+
 **Note**: Our libdcap_quoteprov.so is not built with Intel(R) Control Flow Enforcement Technology(CET) feature. If the sample is built with CET feature(it can be enabled by the compiler's default setting) and it is running on a CET enabled platform, you may encounter such an error message(or something similar): "Couldn't find the platform library. rebuild shared object with SHSTK support enabled". It means the system glibc enforces that a CET-enabled application can't load a non-CET shared library. You need to rebuild the sample by adding  -fcf-protection=none option explicitly to disable CET.
 
 ## Windows

@@ -32,6 +32,7 @@
 ######## SGX SDK Settings ########
 TOP_DIR  = ../..
 include $(TOP_DIR)/buildenv.mk
+PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
 
 ######## SGX CNL Library Settings ########
 
@@ -42,7 +43,8 @@ CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
                          -I../inc -I$(SGX_SDK)/include          \
                          -I../../common/inc/internal            \
                          -I../../pce_wrapper/inc                \
-                         -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson
+                         -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson	\
+                         -I$(PREBUILD_OPENSSL_PATH)/inc
 
 CNL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(CNL_Lib_Include_Paths)
 
@@ -55,7 +57,8 @@ ifdef SELF_SIGNED_CERT
 CNL_Lib_Cpp_Flags+= -DSELF_SIGNED_CERT
 endif
 
-CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl -lcurl
+CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
+		-lpthread -ldl -lcurl
  
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE
@@ -65,14 +68,22 @@ endif
 CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 
-CNL_Lib_Name_Dynamic  := libsgx_default_qcnl_wrapper.so
+CNL_Lib_Name := libsgx_default_qcnl_wrapper
+CNL_Lib_Name_Dynamic :=  $(CNL_Lib_Name).so
+CNL_Lib_Name_Static := $(CNL_Lib_Name).a
+
 
 .PHONY: all run
 
-all: $(CNL_Lib_Name) install_lib
+all: install_lib
 
 install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(CNL_Lib_Name_Dynamic) $|
+
+ifeq ($(GEN_STATIC),1)
+	@$(MAKE) $(CNL_Lib_Name_Static)
+	@$(CP) $(CNL_Lib_Name_Static) $|
+endif
 
 run: all
 
@@ -87,6 +98,9 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 $(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects)
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
 
+$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects)
+	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects)
+
 force_look:
 	true
 
@@ -96,6 +110,6 @@ $(BUILD_DIR):
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug)
+	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Static)
 
 

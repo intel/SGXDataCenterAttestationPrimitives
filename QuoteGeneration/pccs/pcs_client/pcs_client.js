@@ -87,7 +87,7 @@ async function do_request(url, options) {
 
     return response;
   } catch (err) {
-    logger.error(err);
+    logger.error(err);  
     if (err.response && err.response.headers) {
       logger.info('Request-ID is : ' + err.response.headers['request-id']);
     }
@@ -99,6 +99,7 @@ function getTdxUrl(url) {
   return url.replace('/sgx/', '/tdx/');
 }
 
+/*
 export async function getCert(enc_ppid, cpusvn, pcesvn, pceid) {
   const options = {
     searchParams: {
@@ -113,6 +114,7 @@ export async function getCert(enc_ppid, cpusvn, pcesvn, pceid) {
 
   return do_request(Config.get('uri') + 'pckcert', options);
 }
+*/
 
 export async function getCerts(enc_ppid, pceid) {
   const options = {

@@ -40,10 +40,13 @@ export default class Platforms extends Sequelize.Model {
           type: Sequelize.DataTypes.BLOB,
           // store binary data in DB
           get() {
-            return (this.getDataValue('platform_manifest') || '').toString('hex');
+            return (this.getDataValue('platform_manifest') || '').toString(
+              'hex'
+            );
           },
           set(value) {
-            this.setDataValue('platform_manifest', Buffer.from(value, 'hex'));
+            if (value)
+              this.setDataValue('platform_manifest', Buffer.from(value, 'hex'));
           },
         },
         enc_ppid: {
@@ -53,7 +56,7 @@ export default class Platforms extends Sequelize.Model {
             return (this.getDataValue('enc_ppid') || '').toString('hex');
           },
           set(value) {
-            this.setDataValue('enc_ppid', Buffer.from(value, 'hex'));
+            if (value) this.setDataValue('enc_ppid', Buffer.from(value, 'hex'));
           },
         },
         fmspc: { type: Sequelize.DataTypes.STRING },

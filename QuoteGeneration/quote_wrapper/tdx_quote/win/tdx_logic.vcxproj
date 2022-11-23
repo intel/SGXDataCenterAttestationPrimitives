@@ -205,6 +205,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\inc\td_ql_wrapper.h" />
     <ClInclude Include="..\td_ql_logic.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="id_enclave_u.h" />
@@ -213,6 +214,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\td_ql_logic.cpp" />
+    <ClCompile Include="..\td_ql_wrapper.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="id_enclave_u.c" />
     <ClCompile Include="tdqe_u.c">
@@ -224,6 +226,10 @@
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4201</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4201</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4201</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4201</DisableSpecificWarnings>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

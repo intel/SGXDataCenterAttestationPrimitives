@@ -33,8 +33,8 @@
 # main make file for PCK Cert Selection library project
 #
 
-ifndef $(VERBOSE)
-	VERBOSE:=@
+ifndef VERBOSE
+	PCKCERTSEL_VERBOSE:=@
 endif
 
 ######## Project Settings ########
@@ -159,60 +159,60 @@ all: $(BIN_DIR) $(LIB_NAME)
 
 # local source files compiling
 %.o: %.cpp
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # parser source files compiling
 %.o: $(PARSERS_DIR)/%.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # x509 source files compiling
 %.o: $(X509_DIR)/%.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # helpers source files compiling
 %.o: $(HELPERS_DIR)/%.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # json source files compiling
 %.o: $(JSON_DIR)/%.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # utils source files compiling
 %.o: $(UTILS_DIR)/%.cpp 
-	$(VERBOSE)echo "Compiling $<..."
-	$(VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # build library - link into output dir
 $(LIB_NAME): $(LIB_CPP_OBJECTS)
-	$(VERBOSE)echo "Linking..."
-	$(VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS)
-	$(VERBOSE)cp $(BIN_DIR)/$@ $(BIN_DIR)/$(LIB_SYM)
-	$(VERBOSE)echo "Stripping..."
-	$(VERBOSE)$(STRIP_CMD) $(BIN_DIR)/$@
-	$(VERBOSE)echo "\t -> $@ done"
+	$(PCKCERTSEL_VERBOSE)echo "Linking..."
+	$(PCKCERTSEL_VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS)
+	$(PCKCERTSEL_VERBOSE)cp $(BIN_DIR)/$@ $(BIN_DIR)/$(LIB_SYM)
+	$(PCKCERTSEL_VERBOSE)echo "Stripping..."
+	$(PCKCERTSEL_VERBOSE)$(STRIP_CMD) $(BIN_DIR)/$@
+	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 debug:
-	$(VERBOSE)$(MAKE) DEBUG=1 all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) DEBUG=1 all
 
 release:
-	$(VERBOSE)$(MAKE) all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) all
 
 clean:
-	$(VERBOSE)echo -n "Clean $(LIB_NAME)..."
-	$(VERBOSE)rm -f $(BIN_DIR)/$(LIB_NAME)* $(LIB_CPP_OBJECTS)
-	$(VERBOSE)echo done
+	$(PCKCERTSEL_VERBOSE)echo -n "Clean $(LIB_NAME)..."
+	$(PCKCERTSEL_VERBOSE)rm -f $(BIN_DIR)/$(LIB_NAME)* $(LIB_CPP_OBJECTS)
+	$(PCKCERTSEL_VERBOSE)echo done
 
 $(BIN_DIR):
-	$(VERBOSE)mkdir -p $@
+	$(PCKCERTSEL_VERBOSE)mkdir -p $@
 

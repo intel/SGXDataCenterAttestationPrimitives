@@ -337,6 +337,7 @@ def pcs_fetch(args):
         root_cert = qe_identity[1][spos:]
         cdp = sgxext.get_root_ca_crl(unquote(root_cert).encode('utf-8'))
         rootcacrl = pcsclient.getFileFromUrl(cdp)
+        output_json["collaterals"]["rootcacrl_cdp"] = cdp
         output_json["collaterals"]["rootcacrl"] = rootcacrl
 
         with open(output_file, "w") as ofile:

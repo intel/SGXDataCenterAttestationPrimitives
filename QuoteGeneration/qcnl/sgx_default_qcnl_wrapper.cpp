@@ -29,27 +29,27 @@
  *
  */
 /**
- * File: sgx_default_qcnl_wrapper.cpp 
- *  
- * Description: SGX default PCK Collateral Network Library  
+ * File: sgx_default_qcnl_wrapper.cpp
+ *
+ * Description: SGX default PCK Collateral Network Library
  *
  */
 
 #include "sgx_default_qcnl_wrapper.h"
-#include "pckcert_provider.h"
+#include "certification_service.h"
 #include "qcnl_config.h"
 #include "qcnl_def.h"
-#include "qv_collateral_provider.h"
-#include "sgx_pce.h"
 #include "qcnl_util.h"
+#include "sgx_pce.h"
 #include <cstdarg>
 #include <stdexcept>
 
 static sgx_ql_logging_callback_t logger_callback = nullptr;
+static sgx_ql_log_level_t g_loglevel = SGX_QL_LOG_ERROR;
 
 void qcnl_log(sgx_ql_log_level_t level, const char *fmt, ...) {
-    if (logger_callback != nullptr) {
-        char message[512];
+    if (logger_callback != nullptr && level <= g_loglevel) {
+        char message[2500]; // to make sure the full URL can be logged.
         va_list args;
         va_start(args, fmt);
         vsnprintf(message, sizeof(message), fmt, args);
@@ -63,14 +63,14 @@ void qcnl_log(sgx_ql_log_level_t level, const char *fmt, ...) {
 }
 
 /**
-* This API gets PCK certificate chain and TCBm from PCCS server based on the information provided(QE_ID, TCBr, EncPPID, PCE_ID) 
-* The buffer allocated by this function should be freed with sgx_qcnl_free_pck_cert_chain by the caller.
-*
-* @param p_pck_cert_id PCK cert identity information
-* @param pp_quote_config Output buffer for quote configuration data
-*
-* @return SGX_QCNL_SUCCESS If the PCK certificate chain and TCBm was retrieved from PCCS server successfully.
-*/
+ * This API gets PCK certificate chain and TCBm from PCCS server based on the information provided(QE_ID, TCBr, EncPPID, PCE_ID)
+ * The buffer allocated by this function should be freed with sgx_qcnl_free_pck_cert_chain by the caller.
+ *
+ * @param p_pck_cert_id PCK cert identity information
+ * @param pp_quote_config Output buffer for quote configuration data
+ *
+ * @return SGX_QCNL_SUCCESS If the PCK certificate chain and TCBm was retrieved from PCCS server successfully.
+ */
 sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
                                              sgx_ql_config_t **pp_quote_config) {
 
@@ -92,13 +92,13 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_c
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    PckCertProvider pckCertProvider;
-    return pckCertProvider.get_pck_cert_chain(p_pck_cert_id, pp_quote_config);
+    CertificationService certificationService;
+    return certificationService.get_pck_cert_chain(p_pck_cert_id, pp_quote_config);
 }
 
 /**
-* This API frees the buffer allocated by sgx_qcnl_get_pck_cert_chain
-*/
+ * This API frees the buffer allocated by sgx_qcnl_get_pck_cert_chain
+ */
 void sgx_qcnl_free_pck_cert_chain(sgx_ql_config_t *p_quote_config) {
     if (p_quote_config) {
         if (p_quote_config->p_cert_data) {
@@ -112,19 +112,19 @@ void sgx_qcnl_free_pck_cert_chain(sgx_ql_config_t *p_quote_config) {
 }
 
 /**
-* This API gets CRL certificate chain from PCCS server. The p_crl_chain buffer allocated by this API
-* must be freed with sgx_qcnl_free_pck_crl_chain upon success.
-*
-* @param ca Currently only "platform" or "processor"
-* @param ca_size Size of the ca buffer
-* @param p_crl_chain Output buffer for CRL certificate chain
-* @param p_crl_chain_size Size of CRL certificate chain
-*
-* @return SGX_QCNL_SUCCESS If the CRL certificate chain was retrieved from PCCS server successfully.
-*/
+ * This API gets CRL certificate chain from PCCS server. The p_crl_chain buffer allocated by this API
+ * must be freed with sgx_qcnl_free_pck_crl_chain upon success.
+ *
+ * @param ca Currently only "platform" or "processor"
+ * @param ca_size Size of the ca buffer
+ * @param p_crl_chain Output buffer for CRL certificate chain
+ * @param p_crl_chain_size Size of CRL certificate chain
+ *
+ * @return SGX_QCNL_SUCCESS If the CRL certificate chain was retrieved from PCCS server successfully.
+ */
 sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char *ca,
                                             uint16_t ca_size,
-                                            const char* custom_param_b64_string,
+                                            const char *custom_param_b64_string,
                                             uint8_t **p_crl_chain,
                                             uint16_t *p_crl_chain_size) {
     // Check input parameters
@@ -136,13 +136,13 @@ sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char *ca,
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_pck_crl_chain(ca, ca_size, p_crl_chain, p_crl_chain_size);
+    CertificationService certificationService(custom_param_b64_string);
+    return certificationService.get_pck_crl_chain(ca, ca_size, p_crl_chain, p_crl_chain_size);
 }
 
 /**
-* This API frees the p_crl_chain buffer allocated by sgx_qcnl_get_pck_crl_chain
-*/
+ * This API frees the p_crl_chain buffer allocated by sgx_qcnl_get_pck_crl_chain
+ */
 void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain) {
     if (p_crl_chain) {
         free(p_crl_chain);
@@ -151,21 +151,21 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain) {
 }
 
 /**
-* This API gets TCB information from PCCS server. The p_tcbinfo buffer allocated by this API
-* must be freed with sgx_qcnl_free_tcbinfo upon success.
-*
-* @param prod_type SGX or TDX
-* @param fmspc Family-Model-Stepping value
-* @param fmspc_size Size of the fmspc buffer
-* @param p_tcbinfo Output buffer for TCB information
-* @param p_tcbinfo_size Size of TCB information
-*
-* @return SGX_QCNL_SUCCESS If the TCB information was retrieved from PCCS server successfully.
-*/
+ * This API gets TCB information from PCCS server. The p_tcbinfo buffer allocated by this API
+ * must be freed with sgx_qcnl_free_tcbinfo upon success.
+ *
+ * @param prod_type SGX or TDX
+ * @param fmspc Family-Model-Stepping value
+ * @param fmspc_size Size of the fmspc buffer
+ * @param p_tcbinfo Output buffer for TCB information
+ * @param p_tcbinfo_size Size of TCB information
+ *
+ * @return SGX_QCNL_SUCCESS If the TCB information was retrieved from PCCS server successfully.
+ */
 sgx_qcnl_error_t qcnl_get_tcbinfo_internal(sgx_prod_type_t prod_type,
                                            const char *fmspc,
                                            uint16_t fmspc_size,
-                                           const char* custom_param_b64_string,
+                                           const char *custom_param_b64_string,
                                            uint8_t **p_tcbinfo,
                                            uint16_t *p_tcbinfo_size) {
     // Check input parameters
@@ -177,13 +177,13 @@ sgx_qcnl_error_t qcnl_get_tcbinfo_internal(sgx_prod_type_t prod_type,
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_tcbinfo(prod_type, fmspc, fmspc_size, p_tcbinfo, p_tcbinfo_size);
+    CertificationService certificationService(custom_param_b64_string);
+    return certificationService.get_tcbinfo(prod_type, fmspc, fmspc_size, p_tcbinfo, p_tcbinfo_size);
 }
 
 sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
                                       uint16_t fmspc_size,
-                                      const char* custom_param_b64_string,
+                                      const char *custom_param_b64_string,
                                       uint8_t **p_tcbinfo,
                                       uint16_t *p_tcbinfo_size) {
     return qcnl_get_tcbinfo_internal(SGX_PROD_TYPE_SGX,
@@ -196,7 +196,7 @@ sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
 
 sgx_qcnl_error_t tdx_qcnl_get_tcbinfo(const char *fmspc,
                                       uint16_t fmspc_size,
-                                      const char* custom_param_b64_string,
+                                      const char *custom_param_b64_string,
                                       uint8_t **p_tcbinfo,
                                       uint16_t *p_tcbinfo_size) {
     return qcnl_get_tcbinfo_internal(SGX_PROD_TYPE_TDX,
@@ -208,8 +208,8 @@ sgx_qcnl_error_t tdx_qcnl_get_tcbinfo(const char *fmspc,
 }
 
 /**
-* This API frees the p_tcbinfo buffer allocated by sgx_qcnl_get_tcbinfo
-*/
+ * This API frees the p_tcbinfo buffer allocated by sgx_qcnl_get_tcbinfo
+ */
 void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
     if (p_tcbinfo) {
         free(p_tcbinfo);
@@ -218,8 +218,8 @@ void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
 }
 
 /**
-* This API frees the p_tcbinfo buffer allocated by tdx_qcnl_get_tcbinfo
-*/
+ * This API frees the p_tcbinfo buffer allocated by tdx_qcnl_get_tcbinfo
+ */
 void tdx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
     if (p_tcbinfo) {
         free(p_tcbinfo);
@@ -227,31 +227,31 @@ void tdx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo) {
 }
 
 /**
-* This API gets QE identity from PCCS server. The p_qe_identity buffer allocated by this API
-* must be freed with sgx_qcnl_free_qe_identity upon success.
-*
-* @param qe_type Type of QE
-* @param p_qe_identity Output buffer for QE identity
-* @param p_qe_identity_size Size of QE identity
-*
-* @return SGX_QCNL_SUCCESS If the QE identity was retrieved from PCCS server successfully.
-*/
+ * This API gets QE identity from PCCS server. The p_qe_identity buffer allocated by this API
+ * must be freed with sgx_qcnl_free_qe_identity upon success.
+ *
+ * @param qe_type Type of QE
+ * @param p_qe_identity Output buffer for QE identity
+ * @param p_qe_identity_size Size of QE identity
+ *
+ * @return SGX_QCNL_SUCCESS If the QE identity was retrieved from PCCS server successfully.
+ */
 sgx_qcnl_error_t sgx_qcnl_get_qe_identity(sgx_qe_type_t qe_type,
-                                          const char* custom_param_b64_string,
+                                          const char *custom_param_b64_string,
                                           uint8_t **p_qe_identity,
                                           uint16_t *p_qe_identity_size) {
     // Check input parameters
-    if (p_qe_identity == NULL || p_qe_identity_size == NULL ) {
+    if (p_qe_identity == NULL || p_qe_identity_size == NULL) {
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_qe_identity(qe_type, p_qe_identity, p_qe_identity_size);
+    CertificationService certificationService(custom_param_b64_string);
+    return certificationService.get_qe_identity(qe_type, p_qe_identity, p_qe_identity_size);
 }
 
 /**
-* This API frees the p_qe_identity buffer allocated by sgx_qcnl_get_qe_identity
-*/
+ * This API frees the p_qe_identity buffer allocated by sgx_qcnl_get_qe_identity
+ */
 void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity) {
     if (p_qe_identity) {
         free(p_qe_identity);
@@ -260,17 +260,17 @@ void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity) {
 }
 
 /**
-* This API gets QvE identity from PCCS server. The pp_qve_identity and pp_qve_identity_issuer_chain buffer allocated by this API
-* must be freed with sgx_qcnl_free_qve_identity upon success.
-*
-* @param pp_qve_identity Output buffer for QvE identity
-* @param p_qve_identity_size Size of QvE identity
-* @param pp_qve_identity_issuer_chain Output buffer for QvE identity certificate chain
-* @param p_qve_identity_issuer_chain_size Size of QvE identity certificate chain
-*
-* @return SGX_QCNL_SUCCESS If the QvE identity was retrieved from PCCS server successfully.
-*/
-sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char* custom_param_b64_string,
+ * This API gets QvE identity from PCCS server. The pp_qve_identity and pp_qve_identity_issuer_chain buffer allocated by this API
+ * must be freed with sgx_qcnl_free_qve_identity upon success.
+ *
+ * @param pp_qve_identity Output buffer for QvE identity
+ * @param p_qve_identity_size Size of QvE identity
+ * @param pp_qve_identity_issuer_chain Output buffer for QvE identity certificate chain
+ * @param p_qve_identity_issuer_chain_size Size of QvE identity certificate chain
+ *
+ * @return SGX_QCNL_SUCCESS If the QvE identity was retrieved from PCCS server successfully.
+ */
+sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char *custom_param_b64_string,
                                            char **pp_qve_identity,
                                            uint32_t *p_qve_identity_size,
                                            char **pp_qve_identity_issuer_chain,
@@ -280,13 +280,13 @@ sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char* custom_param_b64_string,
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_qve_identity(pp_qve_identity, p_qve_identity_size, pp_qve_identity_issuer_chain, p_qve_identity_issuer_chain_size);
+    CertificationService certificationService(custom_param_b64_string);
+    return certificationService.get_qve_identity(pp_qve_identity, p_qve_identity_size, pp_qve_identity_issuer_chain, p_qve_identity_issuer_chain_size);
 }
 
 /**
-* This API frees the p_qve_identity and p_qve_identity_issuer_chain buffer allocated by sgx_qcnl_get_qve_identity
-*/
+ * This API frees the p_qve_identity and p_qve_identity_issuer_chain buffer allocated by sgx_qcnl_get_qve_identity
+ */
 void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain) {
     if (p_qve_identity) {
         free(p_qve_identity);
@@ -299,17 +299,17 @@ void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issue
 }
 
 /**
-* This API gets Root CA CRL from PCCS server. The p_root_ca_crl buffer allocated by this API
-* must be freed with sgx_qcnl_free_root_ca_crl upon success.
-*
-* @param root_ca_cdp_url The url of root CA CRL
-* @param p_root_ca_crl Output buffer for Root CA CRL 
-* @param p_root_ca_cal_size Size of Root CA CRL
-*
-* @return SGX_QCNL_SUCCESS If the Root CA CRL was retrieved from PCCS server successfully.
-*/
+ * This API gets Root CA CRL from PCCS server. The p_root_ca_crl buffer allocated by this API
+ * must be freed with sgx_qcnl_free_root_ca_crl upon success.
+ *
+ * @param root_ca_cdp_url The url of root CA CRL
+ * @param p_root_ca_crl Output buffer for Root CA CRL
+ * @param p_root_ca_cal_size Size of Root CA CRL
+ *
+ * @return SGX_QCNL_SUCCESS If the Root CA CRL was retrieved from PCCS server successfully.
+ */
 sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl(const char *root_ca_cdp_url,
-                                          const char* custom_param_b64_string,
+                                          const char *custom_param_b64_string,
                                           uint8_t **p_root_ca_crl,
                                           uint16_t *p_root_ca_crl_size) {
     // Check input parameters
@@ -317,13 +317,13 @@ sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl(const char *root_ca_cdp_url,
         return SGX_QCNL_INVALID_PARAMETER;
     }
 
-    QvCollateralProvider qvCollateralProvider(custom_param_b64_string);
-    return qvCollateralProvider.get_root_ca_crl(root_ca_cdp_url, p_root_ca_crl, p_root_ca_crl_size);
+    CertificationService certificationService(custom_param_b64_string);
+    return certificationService.get_root_ca_crl(root_ca_cdp_url, p_root_ca_crl, p_root_ca_crl_size);
 }
 
 /**
-* This API frees the p_root_ca_crl buffer allocated by sgx_qcnl_get_root_ca_crl
-*/
+ * This API frees the p_root_ca_crl buffer allocated by sgx_qcnl_get_root_ca_crl
+ */
 void sgx_qcnl_free_root_ca_crl(uint8_t *p_root_ca_crl) {
     if (p_root_ca_crl) {
         free(p_root_ca_crl);
@@ -369,7 +369,8 @@ bool sgx_qcnl_get_api_version(uint16_t *p_major_ver, uint16_t *p_minor_ver) {
     return true;
 }
 
-sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger) {
+sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel) {
     logger_callback = logger;
+    g_loglevel = loglevel;
     return SGX_QCNL_SUCCESS;
 }

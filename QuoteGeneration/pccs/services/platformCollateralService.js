@@ -42,9 +42,13 @@ import * as pckcrlDao from '../dao/pckcrlDao.js';
 import * as enclaveIdentityDao from '../dao/enclaveIdentityDao.js';
 import * as pckCertchainDao from '../dao/pckCertchainDao.js';
 import * as pcsCertificatesDao from '../dao/pcsCertificatesDao.js';
+import * as crlCacheDao from '../dao/crlCacheDao.js';
 import * as pckLibWrapper from '../lib_wrapper/pcklib_wrapper.js';
 import * as appUtil from '../utils/apputil.js';
-import { PLATFORM_COLLATERAL_SCHEMA_V4 } from './pccs_schemas.js';
+import {
+  PLATFORM_COLLATERAL_SCHEMA_V3,
+  PLATFORM_COLLATERAL_SCHEMA_V4,
+} from './pccs_schemas.js';
 import { sequelize } from '../dao/models/index.js';
 
 const ajv = new Ajv();
@@ -332,6 +336,9 @@ export async function addPlatformCollateral(collateralJson, version) {
       await pcsCertificatesDao.upsertRootCACrl(
         Buffer.from(collaterals.rootcacrl, 'hex')
       );
+      if (collaterals.rootcacrl_cdp) {
+        await crlCacheDao.upsertCrl(collaterals.rootcacrl_cdp, Buffer.from(collaterals.rootcacrl, 'hex'));
+      }
     }
   });
 }

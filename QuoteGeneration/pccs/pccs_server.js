@@ -44,7 +44,7 @@ import * as error from './middleware/error.js';
 import addRequestId from './middleware/addRequestId.js';
 import * as refreshService from './services/refreshService.js';
 import * as appUtil from './utils/apputil.js';
-import { cachingModeManager } from './services/caching_modes/cachingModeManager';
+import { cachingModeManager } from './services/caching_modes/cachingModeManager.js';
 import {
   LazyCachingMode,
   ReqCachingMode,
@@ -64,8 +64,8 @@ const app = express();
 const { urlencoded, json } = body_parser;
 const { scheduleJob } = node_schedule;
 
-  // Get PCS API version from the config file
-  global.PCS_VERSION = appUtil.get_api_version_from_url(Config.get('uri'));
+// Get PCS API version from the config file
+global.PCS_VERSION = appUtil.get_api_version_from_url(Config.get('uri'));
 
 // startup check
 if (!appUtil.startup_check()) {
@@ -138,8 +138,23 @@ appUtil.database_check().then((db_init_ok) => {
     logger.error('The private key or certificate for HTTPS server is missing.');
     logger.endAndExitProcess();
   }
-  const credentials = { key: privateKey, cert: certificate };
-  const httpsServer = https.createServer(credentials, app);
+  const secure_sigalgs = [
+    'ecdsa_secp256r1_sha256',
+    'ecdsa_secp384r1_sha384',
+    'ecdsa_secp521r1_sha512',
+    'rsa_pss_rsae_sha256',
+    'rsa_pss_rsae_sha384',
+    'rsa_pss_rsae_sha512',
+    'rsa_pkcs1_sha256',
+    'rsa_pkcs1_sha384',
+    'rsa_pkcs1_sha512',
+  ];
+  const options = {
+    key: privateKey,
+    cert: certificate,
+    sigalgs: secure_sigalgs.join(':'),
+  };
+  const httpsServer = https.createServer(options, app);
   httpsServer.listen(
     Config.get('HTTPS_PORT'),
     Config.get('hosts'),

@@ -74,9 +74,9 @@ export async function getPckCertFromPCS(
       pceid
     );
   } else {
-    // if enc_ppid is all zero, return NOT_FOUND
+    // if enc_ppid is all zero, return NO_CACHE_DATA
     if (enc_ppid.match(/^0+$/)) {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NOT_FOUND);
+      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
     }
 
     // Call Intel PCS API with encrypted PPID

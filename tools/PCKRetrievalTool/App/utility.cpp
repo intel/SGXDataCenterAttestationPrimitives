@@ -380,7 +380,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
         p_mp_uefi_get_request == NULL ||
         p_mp_uefi_get_registration_status == NULL ||
         p_mp_uefi_terminate == NULL) {
-        printf("Error: cound't find uefi function interface(s) in the UEFI shared library.\n");
+        printf("Error: coulnd't find uefi function interface(s) in the UEFI shared library.\n");
         CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
@@ -418,7 +418,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
             MpRegistrationStatus status;
             MpResult mpResult_registration_status = p_mp_uefi_get_registration_status(&status);
             if (mpResult != MP_SUCCESS) {
-                printf("Warning: error happens when get registration status, the error code is: %d \n", mpResult_registration_status);
+                printf("Warning: error occurred while getting registration status, the error code is: %d \n", mpResult_registration_status);
                 break;
             }
             if(status.registrationStatus == MP_TASK_COMPLETED){
@@ -495,7 +495,7 @@ uefi_status_t set_registration_status()
     status.errorCode = MPA_SUCCESS;
     mpResult = p_mp_uefi_set_registration_status(&status);
     if (mpResult != MP_SUCCESS) {
-        printf("Warning: error happens when set registration status, the error code is: %d \n", mpResult);
+        printf("Warning: error occurred while setting registration status, the error code is: %d \n", mpResult);
     }
     else {
         ret = UEFI_OPERATION_SUCCESS;
@@ -721,7 +721,7 @@ int collect_data(uint8_t **pp_data_buffer)
     }
 
     if (encrypted_ppid_ret_size != ENCRYPTED_PPID_LENGTH) {
-        fprintf(stderr, "PCE returned unexpected returned encrypted PPID size.\n");
+        fprintf(stderr, "PCE returned incorrect encrypted PPID size.\n");
         ret = -1;
         goto CLEANUP;
     }

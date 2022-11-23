@@ -29,22 +29,29 @@
  *
  */
 /**
- * File: qcnl_config.cpp 
- *  
+ * File: qcnl_config.cpp
+ *
  * Description: Read configuration data
  *
  */
 
 #include "qcnl_config.h"
+#include "error/en.h"
+#include "error/error.h"
 #include "sgx_default_qcnl_wrapper.h"
 #include <fstream>
 #include <istreamwrapper.h>
+#include <mutex>
 
 using namespace std;
 
 std::shared_ptr<QcnlConfig> QcnlConfig::myInstance;
+static std::mutex mutex_config_lock;
 
 std::shared_ptr<QcnlConfig> QcnlConfig::Instance() {
+    // Lock the mutex
+    std::lock_guard<std::mutex> lock(mutex_config_lock);
+
     if (!myInstance) {
         QcnlConfigJson *pConfigJson = new QcnlConfigJson();
         if (pConfigJson->load_config()) {
@@ -69,11 +76,18 @@ bool QcnlConfig::load_config_json(const TCHAR *json_file) {
     ParseResult ok = config.ParseStream<kParseCommentsFlag>(isw);
 
     if (!ok) {
-        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to load config file in JSON. Either the legacy format config file is used, \n");
-        qcnl_log(SGX_QL_LOG_INFO, "       or there is something wrong with it (should be JSON format). \n");
+        // If the config file starts with '{', it's likely JSON format
+        char first_byte = 0;
+        ifs.clear();
+        ifs.seekg(0, ifs.beg);
+        if (ifs.get(first_byte) && first_byte == '{') {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Load JSON config error: %s (offset %u).\n",
+                     GetParseError_En(ok.Code()), ok.Offset());
+        } else {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to load config file in JSON format. \n");
+        }
         return false;
-    }
-    else {
+    } else {
         qcnl_log(SGX_QL_LOG_INFO, "[QCNL] JSON config file %s is loaded successfully. \n", json_file);
     }
 
@@ -129,10 +143,19 @@ bool QcnlConfig::load_config_json(const TCHAR *json_file) {
 
     if (config.HasMember("pck_cache_expire_hours")) {
         Value &val = config["pck_cache_expire_hours"];
-        if (val.IsInt()) {
-            this->cache_expire_hour_ = val.GetInt();
-            if (this->cache_expire_hour_ > CACHE_MAX_EXPIRY_HOURS)
-                this->cache_expire_hour_ = CACHE_MAX_EXPIRY_HOURS;
+        if (val.IsDouble() || val.IsInt()) {
+            this->pck_cache_expire_hours_ = val.GetDouble();
+            if (this->pck_cache_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+                this->pck_cache_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
+        }
+    }
+
+    if (config.HasMember("verify_collateral_cache_expire_hours")) {
+        Value &val = config["verify_collateral_cache_expire_hours"];
+        if (val.IsDouble() || val.IsInt()) {
+            this->verify_collateral_expire_hours_ = val.GetDouble();
+            if (this->verify_collateral_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+                this->verify_collateral_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
         }
     }
 
