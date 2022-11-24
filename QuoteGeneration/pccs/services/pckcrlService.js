@@ -30,7 +30,7 @@
  */
 import Constants from '../constants/index.js';
 import * as pckcrlDao from '../dao/pckcrlDao.js';
-import { cachingModeManager } from './caching_modes/cachingModeManager';
+import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
 export async function getPckCrl(ca, encoding) {
   // query pck crl from local database first

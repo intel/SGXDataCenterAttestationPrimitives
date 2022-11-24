@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: network_wrapper.h 
- *  
+/** File: network_wrapper.h
+ *
  * Description: Definitions of network access interfaces
  *
  */

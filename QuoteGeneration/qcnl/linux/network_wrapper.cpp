@@ -97,10 +97,20 @@ static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error) {
     case CURLE_UNKNOWN_OPTION:
         return SGX_QCNL_NETWORK_UNKNOWN_OPTION;
     case CURLE_PEER_FAILED_VERIFICATION:
-        return SGX_QCNL_NETWORK_HTTPS_ERROR;
+        return SGX_QCNL_ROOT_CA_UNTRUSTED;
     default:
         return SGX_QCNL_NETWORK_ERROR;
     }
+}
+
+template <typename T>
+static CURLcode curl_set_opt_with_log(CURL *handle, CURLoption option, T param) {
+    CURLcode result = curl_easy_setopt(handle, option, param);
+    if (result != CURLE_OK) {
+        auto optionStr = std::to_string(option);
+        qcnl_log(SGX_QL_LOG_ERROR, "curl_easy_setopt(%s) returned %d.", optionStr.c_str(), result);
+    }
+    return result;
 }
 
 /**
@@ -161,12 +171,14 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
     network_malloc_info_t res_body = {0, 0};
     struct curl_slist *headers = NULL;
 
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Request URL %s \n", url);
+
     do {
         curl = curl_easy_init();
         if (!curl)
             break;
 
-        if (curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_URL, url) != CURLE_OK)
             break;
 
         // append user token
@@ -191,42 +203,42 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
         }
 
         // set header
-        if (curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_HTTPHEADER, headers) != CURLE_OK)
             break;
 
         if (req_body && req_body_size > 0) {
             // using CURLOPT_POSTFIELDS implies setting CURLOPT_POST to 1.
-            if (curl_easy_setopt(curl, CURLOPT_POST, 1) != CURLE_OK)
+            if (curl_set_opt_with_log(curl, CURLOPT_POST, 1) != CURLE_OK)
                 break;
             // size of the POST data
-            if (curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)req_body_size) != CURLE_OK)
+            if (curl_set_opt_with_log(curl, CURLOPT_POSTFIELDSIZE, (long)req_body_size) != CURLE_OK)
                 break;
             // pass in a pointer to the data - libcurl will not copy
-            if (curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body) != CURLE_OK)
+            if (curl_set_opt_with_log(curl, CURLOPT_POSTFIELDS, req_body) != CURLE_OK)
                 break;
         }
 
         if (!QcnlConfig::Instance()->is_server_secure()) {
             // if not set this option, the below error code will be returned for self signed cert
             // CURLE_SSL_CACERT (60) Peer certificate cannot be authenticated with known CA certificates.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK)
+            if (curl_set_opt_with_log(curl, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK)
                 break;
             // if not set this option, the below error code will be returned for self signed cert
             // // CURLE_PEER_FAILED_VERIFICATION (51) The remote server's SSL certificate or SSH md5 fingerprint was deemed not OK.
-            if (curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L) != CURLE_OK)
+            if (curl_set_opt_with_log(curl, CURLOPT_SSL_VERIFYHOST, 0L) != CURLE_OK)
                 break;
         }
 
         // Set write callback functions
-        if (curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_WRITEFUNCTION, write_callback) != CURLE_OK)
             break;
-        if (curl_easy_setopt(curl, CURLOPT_WRITEDATA, reinterpret_cast<void *>(&res_body)) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_WRITEDATA, reinterpret_cast<void *>(&res_body)) != CURLE_OK)
             break;
 
         // Set header callback functions
-        if (curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_callback) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_HEADERFUNCTION, write_callback) != CURLE_OK)
             break;
-        if (curl_easy_setopt(curl, CURLOPT_HEADERDATA, reinterpret_cast<void *>(&res_header)) != CURLE_OK)
+        if (curl_set_opt_with_log(curl, CURLOPT_HEADERDATA, reinterpret_cast<void *>(&res_header)) != CURLE_OK)
             break;
 
         uint32_t retry_times = QcnlConfig::Instance()->getRetryTimes() + 1;
@@ -260,9 +272,11 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
                 }
                 continue;
             } else {
-                if (curl_ret != CURLE_OK)
+                if (curl_ret != CURLE_OK) {
+                    qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Encountered CURL error: (%d) %s \n",
+                             curl_ret, curl_easy_strerror(curl_ret));
                     ret = curl_error_to_qcnl_error(curl_ret);
-                else
+                } else
                     ret = pccs_status_to_qcnl_error(http_code);
                 goto cleanup;
             }

@@ -60,6 +60,12 @@
       <Command>"$(SGXSDKInstallPath)\bin\win32\release\sgx_sign.exe" sign -key "$(ProjectDir)Enclave_private_sample.pem" -enclave "$(OutDir)Enclave.dll" -out "$(OutDir)Enclave.signed.dll" -config "$(ProjectDir)Enclave.config.xml"</Command>
       <Message>sign the enclave</Message>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>if not exist "$(SolutionDir)Enclave\Enclave_private_sample.pem" ("$(SGXSDKInstallPath)bin\win32\Release\ippRsaTool.exe" -genrsa "$(SolutionDir)Enclave\Enclave_private_sample.pem")</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generate enclave test key</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

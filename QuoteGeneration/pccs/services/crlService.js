@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-import * as crlCacheDao from '../dao/crlCacheDao';
+import * as crlCacheDao from '../dao/crlCacheDao.js';
 import { cachingModeManager } from './caching_modes/cachingModeManager.js';
 
 export async function getCrl(uri) {

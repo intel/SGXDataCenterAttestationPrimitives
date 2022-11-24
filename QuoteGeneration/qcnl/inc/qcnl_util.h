@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: qcnl_util.h 
- *  
+/** File: qcnl_util.h
+ *
  * Description: Utility functions for QCNL
  *
  */
@@ -51,5 +51,6 @@ bool concat_string_with_hex_buf(string &url, const uint8_t *ba, const uint32_t b
 bool req_body_append_para(string &req_body, const string &para_name, const uint8_t *para, const uint32_t para_size);
 void http_header_to_map(const char *resp_header, uint32_t header_size, unordered_map<string, string> &header_map);
 bool is_collateral_service_pcs();
+string sha256(const void *data, size_t data_size);
 
 #endif

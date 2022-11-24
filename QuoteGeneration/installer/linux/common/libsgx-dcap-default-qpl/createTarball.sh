@@ -51,6 +51,7 @@ cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 
 # Copy the files according to the BOM
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-default-qpl.txt --installdir=pkgroot/libsgx-dcap-default-qpl
+python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-default-qpl-dev.txt --cleanup=false --installdir=pkgroot/libsgx-dcap-default-qpl-dev
 python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/libsgx-dcap-default-qpl-package.txt  --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 

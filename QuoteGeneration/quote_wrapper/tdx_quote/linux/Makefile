@@ -52,7 +52,7 @@ vpath %.c $(COMMON_DIR)/src
 Quote_C_Files := tdqe_u.c id_enclave_u.c se_thread.c se_trace.c
 Quote_Cpp_Files := $(wildcard ../*.cpp)
 
-Quote_Include_Paths := -I$(SGX_SDK)/include -I../../common/inc -I./ \
+Quote_Include_Paths := -I$(SGX_SDK)/include -I../inc -I../../common/inc -I./ \
                        -I../enclave -I$(TOP_DIR)/pce_wrapper/inc \
 					   -I$(COMMON_DIR)/inc/internal \
 					   -I$(COMMON_DIR)/inc/internal/linux

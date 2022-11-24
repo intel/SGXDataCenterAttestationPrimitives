@@ -14,7 +14,7 @@ function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$
 # check nodejs version
 function checkDependencies() {
     echo "Checking nodejs version ..."
-    expected_node_v="v10.20.0"
+    expected_node_v="v14.20.0"
     if which node > /dev/null
     then
         cur_node_v=$(node -v)

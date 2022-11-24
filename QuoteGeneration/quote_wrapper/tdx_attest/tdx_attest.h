@@ -62,7 +62,7 @@ typedef enum _tdx_attest_error_t {
 #pragma pack(push, 1)
 
 #define TDX_UUID_SIZE 16
-typedef struct tdx_uuid_t
+typedef struct _tdx_uuid_t
 {
     uint8_t d[TDX_UUID_SIZE];
 } tdx_uuid_t;
@@ -149,6 +149,7 @@ extern "C" {
  * @return TDX_ATTEST_SUCCESS: Successfully generated the Quote.
  * @return TDX_ATTEST_ERROR_UNEXPECTED: An unexpected internal error occurred.
  * @return TDX_ATTEST_ERROR_INVALID_PARAMETER: The parameter is incorrect
+ * @return TDX_ATTEST_ERROR_DEVICE_FAILURE: Failed to acess tdx attest device.
  * @return TDX_ATTEST_ERROR_REPORT_FAILURE: Failed to get TD report.
  * @return TDX_ATTEST_ERROR_VSOCK_FAILURE: Failed read/write in vsock mode
  * @return TDX_ATTEST_ERROR_QUOTE_FAILURE: Failed to get quote from QGS
@@ -191,6 +192,7 @@ tdx_attest_error_t tdx_att_free_quote(
  *                           generated TDX Report. Must not be NULL.
  * @return TDX_ATTEST_SUCCESS: Successfully generated the Report.
  * @return TDX_ATTEST_ERROR_INVALID_PARAMETER: p_tdx_report == NULL
+ * @return TDX_ATTEST_ERROR_DEVICE_FAILURE: Failed to acess tdx attest device.
  * @return TDX_ATTEST_ERROR_REPORT_FAILURE: Failed to get TD report.
  */
 tdx_attest_error_t tdx_att_get_report(
@@ -217,6 +219,7 @@ tdx_attest_error_t tdx_att_get_report(
  * @return TDX_ATTEST_SUCCESS: Successfully extended the RTMR.
  * @return TDX_ATTEST_ERROR_INVALID_PARAMETER: p_rtmr_event == NULL
  * @return TDX_ATTEST_ERROR_UNEXPECTED: An unexpected internal error occurred.
+ * @return TDX_ATTEST_ERROR_DEVICE_FAILURE: Failed to acess tdx attest device.
  * @return TDX_ATTEST_ERROR_EXTEND_FAILURE: Failed to extend data.
  * @return TDX_ATTEST_ERROR_NOT_SUPPORTED: p_rtmr_event->event_data_size != 0
  */

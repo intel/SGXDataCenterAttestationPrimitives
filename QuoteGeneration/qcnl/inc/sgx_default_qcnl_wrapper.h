@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: sgx_default_qcnl_wrapper.h 
- *  
+/** File: sgx_default_qcnl_wrapper.h
+ *
  * Description: Definitions and prototypes for the PCK Collateral Network Library APIs
  *
  */
@@ -63,6 +63,9 @@ typedef enum _sgx_qcnl_error_t {
     SGX_QCNL_ERROR_STATUS_CERTS_UNAVAILABLE = SGX_QCNL_MK_ERROR(0x0012),   ///< Certs not available
     SGX_QCNL_ERROR_STATUS_SERVICE_UNAVAILABLE = SGX_QCNL_MK_ERROR(0x0013), ///< Service is currently not available
     SGX_QCNL_INVALID_CONFIG = SGX_QCNL_MK_ERROR(0x0030),                   ///< Error in configuration file
+    SGX_QCNL_CACHE_MISSING = SGX_QCNL_MK_ERROR(0x0031),                    ///< Cache missing
+    SGX_QCNL_CACHE_EXPIRED = SGX_QCNL_MK_ERROR(0x0032),                    ///< Cache expired
+    SGX_QCNL_ROOT_CA_UNTRUSTED = SGX_QCNL_MK_ERROR(0x0033),                ///< The certificate used to establish SSL session is untrusted
 } sgx_qcnl_error_t;
 
 typedef enum _sgx_qe_type_t {
@@ -81,7 +84,7 @@ void sgx_qcnl_free_pck_cert_chain(sgx_ql_config_t *p_quote_config);
 
 sgx_qcnl_error_t sgx_qcnl_get_pck_crl_chain(const char *ca,
                                             uint16_t ca_size,
-                                            const char* custom_param_b64_string,
+                                            const char *custom_param_b64_string,
                                             uint8_t **p_crl_chain,
                                             uint16_t *p_crl_chain_size);
 
@@ -89,7 +92,7 @@ void sgx_qcnl_free_pck_crl_chain(uint8_t *p_crl_chain);
 
 sgx_qcnl_error_t sgx_qcnl_get_tcbinfo(const char *fmspc,
                                       uint16_t fmspc_size,
-                                      const char* custom_param_b64_string,
+                                      const char *custom_param_b64_string,
                                       uint8_t **p_tcbinfo,
                                       uint16_t *p_tcbinfo_size);
 
@@ -97,20 +100,20 @@ void sgx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo);
 
 sgx_qcnl_error_t tdx_qcnl_get_tcbinfo(const char *fmspc,
                                       uint16_t fmspc_size,
-                                      const char* custom_param_b64_string,
+                                      const char *custom_param_b64_string,
                                       uint8_t **p_tcbinfo,
                                       uint16_t *p_tcbinfo_size);
 
 void tdx_qcnl_free_tcbinfo(uint8_t *p_tcbinfo);
 
 sgx_qcnl_error_t sgx_qcnl_get_qe_identity(sgx_qe_type_t qe_type,
-                                          const char* custom_param_b64_string,
+                                          const char *custom_param_b64_string,
                                           uint8_t **p_qe_identity,
                                           uint16_t *p_qe_identity_size);
 
 void sgx_qcnl_free_qe_identity(uint8_t *p_qe_identity);
 
-sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char* custom_param_b64_string,
+sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char *custom_param_b64_string,
                                            char **pp_qve_identity,
                                            uint32_t *p_qve_identity_size,
                                            char **pp_qve_identity_issuer_chain,
@@ -119,7 +122,7 @@ sgx_qcnl_error_t sgx_qcnl_get_qve_identity(const char* custom_param_b64_string,
 void sgx_qcnl_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
 
 sgx_qcnl_error_t sgx_qcnl_get_root_ca_crl(const char *root_ca_cdp_url,
-                                          const char* custom_param_b64_string,
+                                          const char *custom_param_b64_string,
                                           uint8_t **p_root_ca_crl,
                                           uint16_t *p_root_ca_crl_size);
 
@@ -127,7 +130,7 @@ void sgx_qcnl_free_root_ca_crl(uint8_t *p_root_ca_crl);
 
 bool sgx_qcnl_get_api_version(uint16_t *p_major_ver, uint16_t *p_minor_ver);
 
-sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger);
+sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel = SGX_QL_LOG_ERROR);
 
 void qcnl_log(sgx_ql_log_level_t level, const char *fmt, ...);
 

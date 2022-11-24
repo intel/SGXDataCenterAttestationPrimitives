@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: qcnl_config.h 
- *  
+/** File: qcnl_config.h
+ *
  * Description: Configurations for QCNL library
  *
  */
@@ -38,8 +38,8 @@
 #pragma once
 
 #include "document.h"
-#include <string>
 #include <memory>
+#include <string>
 
 using namespace std;
 using namespace rapidjson;
@@ -52,7 +52,7 @@ using namespace rapidjson;
 #include <windows.h>
 #endif
 
-#define CACHE_MAX_EXPIRY_HOURS  2160
+#define CACHE_MAX_EXPIRY_HOURS 2160         // 90 days
 
 class QcnlConfig {
 protected:
@@ -71,21 +71,22 @@ protected:
     // Local URL address
     string local_pck_url_;
     // Cache expire hours
-    uint32_t cache_expire_hour_;
+    double pck_cache_expire_hours_;
+    // Collateral expire hours
+    double verify_collateral_expire_hours_;
     // custom request options for Azure
     Document custom_request_options_;
 
-    QcnlConfig() : server_url_("https://localhost:8081/sgx/certification/v3/"),
+    QcnlConfig() : server_url_("https://localhost:8081/sgx/certification/v4/"),
                    use_secure_cert_(true),
                    collateral_service_url_(server_url_),
                    collateral_version_("3.0"),
                    retry_times_(0),
                    retry_delay_(0),
                    local_pck_url_(""),
-                   cache_expire_hour_(0) {}
-    // To define the virtual destructor outside the class:
-    virtual ~QcnlConfig() {
-    };
+                   pck_cache_expire_hours_(0),
+                   verify_collateral_expire_hours_(0) {}
+    virtual ~QcnlConfig(){};
 
 public:
     QcnlConfig(QcnlConfig const &) = delete;
@@ -124,8 +125,12 @@ public:
         return local_pck_url_;
     }
 
-    uint32_t getCacheExpireHour() {
-        return cache_expire_hour_;
+    double getCacheExpireHour() {
+        return pck_cache_expire_hours_;
+    }
+
+    double getVerifyCollateralExpireHour() {
+        return verify_collateral_expire_hours_;
     }
 
     Document &getCustomRequestOptions() {
@@ -153,4 +158,4 @@ public:
     bool load_config();
 };
 
-#endif //QCNLCONFIG_H_
+#endif // QCNLCONFIG_H_

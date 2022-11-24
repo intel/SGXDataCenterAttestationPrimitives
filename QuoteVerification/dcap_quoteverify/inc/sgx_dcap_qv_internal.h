@@ -45,6 +45,9 @@
 extern "C" {
 #endif
 
+#define SGX_QUOTE_TYPE 0x0
+#define TDX_QUOTE_TYPE 0x81
+
 typedef enum {
 	    SGX_EVIDENCE = 0,
 	    TDX_EVIDENCE,

@@ -28,9 +28,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: local_cache.h 
- *  
- * Description: Implementation of local cache for PCK certificate chain
+/** File: local_cache.h
+ *
+ * Description: Implementation of local cache for PCK certificate chain & collaterals
  *
  */
 #ifndef LOCALCACHE_H_
@@ -38,14 +38,23 @@
 #pragma once
 
 #include "qcnl_config.h"
-#include "se_memcpy.h"
 #include "qcnl_util.h"
+#include "se_memcpy.h"
+#include <fstream>
 #include <list>
+#include <mutex>
 #include <time.h>
 #include <unordered_map>
 #include <vector>
 
+#ifdef _MSC_VER
+#else
+#include <sys/stat.h>
+#endif
+
 using namespace std;
+
+static std::mutex mutex_cache_lock;
 
 template <typename Key, typename Value>
 class MemoryCache {
@@ -55,9 +64,8 @@ private:
     size_t size_;
 
 public:
-    // Set default cache size to 5. In fact 1 is enough for PCK certchain. 
-    // We set 5 here tentatively for future expansion
-    MemoryCache() : size_(5) {} 
+    // Set default cache size to 20
+    MemoryCache() : size_(20) {}
 
     void set(const Key key, const Value value) {
         auto pos = map_.find(key);
@@ -85,6 +93,14 @@ public:
         value = pos->second.first;
         return true;
     }
+
+    void remove(const Key key) {
+        auto pos = map_.find(key);
+        if (pos != map_.end()) {
+            keys_.erase(pos->second.second);
+            map_.erase(key);
+        }
+    }
 };
 
 struct CacheItemHeader {
@@ -92,147 +108,188 @@ struct CacheItemHeader {
 };
 
 // (key, value) pair, where
-//    Cache Key = QE_ID || CPU_SVN || PCE_SVN || PCE_ID
-//    Cache value = CacheItemHeader || sgx_ql_config_t
-class LocalMemCache {
+//    Cache Key = sha256(URL)
+//    Cache value = CacheItemHeader || HTTP RESPONSE(HEADER SIZE || HEADER || BODY SIZE || BODY)
+class LocalCache {
 private:
     //
-    MemoryCache<string, vector<uint8_t>> m_cache;
-
-    //
-    string pck_cert_id_to_key(const sgx_ql_pck_cert_id_t *p_pck_cert_id) {
-        string key = "";
-
-        if (!p_pck_cert_id) {
-            return "";
-        }
-
-        if (!concat_string_with_hex_buf(key, p_pck_cert_id->p_qe3_id, p_pck_cert_id->qe3_id_size))
-            return "";
-
-        if (!concat_string_with_hex_buf(key, reinterpret_cast<const uint8_t *>(p_pck_cert_id->p_platform_cpu_svn), sizeof(sgx_cpu_svn_t)))
-            return "";
-
-        if (!concat_string_with_hex_buf(key, reinterpret_cast<const uint8_t *>(p_pck_cert_id->p_platform_pce_isv_svn), sizeof(sgx_isv_svn_t)))
-            return "";
-
-        if (!concat_string_with_hex_buf(key, reinterpret_cast<const uint8_t *>(&p_pck_cert_id->pce_id), sizeof(p_pck_cert_id->pce_id)))
-            return "";
-
-        return key;
-    }
-
-    bool is_cache_item_expired(time_t expiry) {
-        time_t current_time = time(NULL);
-
-        if (current_time == ((time_t)-1) || current_time >= expiry)
-            return true;
-
-        return false;
-    }
+    MemoryCache<string, vector<uint8_t>> mem_cache_;
+#ifdef _MSC_VER
+    wstring cache_dir_;
+#else
+    string cache_dir_;
+#endif
 
 public:
-    static LocalMemCache &Instance() {
-        static LocalMemCache myInstance;
+    static LocalCache &Instance() {
+        static LocalCache myInstance;
         return myInstance;
     }
 
-    LocalMemCache(LocalMemCache const &) = delete;
-    LocalMemCache(LocalMemCache &&) = delete;
-    LocalMemCache &operator=(LocalMemCache const &) = delete;
-    LocalMemCache &operator=(LocalMemCache &&) = delete;
+    LocalCache(LocalCache const &) = delete;
+    LocalCache(LocalCache &&) = delete;
+    LocalCache &operator=(LocalCache const &) = delete;
+    LocalCache &operator=(LocalCache &&) = delete;
 
-    bool get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
-                            sgx_ql_config_t **pp_quote_config) {
-        if (!p_pck_cert_id)
-            return false;
+    bool get_data(const string &key, vector<uint8_t> &value) {
+        // Lock the cache mutex
+        std::lock_guard<std::mutex> lock(mutex_cache_lock);
 
-        string cache_key = pck_cert_id_to_key(p_pck_cert_id);
-        if (cache_key.empty())
-            return false;
-
-        vector<uint8_t> value;
-        bool ret = false;
-        const uint32_t ql_config_header_size = sizeof(sgx_ql_config_t) - sizeof(uint8_t *);
-
-        do {
-            if (!m_cache.get(cache_key, value))
-                break;
-
-            if (value.size() < sizeof(CacheItemHeader) + ql_config_header_size)
-                break;
-
-            // Check expiry
-            CacheItemHeader cache_header = {0};
-            if (memcpy_s(&cache_header, sizeof(CacheItemHeader), value.data(), sizeof(CacheItemHeader)) != 0)
-                break;
-            if (is_cache_item_expired(cache_header.expiry))
-                break;
-
-            const uint8_t *p_ql_config_cache = value.data() + sizeof(CacheItemHeader);
-
-            *pp_quote_config = (sgx_ql_config_t *)malloc(sizeof(sgx_ql_config_t));
-            if (*pp_quote_config == NULL)
-                break;
-
-            if (memcpy_s(*pp_quote_config, ql_config_header_size, p_ql_config_cache, ql_config_header_size) != 0)
-                break;
-
-            if ((*pp_quote_config)->cert_data_size != value.size() - sizeof(CacheItemHeader) - ql_config_header_size)
-                break;
-
-            (*pp_quote_config)->p_cert_data = (uint8_t *)malloc((*pp_quote_config)->cert_data_size);
-            if (!(*pp_quote_config)->p_cert_data)
-                break;
-
-            if (memcpy_s((*pp_quote_config)->p_cert_data, (*pp_quote_config)->cert_data_size,
-                         p_ql_config_cache + ql_config_header_size, (*pp_quote_config)->cert_data_size) != 0)
-                break;
-
-            ret = true;
-        } while (0);
-
-        if (!ret) {
-            sgx_qcnl_free_pck_cert_chain(*pp_quote_config);
+        bool cache_hit = false;
+        if (!mem_cache_.get(key, value)) {
+            // If memory cache missed, turn to file cache
+            if (!cache_dir_.empty()) {
+#ifdef _MSC_VER
+                wstring wskey(key.begin(), key.end());
+                const auto file_name = cache_dir_ + L"\\" + wskey;
+#else
+                const auto file_name = cache_dir_ + "/" + key;
+#endif
+                ifstream ifs(file_name, std::ios::in | std::ios::binary);
+                if (ifs.is_open()) {
+                    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Cache hit in folder '%s'. \n", cache_dir_.c_str());
+                    value.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+                    // Need to update memory cache if file cache is hit
+                    mem_cache_.set(key, value);
+                    cache_hit = true;
+                }
+                ifs.close();
+            }
+        } else {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Cache hit in memory. \n");
+            cache_hit = true;
         }
 
-        return ret;
+        return cache_hit;
     }
 
-    void set_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
-                            sgx_ql_config_t **pp_quote_config) {
-        if (!p_pck_cert_id) 
-            return;
-            
-        string cache_key = pck_cert_id_to_key(p_pck_cert_id);
-        if (cache_key.empty())
-            return;
+    void set_data(const string &key, vector<uint8_t> &value) {
+        // Lock the cache mutex
+        std::lock_guard<std::mutex> lock(mutex_cache_lock);
 
-        time_t current_time = time(NULL);
-        if (current_time == ((time_t)-1))
-            return;
-        CacheItemHeader cache_header = {0};
-        cache_header.expiry = current_time + QcnlConfig::Instance()->getCacheExpireHour() * 3600;
+        // Update memory cache
+        mem_cache_.set(key, value);
 
-        vector<uint8_t> value;
-        // Append cache header
-        uint8_t *p_data = reinterpret_cast<uint8_t *>(&cache_header);
-        value.insert(value.end(), p_data, p_data + sizeof(cache_header));
+        if (!cache_dir_.empty()) {
+            // Update file cache
+#ifdef _MSC_VER
+            wstring wskey(key.begin(), key.end());
+            const auto file_name = cache_dir_ + L"\\" + wskey;
+#else
+            const auto file_name = cache_dir_ + "/" + key;
+#endif
+            ofstream ofs(file_name, ios::out | ios::binary);
+            if (!ofs.is_open()) {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to write cache file '%s'. \n", file_name.c_str());
+            }
+            ofs.write(reinterpret_cast<const char *>(&value[0]), value.size());
+            ofs.close();
 
-        // Append sgx_ql_config_t strcture header
-        p_data = reinterpret_cast<uint8_t *>(*pp_quote_config);
-        const uint32_t ql_config_header_size = sizeof(sgx_ql_config_t) - sizeof(uint8_t *);
-        value.insert(value.end(), p_data, p_data + ql_config_header_size);
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Updated file cache successfully. \n");
+        }
+    }
 
-        // Append certificate data
-        value.insert(value.end(), (*pp_quote_config)->p_cert_data, (*pp_quote_config)->p_cert_data + (*pp_quote_config)->cert_data_size);
+    void remove_data(const string &key) {
+        // Lock the cache mutex
+        std::lock_guard<std::mutex> lock(mutex_cache_lock);
 
-        m_cache.set(cache_key, value);
+        // Remove memory cache entry
+        mem_cache_.remove(key);
+
+        if (!cache_dir_.empty()) {
+            // Remove file cache
+#ifdef _MSC_VER
+            wstring wskey(key.begin(), key.end());
+            const auto file_name = cache_dir_ + L"\\" + wskey;
+            ::DeleteFile(file_name.c_str());
+#else
+            const auto file_name = cache_dir_ + "/" + key;
+            std::remove(file_name.c_str());
+#endif
+        }
     }
 
 protected:
-    LocalMemCache() {}
-    ~LocalMemCache() {}
+    LocalCache() {
+        init_cache_directory();
+    }
+    ~LocalCache() {}
+
+#ifdef _MSC_VER
+    void init_cache_directory() {
+        const DWORD buffSize = MAX_PATH;
+
+        auto env_home = std::make_unique<wchar_t[]>(buffSize);
+        memset(env_home.get(), 0, buffSize);
+        GetEnvironmentVariable(L"LOCALAPPDATA", env_home.get(), buffSize);
+        std::wstring wenv_home(env_home.get());
+
+        auto env_azdcap_cache = std::make_unique<wchar_t[]>(buffSize);
+        memset(env_azdcap_cache.get(), 0, buffSize);
+        GetEnvironmentVariable(L"AZDCAP_CACHE", env_azdcap_cache.get(), buffSize);
+        std::wstring wenv_azdcap_cache(env_azdcap_cache.get());
+
+        const std::wstring application_name(L"\\.dcap-qcnl");
+        std::wstring dirname;
+
+        if (wenv_azdcap_cache != L"" && wenv_azdcap_cache[0] != 0) {
+            dirname = wenv_azdcap_cache;
+        } else if (wenv_home != L"" && wenv_home[0] != 0) {
+            dirname = wenv_home.append(L"..\\..\\LocalLow");
+        }
+
+        dirname += application_name;
+        make_dir(dirname);
+        cache_dir_ = dirname;
+    }
+
+    bool make_dir(const std::wstring &dirname) {
+        CreateDirectory(dirname.c_str(), NULL);
+        if (GetLastError() == ERROR_PATH_NOT_FOUND && GetLastError() != ERROR_ALREADY_EXISTS)
+            return false;
+        return true;
+    }
+#else
+    void init_cache_directory() {
+        const char *cache_locations[5];
+        cache_locations[0] = ::getenv("AZDCAP_CACHE");
+        cache_locations[1] = ::getenv("XDG_CACHE_HOME");
+        cache_locations[2] = ::getenv("HOME");
+        cache_locations[3] = ::getenv("TMPDIR");
+        cache_locations[4] = "/tmp/";
+
+        string application_name("/.dcap-qcnl/");
+        for (auto &cache_location : cache_locations) {
+            if (cache_location != 0 && strcmp(cache_location, "") != 0) {
+                string dirname = cache_location + application_name;
+                if (make_dir(dirname))
+                    cache_dir_ = dirname;
+                return;
+            }
+        }
+    }
+
+    bool make_dir(const std::string &dirname) {
+        struct stat buf {};
+        int rc = stat(dirname.c_str(), &buf);
+        if (rc == 0) {
+            if (S_ISDIR(buf.st_mode)) {
+                return true;
+            } else {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] '%s' already exists, and is not a directory. \n", dirname.c_str());
+                return false;
+            }
+        }
+
+        rc = mkdir(dirname.c_str(), 0777);
+        if (rc != 0) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Error creating directory '%s'. \n", dirname.c_str());
+            return false;
+        }
+
+        return true;
+    }
+#endif
 };
 
 #endif // LOCALCACHE_H_

@@ -359,7 +359,7 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
     string strJson("");
     ret = generate_json_message_body(raw_data, raw_data_size, platform_id_length, non_enclave_mode, strJson);
     if (ret != POST_SUCCESS) {
-        printf("Error: unexpected error happens during generate json message body.\n");
+        printf("Error: unexpected error occurred while generating json message body.\n");
         return ret;
     } 
     

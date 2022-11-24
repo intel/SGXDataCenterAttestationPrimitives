@@ -196,7 +196,7 @@ tdx_attest_error_t tdx_att_get_quote(
     get_quote_blob_t *p_get_quote_blob = NULL;
     tdx_report_t tdx_report;
     uint32_t msg_size = 0;
-    Qgs__Message__Response *resp;
+    Qgs__Message__Response *resp = NULL;
     Qgs__Message__Request request = QGS__MESSAGE__REQUEST__INIT;
     Qgs__Message__Request__GetQuoteRequest get_quote_request =
         QGS__MESSAGE__REQUEST__GET_QUOTE_REQUEST__INIT;
@@ -406,6 +406,7 @@ ret_point:
     if (-1 != devfd) {
         close(devfd);
     }
+    protobuf_c_message_free_unpacked((ProtobufCMessage *)resp, NULL);
     free(p_get_quote_blob);
 
     return ret;

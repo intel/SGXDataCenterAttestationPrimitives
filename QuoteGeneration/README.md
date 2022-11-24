@@ -37,7 +37,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.14/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.15/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -60,7 +60,7 @@ For Linux* OS
   ```
   * On Ubuntu 20.04
   ```
-    $ sudo apt-get install build-essential wget python-is-python3 debhelper zip libcurl4-openssl-dev pkgconf libboost-dev libboost-system-dev protobuf-c-compiler libprotobuf-c-dev protobuf-compiler
+    $ sudo apt-get install build-essential wget python-is-python3 debhelper zip libcurl4-openssl-dev pkgconf libboost-dev libboost-system-dev libboost-thread-dev protobuf-c-compiler libprotobuf-c-dev protobuf-compiler
   ```
   * On Red Hat Enterprise Linux 8.5
   ```
@@ -193,4 +193,4 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
     $ sudo rpm -ivh libsgx-dcap-default-qpl-debuginfo*.rpm
   ```
 ## TDX Attestation Support
-- From version 1.14, TDX attestation feature is added into DCAP. Corresponding packages will be built along with the DCAP Quote Generation Library adn DCAP Quote Verification Library. Currently, TDX attestation support has been verified on Red Hat Enterprise Linux 8.5 and CentOS Stream 8 only.
+- From version 1.14, TDX attestation feature is added into DCAP. Corresponding packages will be built along with the DCAP Quote Generation Library and DCAP Quote Verification Library. Currently, TDX attestation support has been verified on Red Hat Enterprise Linux 8.5 and CentOS Stream 8 only.

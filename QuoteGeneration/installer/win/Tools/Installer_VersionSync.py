@@ -89,8 +89,8 @@ def Main(argv):
 	Identity = Metadata[0].getElementsByTagName("version")
 	Identity[0].firstChild.replaceWholeText(version)
 	
-	print vsixmanifest.toxml()
-	f =  open(xmlFile, "wb")
+	print(vsixmanifest.toxml())
+	f =  open(xmlFile, "w")
 	vsixmanifest.writexml(f)
 	f.close()	
 

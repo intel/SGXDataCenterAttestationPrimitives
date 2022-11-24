@@ -52,9 +52,10 @@ using namespace std;
 
 static const char *X509_DELIMITER = "-----BEGIN CERTIFICATE-----";
 static sgx_ql_logging_callback_t logger_callback = nullptr;
+static sgx_ql_log_level_t g_loglevel = SGX_QL_LOG_ERROR;
 
 void qpl_log(sgx_ql_log_level_t level, const char *fmt, ...) {
-    if (logger_callback != nullptr) {
+    if (logger_callback != nullptr && level <= g_loglevel) {
         char message[512];
         va_list args;
         va_start(args, fmt);
@@ -89,6 +90,8 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret) {
     case SGX_QCNL_NETWORK_UNKNOWN_OPTION:
     case SGX_QCNL_NETWORK_INIT_ERROR:
         return SGX_QL_NETWORK_ERROR;
+    case SGX_QCNL_ROOT_CA_UNTRUSTED:
+        return SGX_QL_ROOT_CA_UNTRUSTED;
     case SGX_QCNL_MSG_ERROR:
         return SGX_QL_ERROR_MESSAGE_PARSING_ERROR;
     case SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA:
@@ -243,7 +246,11 @@ quote3_error_t ql_get_quote_verification_collateral_internal(sgx_prod_type_t pro
 
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get TCBInfo : 0x%04x\n", qcnl_ret);
-            ret = qcnl_error_to_ql_error(qcnl_ret);
+            if (qcnl_ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA) {
+                ret = SGX_QL_TCBINFO_NOT_FOUND;
+            } else {
+                ret = qcnl_error_to_ql_error(qcnl_ret);
+            }
             break;
         }
 
@@ -263,7 +270,11 @@ quote3_error_t ql_get_quote_verification_collateral_internal(sgx_prod_type_t pro
         qcnl_ret = sgx_qcnl_get_qe_identity(qe_type, base64_string, &p_qe_identity, &qe_identity_size);
         if (qcnl_ret != SGX_QCNL_SUCCESS) {
             qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : 0x%04x\n", qcnl_ret);
-            ret = qcnl_error_to_ql_error(qcnl_ret);
+            if (qcnl_ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA) {
+                ret = SGX_QL_QEIDENTITY_NOT_FOUND;
+            } else {
+                ret = qcnl_error_to_ql_error(qcnl_ret);
+            }
             break;
         }
 
@@ -295,15 +306,6 @@ quote3_error_t ql_get_quote_verification_collateral_internal(sgx_prod_type_t pro
             ret = qcnl_error_to_ql_error(qcnl_ret);
             break;
         }
-        // Add NULL terminator to Root CA CRL
-        (*pp_quote_collateral)->root_ca_crl_size++;
-        char *p_root_ca_crl = (char *)realloc((*pp_quote_collateral)->root_ca_crl, (*pp_quote_collateral)->root_ca_crl_size);
-        if (p_root_ca_crl == NULL) {
-            ret = SGX_QL_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-        (*pp_quote_collateral)->root_ca_crl = p_root_ca_crl;
-        (*pp_quote_collateral)->root_ca_crl[(*pp_quote_collateral)->root_ca_crl_size - 1] = 0;
 
         ret = SGX_QL_SUCCESS;
     } while (0);
@@ -459,7 +461,12 @@ quote3_error_t sgx_ql_get_root_ca_crl(uint8_t **pp_root_ca_crl, uint16_t *p_root
     sgx_qcnl_error_t qcnl_ret = sgx_qcnl_get_qe_identity(SGX_QE_TYPE_ECDSA, NULL, &p_qe_identity, &qe_identity_size);
     if (qcnl_ret != SGX_QCNL_SUCCESS) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get QE identity : 0x%04x\n", qcnl_ret);
-        return qcnl_error_to_ql_error(qcnl_ret);
+        if (qcnl_ret == SGX_QCNL_ERROR_STATUS_NO_CACHE_DATA) {
+            ret = SGX_QL_QEIDENTITY_NOT_FOUND;
+        } else {
+            ret = qcnl_error_to_ql_error(qcnl_ret);
+        }
+        return ret;
     }
 
     do {
@@ -505,8 +512,9 @@ quote3_error_t sgx_ql_free_root_ca_crl(uint8_t *p_root_ca_crl) {
     return SGX_QL_SUCCESS;
 }
 
-quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger) {
+quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel) {
     logger_callback = logger;
-    sgx_qcnl_set_logging_callback(logger);
+    g_loglevel = loglevel;
+    sgx_qcnl_set_logging_callback(logger, g_loglevel);
     return SGX_QL_SUCCESS;
 }

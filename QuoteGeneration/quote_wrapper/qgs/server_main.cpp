@@ -37,6 +37,7 @@
 #include <linux/vm_sockets.h>
 
 #define QGS_CONFIG_FILE "/etc/qgs.conf"
+#define QGS_UNIX_SOCKET_FILE "/var/run/tdx-qgs/qgs.socket"
 
 using namespace std;
 using namespace intel::sgx::dcap::qgs;
@@ -71,9 +72,10 @@ int main(int argc, const char* argv[])
 {
     bool no_daemon = false;
     unsigned long int port = 0;
+    unsigned long int num_threads = 0;
     char *endptr = NULL;
-    if (argc > 3) {
-        cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number]"
+    if (argc > 4) {
+        cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-n=number_threads]"
              << endl;
         exit(1);
     }
@@ -98,16 +100,30 @@ int main(int argc, const char* argv[])
             }
             cout << "port number [" << port << "] found in cmdline" << endl;
             continue;
+        } else if (strncmp(argv[i], "-n=", 3) == 0) {
+            if (strspn(argv[i] + 3, "0123456789") != strlen(argv[i] + 3)) {
+                cout << "Please input valid thread number" << endl;
+                exit(1);
+            }
+            errno = 0;
+            num_threads = strtoul(argv[i] + 3, &endptr, 10);
+            if (errno || strlen(endptr) || (num_threads > 255)) {
+                cout << "Please input valid thread number[0, 255]" << endl;
+                exit(1);
+            }
+            cout << "thread number [" << num_threads << "] found in cmdline" << endl;
+            continue;
         } else {
-            cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number]"
-                 << endl;
+            cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-n=number_threads]"
+                << endl;
             exit(1);
         }
     }
 
+
     // Use the port number in QGS_CONFIG_FILE if no valid port number on
     // command line
-    if (port == 0) {
+    if (port == 0 || num_threads == 0) {
         ifstream config_file(QGS_CONFIG_FILE);
         if (config_file.is_open()) {
             string line;
@@ -127,13 +143,23 @@ int main(int argc, const char* argv[])
                          << endl;
                     exit(1);
                 }
-                if( name.compare("port") == 0) {
+                if (!port && name.compare("port") == 0) {
                     errno = 0;
                     endptr = NULL;
                     port = strtoul(line.substr(delimiterPos + 1).c_str(),
                                    &endptr, 10);
                     if (errno || strlen(endptr) || (port > UINT_MAX) ) {
                         cout << "Please input valid port number in "
+                             << QGS_CONFIG_FILE << endl;
+                        exit(1);
+                    }
+                } else if (!num_threads && name.compare("number_threads") == 0) {
+                    errno = 0;
+                    endptr = NULL;
+                    num_threads = strtoul(line.substr(delimiterPos + 1).c_str(),
+                                          &endptr, 10);
+                    if (errno || strlen(endptr) || (num_threads > 255)) {
+                        cout << "Please input valid thread number[0, 255] in "
                              << QGS_CONFIG_FILE << endl;
                         exit(1);
                     }
@@ -146,9 +172,7 @@ int main(int argc, const char* argv[])
     }
 
     if (port == 0) {
-        cout << "Please provide valid port number in cmdline or "
-             << QGS_CONFIG_FILE << endl;
-        exit(1);
+        cout << "Use unix socket: " << QGS_UNIX_SOCKET_FILE << endl;
     }
 
     if(!no_daemon && daemon(0, 0) < 0) {
@@ -166,14 +190,21 @@ int main(int argc, const char* argv[])
         do {
             reload = false;
             asio::io_service io_service;
-            struct sockaddr_vm vm_addr = {};
-            vm_addr.svm_family = AF_VSOCK;
-            vm_addr.svm_reserved1 = 0;
-            vm_addr.svm_port = port & UINT_MAX;
-            vm_addr.svm_cid = VMADDR_CID_ANY;
-            asio::generic::stream_protocol::endpoint ep(&vm_addr, sizeof(vm_addr));
-            QGS_LOG_INFO("About to create QgsServer\n");
-            server = new QgsServer(io_service, ep);
+            gs::endpoint ep;
+            if (port) {
+                struct sockaddr_vm vm_addr = {};
+                vm_addr.svm_family = AF_VSOCK;
+                vm_addr.svm_reserved1 = 0;
+                vm_addr.svm_port = port & UINT_MAX;
+                vm_addr.svm_cid = VMADDR_CID_ANY;
+                asio::generic::stream_protocol::endpoint vsock_ep(&vm_addr, sizeof(vm_addr));
+                ep = vsock_ep;
+            } else {
+                asio::local::stream_protocol::endpoint unix_ep(QGS_UNIX_SOCKET_FILE);
+                ep = unix_ep;
+            }
+            QGS_LOG_INFO("About to create QgsServer with num_thread = %d\n", (uint8_t)num_threads);
+            server = new QgsServer(io_service, ep, (uint8_t)num_threads);
             QGS_LOG_INFO("About to start main loop\n");
             io_service.run();
             QGS_LOG_INFO("Quit main loop\n");

@@ -101,7 +101,7 @@ Parameters
     pck_ca [In]
         Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
     custom_param [In]
-        Custom parameter that will be appended to request URL in Base64 format ( ...&customParameters=Base64(custom_param) )
+        Custom parameter that will be appended to request URL in Base64 format ( ...&customParameter=Base64(custom_param) )
     custom_param_length [In]
         Length of custom_param.
     pp_quote_collateral [Out]
@@ -149,13 +149,13 @@ Parameters:
     pp_qve_identity[Out]
         Pointer to a pointer to the UTF-8 encoded JSON string containing the QVE Identity structure.  The 
         provider library will allocate this buffer and it is expected that the caller will free it using 
-        the provider library’s sgx_ql_free_qve_identity() API.
+        the provider library's sgx_ql_free_qve_identity() API.
     p_qve_identity_size[Out]
         The length of the string in bytes in the buffer pointed by *pp_qve_identity including the 
         terminating null character.
     pp_qve_identity_issuer_chain[Out]
         Pointer to a pointer to the QVE identity certificate chain. The provider library will allocate This
-        buffer and it is expected that the caller will free it using the provider library’s sgx_ql_free_qve_identity() API.
+        buffer and it is expected that the caller will free it using the provider library's sgx_ql_free_qve_identity() API.
     p_qve_identity_issuer_chain_size[Out]
         The length of the string in bytes in the buffer pointed by *pp_qve_identity_issuer_chain including the 
         terminating null character.
@@ -216,8 +216,8 @@ typedef struct _sgx_ql_qve_collateral_t
         uint32_t version;           ///< 'version' is the backward compatible legacy representation
         struct {                    ///< For PCS V1 and V2 APIs, the major_version = 1 and minor_version = 0 and
             uint16_t major_version; ///< the CRLs will be formatted in PEM. For PCS V3 APIs, the major_version = 3 and the
-            uint16_t minor_version; ///< minor_version can be either 0 or 1. minor_verion of 0 indicates the CRL’s are formatted
-                                    ///< in Base16 encoded DER.  A minor version of 1 indicates the CRL’s are formatted in raw binary DER.
+            uint16_t minor_version; ///< minor_version can be either 0 or 1. minor_verion of 0 indicates the CRLs are formatted
+                                    ///< in Base16 encoded DER.  A minor version of 1 indicates the CRLs are formatted in raw binary DER.
         };
     };
     char *pck_crl_issuer_chain;

@@ -6,3 +6,4 @@ DCAP_QPL_DEV_PACKAGE_NAME=libsgx-dcap-default-qpl-dev
 
 LIB_DIR=lib
 ETC_DIR=etc
+INC_DIR=include
