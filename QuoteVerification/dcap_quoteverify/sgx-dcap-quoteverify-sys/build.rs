@@ -44,12 +44,9 @@ fn main() {
 
     // Set sdk to search path if SGX_SDK is in environment variable
     let mut sdk_inc = String::from("-I");
-    match env::var("SGX_SDK") {
-        Ok(val) => {
-            sdk_inc.push_str(&val);
-            sdk_inc.push_str("/include/");
-        },
-        _ => (),
+    if let Ok(val) = env::var("SGX_SDK") {
+        sdk_inc.push_str(&val);
+        sdk_inc.push_str("/include/");
     }
 
     // The bindgen::Builder is the main entry point
@@ -66,13 +63,15 @@ fn main() {
         .rustified_enum("_sgx_ql_request_policy")
         .rustified_enum("_sgx_ql_qv_result_t")
         .rustified_enum("sgx_qv_path_type_t")
-        // Disable debug trait for packed C structures
+        // Disable Debug trait for packed C structures
         .no_debug("_quote_t")
         .no_debug("_sgx_ql_auth_data_t")
         .no_debug("_sgx_ql_certification_data_t")
         .no_debug("_sgx_ql_ecdsa_sig_data_t")
         .no_debug("_sgx_quote3_t")
         .no_debug("_sgx_ql_att_key_id_param_t")
+        // Enable Default trait
+        .derive_default(true)
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))

@@ -70,3 +70,9 @@ Prerequisite:
    ```
    $ cargo run -- --quote </path/to/quote.dat>
    ```
+
+3. Build and run *RustQuoteVerificationSample* in TD VM:
+
+```
+cargo run --features TD_ENV
+```
