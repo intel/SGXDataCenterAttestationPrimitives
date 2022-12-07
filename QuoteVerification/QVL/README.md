@@ -121,6 +121,9 @@ Requirements:
 
 NOTE: Enclave build is currently not supported on Windows.
 
+HINT: Windows build may fail if repository path is too long.
+      Consider changing HUNTER_ROOT location in CMakeLists.txt
+
 #### Using Visual Studio with CMake support
 CMake project can be directly opened and built using Visual Studio with CMake support..
 #### Using CMake, MSBuild and PowerShell
