@@ -42,6 +42,8 @@
 #endif //DEBUG_MODE
 
 #define SUPPLEMENTAL_DATA_VERSION 3
+#define LEGACY_SUPPLEMENTAL_MINOR_VERSION 0
+#define SUPPLEMENTAL_V3_LATEST_MINOR_VERSION 1
 #define QVE_COLLATERAL_VERSION1 0x1
 #define QVE_COLLATERAL_VERSION3 0x3
 #define QVE_COLLATERAL_VERSOIN31 0x00010003
@@ -81,5 +83,26 @@
 #endif //CLEAR_FREE_MEM
 
 #define EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN 3
+
+// Nameless struct generates C4201 warning in MS compiler, but it is allowed in c++ 11 standard
+// Should remove the pragma after Microsoft fixes this issue
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#endif
+
+//Quote verfication supplemental data version
+//Use for checking and assigning supplemental data version
+typedef union _supp_ver_t{
+    uint32_t version;
+    struct {
+        uint16_t major_version;      
+        uint16_t minor_version;
+    };
+} supp_ver_t;
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif //_SGX_QVE_DEF_H_

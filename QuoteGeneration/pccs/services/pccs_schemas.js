@@ -484,6 +484,9 @@ export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
     collaterals: {
       type: 'object',
       properties: {
+        version:{
+          "const": 4,
+        },
         pck_certs: {
           type: 'array',
           items: {
@@ -871,11 +874,14 @@ export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
           },
           required: ['SGX-PCK-Certificate-Issuer-Chain'],
         },
+        rootcacrl_cdp: {
+          type: 'string',
+        },
         rootcacrl: {
           type: 'string',
         },
       },
-      required: ['pck_certs', 'tcbinfos', 'certificates'],
+      required: ['version','pck_certs', 'tcbinfos', 'certificates'],
     },
   },
   required: ['platforms', 'collaterals'],

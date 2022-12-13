@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 AS builder
 
 # DCAP version (github repo branch, tag or commit hash)
-ARG DCAP_VERSION=DCAP_1.14
+ARG DCAP_VERSION=DCAP_1.15
 
 # update and install packages
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -58,4 +58,4 @@ WORKDIR /opt/intel/pccs/
 USER ${USER}
 
 # entrypoint to start pccs
-ENTRYPOINT ["/usr/bin/node",  "-r", "esm", "pccs_server.js"]
+ENTRYPOINT ["/usr/bin/node", "pccs_server.js"]

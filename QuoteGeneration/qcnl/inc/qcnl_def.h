@@ -53,6 +53,7 @@ constexpr char TCB_INFO_ISSUER_CHAIN[] = "tcb-info-issuer-chain";
 constexpr char SGX_TCBM[] = "sgx-tcbm";
 constexpr char ENCLAVE_ID_ISSUER_CHAIN[] = "sgx-enclave-identity-issuer-chain";
 constexpr char REQUEST_ID[] = "request-id";
+constexpr char CACHE_CONTROL[] = "Cache-Control";
 } // namespace intelpcs
 
 // Azure returns the headers in JSON format inside body, so they are case sensitive
@@ -60,10 +61,6 @@ namespace azurepccs {
 constexpr char PCK_CERT[] = "pckCert";
 constexpr char PCK_CERT_ISSUER_CHAIN[] = "sgx-Pck-Certificate-Issuer-Chain";
 constexpr char SGX_TCBM[] = "sgx-Tcbm";
-// constexpr char CRL_ISSUER_CHAIN[] = "SGX-PCK-CRL-Issuer-Chain";
-// constexpr char SGX_TCB_INFO_ISSUER_CHAIN[] = "SGX-TCB-Info-Issuer-Chain";
-// constexpr char TCB_INFO_ISSUER_CHAIN[] = "TCB-Info-Issuer-Chain";
-// constexpr char ENCLAVE_ID_ISSUER_CHAIN[] = "SGX-Enclave-Identity-Issuer-Chain";
 } // namespace azurepccs
 
 #endif

@@ -47,7 +47,6 @@
 #include "se_memcpy.h"
 #include "sgx_urts_wrapper.h"
 
-
 sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
 sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
 sgx_ecall_func_t p_sgx_urts_ecall = NULL;
@@ -338,10 +337,11 @@ static sgx_status_t initialize_enclave(sgx_enclave_id_t* eid)
 }
 
 /**
- * Get supplemental data required size.
+ * Internal function - get supplemental data size and version.
  **/
-quote3_error_t tee_get_verification_supplemental_data_size(
+static quote3_error_t get_verification_supplemental_data_size_and_version(
     uint32_t *p_data_size,
+    uint32_t *p_version,
     tee_evidence_type_t tee_type) {
 
     if (NULL_POINTER(p_data_size)) {
@@ -352,7 +352,10 @@ quote3_error_t tee_get_verification_supplemental_data_size(
     if (tee_type != SGX_EVIDENCE && tee_type != TDX_EVIDENCE)
         return SGX_QL_ERROR_INVALID_PARAMETER;
 
-    uint32_t trusted_version = 0, untrusted_version = 0;
+    supp_ver_t trusted_version;
+    supp_ver_t untrusted_version;
+    trusted_version.version = 0;
+    untrusted_version.version = 0;
     uint32_t trusted_size = 0, untrusted_size = 0;
     bool VerNumMismatch = false;
     sgx_status_t load_ret = SGX_ERROR_UNEXPECTED;
@@ -392,9 +395,9 @@ quote3_error_t tee_get_verification_supplemental_data_size(
 
         //call SGX QvE ECALL to get supplemental data version
         //
-        qve_ret = p_trusted_qv->tee_get_supplemental_data_version(&trusted_version);
+        qve_ret = p_trusted_qv->tee_get_supplemental_data_version(&trusted_version.version);
         if (qve_ret != SGX_QL_SUCCESS) {
-            trusted_version = 0;
+            trusted_version.version = 0;
             break;
         }
 
@@ -409,7 +412,7 @@ quote3_error_t tee_get_verification_supplemental_data_size(
     do {
         //call untrusted API to get supplemental data version
         //
-        qve_ret = p_untrusted_qv->tee_get_supplemental_data_version(&untrusted_version);
+        qve_ret = p_untrusted_qv->tee_get_supplemental_data_version(&untrusted_version.version);
         if (qve_ret != SGX_QL_SUCCESS) {
             SE_TRACE(SE_TRACE_DEBUG, "Error: untrusted API qvl_get_quote_supplemental_data_version failed: 0x%04x\n", qve_ret);
             *p_data_size = 0;
@@ -426,17 +429,22 @@ quote3_error_t tee_get_verification_supplemental_data_size(
         }
 
         if (VerNumMismatch) {
-            if (trusted_version != untrusted_version || trusted_size != untrusted_size) {
+            if (trusted_version.version != untrusted_version.version || trusted_size != untrusted_size) {
                 SE_TRACE(SE_TRACE_DEBUG, "Error: Quote supplemental data version is different between trusted QvE and untrusted QVL.\n");
-                SE_TRACE(SE_TRACE_DEBUG, "Supplemental version from QvE: %d,\t size: %d\n", trusted_version, trusted_size);
-                SE_TRACE(SE_TRACE_DEBUG, "Supplemental version from QVL: %d,\t size: %d\n", untrusted_version, untrusted_size);
+                SE_TRACE(SE_TRACE_DEBUG, "Supplemental version from QvE, major version: %d, minor version: %d,\t size: %d\n",
+                                            trusted_version.major_version, trusted_version.minor_version, trusted_size);
+                SE_TRACE(SE_TRACE_DEBUG, "Supplemental version from QVL, major version: %d, minor version: %d,\t size: %d\n",
+                                            untrusted_version.major_version, untrusted_version.minor_version, untrusted_size);
                 *p_data_size = 0;
                 qve_ret = SGX_QL_ERROR_QVL_QVE_MISMATCH;
                 break;
             }
         }
 
-        *p_data_size = untrusted_size;
+        if (p_data_size != NULL)
+            *p_data_size = untrusted_size;
+        if (p_version != NULL)
+            *p_version = untrusted_version.version;
 
     } while (0) ;
 
@@ -452,6 +460,36 @@ quote3_error_t tee_get_verification_supplemental_data_size(
 
     return qve_ret;
 }
+
+
+/**
+ * Get supplemental data latest version and required size.
+ **/
+quote3_error_t tee_get_supplemental_data_version_and_size(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    uint32_t *p_version,
+    uint32_t *p_data_size) {
+
+    if (p_quote == NULL || quote_size == 0 ||
+        (p_version == NULL && p_data_size == NULL))
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
+    // check quote type
+    uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
+
+    if (*p_type == SGX_QUOTE_TYPE)
+        tee_type = SGX_EVIDENCE;
+    else if (*p_type == TDX_QUOTE_TYPE)
+        tee_type = TDX_EVIDENCE;
+    else
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    return get_verification_supplemental_data_size_and_version(p_data_size, p_version, tee_type);
+
+}
+
 
 /**
  * Perform ECDSA quote verification
@@ -484,11 +522,13 @@ quote3_error_t tee_verify_evidence(
 
     //parse quote header to get tee type, only support SGX and TDX by now
     tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
-    const sgx_quote_header_t *p_header = reinterpret_cast<const sgx_quote_header_t *> (p_quote);
-    uint32_t quote_type = p_header->att_key_data_0;
-    if (quote_type == 0)
+
+    // check quote type
+    uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
+
+    if (*p_type == SGX_QUOTE_TYPE)
         tee_type = SGX_EVIDENCE;
-    else if (quote_type == 0x81)
+    else if (*p_type == TDX_QUOTE_TYPE)
         tee_type = TDX_EVIDENCE;
     else
         //quote type is not supported
@@ -499,9 +539,9 @@ quote3_error_t tee_verify_evidence(
     if (p_supplemental_data) {
         quote3_error_t tmp_ret = SGX_QL_ERROR_UNEXPECTED;
         uint32_t tmp_size = 0;
-        tmp_ret = tee_get_verification_supplemental_data_size(&tmp_size, tee_type);
+        tmp_ret = get_verification_supplemental_data_size_and_version(&tmp_size, NULL, tee_type);
 
-        if (tmp_ret != SGX_QL_SUCCESS || tmp_size > supplemental_data_size) {
+        if (tmp_ret != SGX_QL_SUCCESS || tmp_size != supplemental_data_size) {
 
             if (p_quote_verification_result) {
                 *p_quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
@@ -673,7 +713,7 @@ quote3_error_t sgx_qv_free_qve_identity(
  **/
 quote3_error_t sgx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size)
 {
-    return tee_get_verification_supplemental_data_size(p_data_size, SGX_EVIDENCE);
+    return get_verification_supplemental_data_size_and_version(p_data_size, NULL, SGX_EVIDENCE);
 }
 
 /**
@@ -690,7 +730,21 @@ quote3_error_t sgx_qv_verify_quote(
     uint32_t supplemental_data_size,
     uint8_t *p_supplemental_data)
 {
-    return tee_verify_evidence(
+    quote3_error_t ret = SGX_QL_SUCCESS;
+
+    // set supplemental version if necessary
+    if (p_supplemental_data != NULL && supplemental_data_size > 0) {
+        try {
+            reinterpret_cast<sgx_ql_qv_supplemental_t*> (p_supplemental_data)->version = SUPPLEMENTAL_DATA_VERSION;
+        }
+
+        catch(...) {
+            // cannot access p_supplemental_data field
+            return SGX_QL_ERROR_INVALID_PARAMETER;
+        }
+    }
+
+    ret = tee_verify_evidence(
         p_quote,
         quote_size,
         p_quote_collateral,
@@ -700,6 +754,13 @@ quote3_error_t sgx_qv_verify_quote(
         p_qve_report_info,
         supplemental_data_size,
         p_supplemental_data);
+
+    // clear version info
+    if (ret != SGX_QL_SUCCESS && p_supplemental_data != NULL) {
+        memset(p_supplemental_data, 0, sizeof(*p_supplemental_data));
+    }
+
+    return ret;
 }
 
 /**
@@ -707,7 +768,7 @@ quote3_error_t sgx_qv_verify_quote(
  **/
 quote3_error_t tdx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size)
 {
-    return tee_get_verification_supplemental_data_size(p_data_size, TDX_EVIDENCE);
+    return get_verification_supplemental_data_size_and_version(p_data_size, NULL, TDX_EVIDENCE);
 }
 
 /**
@@ -724,17 +785,245 @@ quote3_error_t tdx_qv_verify_quote(
     uint32_t supplemental_data_size,
     uint8_t *p_supplemental_data)
 {
-    return tee_verify_evidence(
+    quote3_error_t ret = SGX_QL_SUCCESS;
+
+    // set supplemental version if necessary
+    if (p_supplemental_data != NULL && supplemental_data_size > 0) {
+        try {
+            reinterpret_cast<sgx_ql_qv_supplemental_t*> (p_supplemental_data)->version = SUPPLEMENTAL_DATA_VERSION;
+        }
+
+        catch(...) {
+            // cannot access p_supplemental_data field
+            return SGX_QL_ERROR_INVALID_PARAMETER;
+        }
+    }
+
+    ret = tee_verify_evidence(
+       p_quote,
+       quote_size,
+       p_quote_collateral,
+       expiration_check_date,
+       p_collateral_expiration_status,
+       p_quote_verification_result,
+       p_qve_report_info,
+        supplemental_data_size,
+        p_supplemental_data);
+
+    // clear version info
+    if (ret != SGX_QL_SUCCESS && p_supplemental_data != NULL) {
+        memset(p_supplemental_data, 0, sizeof(*p_supplemental_data));
+    }
+
+    return ret;
+}
+
+
+/**
+ * @brief retrieve verification colloateral
+ *
+ */
+quote3_error_t tee_qv_get_collateral(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    uint8_t **pp_quote_collateral,
+    uint32_t *p_collateral_size)
+{
+    quote3_error_t ret = SGX_QL_SUCCESS;
+    unsigned char fmspc_from_quote[FMSPC_SIZE] = {0};
+    unsigned char ca_from_quote[CA_SIZE] = {0};
+    if (p_quote == NULL || quote_size < QUOTE_MIN_SIZE || pp_quote_collateral == NULL || *pp_quote_collateral != NULL || p_collateral_size == NULL)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    // skip version and att_key_type in SGX or TDX quote
+    uint32_t quote_type = *((uint32_t *)(p_quote + sizeof(uint16_t) + sizeof(uint16_t)));
+    *p_collateral_size = 0;
+
+    ret = qvl_get_fmspc_ca_from_quote(
         p_quote,
         quote_size,
-        p_quote_collateral,
+        fmspc_from_quote,
+        FMSPC_SIZE,
+        ca_from_quote,
+        CA_SIZE);
+    if (ret != SGX_QL_SUCCESS)
+    {
+        return ret;
+    }
+    if (quote_type == SGX_QUOTE_TYPE)
+    { // little endian 0x0 means SGX
+        ret = sgx_dcap_retrieve_verification_collateral((const char *)fmspc_from_quote,
+                                                        FMSPC_SIZE,
+                                                        (const char *)ca_from_quote,
+                                                        (sgx_ql_qve_collateral_t **)pp_quote_collateral);
+        if (ret == SGX_QL_SUCCESS)
+        {
+		 *p_collateral_size =
+                (uint32_t)sizeof(sgx_ql_qve_collateral_t) +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->pck_crl_issuer_chain_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->root_ca_crl_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->pck_crl_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->tcb_info_issuer_chain_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->qe_identity_issuer_chain_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->qe_identity_size +
+                ((sgx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->tcb_info_size;
+	    }
+    }
+    else if (quote_type == TDX_QUOTE_TYPE)
+    { // little endian 0x81 means TDX
+        ret = tdx_dcap_retrieve_verification_collateral((const char *)fmspc_from_quote,
+                                                        FMSPC_SIZE,
+                                                        (const char *)ca_from_quote,
+                                                        (tdx_ql_qve_collateral_t **)pp_quote_collateral);
+        if (ret == SGX_QL_SUCCESS)
+        {
+		 *p_collateral_size =
+                (uint32_t)sizeof(tdx_ql_qve_collateral_t) +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->pck_crl_issuer_chain_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->root_ca_crl_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->pck_crl_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->tcb_info_issuer_chain_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->qe_identity_issuer_chain_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->qe_identity_size +
+                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                    ->tcb_info_size;
+	    }
+    }
+    else
+    {
+        // quote type is not supported
+        ret = SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    return ret;
+}
+
+
+/**
+ * @brief free verification colloateral
+ *
+ */
+quote3_error_t tee_qv_free_collateral(uint8_t *p_quote_collateral)
+{
+    quote3_error_t ret = SGX_QL_SUCCESS;
+    if (p_quote_collateral == NULL)
+
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    const sgx_ql_qve_collateral_t *p_collater =
+        reinterpret_cast<const sgx_ql_qve_collateral_t *>(p_quote_collateral);
+    if (p_collater->tee_type == SGX_QUOTE_TYPE)
+    {
+        ret = sgx_dcap_free_verification_collateral((sgx_ql_qve_collateral_t *)p_quote_collateral);
+    }
+    else if (p_collater->tee_type == TDX_QUOTE_TYPE)
+    {
+        ret = tdx_dcap_free_verification_collateral((tdx_ql_qve_collateral_t *)p_quote_collateral);
+    }
+    else
+    {
+        // quote type is not supported
+        ret = SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    return ret;
+}
+
+
+/**
+ * Perform quote verification for SGX and TDX
+ * This API works the same as the old one, but takes a new parameter to describe the supplemental data (p_supp_data_descriptor)
+ **/
+quote3_error_t tee_verify_quote(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    const uint8_t *p_quote_collateral,
+    const time_t expiration_check_date,
+    uint32_t *p_collateral_expiration_status,
+    sgx_ql_qv_result_t *p_quote_verification_result,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    tee_supp_data_descriptor_t *p_supp_data_descriptor)
+{
+    quote3_error_t ret = SGX_QL_SUCCESS;
+    supp_ver_t latest_version;
+    uint32_t supp_data_size = 0;
+    uint32_t tmp_size = 0;
+    uint8_t *p_supp_data = NULL;
+
+    // only check quote, other parameters will be checked in internal functions
+    if (p_quote == NULL || quote_size == 0)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    ret = tee_get_supplemental_data_version_and_size(p_quote, quote_size, &latest_version.version, &tmp_size);
+
+    if (ret != SGX_QL_SUCCESS)
+        return ret;
+
+    try {
+        // check supplemental descriptor
+        if (p_supp_data_descriptor != NULL) {
+
+            if (p_supp_data_descriptor->p_data == NULL)
+                return SGX_QL_ERROR_INVALID_PARAMETER;
+
+            if (p_supp_data_descriptor->major_version > latest_version.major_version)
+                return SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED;
+
+            // major version <= latest support version
+            else {
+                // Only support major version 0 and 3 in current stage
+                if ((p_supp_data_descriptor->major_version != 0 && p_supp_data_descriptor->major_version != SUPPLEMENTAL_DATA_VERSION) ||
+                        p_supp_data_descriptor->data_size != tmp_size)
+                    return SGX_QL_ERROR_INVALID_PARAMETER;
+
+                // only support version 3 by now, may add additional logic to match major version and minor version in future
+                memset(p_supp_data_descriptor->p_data, 0, p_supp_data_descriptor->data_size);
+
+                // set version in supplemental data
+                reinterpret_cast<sgx_ql_qv_supplemental_t*> (p_supp_data_descriptor->p_data)->major_version = SUPPLEMENTAL_DATA_VERSION;
+                reinterpret_cast<sgx_ql_qv_supplemental_t*> (p_supp_data_descriptor->p_data)->minor_version = SUPPLEMENTAL_V3_LATEST_MINOR_VERSION;
+
+                // size will be checked in internal logic
+                supp_data_size = p_supp_data_descriptor->data_size;
+                p_supp_data = p_supp_data_descriptor->p_data;
+            }
+        }
+    }
+
+    catch (...) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    ret = tee_verify_evidence(
+        p_quote,
+        quote_size,
+        reinterpret_cast<const sgx_ql_qve_collateral_t*> (p_quote_collateral),
         expiration_check_date,
         p_collateral_expiration_status,
         p_quote_verification_result,
         p_qve_report_info,
-        supplemental_data_size,
-        p_supplemental_data);
+        supp_data_size,
+        p_supp_data);
+
+    if (ret != SGX_QL_SUCCESS && p_supp_data_descriptor->p_data != NULL) {
+        // defense in depth
+        memset(p_supp_data_descriptor->p_data, 0, sizeof(sgx_ql_qve_collateral_t));
+    }
+
+    return ret;
 }
+
 
 #ifndef _MSC_VER
 

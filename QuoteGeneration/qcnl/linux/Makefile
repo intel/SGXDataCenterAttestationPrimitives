@@ -32,6 +32,7 @@
 ######## SGX SDK Settings ########
 TOP_DIR  = ../..
 include $(TOP_DIR)/buildenv.mk
+PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
 
 ######## SGX CNL Library Settings ########
 
@@ -42,7 +43,8 @@ CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
                          -I../inc -I$(SGX_SDK)/include          \
                          -I../../common/inc/internal            \
                          -I../../pce_wrapper/inc                \
-                         -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson
+                         -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson	\
+                         -I$(PREBUILD_OPENSSL_PATH)/inc
 
 CNL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(CNL_Lib_Include_Paths)
 
@@ -55,7 +57,8 @@ ifdef SELF_SIGNED_CERT
 CNL_Lib_Cpp_Flags+= -DSELF_SIGNED_CERT
 endif
 
-CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -lpthread -ldl -lcurl
+CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
+		-lpthread -ldl -lcurl
  
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE

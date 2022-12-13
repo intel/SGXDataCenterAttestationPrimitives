@@ -62,12 +62,6 @@
     <ClCompile Include="..\pccs_response_object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\pckcert_provider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\qv_collateral_provider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\qcnl_util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -75,6 +69,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="qcnl_config_impl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\certification_provider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\certification_service.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

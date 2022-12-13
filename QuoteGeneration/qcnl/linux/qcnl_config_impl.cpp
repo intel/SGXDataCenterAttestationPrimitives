@@ -29,8 +29,8 @@
  *
  */
 /**
- * File: qcnl_config.cpp 
- *  
+ * File: qcnl_config_impl.cpp
+ *
  * Description: Read configuration data
  *
  */
@@ -43,6 +43,7 @@
 
 static struct init_solib {
     init_solib() {
+        // put global initialization logic here
         curl_global_init(CURL_GLOBAL_DEFAULT);
     }
 } _init_solib;
@@ -90,9 +91,18 @@ bool QcnlConfigLegacy::load_config() {
             } else if (name.compare("PCK_CACHE_EXPIRE_HOURS") == 0) {
                 try {
                     string::size_type sz;
-                    cache_expire_hour_ = stoi(value, &sz);
-                    if (cache_expire_hour_ > CACHE_MAX_EXPIRY_HOURS)
-                        cache_expire_hour_ = CACHE_MAX_EXPIRY_HOURS;
+                    pck_cache_expire_hours_ = (double)stoi(value, &sz);
+                    if (pck_cache_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+                        pck_cache_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
+                } catch (const invalid_argument &) {
+                    continue;
+                }
+            } else if (name.compare("VERIFY_COLLATERAL_CACHE_EXPIRE_HOURS") == 0) {
+                try {
+                    string::size_type sz;
+                    verify_collateral_expire_hours_ = (double)stoi(value, &sz);
+                    if (verify_collateral_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+                        verify_collateral_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
                 } catch (const invalid_argument &) {
                     continue;
                 }

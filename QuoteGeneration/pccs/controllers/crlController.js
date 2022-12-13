@@ -31,6 +31,7 @@
 
 import { crlService } from '../services/index.js';
 import PccsStatus from '../constants/pccs_status_code.js';
+import PccsError from '../utils/PccsError.js';
 
 export async function getCrl(req, res, next) {
   const MAX_URL_LENGTH = 2048;

@@ -29,14 +29,15 @@
  *
  */
 /**
- * File: pccs_response_object.cpp 
- *  
+ * File: pccs_response_object.cpp
+ *
  * Description: Object class to save PCCS/PCS response message
  *
  */
 #include "pccs_response_object.h"
 #include "qcnl_def.h"
 #include "qcnl_util.h"
+#include "sgx_default_qcnl_wrapper.h"
 
 PccsResponseObject::PccsResponseObject() : is_body_json_(false) {
 }
@@ -68,8 +69,12 @@ PccsResponseObject &PccsResponseObject::set_raw_body(const char *body, uint32_t 
     return *this;
 }
 
+string &PccsResponseObject::get_raw_header() {
+    return this->header_raw_;
+}
+
 string &PccsResponseObject::get_raw_body() {
-    return body_raw_;
+    return this->body_raw_;
 }
 
 string PccsResponseObject::get_header_key_value(const char *key) {
@@ -78,6 +83,7 @@ string PccsResponseObject::get_header_key_value(const char *key) {
     if (it != header_map_.end()) {
         return it->second;
     } else {
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Header '%s' not found. \n", key);
         return "";
     }
 }
@@ -88,6 +94,7 @@ string PccsResponseObject::get_body_key_value(const char *key) {
         if (val.IsString()) {
             return val.GetString();
         } else {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Body '%s' is not string. \n", key);
             return "";
         }
 
@@ -100,5 +107,27 @@ string PccsResponseObject::get_real_response_body(const char *key) {
     string body = get_body_key_value(key);
     if (body.empty())
         return body_raw_;
-    else return body;
+    else
+        return body;
+}
+
+uint32_t PccsResponseObject::get_cache_max_age() {
+    stringstream ss(this->get_header_key_value(intelpcs::CACHE_CONTROL));
+    string directive;
+    while (std::getline(ss, directive, ',')) {
+        std::size_t pos = directive.find("max-age=");
+        if (pos != std::string::npos) {
+            string value = directive.substr(pos + 8);
+            try {
+                string::size_type sz;
+                return stoi(value, &sz);
+            } catch (const invalid_argument &) {
+                qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to parse Cache-Control: max-age. \n");
+                return 0;
+            }
+        } else {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Cache-Control: max-age not found in header. \n");
+        }
+    }
+    return 0;
 }

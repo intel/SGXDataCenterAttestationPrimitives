@@ -33,8 +33,8 @@
 # main make file for PCK Cert Selection project
 #
 
-ifndef $(VERBOSE)
-	VERBOSE:=@
+ifndef VERBOSE
+	PCKCERTSEL_VERBOSE:=@
 endif
 
 # this is project root directory 
@@ -60,30 +60,30 @@ ZIPFILE := PCKCertSelectionLinux.zip
 .NOTPARALLEL: $(PROJECTS) $(ZIPFILE)
 
 all: $(PROJECTS) $(ZIPFILE)
-	$(VERBOSE)echo projects all: done
+	$(PCKCERTSEL_VERBOSE)echo projects all: done
 
 debug:
-	$(VERBOSE)$(MAKE) DEBUG=1 all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) DEBUG=1 all
 
 release:
-	$(VERBOSE)$(MAKE) all
+	$(PCKCERTSEL_VERBOSE)$(MAKE) all
 
 clean: $(PROJECTS)
-	$(VERBOSE)rm -rf out/*.zip
-	$(VERBOSE)echo projects clean: done
+	$(PCKCERTSEL_VERBOSE)rm -rf out/*.zip
+	$(PCKCERTSEL_VERBOSE)echo projects clean: done
 
 PCKSelectionSample : PCKCertSelectionLib
 
 $(PROJECTS): $(BIN_DIR)
-	$(VERBOSE)$(MAKE) -C $@ $(MAKECMDGOALS)
-	$(VERBOSE)echo "$@ : done"
-	$(VERBOSE)echo
+	$(PCKCERTSEL_VERBOSE)$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(PCKCERTSEL_VERBOSE)echo "$@ : done"
+	$(PCKCERTSEL_VERBOSE)echo
 
 $(BIN_DIR):
-	$(VERBOSE)mkdir -p $@
+	$(PCKCERTSEL_VERBOSE)mkdir -p $@
 
 $(ZIPFILE):
 	bash pack.sh
-	$(VERBOSE)echo "$@ : done"
-	$(VERBOSE)echo
+	$(PCKCERTSEL_VERBOSE)echo "$@ : done"
+	$(PCKCERTSEL_VERBOSE)echo
 

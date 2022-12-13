@@ -6,7 +6,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Prerequisites**
 
-  Install node.js (Version <ins>12.22</ins> or later)
+  Install node.js (Version <ins>14.20</ins> or later)
 
   - For Debian and Ubuntu based distributions, you can use the following command:<br/>
     $ curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - <br/>
@@ -78,7 +78,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **HTTPS_PORT** - The port you want the PCCS to listen on. The default listening port is 8081.
 - **hosts** - The hosts that will be accepted for connections. Default is localhost only. To accept all connections use 0.0.0.0
-- **uri** - The URL of Intel Provisioning Certificate Service. The default URL is https://api.trustedservices.intel.com/sgx/certification/v3/
+- **uri** - The URL of Intel Provisioning Certificate Service. The default URL is https://api.trustedservices.intel.com/sgx/certification/v4/
 - **ApiKey** - The PCCS uses this API key to request collaterals from Intel's Provisioning Certificate Service. User needs to subscribe first to obtain an API key. For how to subscribe to Intel Provisioning Certificate Service and receive an API key, goto https://api.portal.trustedservices.intel.com/provisioning-certification and click on 'Subscribe'.
 - **proxy** - Specify the proxy server for internet connection, for example, "http://192.168.1.1:80". Leave blank for no proxy or system proxy.
 - **RefreshSchedule** - cron-style refresh schedule for the PCCS to refresh cached artifacts including CRL/TCB Info/QE Identity/QVE Identity.
@@ -135,7 +135,7 @@ In /etc/sgx_default_qcnl.conf, set "use_secure_cert": true (For Windows see ../q
      $ sudo systemctl start/stop/restart pccs
 
 - If PCCS was installed manually by current user, you can start it with the following command <br/>
-  $ node -r esm pccs_server.js
+  $ node pccs_server.js
 
 ## <h3>Uninstall</h3>
 

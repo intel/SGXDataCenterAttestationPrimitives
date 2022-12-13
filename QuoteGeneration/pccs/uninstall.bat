@@ -2,7 +2,7 @@
 
 echo Uninstall npm packages ......
 
-call node pccs.service.win-un
+call node pccs.winsvc.uninst.cjs
 
 @ call rd /s /q node_modules
 

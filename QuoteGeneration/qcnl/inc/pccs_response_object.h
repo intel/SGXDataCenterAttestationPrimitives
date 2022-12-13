@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/** File: pccs_response_object.h 
- *  
+/** File: pccs_response_object.h
+ *
  * Description: Header file of PccsResponseObject class and its sub-classes
  *
  */
@@ -39,6 +39,7 @@
 
 #include "document.h"
 #include "qcnl_def.h"
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -53,10 +54,12 @@ public:
 
     PccsResponseObject &set_raw_header(const char *header, uint32_t header_size);
     PccsResponseObject &set_raw_body(const char *body, uint32_t body_size);
+    string &get_raw_header();
     string &get_raw_body();
     string get_header_key_value(const char *key);
     string get_body_key_value(const char *key);
     string get_real_response_body(const char *key);
+    uint32_t get_cache_max_age();
 
 protected:
     string header_raw_;
@@ -90,12 +93,9 @@ public:
     PckCrlResponseObject() {}
     ~PckCrlResponseObject() {}
     string get_pckcrl_issuer_chain() {
-        // string chain = this->get_header_key_value(intelpcs::CRL_ISSUER_CHAIN);
-        // return chain.empty() ? this->get_body_key_value(azurepccs::CRL_ISSUER_CHAIN) : chain;
         return this->get_header_key_value(intelpcs::CRL_ISSUER_CHAIN);
     }
     string get_pckcrl() {
-        //return this->get_real_response_body();
         return this->body_raw_;
     }
 };
@@ -114,16 +114,10 @@ public:
         if (!chain.empty())
             return chain;
 
-        // chain = this->get_body_key_value(azurepccs::SGX_TCB_INFO_ISSUER_CHAIN);
-        // if (!chain.empty())
-        //     return chain;
-
-        // return this->get_body_key_value(azurepccs::TCB_INFO_ISSUER_CHAIN);
-
         return "";
     }
     string get_tcbinfo() {
-        //return this->get_real_response_body();
+        // return this->get_real_response_body();
         return body_raw_;
     }
 };
@@ -134,12 +128,9 @@ public:
     QeIdentityResponseObject() {}
     ~QeIdentityResponseObject() {}
     string get_enclave_id_issuer_chain() {
-        // string chain = this->get_header_key_value(intelpcs::ENCLAVE_ID_ISSUER_CHAIN);
-        // return chain.empty() ? this->get_body_key_value(azurepccs::ENCLAVE_ID_ISSUER_CHAIN) : chain;
         return this->get_header_key_value(intelpcs::ENCLAVE_ID_ISSUER_CHAIN);
     }
     string get_qeidentity() {
-        //return this->get_real_response_body();
         return body_raw_;
     }
 };
@@ -150,12 +141,9 @@ public:
     QveIdentityResponseObject() {}
     ~QveIdentityResponseObject() {}
     string get_enclave_id_issuer_chain() {
-        // string chain = this->get_header_key_value(intelpcs::ENCLAVE_ID_ISSUER_CHAIN);
-        // return chain.empty() ? this->get_body_key_value(azurepccs::ENCLAVE_ID_ISSUER_CHAIN) : chain;
         return this->get_header_key_value(intelpcs::ENCLAVE_ID_ISSUER_CHAIN);
     }
     string get_qveidentity() {
-        // return this->get_real_response_body();
         return body_raw_;
     }
 };

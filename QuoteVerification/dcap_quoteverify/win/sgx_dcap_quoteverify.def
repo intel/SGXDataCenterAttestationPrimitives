@@ -6,3 +6,7 @@ EXPORTS
     sgx_qv_set_enclave_load_policy                  @3
     sgx_qv_get_qve_identity                         @4
     sgx_qv_free_qve_identity                        @5
+    tee_qv_get_collateral                           @6
+    tee_qv_free_collateral                          @7
+    tee_get_supplemental_data_version_and_size      @8
+    tee_verify_quote                                @9

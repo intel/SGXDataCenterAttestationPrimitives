@@ -26,7 +26,7 @@ Parameters:
     supplemental_data_size [In]
         Size of the buffer pointed to by p_supplemental_data (in bytes).
         The value should match the value retuned by the sgx_qve_get_supplemental_data_size().
-    p_supplemental_data [Out]
+    p_supplemental_data [In/Out]
         The parameter is optional.  If it is NULL, supplemental_data_size must be 0.
         This data can be used by the CSP or Relying Party to enforce a different quote verification policy than enforced by this API.
 

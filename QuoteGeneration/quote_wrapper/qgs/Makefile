@@ -41,7 +41,7 @@ PROTOBUF_CFLAGS = `pkg-config --cflags protobuf-lite`
 QGS_INC = -I$(SGX_SDK)/include \
 		  -I$(COMMON_DIR)/inc/internal \
 		  -I$(TOP_DIR)/qpl/inc \
-		  -I$(TOP_DIR)/quote_wrapper/tdx_quote
+		  -I$(TOP_DIR)/quote_wrapper/tdx_quote/inc
 QGS_CFLAGS = -g  -MMD $(CFLAGS) $(QGS_INC) $(PROTOBUF_CFLAGS)
 QGS_CXXFLAGS = -g  -MMD $(CXXFLAGS) $(QGS_INC) $(PROTOBUF_CFLAGS)
 ifeq ($(CC_NO_LESS_THAN_8), 1)
@@ -57,7 +57,7 @@ QGS_LFLAGS = -L$(TOP_DIR)/build/linux -lsgx_tdx_logic -lsgx_pce_logic -ldl \
 # add protobuf for link
 QGS_LFLAGS += `pkg-config --libs protobuf-lite`
 # add boost_system for link
-QGS_LFLAGS += -lboost_system -lpthread
+QGS_LFLAGS += -lboost_system -lboost_thread -lpthread
 
 vpath %.c $(COMMON_DIR)/src
 

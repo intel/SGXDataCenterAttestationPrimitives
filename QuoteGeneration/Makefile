@@ -48,11 +48,11 @@ DISTR_VER := $(call get_distr_info, '^VERSION_ID=')
 
 # DCAP requires prebuilt enclaves.
 CHECK_OPT :=
-ifeq ("$(wildcard psw/ae/data/prebuilt)", "")
+ifeq ("$(wildcard psw/ae/data/prebuilt/*.signed.so)", "")
 CHECK_OPT := opt_check_failed
 endif
 
-dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper tdx_qe id_enclave
+dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
 
 opt_check_failed:
 	@echo "Please run download_prebuilt.sh before compiling"
@@ -61,8 +61,6 @@ opt_check_failed:
 
 pce_logic:
 	$(MAKE) -C pce_wrapper/linux
-id_enclave:
-	$(MAKE) -C quote_wrapper/quote/id_enclave/linux
 
 qe3_logic: pce_logic
 	$(MAKE) -C quote_wrapper/ql/linux
@@ -110,7 +108,7 @@ deb_sgx_ae_qve_pkg: $(CHECK_OPT)
 
 .PHONY: deb_sgx_ae_tdqe_pkg deb_sgx_tdx_logic_pkg deb_sgx_tdx_qgs_pkg deb_sgx_tdx_attest_pkg
 ifeq ($(DISTR_ID)$(DISTR_VER),ubuntu18.04)
-tdx_qe deb_sgx_ae_tdqe_pkg:
+deb_sgx_ae_tdqe_pkg:
 	echo "Skip tdqe in ubuntu 18.04"
 tdx_logic deb_sgx_tdx_logic_pkg:
 	echo "Skip tdx_logic in ubuntu 18.04"
@@ -119,8 +117,6 @@ tdx_qgs deb_sgx_tdx_qgs_pkg:
 tdx_attest deb_sgx_tdx_attest_pkg:
 	echo "Skip tdx_attest in ubuntu 18.04"
 else
-tdx_qe:
-	$(MAKE) -C quote_wrapper/tdx_quote/enclave/linux
 tdx_logic: pce_logic
 	$(MAKE) -C quote_wrapper/tdx_quote/linux
 tdx_qgs: tdx_logic
@@ -184,25 +180,29 @@ rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
 .PHONY: rpm_sgx_ae_tdqe_pkg
 rpm_sgx_ae_tdqe_pkg: $(CHECK_OPT)
 	./installer/linux/rpm/libsgx-ae-tdqe/build.sh
+
 .PHONY: rpm_sgx_ae_id_enclave_pkg
 rpm_sgx_ae_id_enclave_pkg: $(CHECK_OPT)
 	./installer/linux/rpm/libsgx-ae-id-enclave/build.sh
 
 .PHONY: rpm_sgx_ae_qve_pkg
-rpm_sgx_ae_qve_pkg: $(CHECK_OPT) qve_wrapper
+rpm_sgx_ae_qve_pkg: $(CHECK_OPT)
 	./installer/linux/rpm/libsgx-ae-qve/build.sh
+
 .PHONY: rpm_sgx_tdx_logic_pkg
 rpm_sgx_tdx_logic_pkg: tdx_logic
 	./installer/linux/rpm/libsgx-tdx-logic/build.sh
+
 .PHONY: rpm_sgx_tdx_qgs_pkg
 rpm_sgx_tdx_qgs_pkg: tdx_qgs
 	./installer/linux/rpm/tdx-qgs/build.sh
+
 .PHONY: rpm_sgx_tdx_attest_pkg
 rpm_sgx_tdx_attest_pkg: tdx_attest
 	./installer/linux/rpm/libtdx-attest/build.sh
 
 .PHONY: rpm_sgx_dcap_quote_verify_pkg
-rpm_sgx_dcap_quote_verify_pkg: $(CHECK_OPT) qve_wrapper
+rpm_sgx_dcap_quote_verify_pkg: qve_wrapper
 	./installer/linux/rpm/libsgx-dcap-quote-verify/build.sh
 
 .PHONY: rpm_sgx_qe3_logic_pkg

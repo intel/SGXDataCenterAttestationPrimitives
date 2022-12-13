@@ -46,7 +46,9 @@ default:
 install: $(PACKAGES)
 	cd $(shell readlink -m $(DESTDIR)/$(TDX_ATTEST_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libtdx_attest.so libtdx_attest.so.$(USR_LIB_VER) && \
-	ln -fs libtdx_attest.so.$(USR_LIB_VER) libtdx_attest.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
+	ln -fs libtdx_attest.so.$(USR_LIB_VER) libtdx_attest.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) && \
+	cd $(shell readlink -m $(DESTDIR)/$(TDX_ATTEST_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
+	ln -fs libtdx_attest.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libtdx_attest.so
 
 $(PACKAGES):
 	install -d $(shell readlink -m $(DESTDIR)/$@)

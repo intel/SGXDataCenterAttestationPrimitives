@@ -46,6 +46,7 @@
 #define PATH_SEPARATOR '/'
 
 #define SGX_URTS_LIB_FILE_NAME "libsgx_urts.so.1"
+#define SGX_URTS_LIB_FILE_NAME_V2 "libsgx_urts.so.2"
 void *g_urts_handle = NULL;
 se_mutex_t g_urts_mutex;
 
@@ -278,9 +279,13 @@ bool sgx_dcap_load_urts()
             g_urts_handle = dlopen(SGX_URTS_LIB_FILE_NAME, RTLD_LAZY);
 
             if (g_urts_handle == NULL) {
-                fputs(dlerror(), stderr);
-                SE_TRACE(SE_TRACE_DEBUG, "Couldn't find urts library: %s\n", SGX_URTS_LIB_FILE_NAME);
-                break;
+                //try to load urts v2
+                g_urts_handle = dlopen(SGX_URTS_LIB_FILE_NAME_V2, RTLD_LAZY);
+                if (g_urts_handle == NULL) {
+                    fputs(dlerror(), stderr);
+                    SE_TRACE(SE_TRACE_DEBUG, "Couldn't find urts library: %s, %s\n", SGX_URTS_LIB_FILE_NAME, SGX_URTS_LIB_FILE_NAME_V2);
+                    break;
+                }
             }
 
             //search for sgx_create_enclave symbol in urts library

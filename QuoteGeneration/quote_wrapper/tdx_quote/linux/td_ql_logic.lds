@@ -1,12 +1,12 @@
 {
 global:
-    td_set_enclave_load_policy;
-    td_set_qe_path;
-    td_set_qpl_path;
-    td_init_quote;
-    td_get_quote_size;
-    td_get_quote;
-    get_qpl_handle;
+    tee_att_create_context;
+    tee_att_free_context;
+    tee_att_init_quote;
+    tee_att_get_quote_size;
+    tee_att_get_quote;
+    tee_att_get_keyid;
+    tee_att_set_path;
 local:
     *;
 };

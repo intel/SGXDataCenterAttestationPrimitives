@@ -393,7 +393,7 @@ class PCS:
         certs_pem= []
         url= self._geturl('pckcerts')
 
-        if self.ApiVersion >= 3 and len(platform_manifest) > 0 :
+        if self.ApiVersion >= 3 and platform_manifest :
             data = {}
             data["pceid"] = pceid
             data["platformManifest"] = platform_manifest

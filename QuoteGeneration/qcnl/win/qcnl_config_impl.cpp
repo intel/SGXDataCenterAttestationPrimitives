@@ -50,6 +50,7 @@ using namespace std;
 #define REG_VALUE_QCNL_RETRY_DELAY _T("RETRY_DELAY")
 #define REG_VALUE_QCNL_LOCAL_PCK_URL _T("LOCAL_PCK_URL")
 #define REG_VALUE_QCNL_CACHE_EXPIRE_HOURS _T("PCK_CACHE_EXPIRE_HOURS")
+#define REG_VALUE_QCNL_COLLATERAL_EXPIRE_HOURS _T("VERIFY_COLLATERAL_CACHE_EXPIRE_HOURS")
 #define REG_VALUE_QCNL_CONFIG_FILE _T("CONFIG_FILE")
 
 
@@ -153,9 +154,17 @@ bool QcnlConfigLegacy::load_config() {
     DWORD dwCacheExpireHours = 0;
     status = RegQueryValueEx(key, REG_VALUE_QCNL_CACHE_EXPIRE_HOURS, NULL, &type, (LPBYTE)&dwCacheExpireHours, &count);
     if (ERROR_SUCCESS == status && type == REG_DWORD) {
-        cache_expire_hour_ = (uint32_t)dwCacheExpireHours;
-        if (cache_expire_hour_ > CACHE_MAX_EXPIRY_HOURS)
-            cache_expire_hour_ = CACHE_MAX_EXPIRY_HOURS;
+        pck_cache_expire_hours_ = (double)dwCacheExpireHours;
+        if (pck_cache_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+            pck_cache_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
+    }
+
+    DWORD dwVerifyCollateralExpireHours = 0;
+    status = RegQueryValueEx(key, REG_VALUE_QCNL_COLLATERAL_EXPIRE_HOURS, NULL, &type, (LPBYTE)&dwVerifyCollateralExpireHours, &count);
+    if (ERROR_SUCCESS == status && type == REG_DWORD) {
+        verify_collateral_expire_hours_ = (double)dwVerifyCollateralExpireHours;
+        if (verify_collateral_expire_hours_ > CACHE_MAX_EXPIRY_HOURS)
+            verify_collateral_expire_hours_ = CACHE_MAX_EXPIRY_HOURS;
     }
 
     RegCloseKey(key);

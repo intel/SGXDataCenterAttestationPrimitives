@@ -76,11 +76,29 @@ typedef enum _pck_cert_flag_enum_t {
 #define ROOT_KEY_ID_SIZE    48
 #define PLATFORM_INSTANCE_ID_SIZE   16
 
+// Each Intel Advisory size is ~16 bytes
+// Assume each TCB level has 10 advisoryIDs at the very most
+#define MAX_SA_LIST_SIZE   160
+
+// Nameless struct generates C4201 warning in MS compiler, but it is allowed in c++ 11 standard
+// Should remove the pragma after Microsoft fixes this issue
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#endif
 
 /** Contains data that will allow an alternative quote verification policy. */
 typedef struct _sgx_ql_qv_supplemental_t
 {
-    uint32_t version;                     ///< Supplemental data version
+    union {
+        uint32_t version;                       ///< 'version' is the backward compatible legacy representation
+        struct {
+            uint16_t major_version;             ///< If this major version doesn't change, the size of the structure may change and new fields appended to the end but old minor version structure can still be 'cast'
+                                                ///< If this major version does change, then the structure has been modified in a way that makes the older definitions non-backwards compatible. i.e. You cannot 'cast' older definitions
+            uint16_t minor_version;             ///< If this version changes, new fields have been appended to the end of the previous minor version definition of the structure
+                                                ///< Set to 1 to support SA_List.  Set to 0 to support everything except the SA List
+        };
+    };
     time_t earliest_issue_date;           ///< Earliest issue date of all the collateral (UTC)
     time_t latest_issue_date;             ///< Latest issue date of all the collateral (UTC)
     time_t earliest_expiration_date;      ///< Earliest expiration date of all the collateral (UTC)
@@ -105,7 +123,25 @@ typedef struct _sgx_ql_qv_supplemental_t
     pck_cert_flag_enum_t cached_keys;           ///< Indicate whether platform root keys are cached by SGX Registration Backend
     pck_cert_flag_enum_t smt_enabled;           ///< Indicate whether a plat form has SMT (simultaneous multithreading) enabled
 
+    char sa_list[MAX_SA_LIST_SIZE];             ///< String of comma separated list of Security Advisory IDs
+
 } sgx_ql_qv_supplemental_t;
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+/** Descriptor of the supplemental data requestor structure. Used when requesting supplemental data from the DCAP quote verification API */
+typedef struct _tee_supp_data_descriptor_t
+{
+    uint16_t major_version;             ///< Input. Major version of supplemental data
+                                        ///< If == 0, then return latest version of the sgx_ql_qv_supplemental_t structure
+                                        ///< If <= latest supported, return the latest minor version associated with that major version
+                                        ///< > latest supported, return an error (SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED)
+
+    uint32_t data_size;                 ///< Input. Supplemental data size of `p_data`, which returned by API `tee_get_supplemental_data_version_and_size()`
+    uint8_t *p_data;                    ///< Output. Pointer to supplemental data
+}tee_supp_data_descriptor_t;
 
 
 #endif //_QVE_HEADER_H_
