@@ -1,38 +1,35 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2018-2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include <QuoteVerification/QuoteConstants.h>
 #include <OpensslHelpers/Bytes.h>
 #include "EnclaveIdentityParser.h"
 #include "EnclaveIdentityV2.h"
+#include "Utils/Logger.h"
 
 #include <tuple>
 #include <memory>
@@ -43,11 +40,13 @@ namespace intel { namespace sgx { namespace dcap {
     {
         if (!jsonParser.parse(input))
         {
+            LOG_ERROR("Enclave Identity format error. Enclave Identity: {}", input);
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT);
         }
 
         if (!jsonParser.getRoot()->IsObject())
         {
+            LOG_ERROR("Invalid Enclave Identity. A valid root has not been supplied");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -55,11 +54,20 @@ namespace intel { namespace sgx { namespace dcap {
 
         if (signature == nullptr)
         {
+            LOG_ERROR("Enclave Identity format error. Enclave Identity: {}", input);
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT);
         }
 
-        if(!signature->IsString() || signature->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
+        if(!signature->IsString())
         {
+            LOG_ERROR("Invalid Enclave Identity. A signature is not a string");
+            throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
+        }
+
+        if(signature->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
+        {
+            LOG_ERROR("Invalid Enclave Identity. A signature: {} has wrong length. Expected: {}, actual: {}",
+                      signature->GetString(), constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2, signature->GetStringLength());
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -72,12 +80,14 @@ namespace intel { namespace sgx { namespace dcap {
 
         if (identityField == nullptr || !identityField->IsObject())
         {
+            LOG_ERROR("Invalid Enclave Identity. A valid identityField has not been supplied.");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
         std::tie(version, status) = jsonParser.getIntFieldOf(*identityField, "version");
         if (status != JsonParser::OK)
         {
+            LOG_ERROR("Invalid Enclave Identity. A version of IdentityField is not valid.");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -89,13 +99,17 @@ namespace intel { namespace sgx { namespace dcap {
                 std::unique_ptr<dcap::EnclaveIdentityV2> identity = std::unique_ptr<dcap::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
                 if (identity->getStatus() != STATUS_OK)
                 {
+                    LOG_ERROR("EnclaveIdentityV2 parsing error: {}", identity->getStatus());
                     throw ParserException(identity->getStatus());
                 }
                 identity->setSignature(signatureBytes);
                 return identity;
             }
             default:
+            {
+                LOG_ERROR("Enclave Identity version: {} is not supported", version);
                 throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION);
+            }
         }
     }
 

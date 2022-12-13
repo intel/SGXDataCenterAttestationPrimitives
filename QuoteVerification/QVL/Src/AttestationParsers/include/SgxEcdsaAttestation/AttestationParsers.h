@@ -1,48 +1,71 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #ifndef SGX_DCAP_PARSERS_H_
 #define SGX_DCAP_PARSERS_H_
+
+#ifndef _MSC_VER
+#define ATTESTATION_PARSERS_API __attribute__ ((visibility("default")))
+#elif _ATTESTATIONPARSERS_EXPORTS
+#define ATTESTATION_PARSERS_API __declspec(dllexport)
+#elif ATTESTATIONPARSERS_STATIC
+	#define ATTESTATION_PARSERS_API
+#else
+	#define ATTESTATION_PARSERS_API __declspec(dllimport)
+#endif
 
 #include <vector>
 #include <set>
 #include <string>
 #include <ctime>
 #include <stdexcept>
-#include <rapidjson/fwd.h>
-#include <openssl/x509.h>
+
+// Forward declarations for rapidjson
+namespace rapidjson {
+    template <typename BaseAllocator>
+    class MemoryPoolAllocator;
+    class CrtAllocator;
+    template<typename CharType> struct UTF8;
+    template <typename Encoding, typename Allocator>
+    class GenericValue;
+    typedef GenericValue<UTF8<char>, MemoryPoolAllocator<CrtAllocator> > Value;
+}
+
+// Forward declarations for openssl
+typedef struct X509_name_st X509_NAME;
+typedef struct asn1_string_st ASN1_STRING;
+typedef struct asn1_string_st ASN1_BIT_STRING;
+typedef struct X509_extension_st X509_EXTENSION;
+struct stack_st_ASN1_TYPE;
+typedef struct asn1_type_st ASN1_TYPE;
+typedef struct x509_st X509;
 
 namespace intel { namespace sgx { namespace dcap { namespace parser
 {
-
     namespace json
     {
         class JsonParser;
@@ -50,7 +73,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         class TcbInfo;
         class TcbLevel;
 
-        class TcbComponent
+        class ATTESTATION_PARSERS_API TcbComponent
         {
         public:
             uint8_t getSvn() const;
@@ -73,7 +96,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class representing properties of Intel’s TDX SEAM module.
          */
-        class TdxModule
+        class ATTESTATION_PARSERS_API TdxModule
         {
         public:
             TdxModule() = default;
@@ -113,7 +136,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class representing a TCB information structure which holds information about TCB Levels for specific FMSPC
          */
-        class TcbInfo
+        class ATTESTATION_PARSERS_API TcbInfo
         {
         public:
             /**
@@ -249,7 +272,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class representing a single TCB Level
          */
-        class TcbLevel
+        class ATTESTATION_PARSERS_API TcbLevel
         {
         public:
             /**
@@ -429,7 +452,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents x509 distinguished name
          */
-        class DistinguishedName
+        class ATTESTATION_PARSERS_API DistinguishedName
         {
         public:
             DistinguishedName() = default;
@@ -500,7 +523,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents certificate's validity
          */
-        class Validity
+        class ATTESTATION_PARSERS_API Validity
         {
         public:
             Validity() = default;
@@ -538,13 +561,13 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents SGX specific X509 certificate extensions
          */
-        class Extension
+        class ATTESTATION_PARSERS_API Extension
         {
         public:
             /**
              * Enum representing SGX extension type
              */
-            enum class Type : int
+            enum class ATTESTATION_PARSERS_API Type : int
             {
                 NONE = -1,
                 PPID = 0,
@@ -634,7 +657,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents ECDSA signature
          */
-        class Signature
+        class ATTESTATION_PARSERS_API Signature
         {
         public:
             Signature();
@@ -688,7 +711,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents X509 Certificate
          */
-        class Certificate
+        class ATTESTATION_PARSERS_API Certificate
         {
         public:
             Certificate();
@@ -768,6 +791,12 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             virtual const std::vector<uint8_t>& getPubKey() const;
 
             /**
+             * Get CRL distribution point
+             * @return string
+             */
+             virtual const std::string& getCrlDistributionPoint() const;
+
+            /**
              * Parse PEM encoded X.509 certificate
              * @param pem PEM encoded X.509 certificate
              * @return Certificate instance
@@ -787,6 +816,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             std::vector<uint8_t> _pubKey;
             std::vector<uint8_t> _info;
             std::string _pem;
+            std::string _crlDistributionPoint;
 
             explicit Certificate(const std::string& pem);
 
@@ -800,9 +830,10 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             void setExtensions(const X509* x509);
             void setSignature(const X509* x509);
             void setPublicKey(const X509* x509);
+            void setCrlDistributionPoint(const X509* x509);
         };
 
-        enum SgxType
+        enum ATTESTATION_PARSERS_API SgxType
         {
             Standard,
             Scalable,
@@ -814,7 +845,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents Intel SGX Trusted Computing Base information stored in Provisioning Certification Key Certificate
          */
-        class Tcb
+        class ATTESTATION_PARSERS_API Tcb
         {
         public:
             Tcb() = default;
@@ -876,7 +907,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
          * Optional sequence of additional configuration settings.
          * This data is only relevant to PCK Certificates issued by PCK Platform CA
          */
-        class Configuration {
+        class ATTESTATION_PARSERS_API Configuration {
         public:
             Configuration() = default;
             /**
@@ -931,7 +962,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents Provisioning Certification Key Certificate
          */
-        class PckCertificate : public Certificate
+        class ATTESTATION_PARSERS_API PckCertificate : public Certificate
         {
         public:
             PckCertificate() = default;
@@ -1018,7 +1049,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents Processor Provisioning Certification Key Certificate
          */
-        class ProcessorPckCertificate : public PckCertificate
+        class ATTESTATION_PARSERS_API ProcessorPckCertificate : public PckCertificate
         {
             using PckCertificate::PckCertificate;
         public:
@@ -1047,7 +1078,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         /**
          * Class that represents Platform Certification Key Certificate
          */
-        class PlatformPckCertificate : public PckCertificate {
+        class ATTESTATION_PARSERS_API PlatformPckCertificate : public PckCertificate {
         public:
 
             PlatformPckCertificate() = default;
@@ -1106,7 +1137,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
     /**
      * Exception when parsing fails due to incorrect format of the structure
      */
-    class FormatException : public std::logic_error
+    class ATTESTATION_PARSERS_API FormatException : public std::logic_error
     {
     public:
         using std::logic_error::logic_error;
@@ -1115,7 +1146,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
     /**
      * Exception when invalid extension is found in certificate
      */
-    class InvalidExtensionException : public std::logic_error
+    class ATTESTATION_PARSERS_API InvalidExtensionException : public std::logic_error
     {
     public:
         using std::logic_error::logic_error;

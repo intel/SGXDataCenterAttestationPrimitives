@@ -1,36 +1,33 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2017-2021, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include "Quote.h"
 #include "QuoteParsers.h"
+#include "Utils/Logger.h"
 
 #include <algorithm>
 #include <iterator>
@@ -42,12 +39,14 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
 {
     if(rawQuote.size() < QUOTE_MIN_BYTE_LEN)
     {
+        LOG_ERROR("Quote size {} is not at least {}.", rawQuote.size(), QUOTE_MIN_BYTE_LEN);
         return false;
     }
 
     auto from = rawQuote.cbegin();
     Header localHeader{};
     if (!copyAndAdvance(localHeader, from, HEADER_BYTE_LEN, rawQuote.cend())) {
+        LOG_ERROR("Can't read header from quote. Expected size: {}", HEADER_BYTE_LEN);
         return false;
     }
 
@@ -59,6 +58,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localEnclaveReport, from, ENCLAVE_REPORT_BYTE_LEN, rawQuote.end()))
         {
+            LOG_ERROR("Can't read SGX enclave report from quote. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
             return false;
         }
     }
@@ -66,17 +66,20 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localTdReport, from, TD_REPORT_BYTE_LEN, rawQuote.end()))
         {
+            LOG_ERROR("Can't read TDX TD Report from quote. Expected size: {}", TD_REPORT_BYTE_LEN);
             return false;
         }
     }
 
     uint32_t localAuthDataSize = 0;
     if (!copyAndAdvance(localAuthDataSize, from, rawQuote.end())) {
+        LOG_ERROR("Can't read auth data size  from quote.");
         return false;
     }
     const auto remainingDistance = std::distance(from, rawQuote.end());
     if(localAuthDataSize != remainingDistance)
     {
+        LOG_ERROR("Declared auth data size {} doesn't match remaining quote size {}", localAuthDataSize, remainingDistance);
         return false;
     }
 
@@ -86,6 +89,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localQuoteV3Auth, from, static_cast<size_t>(localAuthDataSize), rawQuote.end()))
         {
+            LOG_ERROR("Can't read QUOTE v3 Auth data. Expected size: {}", localAuthDataSize);
             return false;
         }
         qeReportSignature = localQuoteV3Auth.qeReportSignature.signature;
@@ -99,6 +103,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localQuoteV4Auth, from, static_cast<size_t>(localAuthDataSize), rawQuote.end()))
         {
+            LOG_ERROR("Can't read QUOTE v4 Auth data. Expected size: {}", localAuthDataSize);
             return false;
         }
         
@@ -122,6 +127,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     // and it means invalid format
     if(from != rawQuote.end())
     {
+        LOG_ERROR("There is additional, not expected data in quote.");
         return false;
     }
 
@@ -148,21 +154,25 @@ bool Quote::validate() const
     if(std::find(ALLOWED_QUOTE_VERSIONS.begin(), ALLOWED_QUOTE_VERSIONS.end(), header.version) ==
        ALLOWED_QUOTE_VERSIONS.end())
     {
+        LOG_ERROR("Quote version {} is not supported", header.version);
         return false;
     }
 
     if(std::find(ALLOWED_ATTESTATION_KEY_TYPES.begin(), ALLOWED_ATTESTATION_KEY_TYPES.end(), header.attestationKeyType) ==
        ALLOWED_ATTESTATION_KEY_TYPES.end())
     {
+        LOG_ERROR("Attestation Key type {} is not supported", header.attestationKeyType);
         return false;
     }
 
     if(std::find(ALLOWED_TEE_TYPES.begin(), ALLOWED_TEE_TYPES.end(), header.teeType) == ALLOWED_TEE_TYPES.end())
     {
+        LOG_ERROR("TEE Type {} is not supported", header.teeType);
         return false;
     }
 
     if(header.qeVendorId != INTEL_QE_VENDOR_ID) {
+        LOG_ERROR("Wrong QE vendor ID. Found: {}, expected: {}", header.qeVendorId, INTEL_QE_VENDOR_ID);
         return false;
     }
 
@@ -170,10 +180,13 @@ bool Quote::validate() const
     {
         if (header.teeType != TEE_TYPE_SGX)
         {
+            LOG_ERROR("Quote v3 supports only SGX tee type but found {}", header.teeType);
             return false;
         }
         if (authDataV3.certificationData.type < 1 || authDataV3.certificationData.type > 5) // QuoteV3 supports only 1-5 types
         {
+            LOG_ERROR("Quote v3 supports certification data types from 1 to 5 but found {}",
+                      authDataV3.certificationData.type);
             return false;
         }
     }
@@ -182,10 +195,14 @@ bool Quote::validate() const
     {
         if (authDataV4.certificationData.type != constants::PCK_ID_QE_REPORT_CERTIFICATION_DATA)
         {
+            LOG_ERROR("Quote v4 supports only {} certification data type but found {}",
+                      constants::PCK_ID_QE_REPORT_CERTIFICATION_DATA, authDataV4.certificationData.type);
             return false;
         }
         if (certificationData.type < 1 || certificationData.type > 5)
         {
+            LOG_ERROR("Quote v4 supports QE Report Certification data types from 1 to 5 but found: {}",
+                      certificationData.type);
             return false;
         }
     }

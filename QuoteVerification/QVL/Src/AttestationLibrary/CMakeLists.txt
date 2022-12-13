@@ -52,6 +52,9 @@ endif()
 hunter_add_package(OpenSSL)
 find_package(OpenSSL 1.1.1 EXACT REQUIRED)
 
+hunter_add_package(spdlog)
+find_package(spdlog CONFIG REQUIRED)
+
 file(GLOB SOURCE_FILES src/*.cpp
         src/OpensslHelpers/*.cpp
         src/PckParser/*.cpp
@@ -59,6 +62,7 @@ file(GLOB SOURCE_FILES src/*.cpp
         src/QuoteVerification/*.cpp
         src/Verifiers/*.cpp
         src/Utils/*.cpp
+        include/SgxEcdsaAttestation/*.h
         )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -81,6 +85,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         rapidjson
         OpenSSL::SSL
         OpenSSL::Crypto
+        spdlog::spdlog_header_only
         )
 
 target_link_libraries(${PROJECT_NAME}Static PRIVATE
@@ -89,6 +94,7 @@ target_link_libraries(${PROJECT_NAME}Static PRIVATE
         rapidjson
         OpenSSL::SSL
         OpenSSL::Crypto
+        spdlog::spdlog_header_only
         )
 
 if(MSVC)

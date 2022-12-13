@@ -1,39 +1,36 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 
 #include "ParserUtils.h"
 #include "OpensslHelpers/OpensslTypes.h"
 #include "Utils/TimeUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/objects.h>
 #include <openssl/x509.h>
@@ -51,6 +48,7 @@ std::string obj2Str(const ASN1_OBJECT* obj)
 {
     if(!obj)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -66,6 +64,7 @@ std::vector<uint8_t> bn2Vec(const BIGNUM* bn)
 {
     if(!bn)
     {
+        LOG_WARN("Provided object is NULL");
         return {};
     }
 
@@ -86,6 +85,7 @@ std::string x509NameToString(const X509_NAME* name)
 {
     if(!name)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -115,6 +115,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(!name)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -124,6 +125,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(X509_NAME_entry_count(name) <= 0)
     {
+        LOG_WARN("Can't get any entries");
         return "";
     }
 
@@ -131,6 +133,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(position == -1)
     {
+        LOG_WARN("NID {} can't be found", nid);
         return "";
     }
 
@@ -138,6 +141,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(!entry)
     {
+        LOG_WARN("Entry at position {} can't be found");
         return "";
     }
 
@@ -145,6 +149,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
     const int asn1EstimatedStrLen = ASN1_STRING_length(asn1);
     if(asn1EstimatedStrLen <= 0)
     {
+        LOG_WARN("Can't get data for entry");
         return "";
     }
 
@@ -154,6 +159,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(len < 0)
     {
+        LOG_WARN("Can't convert ASN1_STRING to UTF8");
         return "";
     }
 
@@ -162,6 +168,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
     // shouldn't happened, but who knows
     if(asn1EstimatedStrLen != len)
     {
+        LOG_WARN("Estimated string length is not equal to actual length {} != {}", asn1EstimatedStrLen, len);
         return "";
     }
 
@@ -189,7 +196,8 @@ std::time_t asn1TimeToTimet(
     {
         // We're here if the format is invalid, thus
         // validity settings in cert should be considered invalid
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_AND_THROW(FormatException, err);
     }
 
     return resultTime + pday * SECONDS_IN_A_DAY + psec;

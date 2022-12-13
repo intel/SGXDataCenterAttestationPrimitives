@@ -1,36 +1,33 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2017-2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 
 #include "CommonVerifier.h"
+#include "Utils/Logger.h"
 
 #include <OpensslHelpers/SignatureVerification.h>
 #include <OpensslHelpers/KeyUtils.h>
@@ -44,6 +41,8 @@ bool CommonVerifier::checkStandardExtensions(const std::vector<pckparser::Extens
 {
     if(opensslExtensionNids.size() > presentExtensions.size())
     {
+        LOG_ERROR("Number of extensions in CRL is not what expected. Expected: {}, actual: {}", opensslExtensionNids.size(),
+                  presentExtensions.size());
         return false;
     }
 
@@ -57,6 +56,7 @@ bool CommonVerifier::checkStandardExtensions(const std::vector<pckparser::Extens
         
         if(found == presentExtensions.end())
         {
+            LOG_ERROR("Expected extension with NID {} not found in CRL", requiredNid);
             return false;
         }
     }
@@ -68,11 +68,13 @@ Status CommonVerifier::verifyRootCACert(const dcap::parser::x509::Certificate &r
 {
     if(rootCa.getIssuer() != rootCa.getSubject())
     {
+        LOG_ERROR("Root CA is not self signed");
         return STATUS_SGX_ROOT_CA_INVALID_ISSUER;
     }
 
     if (!crypto::verifySha256EcdsaSignature(rootCa.getSignature(), rootCa.getInfo(), rootCa.getPubKey()))
     {
+        LOG_ERROR("Root CA signature is invalid");
         return STATUS_SGX_ROOT_CA_INVALID_ISSUER;
     }
 
@@ -84,11 +86,13 @@ Status CommonVerifier::verifyIntermediate(const dcap::parser::x509::Certificate 
 {
     if (intermediate.getIssuer() != root.getSubject())
     {
+        LOG_ERROR("Intermediate CA is not signed by root");
         return STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER;
     }
 
     if (!crypto::verifySha256EcdsaSignature(intermediate.getSignature(), intermediate.getInfo(), root.getPubKey()))
     {
+        LOG_ERROR("Root CA signature is invalid");
         return STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER;
     }
 
@@ -110,6 +114,7 @@ bool CommonVerifier::checkSha256EcdsaSignature(const Bytes &signature, const std
     auto pubKey = crypto::rawToP256PubKey(publicKey);
     if (pubKey == nullptr)
     {
+        LOG_ERROR("Parsing publickey failed: {}", publicKey);
         return false;
     }
     return crypto::verifySha256EcdsaSignature(signature, message, *pubKey);

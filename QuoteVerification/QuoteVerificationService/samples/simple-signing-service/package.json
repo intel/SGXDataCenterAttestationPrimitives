@@ -1,0 +1,17 @@
+{
+  "name": "simple-signing-service",
+  "version": "0.0.1",
+  "description": "DO NOT USE IN PRODUCTION. This simple service demonstrates Verification Crypto Service concept.",
+  "main": "simple-signing-service.js",
+  "scripts": {
+    "start": "node simple-signing-service.js"
+  },
+  "dependencies": {
+    "koa": "^2.13.4",
+    "koa-router": "^12.0.0",
+    "koa-body": "^5.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,33 +1,29 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2018-2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include "EnclaveReportVerifier.h"
 #include "QuoteVerification/ByteOperands.h"
@@ -38,7 +34,8 @@
 #include <numeric>
 #include <iostream>
 #include <memory>
-
+#include <Utils/Logger.h>
+#include <OpensslHelpers/Bytes.h>
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -50,6 +47,8 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     /// 4.1.2.9.5
     if((enclaveReport.miscSelect & miscselectMask) != miscselect)
     {
+        LOG_ERROR("MiscSelect value from Enclave Report: {} does not match miscSelect value from Enclave Identity: {}",
+                  enclaveReport.miscSelect & miscselectMask, miscselect);
         return STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH;
     }
 
@@ -58,6 +57,7 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     std::vector<uint8_t> attributes(attributesReport.begin(), attributesReport.end());
     if(applyMask(attributes, enclaveIdentity->getAttributesMask()) != enclaveIdentity->getAttributes())
     {
+        LOG_ERROR("Attributes value from Enclave Report does not match attributes from Enclave Identity");
         return STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH;
     }
 
@@ -68,12 +68,16 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
 
     if(!enclaveIdentityMrSigner.empty() && enclaveIdentityMrSigner != mrSigner)
     {
+        LOG_ERROR("Enclave Identity contains MRSIGNER field: {} which does not match MRSIGNER value from Enclave Report: {}",
+                  bytesToHexString(enclaveIdentityMrSigner), bytesToHexString(mrSigner));
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
 
     /// 4.1.2.9.8
     if(enclaveReport.isvProdID != enclaveIdentity->getIsvProdId())
     {
+        LOG_ERROR("Enclave Identity contains IsvProdId field: {} which does not match IsvProdId value from Enclave Report: {}",
+                  enclaveIdentity->getIsvProdId(), enclaveReport.isvProdID);
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
 
@@ -83,8 +87,12 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     {
         if (enclaveIdentityStatus == TcbStatus::Revoked)
         {
+            LOG_ERROR("Value of tcbStatus for the selected Enclave's Identity tcbLevel (isvSvn: {}) is \"Revoked\"",
+                      enclaveReport.isvSvn);
             return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED;
         }
+        LOG_ERROR("Value of tcbStatus for the selected Enclave's Identity tcbLevel (isvSvn: {}) is \"OutOfDate\"",
+                  enclaveReport.isvSvn);
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;
     }
 

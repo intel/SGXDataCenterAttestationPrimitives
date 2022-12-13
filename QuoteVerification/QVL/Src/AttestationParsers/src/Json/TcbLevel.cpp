@@ -1,33 +1,29 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 
@@ -37,6 +33,7 @@
 #include <array>
 #include <tuple>
 #include <algorithm>
+#include "Utils/Logger.h"
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {
 
@@ -100,7 +97,7 @@ uint32_t TcbLevel::getSgxTcbComponentSvn(uint32_t componentNumber) const
     {
         std::string err = "Invalid component SVN number [" + std::to_string(componentNumber) +
                           "]. Should be less than " + std::to_string(constants::CPUSVN_BYTE_LEN);
-        throw FormatException(err);
+        LOG_AND_THROW(FormatException, err);
     }
     return _cpuSvnComponents[componentNumber];
 }
@@ -111,7 +108,7 @@ const TcbComponent& TcbLevel::getSgxTcbComponent(uint32_t componentNumber) const
     {
         std::string err = "Invalid component SVN number [" + std::to_string(componentNumber) +
                           "]. Should be less than " + std::to_string(constants::CPUSVN_BYTE_LEN);
-        throw FormatException(err);
+        LOG_AND_THROW(FormatException, err);
     }
     return _sgxTcbComponents[componentNumber];
 }
@@ -120,7 +117,7 @@ const std::vector<TcbComponent>& TcbLevel::getSgxTcbComponents() const
 {
     if (_version < TcbInfo::Version::V3)
     {
-        throw FormatException("SGX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+        LOG_AND_THROW(FormatException, "SGX TCB Components is not a valid field in TCB Info V1 and V2 structure");
     }
     return _sgxTcbComponents;
 }
@@ -131,15 +128,15 @@ const TcbComponent& TcbLevel::getTdxTcbComponent(uint32_t componentNumber) const
     {
         std::string err = "Invalid component SVN number [" + std::to_string(componentNumber) +
                           "]. Should be less than " + std::to_string(constants::CPUSVN_BYTE_LEN);
-        throw FormatException(err);
+        LOG_AND_THROW(FormatException, err);
     }
     if (_version < TcbInfo::Version::V3)
     {
-        throw FormatException("TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+        LOG_AND_THROW(FormatException, "TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
     }
     if (_id != TcbInfo::TDX_ID)
     {
-        throw FormatException("TDX TCB Components is not a valid field in SGX TCB Info structure");
+        LOG_AND_THROW(FormatException, "TDX TCB Components is not a valid field in SGX TCB Info structure");
     }
     return _tdxTcbComponents[componentNumber];
 }
@@ -148,11 +145,11 @@ const std::vector<TcbComponent>& TcbLevel::getTdxTcbComponents() const
 {
     if (_version < TcbInfo::Version::V3)
     {
-        throw FormatException("TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
+        LOG_AND_THROW(FormatException, "TDX TCB Components is not a valid field in TCB Info V1 and V2 structure");
     }
     if (_id != TcbInfo::TDX_ID)
     {
-        throw FormatException("TDX TCB Components is not a valid field in SGX TCB Info structure");
+        LOG_AND_THROW(FormatException, "TDX TCB Components is not a valid field in SGX TCB Info structure");
     }
     return _tdxTcbComponents;
 }
@@ -198,7 +195,7 @@ TcbLevel::TcbLevel(const ::rapidjson::Value& tcbLevel, const uint32_t version, c
             parseTcbLevelV3(tcbLevel, jsonParser);
             break;
         default:
-            throw InvalidExtensionException("Unsupported version of tcbLevel");
+            LOG_AND_THROW(InvalidExtensionException, "Unsupported version of tcbLevel");
 
     }
 }
@@ -209,18 +206,18 @@ void TcbLevel::parseStatus(const ::rapidjson::Value &tcbLevel,
 {
     if(!tcbLevel.HasMember(filedName.c_str()))
     {
-        throw FormatException("TCB level JSON should has [" + filedName + "] field");
+        LOG_AND_THROW(FormatException, "TCB level JSON should has [" + filedName + "] field");
     }
 
     const ::rapidjson::Value& status_v = tcbLevel[filedName.c_str()];
     if(!status_v.IsString())
     {
-        throw FormatException("TCB level [" + filedName + "] JSON field should be a string");
+        LOG_AND_THROW(FormatException, "TCB level [" + filedName + "] JSON field should be a string");
     }
     _status = status_v.GetString();
     if(std::find(validStatuses.cbegin(), validStatuses.cend(), _status) == validStatuses.cend())
     {
-        throw InvalidExtensionException("TCB level [" + filedName + "] JSON field has invalid value [" + _status + "]");
+        LOG_AND_THROW(InvalidExtensionException, "TCB level [" + filedName + "] JSON field has invalid value [" + _status + "]");
     }
 }
 
@@ -228,7 +225,7 @@ void TcbLevel::parseSvns(const ::rapidjson::Value &tcbLevel, JsonParser& jsonPar
 {
     if(!tcbLevel.HasMember("tcb"))
     {
-        throw FormatException("TCB level JSON should has [tcb] field");
+        LOG_AND_THROW(FormatException, "TCB level JSON should has [tcb] field");
     }
 
     const ::rapidjson::Value& tcb = tcbLevel["tcb"];
@@ -239,7 +236,7 @@ void TcbLevel::parseSvns(const ::rapidjson::Value &tcbLevel, JsonParser& jsonPar
     std::tie(_pceSvn, pceSvnValid) = jsonParser.getUintFieldOf(tcb, "pcesvn");
     if(pceSvnValid != JsonParser::OK)
     {
-        throw FormatException("Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
+        LOG_AND_THROW(FormatException, "Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
     }
 }
 
@@ -247,7 +244,7 @@ void TcbLevel::parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParse
 {
     if(!tcbLevel.IsObject())
     {
-        throw FormatException("TCB level should be a JSON object");
+        LOG_AND_THROW(FormatException, "TCB level should be a JSON object");
     }
 
     JsonParser::ParseStatus parsedStatus = JsonParser::Missing;
@@ -255,9 +252,9 @@ void TcbLevel::parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParse
     switch (parsedStatus)
     {
         case JsonParser::ParseStatus::Missing:
-            throw FormatException("TCB level JSON should has [tcbDate] field");
+            LOG_AND_THROW(FormatException, "TCB level JSON should has [tcbDate] field");
         case JsonParser::ParseStatus::Invalid:
-            throw InvalidExtensionException("Could not parse [tcbDate] field of TCB info JSON to date. [tcbDate] should be ISO formatted date");
+            LOG_AND_THROW(InvalidExtensionException, "Could not parse [tcbDate] field of TCB info JSON to date. [tcbDate] should be ISO formatted date");
         case JsonParser::ParseStatus::OK:
             break;
     }
@@ -267,7 +264,7 @@ void TcbLevel::parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParse
     switch (parsedStatus)
     {
         case JsonParser::ParseStatus::Invalid:
-            throw InvalidExtensionException("Could not parse [advisoryIDs] field of TCB info JSON to an array.");
+            LOG_AND_THROW(InvalidExtensionException, "Could not parse [advisoryIDs] field of TCB info JSON to an array.");
         case JsonParser::ParseStatus::Missing: // advisoryIDs field is optional
         case JsonParser::ParseStatus::OK:
             break;
@@ -288,21 +285,21 @@ void TcbLevel::parseTcbLevelV3(const ::rapidjson::Value &tcbLevel, JsonParser& j
     parseTcbLevelCommon(tcbLevel, jsonParser);
     if(!tcbLevel.HasMember("tcb"))
     {
-        throw FormatException("TCB level JSON should has [tcb] field");
+        LOG_AND_THROW(FormatException, "TCB level JSON should has [tcb] field");
     }
 
     const ::rapidjson::Value& tcb = tcbLevel["tcb"];
 
     if(!tcb.IsObject())
     {
-        throw FormatException("TCB level JSON [tcb] field should be an object");
+        LOG_AND_THROW(FormatException, "TCB level JSON [tcb] field should be an object");
     }
 
     JsonParser::ParseStatus pceSvnValid = JsonParser::Missing;
     std::tie(_pceSvn, pceSvnValid) = jsonParser.getUintFieldOf(tcb, "pcesvn");
     if(pceSvnValid != JsonParser::OK)
     {
-        throw FormatException("Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
+        LOG_AND_THROW(FormatException, "Could not parse [pcesvn] field of TCB level JSON to unsigned integer");
     }
 
     setTcbComponents(tcb);
@@ -311,18 +308,18 @@ void TcbLevel::parseTcbLevelV3(const ::rapidjson::Value &tcbLevel, JsonParser& j
 void TcbLevel::setTcbComponents(const rapidjson::Value &tcb) {
     if(!tcb.HasMember("sgxtcbcomponents"))
     {
-        throw FormatException("TCB level JSON should have [sgxtcbcomponents] field");
+        LOG_AND_THROW(FormatException, "TCB level JSON should have [sgxtcbcomponents] field");
     }
 
     const auto& sgxComponentsArray = tcb["sgxtcbcomponents"];
 
     if(!sgxComponentsArray.IsArray())
     {
-        throw FormatException("TCB level JSON's [sgxtcbcomponents] field should be an array");
+        LOG_AND_THROW(FormatException, "TCB level JSON's [sgxtcbcomponents] field should be an array");
     }
     if(sgxComponentsArray.Size() != SGX_TCB_SVN_COMP_COUNT)
     {
-        throw FormatException("TCB level [sgxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
+        LOG_AND_THROW(FormatException, "TCB level [sgxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
     }
     _sgxTcbComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
     _cpuSvnComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
@@ -337,16 +334,16 @@ void TcbLevel::setTcbComponents(const rapidjson::Value &tcb) {
     {
         if(!tcb.HasMember("tdxtcbcomponents"))
         {
-            throw FormatException("TCB level JSON for TDX should have [tdxtcbcomponents] field");
+            LOG_AND_THROW(FormatException, "TCB level JSON for TDX should have [tdxtcbcomponents] field");
         }
         const auto& tdxComponentsArray = tcb["tdxtcbcomponents"];
         if(!tdxComponentsArray.IsArray())
         {
-            throw FormatException("TCB level JSON's [tdxtcbcomponents] field should be an array");
+            LOG_AND_THROW(FormatException, "TCB level JSON's [tdxtcbcomponents] field should be an array");
         }
         if(tdxComponentsArray.Size() != SGX_TCB_SVN_COMP_COUNT)
         {
-            throw FormatException("TCB level [tdxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
+            LOG_AND_THROW(FormatException, "TCB level [tdxtcbcomponents] array should have " + std::to_string(SGX_TCB_SVN_COMP_COUNT) + " entries");
         }
         _tdxTcbComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
 
@@ -381,7 +378,7 @@ void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
 
     if(!tcb.IsObject())
     {
-        throw FormatException("[tcb] field of TCB level should be a JSON object");
+        LOG_AND_THROW(FormatException, "[tcb] field of TCB level should be a JSON object");
     }
 
     _cpuSvnComponents.reserve(SGX_TCB_SVN_COMP_COUNT);
@@ -394,9 +391,9 @@ void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
         switch (status)
         {
             case JsonParser::ParseStatus::Missing:
-                throw FormatException("TCB level JSON should has [" + componentName + "] field");
+                LOG_AND_THROW(FormatException, "TCB level JSON should has [" + componentName + "] field");
             case JsonParser::ParseStatus::Invalid:
-                throw InvalidExtensionException("Could not parse [" + componentName + "] field of TCB level JSON to unsigned integer");
+                LOG_AND_THROW(InvalidExtensionException, "Could not parse [" + componentName + "] field of TCB level JSON to unsigned integer");
             case JsonParser::ParseStatus::OK:
                 break;
         }

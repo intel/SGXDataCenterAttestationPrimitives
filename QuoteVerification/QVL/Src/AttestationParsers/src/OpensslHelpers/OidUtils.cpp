@@ -1,38 +1,35 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+* Copyright (c) 2019, Intel Corporation
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright notice,
+*      this list of conditions and the following disclaimer.
+*    * Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*    * Neither the name of Intel Corporation nor the names of its contributors
+*      may be used to endorse or promote products derived from this software
+*      without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include "OidUtils.h"
 
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "ParserUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/asn1.h>
 
@@ -47,7 +44,7 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
     {
         std::string err = "OID [" + oidName + "] type expected [" + std::to_string(expectedType) +
                           "] given [" + std::to_string(oidValue->type) + "]";
-        throw parser::FormatException(err);
+        LOG_AND_THROW(parser::FormatException, err);
     }
 }
 
@@ -73,14 +70,14 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
         default:
         {
             std::string err = "Unsupported OID [" + oidName + "] type [" + std::to_string(oidValue->type) + "]";
-            throw parser::FormatException(err);
+            LOG_AND_THROW(parser::FormatException, err);
         }
     }
     if (oidValueLen != expectedLength)
     {
         std::string err = "OID [" + oidName + "] length expected [" + std::to_string(expectedLength) + "] given [" +
                           std::to_string(oidValueLen) + "]";
-        throw parser::FormatException(err);
+        LOG_AND_THROW(parser::FormatException, err);
     }
 }
 
@@ -119,7 +116,8 @@ STACK_OF_ASN1TYPE_uptr oidToStack(const ASN1_TYPE *oidValue)
 
     if(!stack)
     {
-        throw parser::FormatException("d2i_ASN1_SEQUENCE_ANY failed " + parser::getLastError());
+        auto err = "d2i_ASN1_SEQUENCE_ANY failed " + parser::getLastError();
+        LOG_AND_THROW(parser::FormatException, err);
     }
 
     return stack;
