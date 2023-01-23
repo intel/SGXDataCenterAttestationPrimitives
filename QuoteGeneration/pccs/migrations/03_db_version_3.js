@@ -64,9 +64,9 @@ async function up(sequelize) {
     // this is done by 1.Create new table 2.Copy data 3.Drop old table 4.Rename new into old
     logger.debug('DB Migration -- update enclave_identities');
     sql =
-      'CREATE TABLE IF NOT EXISTS enclave_identities_temp (id INTEGER NOTE NULL, version INTEGER NOT NULL, identity BLOB, root_cert_id INTEGER, ' +
+      'CREATE TABLE IF NOT EXISTS enclave_identities_temp (id INTEGER NOT NULL, version INTEGER NOT NULL, identity BLOB, root_cert_id INTEGER, ' +
       ' signing_cert_id INTEGER, created_time DATETIME NOT NULL, updated_time DATETIME NOT NULL, PRIMARY KEY(id, version));';
-  await sequelize.query(sql);
+    await sequelize.query(sql);
 
     sql =
       'INSERT INTO enclave_identities_temp (id, version, identity, root_cert_id, signing_cert_id, created_time, updated_time) ' +
