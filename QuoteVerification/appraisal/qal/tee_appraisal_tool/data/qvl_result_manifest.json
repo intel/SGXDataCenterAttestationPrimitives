@@ -1,0 +1,62 @@
+{
+	"To_be_sign": false,
+	"qvl_result_payload": {
+        "enclave_tcb":  {
+            "header": {
+                "type": "<UUID-sgx-enclave>",
+                "version": "1.0"
+            },
+            "tcb": {
+                "miscselect": "01234567",
+                "attributes": "0123456789ABCDEF0123456789ABCDEF",
+                "ce_attributes": "01",
+                "mrenclave": "<String>",
+                "mrsigner": "<String>",
+                "isvprodid": 123,
+                "isvsvn": 5,
+                "configid": "<String>",
+                "configsvn": 6,
+                "isvextprodid": "<String>",
+                "isvfamilyid": "<UUID-string>",
+                "reportdata": "<64-bytes>"
+            }
+        },
+        "platform_tcb": {
+            "header": {
+                "type": "<UUID-sgx-platform>",
+                "version": "1.0",
+                "request_id" : 123456789,
+                "verification_time": "2022-02-13T00:00:00Z"
+            },
+            "tcb": {
+                "tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded"
+                ],
+                "earliest_issue_date": "2022-02-12T00:00:00Z",
+                "latest_issue_date": "2022-02-15T00:00:00Z",
+                "earliest_expiration_date": "2022-03-10T00:00:00Z",
+                "tcb_level_date_tag": "2020-07-28T00:00:00Z",
+                "tcb_eval_num": 5,
+                "platform_provider_id": "ppid1",
+                "sgx_types": ["ConfidentialityProtected"],
+                "is_dynamic_plaform": false,
+                "is_cached_keys_policy": true,
+                "is_smt_enabled": false,
+                "advisory_ids" : [
+                    "INTEL-SA-00079",
+                    "INTEL-SA-00077"
+                ]
+            },
+            "endorsement" : {
+                "pck_crl_issuer_chain" : "<base64-encoded-string>",
+                "root_ca_crl" : "<base64-encoded-string>",
+                "pck_crl" : "<base64-encoded-string>",
+                "tcb_info_issuer_chain" : "<base64-encoded-string>",
+                "tcb_info" : "<base64-encoded-string>",
+                "qe_identity_issuer_chain" : "<base64-encoded-string>",
+                "qe_identity" : "<base64-encoded-string>"
+             }
+        }
+	}
+}

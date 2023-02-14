@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2023 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,63 +28,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/**
- * File: sgx_dcap_qv_internal.h
- *
- * Description: Definitions and prototypes for the DCAP Verification Library
- *
- */
 
-#ifndef _SGX_DCAP_QV_INTERNAL_H_
-#define _SGX_DCAP_QV_INTERNAL_H_
+#ifndef _SGX_DCAP_QAL_H_
+#define _SGX_DCAP_QAL_H_
 
-#include "sgx_qve_header.h"
-#include "sgx_qve_def.h"
+#include "sgx_report.h"
+#include "sgx_ql_lib_common.h"
+#include "sgx_ql_quote.h"
+#include <time.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#define SGX_QUOTE_TYPE 0x0
-#define TDX_QUOTE_TYPE 0x81
 
-#define TEE_PALTFORM_TOKEN_UUID "3123ec35-8d38-4ea5-87a5-d6c48b567570"
-#define TEE_ENCLAVE_TOKEN_UUID "bef7cb8c-31aa-42c1-854c-10db005d5c41"
-#define TEE_PLATFORM_TOKEN_VER "1.0"
-#define TEE_ENCLAVE_TOKEN_VER "1.0"
-
-typedef enum {
-	    SGX_EVIDENCE = 0,
-	    TDX_EVIDENCE,
-        UNKNOWN_QUOTE_TYPE
-} tee_evidence_type_t;
-
-//SGX&TDX untrusted quote verification related APIs
-//
-quote3_error_t sgx_qvl_verify_quote(
-    const uint8_t *p_quote,
-    uint32_t quote_size,
-    const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
-    const time_t expiration_check_date,
-    uint32_t *p_collateral_expiration_status,
-    sgx_ql_qv_result_t *p_quote_verification_result,
-    sgx_ql_qe_report_info_t *p_qve_report_info,
-    uint32_t supplemental_data_size,
-    uint8_t *p_supplemental_data);
-
-quote3_error_t sgx_qvl_get_quote_supplemental_data_size(
-    uint32_t *p_data_size);
-
-quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
-    uint32_t *p_version);
-
-
-quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
-     unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
-     unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size);
+/**
+ * Appraise a Verification Result JWT against one or more Quote Appraisal Policies
+ *
+ * @param p_verification_result_token[IN] - Points to a null-terminated string containing the input Verification Result JWT.
+ * @param p_qaps[IN] - Points to an array of pointers, with each pointer pointing to a buffer holding a quote appraisal policy JWT token. Each token is a null-terminated string holding a JWT.
+ * @param qaps_count[IN] - The number of pointers in the p_qaps array.
+ * @param appraisal_check_date[IN] - -	User input, used by the appraisal engine as its “current time” for expiration dates check.
+ * @param p_qae_report_info[IN, OUT] - The parameter is optional.
+ * @param p_appraisal_result_token_buffer_size[IN, OUT] - Points to hold the size of the p_appraisal_result_token buffer.
+ * @param p_appraisal_result_token[OUT] - Points to the output Appraisal result JWT.
+ *
+ * @return Status code of the operation. SGX_QL_SUCCESS or failure as defined in sgx_ql_lib_common.h
+ **/
+quote3_error_t tee_appraise_verification_token(
+    const uint8_t *p_verification_result_token,
+    uint8_t **p_qaps,
+    uint8_t qaps_count,
+    const time_t appraisal_check_date,
+    sgx_ql_qe_report_info_t *p_qae_report_info,
+    uint32_t *p_appraisal_result_token_buffer_size,
+    uint8_t *p_appraisal_result_token);
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif /* !_SGX_DCAP_QV_INTERNAL_H_*/
+#endif

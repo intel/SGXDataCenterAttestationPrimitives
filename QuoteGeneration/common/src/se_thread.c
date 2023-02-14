@@ -30,7 +30,7 @@
  */
 #include "se_thread.h"
 #include "se_types.h"
-
+#include "se_memcpy.h"
 
 #if defined(_MSC_VER)
 
@@ -68,7 +68,7 @@ void se_mutex_init(se_mutex_t* mutex)
 #endif
 
     /* C doesn't allow `*mutex = PTHREAD_..._INITIALIZER'.*/
-    memcpy(mutex, &tmp, sizeof(tmp));
+    memcpy_s(mutex, sizeof(tmp), &tmp, sizeof(tmp));
 }
 
 int se_mutex_lock(se_mutex_t* mutex) { return (0 == pthread_mutex_lock(mutex)); }
@@ -78,7 +78,7 @@ int se_mutex_destroy(se_mutex_t* mutex) { return (0 == pthread_mutex_destroy(mut
 void se_thread_cond_init(se_cond_t* cond)
 {
     se_cond_t tmp = PTHREAD_COND_INITIALIZER;
-    memcpy(cond, &tmp, sizeof(tmp));
+    memcpy_s(cond, sizeof(tmp), &tmp, sizeof(tmp));
 }
 
 int se_thread_cond_wait(se_cond_t *cond, se_mutex_t *mutex){return (0 == pthread_cond_wait(cond, mutex));}

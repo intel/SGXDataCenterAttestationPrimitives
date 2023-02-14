@@ -12,6 +12,9 @@ global:
     tee_qv_free_collateral;
     tee_get_supplemental_data_version_and_size;
     tee_verify_quote;
+    tee_verify_quote_qvt;
+    tee_free_verify_quote_qvt;
+    tee_appraise_verification_token;
 local:
     *;
 };

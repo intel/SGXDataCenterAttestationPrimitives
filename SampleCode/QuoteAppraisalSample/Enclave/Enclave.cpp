@@ -28,63 +28,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/**
- * File: sgx_dcap_qv_internal.h
- *
- * Description: Definitions and prototypes for the DCAP Verification Library
- *
- */
 
-#ifndef _SGX_DCAP_QV_INTERNAL_H_
-#define _SGX_DCAP_QV_INTERNAL_H_
-
-#include "sgx_qve_header.h"
-#include "sgx_qve_def.h"
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#define SGX_QUOTE_TYPE 0x0
-#define TDX_QUOTE_TYPE 0x81
-
-#define TEE_PALTFORM_TOKEN_UUID "3123ec35-8d38-4ea5-87a5-d6c48b567570"
-#define TEE_ENCLAVE_TOKEN_UUID "bef7cb8c-31aa-42c1-854c-10db005d5c41"
-#define TEE_PLATFORM_TOKEN_VER "1.0"
-#define TEE_ENCLAVE_TOKEN_VER "1.0"
-
-typedef enum {
-	    SGX_EVIDENCE = 0,
-	    TDX_EVIDENCE,
-        UNKNOWN_QUOTE_TYPE
-} tee_evidence_type_t;
-
-//SGX&TDX untrusted quote verification related APIs
-//
-quote3_error_t sgx_qvl_verify_quote(
-    const uint8_t *p_quote,
-    uint32_t quote_size,
-    const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
-    const time_t expiration_check_date,
-    uint32_t *p_collateral_expiration_status,
-    sgx_ql_qv_result_t *p_quote_verification_result,
-    sgx_ql_qe_report_info_t *p_qve_report_info,
-    uint32_t supplemental_data_size,
-    uint8_t *p_supplemental_data);
-
-quote3_error_t sgx_qvl_get_quote_supplemental_data_size(
-    uint32_t *p_data_size);
-
-quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
-    uint32_t *p_version);
+#include "Enclave_t.h" /* print_string */
+#include <stdarg.h>
+#include <stdio.h> /* vsnprintf */
+#include <string.h>
+#include "sgx_utils.h"
 
 
-quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
-     unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
-     unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size);
-
-#if defined(__cplusplus)
+sgx_status_t ecall_get_target_info(sgx_target_info_t* target_info) {
+    return sgx_self_target(target_info);
 }
-#endif
-
-#endif /* !_SGX_DCAP_QV_INTERNAL_H_*/

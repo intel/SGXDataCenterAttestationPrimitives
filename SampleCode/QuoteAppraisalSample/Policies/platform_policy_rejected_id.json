@@ -1,0 +1,34 @@
+{
+	"To_be_sign": true,
+	"policy_payload": {
+		"sgx_platform": {
+			"header": {
+				"description": "Platform TCB Policy without rejected security advisories",
+				"type": "3123ec35-8d38-4ea5-87a5-d6c48b567570",
+				"version": "1.0",
+				"svn": 1
+			},
+			"tcb": {
+				"allow_dynamic_platform": true,
+				"accepted_tcb_status": [
+					"UpToDate",
+					"OutOfDate"
+				],
+				"collateral_grace_period": 0,
+				"rejected_advisory_ids": [ 
+					"INTEL-SA-00617" 
+				]
+			}
+		}
+	},
+	"public_jwk": {
+		"kty": "EC",
+		"use": "sig",
+		"crv": "P-384",
+		"kid": "zlllllllllllllllllllllllllllllllll",
+		"x": "Ycaxsyy3KwFbbLB5bX9SqseiMniHL4PXBilar8DaDIGYP_iperB_llmrh1DrE3SH",
+		"y": "PxK1Nucq3cDsA5TJ6NQRmtH4tIcMdWUn55-oBVnk3D_TLAfvE09RLZJv6aYahZh-",
+		"alg": "ES384"
+	},
+	"ec_private_key": "-----BEGIN PRIVATE KEY-----\nME4CAQAwEAYHKoZIzj0CAQYFK4EEACIENzA1AgEBBDBKxXFB8BBS3lpQhaSitwqG\nKkXTBsc4J802Ac5h2OA4dq3EDx+8FPZGXt/6jzaT1A4=\n-----END PRIVATE KEY-----"
+}

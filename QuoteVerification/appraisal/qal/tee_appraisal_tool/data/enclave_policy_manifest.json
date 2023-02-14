@@ -1,0 +1,40 @@
+{
+	"To_be_sign": true,
+	"policy_payload": {
+        "sgx_enclave": { 
+            "header": {
+                "version": "1.0",
+                "type": " bef7cb8c-31aa-42c1-854c-10db005d5c41",
+                "description": "Application SGX Enclave Policy",
+                "svn": 123,
+                "id": "ID-per-policy-instance"
+            },
+            "tcb": {
+                "miscselect": "01234567",
+                "miscselect_mask": "01234567",
+                "attributes": "0123456789ABCDEF0123456789ABCDEF",
+                "attributes_mask": "0123456789ABCDEF0123456789ABCDEF",
+                "ce_attributes": "01",
+                "ce_attributes_mask": "01",
+                "mrenclave": "<String>",
+                "mrsigner": "<String>",
+                "isvprodid": 123,
+                "min_isvsvn": 5,
+                "configid": "<String>",
+                "min_configsvn": 6,
+                "isvextprodid": "<String>",
+                "isvfamilyid": "<UUID-string>"
+            }
+        }
+	},
+	"public_jwk": {
+		"kty": "EC",
+		"use": "sig",
+		"crv": "P-384",
+		"kid": "zlllllllllllllllllllllllllllllllll",
+		"x": "Ycaxsyy3KwFbbLB5bX9SqseiMniHL4PXBilar8DaDIGYP_iperB_llmrh1DrE3SH",
+		"y": "PxK1Nucq3cDsA5TJ6NQRmtH4tIcMdWUn55-oBVnk3D_TLAfvE09RLZJv6aYahZh-",
+		"alg": "ES384"
+	},
+	"ec_private_key": "-----BEGIN PRIVATE KEY-----\nME4CAQAwEAYHKoZIzj0CAQYFK4EEACIENzA1AgEBBDBKxXFB8BBS3lpQhaSitwqG\nKkXTBsc4J802Ac5h2OA4dq3EDx+8FPZGXt/6jzaT1A4=\n-----END PRIVATE KEY-----"
+}

@@ -77,6 +77,11 @@ QVL_VERIFY_LIB_NAME := libsgx_dcap_quoteverify
 QVL_VERIFY_LIB_NAME_Dynamic := $(QVL_VERIFY_LIB_NAME).so
 QVL_VERIFY_LIB_NAME_Static := $(QVL_VERIFY_LIB_NAME).a
 
+QAL_APPRAISAL_DIR := $(DCAP_QV_DIR)/appraisal/qal
+QAL_APPRAISAL_CPP_SRCS :=$(wildcard $(QAL_APPRAISAL_DIR)/*.cpp)
+QAL_CPP_OBJS := $(QAL_APPRAISAL_CPP_SRCS:.cpp=.o)
+WARM_Lib_Path = $(DCAP_EXTERNAL_DIR)/wasm-micro-runtime/product-mini/platforms/linux/build/
+LDUFLAGS += -L$(WARM_Lib_Path) -lvmlib
 
 .PHONY: all run
 
@@ -89,6 +94,7 @@ $(BUILD_DIR):
 install_lib: $(QVL_VERIFY_LIB_NAME_Dynamic) | $(BUILD_DIR)
 	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $|
 	ln -sf $|/$(QVL_VERIFY_LIB_NAME_Dynamic) $|/$(QVL_VERIFY_LIB_NAME_Dynamic).1
+	$(CP) $(QAL_APPRAISAL_DIR)/opa_bin/policy.wasm $|/sgx_appraisal_policy.wasm
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Static)
@@ -137,14 +143,17 @@ $(QVL_PARSER_NAME): $(QVL_PARSER_OBJS)
 	@$(AR) rsD $(QVL_PARSER_NAME) $(QVL_PARSER_OBJS)
 
 
-$(QVL_VERIFY_LIB_NAME_Dynamic): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
-	@ln -sf $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Dynamic).1
+$(QVL_VERIFY_LIB_NAME_Dynamic): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME) qal
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QAL_CPP_OBJS) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
+	ln -sf $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Dynamic).1
 
 $(QVL_VERIFY_LIB_NAME_Static): $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
 	@$(AR) rsD $(QVL_VERIFY_LIB_NAME_Static) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ)
 
-
+.PHONY: qal
+qal: 
+	$(MAKE) -C $(QAL_APPRAISAL_DIR) $(Target_Static_Lib_Name)
+ 
 force_look:
 	true
 
@@ -163,3 +172,4 @@ clean:
 	@rm -f $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
 	@rm -f *.orig *.debug *.1
 	@rm -f $(QVE_CPP_OBJ)
+	$(MAKE) -C $(QAL_APPRAISAL_DIR) clean

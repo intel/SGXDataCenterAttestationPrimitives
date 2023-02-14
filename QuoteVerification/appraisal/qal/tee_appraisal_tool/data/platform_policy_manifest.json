@@ -1,0 +1,46 @@
+{
+	"To_be_sign": true,
+	"policy_payload": {
+        "sgx_platform": {
+            "header": {
+                "version": "1.0",
+                "id": "ID-per-policy-instance",
+                "type": "<UUID-sgx-platform>",
+                "description": "SGX Platform Policy for Acme CSP",
+                "svn": 123
+           },
+            "tcb": {
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded",
+                    "ConfigurationNeeded"
+                ],
+                "collateral_grace_period": 259200000,
+                "platform_grace_period": 259200000,
+                "min_eval_num": 5,
+                "accepted_platform_provider_ids": [ 
+                    "ppid1",
+                    "ppid2",
+                    "ppid3"
+                ],
+                "required_sgx_types": ["ConfidentialityProtected"],
+                "allow_dynamic_plaform": true,
+                "allow_cached_keys_policy": true,
+                "allow_smt_enabled": false,  
+                "rejected_advisory_ids": [
+                    "INTEL-SA-00078"
+                ]
+            }
+        }
+	},
+	"public_jwk": {
+		"kty": "EC",
+		"use": "sig",
+		"crv": "P-384",
+		"kid": "zlllllllllllllllllllllllllllllllll",
+		"x": "Ycaxsyy3KwFbbLB5bX9SqseiMniHL4PXBilar8DaDIGYP_iperB_llmrh1DrE3SH",
+		"y": "PxK1Nucq3cDsA5TJ6NQRmtH4tIcMdWUn55-oBVnk3D_TLAfvE09RLZJv6aYahZh-",
+		"alg": "ES384"
+	},
+	"ec_private_key": "-----BEGIN PRIVATE KEY-----\nME4CAQAwEAYHKoZIzj0CAQYFK4EEACIENzA1AgEBBDBKxXFB8BBS3lpQhaSitwqG\nKkXTBsc4J802Ac5h2OA4dq3EDx+8FPZGXt/6jzaT1A4=\n-----END PRIVATE KEY-----"
+}
