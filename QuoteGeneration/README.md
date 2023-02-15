@@ -8,6 +8,8 @@ For Windows* OS
    * Windows* Server 2016 (Long-Term Servicing Channel)
    * Windows* Server 2019 (Long-Term Servicing Channel)
 - Ensure that you have the following required hardware:
+  * 3rd or 4th Generation Intel(R) Xeon(R) Scalable Processor
+  * Intel(R) Xeon(R) D Processors from the 17xx and 27xx series
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.
@@ -50,6 +52,8 @@ For Linux* OS
   * Red Hat Enterprise Linux Server release 8.5 64bits
   * CentOS Stream 8 64bits
 - Ensure that you have the following required hardware:
+  * 3rd or 4th Generation Intel(R) Xeon(R) Scalable Processor
+  * Intel(R) Xeon(R) D Processors from the 17xx and 27xx series
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.
