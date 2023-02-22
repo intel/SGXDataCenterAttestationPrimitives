@@ -40,7 +40,7 @@ fn main() {
     println!("cargo:rustc-link-lib=tdx_attest");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed=bingings.h");
+    println!("cargo:rerun-if-changed=bindings.h");
 
     // Set sdk to search path if SGX_SDK is in environment variable
     let mut sdk_inc = String::from("-I");
