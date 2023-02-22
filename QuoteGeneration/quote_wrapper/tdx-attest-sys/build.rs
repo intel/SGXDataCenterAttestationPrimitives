@@ -43,9 +43,10 @@ fn main() {
     println!("cargo:rerun-if-changed=bindings.h");
 
     // Set sdk to search path if SGX_SDK is in environment variable
-    let mut sdk_inc = String::from("-I");
+    let mut sdk_inc = String::from("");
     match env::var("SGX_SDK") {
         Ok(val) => {
+            sdk_inc.push_str("-I");
             sdk_inc.push_str(&val);
             sdk_inc.push_str("/include/");
         },
