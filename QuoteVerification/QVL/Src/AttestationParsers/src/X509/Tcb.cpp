@@ -35,6 +35,7 @@
 #include "ParserUtils.h"
 #include "OpensslHelpers/OpensslTypes.h"
 #include "OpensslHelpers/OidUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/asn1.h>
 
@@ -91,7 +92,7 @@ Tcb::Tcb(const ASN1_TYPE *tcbSeq)
     {
         std::string err = "TCB length expected [" + std::to_string(constants::TCB_SEQUENCE_LEN) + "] given [" +
                           std::to_string(stackEntries) + "]";
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 
     std::vector<Extension::Type> expectedExtensions = constants::TCB_REQUIRED_SGX_EXTENSIONS;
@@ -109,7 +110,7 @@ Tcb::Tcb(const ASN1_TYPE *tcbSeq)
         {
             std::string err = "OID tuple [" + oids::TCB + "] expected number of elements is [2] given [" +
                               std::to_string(oidTupleEntries) + "]";
-            throw InvalidExtensionException(err);
+            LOG_AND_THROW(InvalidExtensionException, err);
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
@@ -237,8 +238,7 @@ Tcb::Tcb(const ASN1_TYPE *tcbSeq)
 
         // Now add the last element with no delimiter
         err += oids::type2Description(expectedExtensions.back()) + "]";
-
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 }
 

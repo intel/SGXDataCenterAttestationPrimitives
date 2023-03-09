@@ -32,6 +32,7 @@
 #include "EnclaveIdentityVerifier.h"
 #include "EnclaveIdentityV2.h"
 #include "Utils/TimeUtils.h"
+#include <Utils/Logger.h>
 
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
@@ -67,27 +68,44 @@ Status EnclaveIdentityVerifier::verify(
     if(!_commonVerifier->checkSha256EcdsaSignature(
             enclaveIdentity.getSignature(), enclaveIdentity.getBody(), tcbSigningCert->getPubKey()))
     {
+        LOG_ERROR("QE Identity signature verification failure.");
         return STATUS_SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE;
     }
 
-    if(expirationDate > tcbSigningCert->getValidity().getNotAfterTime())
+    const auto validityDateTcbSigCert = tcbSigningCert->getValidity().getNotAfterTime();
+
+    if(expirationDate > validityDateTcbSigCert)
     {
+        LOG_ERROR("TCB Signing Certificate is expired. Expiration date: {}, validity: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(validityDateTcbSigCert));
         return STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED;
     }
 
     const auto rootCA = chain.getRootCert();
-    if(expirationDate > rootCA->getValidity().getNotAfterTime())
+    const auto validityDateRootCA = rootCA->getValidity().getNotAfterTime();
+
+    if(expirationDate > validityDateRootCA)
     {
+        LOG_ERROR("TCB Signing Chain Root CA is expired. Expiration date: {}, validity: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(validityDateRootCA));
         return STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED;
     }
 
     if(rootCaCrl.expired(expirationDate))
     {
+        LOG_ERROR("ROOT CA CRL is expired. Expiration date: {}, validity date range - from: {} to: {}",
+                  logger::timeToString(expirationDate),
+                  logger::timeToString(rootCaCrl.getValidity().notBeforeTime),
+                  logger::timeToString(rootCaCrl.getValidity().notAfterTime));
         return STATUS_SGX_CRL_EXPIRED;
     }
 
-    if (expirationDate > enclaveIdentity.getNextUpdate())
+    const auto enclaveIdentityNextUpdate = enclaveIdentity.getNextUpdate();
+
+    if (expirationDate > enclaveIdentityNextUpdate)
     {
+        LOG_ERROR("Enclave Identity is expired. Expiration date: {}, next update: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(enclaveIdentityNextUpdate));
         return STATUS_SGX_ENCLAVE_IDENTITY_EXPIRED;
     }
 

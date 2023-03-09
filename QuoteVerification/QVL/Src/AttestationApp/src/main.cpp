@@ -36,6 +36,7 @@
 #include "AppCore/AppOptionsParser.h"
 #include "AppCore/AttestationLibraryAdapter.h"
 #include "AppCore/FileReader.h"
+#include "SgxEcdsaAttestation/QuoteVerification.h"
 
 int main(int argc, char* argv[])
 {
@@ -45,7 +46,6 @@ int main(int argc, char* argv[])
 
     std::stringstream logger;
 
-
     intel::sgx::dcap::AppOptionsParser optionsParser;
     auto options = optionsParser.parse(argc, argv, logger);
     if(nullptr == options)
@@ -54,6 +54,10 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+#ifdef SGX_LOGS
+    sgxAttestationLoggerSetup("AttestationApp", "TRACE", "TRACE", "qvl.log",
+                              "");
+#endif
     std::cout << "Running QVL version: " << app.version() << std::endl;
     bool result = app.runVerification(*options, logger);
     std::cout << "Verification results: " << std::boolalpha << result << std::noboolalpha << "\n\n";

@@ -186,6 +186,23 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             Err(e) => println!("\tError: tee_get_quote_supplemental_data_size failed: {:#04x}", e as u32),
         }
 
+        // get collateral
+        let collateral = match tee_qv_get_collateral(quote) {
+            Ok(c) => {
+                println!("\tInfo: tee_qv_get_collateral successfully returned.");
+                Some(c)
+            }
+            Err(e) => {
+                println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32);
+                None
+            }
+        };
+
+        let p_collateral: Option<&[u8]> = None;
+        // uncomment the next 2 lines, if you want to use the collateral provided by the caller in the verification
+        // let collateral = collateral.unwrap();
+        // let p_collateral = Some(&collateral[..]);
+
         // set current time. This is only for sample purposes, in production mode a trusted time should be used.
         //
         let current_time = SystemTime::now()
@@ -205,7 +222,7 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         // if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote, this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
         match tee_verify_quote(
             quote,
-            None,
+            p_collateral,
             current_time,
             Some(&mut qve_report_info),
             p_supplemental_data,
@@ -287,6 +304,23 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             Err(e) => println!("\tError: tee_get_quote_supplemental_data_size failed: {:#04x}", e as u32),
         }
 
+        // get collateral
+        let collateral = match tee_qv_get_collateral(quote) {
+            Ok(c) => {
+                println!("\tInfo: tee_qv_get_collateral successfully returned.");
+                Some(c)
+            }
+            Err(e) => {
+                println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32);
+                None
+            }
+        };
+
+        let p_collateral: Option<&[u8]> = None;
+        // uncomment the next 2 lines, if you want to use the collateral provided by the caller in the verification
+        // let collateral = collateral.unwrap();
+        // let p_collateral = Some(&collateral[..]);
+
         // set current time. This is only for sample purposes, in production mode a trusted time should be used.
         //
         let current_time = SystemTime::now()
@@ -306,7 +340,7 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         // if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote, this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
         match tee_verify_quote(
             quote,
-            None,
+            p_collateral,
             current_time,
             None,
             p_supplemental_data,

@@ -44,6 +44,7 @@ import PlatformsRegistered from './platforms_registered.js';
 import Platforms from './platforms.js';
 import EnclaveIdentities from './enclave_identities.js';
 import CrlCache from './crl_cache.js';
+import mysqlPromise from 'mysql2/promise.js';
 
 const pccs_namespace = clshooked.createNamespace('pccs-namespace');
 Sequelize.useCLS(pccs_namespace);
@@ -61,6 +62,33 @@ const sequelize = new Sequelize(
   db_conf.password,
   db_opt
 );
+
+try {
+  // Test connection
+  await sequelize.authenticate();
+} catch (err) {
+  if (Config.get('DB_CONFIG') == 'mysql') {
+    logger.error('Failed to connect DB. Try to create it ...');
+    try {
+      // For MySQL, maybe the database doesn't exist. Try to create it
+      const connection = await mysqlPromise.createConnection({
+        host: db_opt.host,
+        port: db_opt.port,
+        user: db_conf.username,
+        password: db_conf.password,
+      });
+      await connection.query(
+        `CREATE DATABASE IF NOT EXISTS \`${db_conf.database}\` CHARACTER SET utf8 COLLATE utf8_general_ci;`
+      );
+    } catch (err2) {
+      logger.error(err2);
+      process.exit(1);
+    }
+  } else {
+    logger.error(err);
+    process.exit(1);
+  }
+}
 
 FmspcTcbs.init(sequelize);
 PckCert.init(sequelize);

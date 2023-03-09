@@ -907,7 +907,7 @@ static quote3_error_t getencryptedppid(sgx_target_info_t& pce_target_info, uint8
     }
 
     if (encrypted_ppid_ret_size != REF_RSA_OAEP_3072_MOD_SIZE) {
-        SE_TRACE(SE_TRACE_ERROR, "PCE returned unexpected returned encrypted PPID size.\n");
+        SE_TRACE(SE_TRACE_ERROR, "PCE returned incorrect encrypted PPID size.\n");
         return SGX_QL_ERROR_UNEXPECTED;
     }
 

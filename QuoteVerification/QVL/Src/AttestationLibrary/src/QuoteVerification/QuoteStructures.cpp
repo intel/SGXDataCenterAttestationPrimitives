@@ -1,6 +1,8 @@
 
 #include "QuoteStructures.h"
 #include "QuoteParsers.h"
+#include "Utils/Logger.h"
+
 #include <algorithm>
 #include <iterator>
 
@@ -239,17 +241,27 @@ bool CertificationData::insert(std::vector<uint8_t>::const_iterator& from, const
 
 bool QEReportCertificationData::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
-    if (!copyAndAdvance(qeReport, from, ENCLAVE_REPORT_BYTE_LEN, end)) { return false; }
-    if (!copyAndAdvance(qeReportSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end)) { return false; }
+    if (!copyAndAdvance(qeReport, from, ENCLAVE_REPORT_BYTE_LEN, end))
+    {
+        LOG_ERROR("Can't read enclave report. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
+        return false;
+    }
+    if (!copyAndAdvance(qeReportSignature, from, ECDSA_SIGNATURE_BYTE_LEN, end))
+    {
+        LOG_ERROR("Can't read report signature from quote. Expected size: {}", ECDSA_SIGNATURE_BYTE_LEN);
+        return false;
+    }
 
     uint16_t authSize = 0;
     if (!copyAndAdvance(authSize, from, end))
     {
+        LOG_ERROR("Can't read auth data size from quote.");
         return false;
     }
     from = std::prev(from, sizeof(uint16_t));
     if (!copyAndAdvance(qeAuthData, from, authSize + sizeof(uint16_t), end))
     {
+        LOG_ERROR("Can't read auth data from quote. Expected size: {}", authSize + sizeof(uint16_t));
         return false;
     }
 
@@ -257,21 +269,25 @@ bool QEReportCertificationData::insert(std::vector<uint8_t>::const_iterator& fro
     const auto available = std::distance(from, end);
     if (available < 0 || (unsigned) available < sizeof(uint16_t))
     {
+        LOG_ERROR("Can't read QE Certification Data size from quote.");
         return false;
     }
     std::advance(from, sizeof(uint16_t)); // skip type
     if (!copyAndAdvance(qeCertSize, from, end))
     {
+        LOG_ERROR("Can't read QE Certification Data size from quote.");
         return false;
     }
     from = std::prev(from, sizeof(uint32_t) + sizeof(uint16_t)); // go back to beg of struct data
     if (!copyAndAdvance(certificationData, from, qeCertSize + sizeof(uint16_t) + sizeof(uint32_t), end))
     {
+        LOG_ERROR("Can't read QE Certification Data from quote. Expected size: {}", qeCertSize + sizeof(uint16_t) + sizeof(uint32_t));
         return false;
     }
 
     if (from != end)
     {
+        LOG_ERROR("There is additional, not expected data in quote.");
         return false; // Inconsistent structure
     }
     return true;

@@ -515,6 +515,35 @@ class PCS:
         return [crl_str, response.headers['SGX-PCK-CRL-Issuer-Chain']]
 
 #----------------------------------------------------------------------------
+# PCS: Get FMSPC List
+#----------------------------------------------------------------------------
+
+    def get_fmspcs(self, platform, dec=None):
+        self.clear_errors()
+        if ( platform not in ['all', 'client', 'E3', 'E5'] ):
+            self.error('Invalid argument')
+            return None
+
+        url= self._geturl('fmspcs')
+        if self.ApiVersion<4:
+            self.error('API /fmspcs not supported')
+            return None
+        else:
+            url+= "?platform={:s}".format(platform)
+
+        response= self._get_request(url, False)
+        if response.status_code != 200:
+            self.error(response.status_code)
+            return None
+
+        # Verify expected headers
+        if not response.headers['Request-ID']:
+            self.error("Response missing Request-ID header")
+            return None
+
+        return response.json()
+
+#----------------------------------------------------------------------------
 # PCS: Get TCB Info
 #----------------------------------------------------------------------------
 

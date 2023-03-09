@@ -49,7 +49,7 @@ Prepare Enclave test key(two options):
 1. Install openssl first, then the project will generate a test key `Enclave_private_sample.pem` automatically when you build the project.
 2. Rename your test key(3072-bit RSA private key) to `Enclave_private_sample.pem` and put it under the `Enclave` folder.
 
-"in-porc" Release build:
+Release build:
 ```
 $ make
 ```
@@ -61,16 +61,6 @@ Run application in "in-proc" mode:
 ```
 $ ./app
 ```
-"out-of-proc" Release build:
-```
-$ make OUT_OF_PROC=1
-```
-Or Debug build:
-```
-$ make SGX_DEBUG=1 OUT_OF_PROC=1
-```
-**Note**: you need to install `libsgx-quote-ex-dev` or `libsgx-quote-ex-devel` package.
-
 Run application in "out-of-proc" mode:
 ```
 $ SGX_AESM_ADDR=1 ./app
@@ -79,7 +69,6 @@ $ SGX_AESM_ADDR=1 ./app
 
 # Windows
 ## Supported operating systems:
-* Windows* Server 2016 (Long-Term Servicing Channel)
 * Windows* Server 2019 (Long-Term Servicing Channel)
 
 ## Requirements:

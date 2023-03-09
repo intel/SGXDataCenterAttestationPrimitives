@@ -204,22 +204,11 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
         return SGX_ERROR_FEATURE_NOT_SUPPORTED;
     }
 
-    int rc = se_mutex_lock(&g_qve_status.m_qve_mutex);
-    if (rc != 1)
-    {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
-        return SGX_ERROR_UNEXPECTED; // SGX_QvE_INTERFACE_UNAVAILABLE;
-    }
-
     // Load the QvE
     if (g_qve_status.m_qve_eid == 0)
     {
         if (!get_qve_path(qve_enclave_path, MAX_PATH)) {
-            rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
-            if (rc != 1)
-            {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
-            }
+
             return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
         }
         do
@@ -246,12 +235,6 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
         } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
         if (sgx_status != SGX_SUCCESS)
         {
-            rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
-            if (rc != 1)
-            {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
-                return SGX_ERROR_UNEXPECTED;
-            }
             if (sgx_status == SGX_ERROR_OUT_OF_EPC)
                 return SGX_ERROR_OUT_OF_EPC;
             else
@@ -264,12 +247,7 @@ static sgx_status_t load_qve(sgx_enclave_id_t *p_qve_eid,
         *p_qve_eid = g_qve_status.m_qve_eid;
         memcpy_s(p_qve_attributes, sizeof(sgx_misc_attribute_t), &g_qve_status.m_qve_attributes, sizeof(sgx_misc_attribute_t));
     }
-    rc = se_mutex_unlock(&g_qve_status.m_qve_mutex);
-    if (rc != 1)
-    {
-        SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
-        return SGX_ERROR_UNEXPECTED;
-    }
+
     return SGX_SUCCESS;
 }
 
@@ -363,8 +341,16 @@ static quote3_error_t get_verification_supplemental_data_size_and_version(
     quote3_error_t qve_ret = SGX_QL_ERROR_INVALID_PARAMETER;
     tee_qv_base *p_trusted_qv = NULL;
     tee_qv_base *p_untrusted_qv = NULL;
+    int mutex_locked = 0;
 
     do {
+        mutex_locked = se_mutex_lock(&g_qve_status.m_qve_mutex);
+        if (mutex_locked == 0)
+        {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+            return SGX_QL_ERROR_UNEXPECTED;
+        }
+
         //create and initialize QvE
         //
         load_ret = initialize_enclave(&qve_eid);
@@ -379,13 +365,7 @@ static quote3_error_t get_verification_supplemental_data_size_and_version(
         }
 
         if (load_ret != SGX_SUCCESS) {
-            if (load_ret == SGX_ERROR_FEATURE_NOT_SUPPORTED) {
-                qve_ret = SGX_QL_PSW_NOT_AVAILABLE;
-            }
-            else {
-                SE_TRACE(SE_TRACE_DEBUG, "Warning: failed to load QvE.\n");
-                qve_ret = SGX_QL_ENCLAVE_LOAD_ERROR;
-            }
+            SE_TRACE(SE_TRACE_DEBUG, "Warning: failed to load QvE.\n");
             break;
         }
 
@@ -458,6 +438,13 @@ static quote3_error_t get_verification_supplemental_data_size_and_version(
     delete p_trusted_qv;
     delete p_untrusted_qv;
 
+    if (mutex_locked != 0) {
+        mutex_locked = se_mutex_unlock(&g_qve_status.m_qve_mutex);
+        if (mutex_locked == 0) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
+        }
+    }
+
     return qve_ret;
 }
 
@@ -471,7 +458,8 @@ quote3_error_t tee_get_supplemental_data_version_and_size(
     uint32_t *p_version,
     uint32_t *p_data_size) {
 
-    if (p_quote == NULL || quote_size == 0 ||
+    if (CHECK_MANDATORY_PARAMS(p_quote, quote_size) ||
+        quote_size < QUOTE_MIN_SIZE ||
         (p_version == NULL && p_data_size == NULL))
         return SGX_QL_ERROR_INVALID_PARAMETER;
 
@@ -508,6 +496,7 @@ quote3_error_t tee_verify_evidence(
     //validate input parameters
     //
     if (CHECK_MANDATORY_PARAMS(p_quote, quote_size) ||
+        quote_size < QUOTE_MIN_SIZE ||
         NULL_POINTER(p_collateral_expiration_status) ||
         expiration_check_date == 0 ||
         NULL_POINTER(p_quote_verification_result) ||
@@ -557,9 +546,17 @@ quote3_error_t tee_verify_evidence(
     unsigned char ca_from_quote[CA_SIZE] = { 0 };
     struct _sgx_ql_qve_collateral_t* qve_collaterals_from_qp = NULL;
     tee_qv_base *p_tee_qv = NULL;
+    int mutex_locked = 0;
 
     do {
         if (p_qve_report_info) {
+            mutex_locked = se_mutex_lock(&g_qve_status.m_qve_mutex);
+            if (mutex_locked == 0)
+            {
+                SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+                return SGX_QL_ERROR_UNEXPECTED;
+            }
+
             //try to load QvE for trusted quote verification
             //
             load_ret = initialize_enclave(&qve_eid);
@@ -671,6 +668,13 @@ quote3_error_t tee_verify_evidence(
     //
     if (p_tee_qv)
         delete p_tee_qv;
+
+    if (mutex_locked != 0) {
+        mutex_locked = se_mutex_unlock(&g_qve_status.m_qve_mutex);
+        if (mutex_locked == 0) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex\n");
+        }
+    }
 
     return qve_ret;
 }
@@ -832,7 +836,11 @@ quote3_error_t tee_qv_get_collateral(
     quote3_error_t ret = SGX_QL_SUCCESS;
     unsigned char fmspc_from_quote[FMSPC_SIZE] = {0};
     unsigned char ca_from_quote[CA_SIZE] = {0};
-    if (p_quote == NULL || quote_size < QUOTE_MIN_SIZE || pp_quote_collateral == NULL || *pp_quote_collateral != NULL || p_collateral_size == NULL)
+    if (CHECK_MANDATORY_PARAMS(p_quote, quote_size) ||
+         quote_size < QUOTE_MIN_SIZE ||
+         pp_quote_collateral == NULL ||
+         *pp_quote_collateral != NULL ||
+         p_collateral_size == NULL)
         return SGX_QL_ERROR_INVALID_PARAMETER;
     // skip version and att_key_type in SGX or TDX quote
     uint32_t quote_type = *((uint32_t *)(p_quote + sizeof(uint16_t) + sizeof(uint16_t)));
@@ -962,7 +970,8 @@ quote3_error_t tee_verify_quote(
     uint8_t *p_supp_data = NULL;
 
     // only check quote, other parameters will be checked in internal functions
-    if (p_quote == NULL || quote_size == 0)
+    if (CHECK_MANDATORY_PARAMS(p_quote, quote_size) ||
+         quote_size < QUOTE_MIN_SIZE)
         return SGX_QL_ERROR_INVALID_PARAMETER;
 
     ret = tee_get_supplemental_data_version_and_size(p_quote, quote_size, &latest_version.version, &tmp_size);
@@ -1016,7 +1025,7 @@ quote3_error_t tee_verify_quote(
         supp_data_size,
         p_supp_data);
 
-    if (ret != SGX_QL_SUCCESS && p_supp_data_descriptor->p_data != NULL) {
+    if (ret != SGX_QL_SUCCESS && p_supp_data_descriptor != NULL && p_supp_data_descriptor->p_data != NULL) {
         // defense in depth
         memset(p_supp_data_descriptor->p_data, 0, sizeof(sgx_ql_qve_collateral_t));
     }
@@ -1024,12 +1033,46 @@ quote3_error_t tee_verify_quote(
     return ret;
 }
 
+/**
+ * @brief Extrace FMSPC from a given quote with cert type 5
+ * @param p_quote[IN] - Pointer to a quote buffer.
+ * @param quote_size[IN] - Size of input quote buffer.
+ * @param p_fmspc_from_quote[IN/OUT] - Pointer to a buffer to write fmspc to.
+ * @param fmspc_from_quote_size[IN] - Size of fmspc buffer.
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_ERROR_UNEXPECTED
+ *      - SGX_QL_PCK_CERT_CHAIN_ERROR
+ *      - SGX_QL_QUOTE_CERTIFICATION_DATA_UNSUPPORTED
+ */
+quote3_error_t tee_get_fmspc_from_quote(const uint8_t *p_quote,
+                                        uint32_t quote_size,
+                                        uint8_t *p_fmspc_from_quote,
+                                        uint32_t fmspc_from_quote_size) {
+  if (CHECK_MANDATORY_PARAMS(p_quote, quote_size) ||
+       quote_size < QUOTE_MIN_SIZE ||
+       p_fmspc_from_quote == NULL ||
+       fmspc_from_quote_size < FMSPC_SIZE) {
+    return SGX_QL_ERROR_INVALID_PARAMETER;
+  }
+
+  unsigned char ca_from_quote[CA_SIZE] = {0};
+  return qvl_get_fmspc_ca_from_quote(
+        p_quote,
+        quote_size,
+        p_fmspc_from_quote,
+        FMSPC_SIZE,
+        ca_from_quote,
+        CA_SIZE);
+}
+
 
 #ifndef _MSC_VER
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
 
 /**
  * This API can be used to set the full path of QVE and QPL library.
@@ -1049,15 +1092,19 @@ quote3_error_t sgx_qv_set_path(
 {
     quote3_error_t ret = SGX_QL_SUCCESS;
     bool temp_ret = false;
+
     struct stat info;
 
-    if (!p_path)
+    if (!p_path){
         return(SGX_QL_ERROR_INVALID_PARAMETER);
+    }
 
-    if(stat(p_path, &info) != 0)
+    if(stat(p_path, &info) != 0){
         return(SGX_QL_ERROR_INVALID_PARAMETER);
-    else if((info.st_mode & S_IFREG) == 0)
+    }
+    else if((info.st_mode & S_IFREG) == 0){
         return(SGX_QL_ERROR_INVALID_PARAMETER);
+    }
 
     switch(path_type)
     {

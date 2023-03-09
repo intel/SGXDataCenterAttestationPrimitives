@@ -24,7 +24,16 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-hunter_config(OpenSSL VERSION "1.1.1j")
+hunter_config(OpenSSL VERSION "1.1.1t")
 hunter_config(GTest
         VERSION "1.11.0"
+        CMAKE_ARGS CMAKE_POSITION_INDEPENDENT_CODE=TRUE)
+
+hunter_config(spdlog
+        VERSION "1.9.2-p0"
+        CMAKE_ARGS CMAKE_POSITION_INDEPENDENT_CODE=TRUE)
+
+# This is dependency of spdlog
+hunter_config(fmt
+        VERSION "8.1.1"
         CMAKE_ARGS CMAKE_POSITION_INDEPENDENT_CODE=TRUE)

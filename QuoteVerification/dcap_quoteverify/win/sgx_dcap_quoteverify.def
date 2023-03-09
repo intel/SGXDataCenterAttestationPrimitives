@@ -10,3 +10,4 @@ EXPORTS
     tee_qv_free_collateral                          @7
     tee_get_supplemental_data_version_and_size      @8
     tee_verify_quote                                @9
+    tee_get_fmspc_from_quote                        @10

@@ -34,12 +34,11 @@ TOP_DIR  = ../../..
 include $(TOP_DIR)/buildenv.mk
 
 ######## Tdx_Attest Settings ########
-Protobuf_CFLAGS = `pkg-config --cflags libprotobuf-c`
-Protobuf_LFLAGS = `pkg-config --libs libprotobuf-c`
+QGS_MSG_LFLAGS = -L../../qgs_msg_lib/linux -lqgs_msg
 
 Tdx_Attest_C_Files := ../tdx_attest.c
 
-Tdx_Attest_Include_Paths := -I./
+Tdx_Attest_Include_Paths := -I./ -I../../qgs_msg_lib/inc
 
 Tdx_Attest_C_Flags := $(CFLAGS) -g -MMD -fPIC -Wno-attributes $(Tdx_Attest_Include_Paths)
 
@@ -60,16 +59,12 @@ install_lib: $(Tdx_Attest_Name) | $(BUILD_DIR)
 	@$(CP) $(Tdx_Attest_Name) $|
 
 ######## Tdx_Attest Objects ########
-$(Tdx_Attest_Name): qgs.message.pb-c.o $(Tdx_Attest_C_Objects)
-	$(CC) $^ -shared -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(Protobuf_LFLAGS) $(LDUFLAGS) -o $@
+$(Tdx_Attest_Name): $(Tdx_Attest_C_Objects)
+	$(CC) $^ -shared -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(QGS_MSG_LFLAGS) $(LDUFLAGS) -o $@
 	@echo "LINK =>  $@"
 
-$(Tdx_Attest_C_Objects): %.o: qgs.message.pb-c.o %.c
+$(Tdx_Attest_C_Objects): %.o: %.c
 	$(CC) $(Tdx_Attest_C_Flags) -c $(Tdx_Attest_C_Files) -o $@
-
-qgs.message.pb-c.o: ../../qgs/qgs.message.proto
-	protoc --c_out=. --proto_path=../../ ../../qgs/qgs.message.proto
-	$(CC) -c qgs/qgs.message.pb-c.c -I. $(Protobuf_CFLAGS) $(Tdx_Attest_C_Flags)
 
 test_app: $(Tdx_Attest_Name) ../test_tdx_attest.c ../tdx_attest.h
 	$(CC) -I. -L./linux ../test_tdx_attest.c -L. -ltdx_attest -g -o $@
@@ -80,6 +75,4 @@ $(BUILD_DIR):
 .PHONY: clean
 
 clean:
-	@rm -rf $(Tdx_Attest_Name) $(Tdx_Attest_C_Objects) $(Tdx_Attest_C_Depends) qgs.message.pb-c.o ./qgs test_app
-
-
+	@rm -rf $(Tdx_Attest_Name) $(Tdx_Attest_C_Objects) $(Tdx_Attest_C_Depends) ./qgs test_app

@@ -427,7 +427,29 @@ QVL_API Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentitySt
  */
 QVL_API Status sgxAttestationVerifyPCKRevocationList(const char *crl, const char *pemCACertChain, const char *pemTrustedRootCaCert);
 
+/**
+ * This function allows user to setup logging in QVL. If fileLogLevel is empty or set to OFF or fileName is empty there
+ * will be no file logger created.
+ * @param name
+ * @param consoleLogLevel
+ * @param fileLogLevel
+ * @param fileName
+ * @param pattern
+ */
+QVL_API void sgxAttestationLoggerSetup(const char *name, const char *consoleLogLevel, const char *fileLogLevel,
+                                       const char *fileName, const char *pattern);
+
+/**
+ * This function allows user to set scoped custom field with specified key and value for current processing thread.
+ * This field will can be used in pattern using %r.
+ * @param key
+ * @param value
+ */
+QVL_API void sgxAttestationLoggerSetCustomField(const char *key, const char *value);
+
 /** @}*/
+
+
 
 #endif //SGX_ECDSA_QUOTE_VERIFICATION_H_
 

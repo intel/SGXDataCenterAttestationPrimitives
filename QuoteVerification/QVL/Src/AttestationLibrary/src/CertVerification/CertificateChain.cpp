@@ -32,6 +32,7 @@
 #include "CertificateChain.h"
 
 #include "X509Constants.h"
+#include "Utils/Logger.h"
 
 #include <algorithm>
 
@@ -57,11 +58,13 @@ Status CertificateChain::parse(const std::string& pemCertChain)
         }
         // any cert in chain has wrong format
         // then whole chain should be considered invalid
-        catch (const dcap::parser::FormatException&)
+        catch (const dcap::parser::FormatException& ex)
         {
+            LOG_ERROR("Cert Chain format error: {}, wrong certChain element: {}",
+                      ex.what(), certPem);
             return STATUS_UNSUPPORTED_CERT_FORMAT;
         }
-        catch (const dcap::parser::InvalidExtensionException&)
+        catch (const dcap::parser::InvalidExtensionException& ex)
         {
             // Since cert order in the chain is not deterministic
             // we do not know which cert we failed to parse (subject is also an extension)
@@ -69,18 +72,22 @@ Status CertificateChain::parse(const std::string& pemCertChain)
             // We will do some guessing... I mean some heuristics
             if (certs.empty()) // we failed parsing first cert, in most cases it will be a root CA
             {
+                LOG_ERROR("Error while parsing Root CA from cert chain: {}", ex.what());
                 return STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS;
             }
             if (certs.size() == 1) // second cert wll be probably an intermediate CA
             {
                 if (certStrs.size() == 2)
                 {
+                    LOG_ERROR("Error while parsing TCB Signing cert from cert chain: {}", ex.what());
                     return STATUS_SGX_TCB_SIGNING_CERT_INVALID_EXTENSIONS;
                 }
+                LOG_ERROR("Error while parsing intermediate CA from cert chain: {}", ex.what());
                 return STATUS_SGX_INTERMEDIATE_CA_INVALID_EXTENSIONS;
             }
             else // third cert wll be probably PCK CA
             {
+                LOG_ERROR("Error while parsing PCK Certificate from cert chain: {}", ex.what());
                 return STATUS_SGX_PCK_INVALID_EXTENSIONS;
             }
         }
@@ -103,12 +110,14 @@ Status CertificateChain::parse(const std::string& pemCertChain)
             {
                 pckCert = std::make_shared<dcap::parser::x509::PckCertificate>(dcap::parser::x509::PckCertificate(*cert));
             }
-            catch (const dcap::parser::FormatException&)
+            catch (const dcap::parser::FormatException& ex)
             {
+                LOG_ERROR("PCK CertChain format error: {}", ex.what());
                 return STATUS_UNSUPPORTED_CERT_FORMAT;
             }
-            catch (const dcap::parser::InvalidExtensionException&)
+            catch (const dcap::parser::InvalidExtensionException& ex)
             {
+                LOG_ERROR("PCK CertChain invalid extension error: {}", ex.what());
                 return STATUS_SGX_PCK_INVALID_EXTENSIONS;
             }
         }
@@ -116,6 +125,7 @@ Status CertificateChain::parse(const std::string& pemCertChain)
 
     if (length() == 0)
     {
+        LOG_ERROR("No certificate in CertChain has been supplied");
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 

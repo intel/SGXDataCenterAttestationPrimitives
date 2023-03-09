@@ -32,6 +32,7 @@
 #include "TimeUtils.h"
 
 #include <chrono>
+#include <stdexcept>
 
 #ifndef SGX_TRUSTED
 #include <sstream>

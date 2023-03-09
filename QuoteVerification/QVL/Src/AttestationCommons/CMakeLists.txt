@@ -33,6 +33,8 @@ find_package(OpenSSL 1.1.1 EXACT REQUIRED)
 
 file(GLOB SOURCE_FILES src/*.cpp
         src/Utils/*.cpp
+        src/Utils/*.h
+        include/Utils/*.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -56,6 +58,21 @@ target_link_libraries(${PROJECT_NAME}Static PUBLIC
         OpenSSL::SSL
         OpenSSL::Crypto
 )
+
+if(BUILD_LOGS)
+    message("Logging enabled.")
+    hunter_add_package(spdlog)
+    find_package(spdlog CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+            spdlog::spdlog_header_only
+            )
+
+    target_link_libraries(${PROJECT_NAME}Static PUBLIC
+            spdlog::spdlog_header_only
+            )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SGX_LOGS=true)
+    target_compile_definitions(${PROJECT_NAME}Static PUBLIC SGX_LOGS=true)
+endif()
 
 ######### QVL Enclave related settings #################################################################################
 

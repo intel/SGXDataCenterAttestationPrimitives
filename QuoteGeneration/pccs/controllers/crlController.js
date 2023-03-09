@@ -43,6 +43,13 @@ export async function getCrl(req, res, next) {
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
 
+    // validate uri
+    let found_root = uri.match(/https:\/\/([a-zA-Z0-9-]*certificates\.trustedservices\.intel\.com|certprx\.adsdcsp\.com)\/IntelSGXRootCA\..*/);
+    let found_intermediate = uri.match(/https:\/\/([a-zA-Z0-9-]*\.?api\.trustedservices\.intel\.com|[a-zA-Z0-9-]+\.az\.sgx(prod|np)\.adsdcsp\.com)\/sgx\/certification\/v([1-9][0-9]*)\/pckcrl\?.*/);
+    if (!found_root && !found_intermediate) {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
+
     // call service
     let crl = await crlService.getCrl(uri);
 

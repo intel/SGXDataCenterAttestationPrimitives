@@ -31,7 +31,7 @@ option(BUILD_ATTESTATION_APP "Build AttestationApp" ON)
 option(BUILD_TESTS "Build tests for all components" ON)
 option(BUILD_DOCS "Build doxygen based documentation" OFF)
 option(BUILD_ENCLAVE "Build test sgx enclave and sample app that uses it" OFF)
-
+option(BUILD_LOGS "Build library with logging support" OFF)
 ######### QVL Enclave related settings #################################################################################
 
 if(BUILD_ENCLAVE)
@@ -147,18 +147,23 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
 #set(HUNTER_ROOT ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
 #set(HUNTER_BINARY_DIR ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
+#If windows build fails, consider changing HUNTER_ROOT dir to shorter one, by either modifying it's value or commenting out the line below:
+set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
 
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("${CMAKE_CURRENT_LIST_DIR}/ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.23.316.tar.gz"
-		SHA1 "167a33c4cc398504826a1a3014ef66f9ccc35db3"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.24.8.tar.gz"
+		SHA1 "ca7838dded9a1811b04ffd56175f629e0af82d3d"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
 project(SgxEcdsaAttestation)
+
+message("HUNTER_GATE_ROOT: ${HUNTER_GATE_ROOT}")
+file(COPY "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/openssl/hunter.cmake" DESTINATION "${HUNTER_GATE_ROOT}/_Base/Download/Hunter/0.24.8/ca7838d/Unpacked/cmake/projects/OpenSSL/")
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_THREAD_LIBS_INIT "-lpthread") # Could NOT find Threads (missing: Threads_FOUND) related workarounds

@@ -101,6 +101,8 @@ static network_post_error_t windows_last_error_to_network_post_error(void)
 static bool process_configuration_setting(const char *config_file_name, string& url, ProxyType &proxy_type, string &proxy_url, string& user_token)
 {
     bool ret = true;
+    bool config_file_exist = true;
+    bool config_file_provide_pccs_url=false;
     ifstream ifs(config_file_name);
     string line;
     if (ifs.is_open()) {
@@ -120,6 +122,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                 else {
                     url = server_url_string + "/sgx/certification/v4/platforms";
                 }
+                config_file_provide_pccs_url = true;
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {
                 if (use_secure_cert_string.empty() == true) {
@@ -156,7 +159,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                         proxy_type = PROXY_TYPE_MANUAL_PROXY;
                     }
                     else if (proxy_type_string.compare("AUTO") == 0 || proxy_type_string.compare("auto") == 0) {
-                        proxy_type = PROXY_TYPE_DIRECT_ACCESS;
+                        proxy_type = PROXY_TYPE_AUTOMATIC;
                     }
                     else  {
                         proxy_type = PROXY_TYPE_DEFAULT_PROXY;
@@ -179,8 +182,9 @@ static bool process_configuration_setting(const char *config_file_name, string& 
         }
     }
     else {
+	config_file_exist = false;
         if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-            g_use_secure_cert = true;
+            g_use_secure_cert = false;
         }
 
         if (proxy_type_string.compare("DIRECT") == 0 || proxy_type_string.compare("direct") == 0) {
@@ -195,8 +199,18 @@ static bool process_configuration_setting(const char *config_file_name, string& 
         else {
             proxy_type = PROXY_TYPE_DEFAULT_PROXY;
         }
-        url = server_url_string + "/sgx/certification/v2/platforms";
+
+
+	if(server_url_string.empty() == false) {
+            url = server_url_string + "/sgx/certification/v4/platforms";
+        }
         ret = false;
+    }
+
+    if(config_file_exist && config_file_provide_pccs_url == false) {
+        if(server_url_string.empty() == false) {
+            url = server_url_string + "/sgx/certification/v4/platforms";
+        }
     }
     return ret;
 }
@@ -355,7 +369,7 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
         return POST_INVALID_PARAMETER_ERROR;
     }
 
-	network_post_error_t ret = POST_UNEXPECTED_ERROR;  
+    network_post_error_t ret = POST_UNEXPECTED_ERROR;  
     string strJson("");
     ret = generate_json_message_body(raw_data, raw_data_size, platform_id_length, non_enclave_mode, strJson);
     if (ret != POST_SUCCESS) {
@@ -365,30 +379,30 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
     
     ret = POST_UNEXPECTED_ERROR;
 
-	// initialize https request url
-	string url(server_url_string);
+    // initialize https request url
+    string url(server_url_string);
     ProxyType proxy_type = PROXY_TYPE_DEFAULT_PROXY;
     string proxy_url(proxy_url_string);
     string user_token(user_token_string);
-	// initialize network configuration
-	network_configuration(url, proxy_type, proxy_url, user_token);
+    // initialize network configuration
+    network_configuration(url, proxy_type, proxy_url, user_token);
     HINTERNET  hSession = NULL, hConnect = NULL, hRequest = NULL;
 
-	//WinHTTP API explicitly use UNICODE so that we should use WCHAR instead of TCHAR
-	WCHAR wurl[MAX_PATH];
-	WCHAR wproxyurl[MAX_PATH];
-	WCHAR whostname[MAX_PATH];
-	size_t count = 0;
-	if (mbstowcs_s(&count, wurl, url.c_str(), url.size()) != 0) {
-		return POST_UNEXPECTED_ERROR;
-	}
+    //WinHTTP API explicitly use UNICODE so that we should use WCHAR instead of TCHAR
+    WCHAR wurl[MAX_PATH];
+    WCHAR wproxyurl[MAX_PATH];
+    WCHAR whostname[MAX_PATH];
+    size_t count = 0;
+    if (mbstowcs_s(&count, wurl, url.c_str(), url.size()) != 0) {
+        return POST_UNEXPECTED_ERROR;
+    }
 
     do {
         //WinHTTP API explicitly use UNICODE so that we should use WCHAR instead of TCHAR
         URL_COMPONENTS urlCompccs;
         ZeroMemory(&urlCompccs, sizeof(urlCompccs));
-		URL_COMPONENTS proxyurlCompccs;
-		ZeroMemory(&urlCompccs, sizeof(proxyurlCompccs));
+        URL_COMPONENTS proxyurlCompccs;
+        ZeroMemory(&urlCompccs, sizeof(proxyurlCompccs));
         urlCompccs.dwStructSize = sizeof(urlCompccs);
         urlCompccs.lpszHostName = whostname;//we will only crack hostname, urlpath 
         urlCompccs.dwHostNameLength = MAX_PATH;//copy hostname to a buffer to get 0-terminated string

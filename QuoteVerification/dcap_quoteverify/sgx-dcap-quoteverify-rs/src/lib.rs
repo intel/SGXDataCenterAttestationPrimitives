@@ -34,8 +34,6 @@
 //!
 //! This is a safe wrapper for **sgx-dcap-quoteverify-sys**.
 
-use std::ffi::CString;
-use std::slice;
 use sgx_dcap_quoteverify_sys as qvl_sys;
 
 pub use qvl_sys::quote3_error_t;
@@ -123,14 +121,14 @@ pub fn sgx_qv_get_quote_supplemental_data_size() -> Result<u32, quote3_error_t> 
 /// - **qve_report_info**\
 /// This parameter can be used in 2 ways.\
 ///     - If qve_report_info is NOT None, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.\
-///     - if qve_report_info is None, the API will use QVL library to perform quote verification, not that the results can not be cryptographically authenticated in this mode.
+///     - if qve_report_info is None, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
 /// - **supplemental_data_size**\
 /// Size of the supplemental data (in bytes).
 /// - **supplemental_data**\
 /// The parameter is optional. If it is None, supplemental_data_size must be 0.
 ///
 /// # Return
-/// Result type of (collateral_expiration_status, verification_result)
+/// Result type of (collateral_expiration_status, verification_result).
 ///
 /// Status code of the operation, one of:
 /// - *SGX_QL_ERROR_INVALID_PARAMETER*
@@ -225,14 +223,14 @@ pub fn tdx_qv_get_quote_supplemental_data_size() -> Result<u32, quote3_error_t> 
 /// - **qve_report_info**\
 /// This parameter can be used in 2 ways.\
 ///     - If qve_report_info is NOT None, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.\
-///     - if qve_report_info is None, the API will use QVL library to perform quote verification, not that the results can not be cryptographically authenticated in this mode.
+///     - if qve_report_info is None, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
 /// - **supplemental_data_size**\
 /// Size of the supplemental data (in bytes).
 /// - **supplemental_data**\
 /// The parameter is optional. If it is None, supplemental_data_size must be 0.
 ///
 /// # Return
-/// Result type of (collateral_expiration_status, verification_result)
+/// Result type of (collateral_expiration_status, verification_result).
 ///
 /// Status code of the operation, one of:
 /// - *SGX_QL_ERROR_INVALID_PARAMETER*
@@ -287,7 +285,7 @@ pub fn tdx_qv_verify_quote(
     }
 }
 
-/// Set the full path of QVE and QPL library.
+/// Set the full path of QVE and QPL library.\
 /// The function takes the enum and the corresponding full path.
 ///
 /// # Param
@@ -300,11 +298,11 @@ pub fn tdx_qv_verify_quote(
 /// - ***SGX_QL_SUCCESS***\
 /// Successfully set the full path.
 /// - ***SGX_QL_ERROR_INVALID_PARAMETER***\
-/// path is not a valid full path or the path is too long.
+/// Path is not a valid full path or the path is too long.
 ///
 #[cfg(target_os = "linux")]
 pub fn sgx_qv_set_path(path_type: sgx_qv_path_type_t, path: &str) -> quote3_error_t {
-    match CString::new(path) {
+    match std::ffi::CString::new(path) {
         Ok(path) => unsafe { qvl_sys::sgx_qv_set_path(path_type, path.as_ptr()) }
         _ => quote3_error_t::SGX_QL_ERROR_INVALID_PARAMETER,
     }
@@ -317,7 +315,7 @@ pub fn sgx_qv_set_path(path_type: sgx_qv_path_type_t, path: &str) -> quote3_erro
 /// SGX/TDX Quote, presented as u8 vector.
 ///
 /// # Return
-/// Result type of quote_collecteral
+/// Result type of quote_collecteral.
 ///
 /// - **quote_collateral**\
 /// This is the Quote Certification Collateral retrieved based on Quote.
@@ -344,7 +342,58 @@ pub fn tee_qv_get_collateral(quote: &[u8]) -> Result<Vec<u8>, quote3_error_t> {
             &mut buf_len,
         ) {
             quote3_error_t::SGX_QL_SUCCESS => {
-                let collateral = slice::from_raw_parts(buf, buf_len as usize).to_vec();
+                assert!(!buf.is_null());
+                assert!(buf_len > 0);
+                let mut collateral = vec![0u8; buf_len as usize];
+                let orig_collateral = &*(buf as *const sgx_ql_qve_collateral_t);
+
+                // copy the original collateral
+                let mut index = 0usize;
+                collateral[..std::mem::size_of::<sgx_ql_qve_collateral_t>()]
+                    .copy_from_slice(std::slice::from_raw_parts(buf, std::mem::size_of::<sgx_ql_qve_collateral_t>()));
+
+                // copy pck_crl_issuer_chain field
+                index += std::mem::size_of::<sgx_ql_qve_collateral_t>();
+                collateral[index..(index + orig_collateral.pck_crl_issuer_chain_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl_issuer_chain as *const u8, orig_collateral.pck_crl_issuer_chain_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).pck_crl_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy root_ca_crl field
+                index += orig_collateral.pck_crl_issuer_chain_size as usize;
+                collateral[index..(index + orig_collateral.root_ca_crl_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.root_ca_crl as *const u8, orig_collateral.root_ca_crl_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).root_ca_crl = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy pck_crl field
+                index += orig_collateral.root_ca_crl_size as usize;
+                collateral[index..(index + orig_collateral.pck_crl_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl as *const u8, orig_collateral.pck_crl_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).pck_crl = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy tcb_info_issuer_chain field
+                index += orig_collateral.pck_crl_size as usize;
+                collateral[index..(index + orig_collateral.tcb_info_issuer_chain_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info_issuer_chain as *const u8, orig_collateral.tcb_info_issuer_chain_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).tcb_info_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy tcb_info field
+                index += orig_collateral.tcb_info_issuer_chain_size as usize;
+                collateral[index..(index + orig_collateral.tcb_info_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info as *const u8, orig_collateral.tcb_info_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).tcb_info = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy qe_identity_issuer_chain field
+                index += orig_collateral.tcb_info_size as usize;
+                collateral[index..(index + orig_collateral.qe_identity_issuer_chain_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity_issuer_chain as *const u8, orig_collateral.qe_identity_issuer_chain_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).qe_identity_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
+
+                // copy qe_identity field
+                index += orig_collateral.qe_identity_issuer_chain_size as usize;
+                collateral[index..(index + orig_collateral.qe_identity_size as usize)]
+                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity as *const u8, orig_collateral.qe_identity_size as usize));
+                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).qe_identity = &mut collateral[index] as *mut u8 as *mut i8;
+
                 match qvl_sys::tee_qv_free_collateral(buf) {
                     quote3_error_t::SGX_QL_SUCCESS => Ok(collateral),
                     error_code => Err(error_code),
@@ -355,14 +404,14 @@ pub fn tee_qv_get_collateral(quote: &[u8]) -> Result<Vec<u8>, quote3_error_t> {
     }
 }
 
-/// Get supplemental data latest version and required size, support both SGX and TDX
+/// Get supplemental data latest version and required size, support both SGX and TDX.
 ///
 /// # Param
 /// - **quote**\
 /// SGX/TDX Quote, presented as u8 vector.
 ///
 /// # Return
-/// Result type of (version, data_size) tuple
+/// Result type of (version, data_size) tuple.
 ///
 /// - **version**\
 /// Latest version of the supplemental data.
@@ -388,8 +437,8 @@ pub fn tee_get_supplemental_data_version_and_size(
     }
 }
 
-/// Perform quote verification for SGX and TDX
-/// This API works the same as the old one, but takes a new parameter to describe the supplemental data (p_supp_data_descriptor)
+/// Perform quote verification for SGX and TDX.\
+/// This API works the same as the old one, but takes a new parameter to describe the supplemental data (supp_data_descriptor).
 ///
 /// # Param
 /// - **quote**\
@@ -401,17 +450,17 @@ pub fn tee_get_supplemental_data_version_and_size(
 /// - **qve_report_info**\
 /// This parameter can be used in 2 ways.\
 ///     - If qve_report_info is NOT None, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.\
-///     - if qve_report_info is None, the API will use QVL library to perform quote verification, not that the results can not be cryptographically authenticated in this mode.
+///     - if qve_report_info is None, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
 /// - **supp_datal_descriptor**\
-/// *tee_supp_data_descriptor_t* structure.
-/// You can specify the major version of supplemental data by setting supp_datal_descriptor.major_version
-/// If supp_datal_descriptor is None, no supplemental data is returned.
-/// If supp_datal_descriptor.major_version == 0, then return the latest version of the *sgx_ql_qv_supplemental_t* structure.
-/// If supp_datal_descriptor <= latest supported version, return the latest minor version associated with that major version.
-/// If supp_datal_descriptor > latest supported version, return an error *SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED*.
+/// *tee_supp_data_descriptor_t* structure.\
+/// You can specify the major version of supplemental data by setting supp_datal_descriptor.major_version.\
+/// If supp_datal_descriptor is None, no supplemental data is returned.\
+/// If supp_datal_descriptor.major_version == 0, then return the latest version of the *sgx_ql_qv_supplemental_t* structure.\
+/// If supp_datal_descriptor.major_version <= latest supported version, return the latest minor version associated with that major version.\
+/// If supp_datal_descriptor.major_version > latest supported version, return an error *SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED*.
 ///
 /// # Return
-/// Result type of (collateral_expiration_status, verification_result)
+/// Result type of (collateral_expiration_status, verification_result).
 ///
 /// Status code of the operation, one of:
 /// - *SGX_QL_ERROR_INVALID_PARAMETER*

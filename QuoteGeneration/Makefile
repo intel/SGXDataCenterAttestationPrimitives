@@ -117,11 +117,13 @@ tdx_qgs deb_sgx_tdx_qgs_pkg:
 tdx_attest deb_sgx_tdx_attest_pkg:
 	echo "Skip tdx_attest in ubuntu 18.04"
 else
+qgs_msg_lib:
+	$(MAKE) -C quote_wrapper/qgs_msg_lib/linux
 tdx_logic: pce_logic
 	$(MAKE) -C quote_wrapper/tdx_quote/linux
-tdx_qgs: tdx_logic
+tdx_qgs: tdx_logic qgs_msg_lib
 	$(MAKE) -C quote_wrapper/qgs
-tdx_attest:
+tdx_attest: qgs_msg_lib
 	$(MAKE) -C quote_wrapper/tdx_attest/linux
 deb_sgx_ae_tdqe_pkg: $(CHECK_OPT)
 	./installer/linux/deb/libsgx-ae-tdqe/build.sh

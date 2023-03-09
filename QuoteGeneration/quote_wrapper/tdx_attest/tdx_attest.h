@@ -54,6 +54,7 @@ typedef enum _tdx_attest_error_t {
     TDX_ATTEST_ERROR_BUSY = 0x0009,                     ///< The device driver return busy
     TDX_ATTEST_ERROR_DEVICE_FAILURE = 0x000a,           ///< Failed to acess tdx attest device
     TDX_ATTEST_ERROR_INVALID_RTMR_INDEX = 0x000b,       ///< Only supported RTMR index is 2 and 3
+    TDX_ATTEST_ERROR_UNSUPPORTED_ATT_KEY_ID = 0x000c,   ///< The platform Quoting infrastructure does not support any of the keys described in att_key_id_list 
     TDX_ATTEST_ERROR_MAX
 } tdx_attest_error_t;
 

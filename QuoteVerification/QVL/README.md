@@ -25,11 +25,12 @@ This library provides ra reference implementation for parsing ECDSA Attestation 
 | BUILD_TESTS | Enable/Disable building of the unit and integration tests | ON |
 | BUILD_DOCS | Enable/Disable building of the doxygen based documentation | OFF |
 | BUILD_ENCLAVE | Enable/Disable building of test SGX enclave that uses Quote Verification Library as part of sample app (Linux only, requires Intel SGX SDK and Intel SGX SSL) | OFF |
+| BUILD_LOGS | Enable/disable logging capabilities in Quote Verification Library. It is not supported inside enclave. | OFF |
 
 ### Linux
 Requirements:
 
-* cmake version 3.10 or higher
+* cmake version 3.18 or higher
 * make
 * clang++ with c++11 support (5.0.2 or higher is recommended)
 * doxygen version 1.8.14 if BUILD_DOCS is enabled
@@ -42,6 +43,7 @@ Additional libraries will be downloaded and compiled during first build:
 
 * openssl v1.1.1 (AttestationLibrary dependency)
 * googletest (Tests dependency)
+* spdlog (added only if building with logs capabilities)
 
 To build test SGX enclave that includes Quote Verification Library additional libraries are required and should be provided by user:
 
@@ -121,6 +123,9 @@ Requirements:
 
 NOTE: Enclave build is currently not supported on Windows.
 
+HINT: Windows build may fail if repository path is too long.
+      Consider changing HUNTER_ROOT location in CMakeLists.txt
+      
 #### Using Visual Studio with CMake support
 CMake project can be directly opened and built using Visual Studio with CMake support..
 #### Using CMake, MSBuild and PowerShell

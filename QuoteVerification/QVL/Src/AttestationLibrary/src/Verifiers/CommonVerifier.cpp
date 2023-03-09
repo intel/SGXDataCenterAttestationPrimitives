@@ -31,6 +31,7 @@
 
 
 #include "CommonVerifier.h"
+#include "Utils/Logger.h"
 
 #include <OpensslHelpers/SignatureVerification.h>
 #include <OpensslHelpers/KeyUtils.h>
@@ -44,6 +45,8 @@ bool CommonVerifier::checkStandardExtensions(const std::vector<pckparser::Extens
 {
     if(opensslExtensionNids.size() > presentExtensions.size())
     {
+        LOG_ERROR("Number of extensions in CRL is not what expected. Expected: {}, actual: {}", opensslExtensionNids.size(),
+                  presentExtensions.size());
         return false;
     }
 
@@ -57,6 +60,7 @@ bool CommonVerifier::checkStandardExtensions(const std::vector<pckparser::Extens
         
         if(found == presentExtensions.end())
         {
+            LOG_ERROR("Expected extension with NID {} not found in CRL", requiredNid);
             return false;
         }
     }
@@ -68,11 +72,13 @@ Status CommonVerifier::verifyRootCACert(const dcap::parser::x509::Certificate &r
 {
     if(rootCa.getIssuer() != rootCa.getSubject())
     {
+        LOG_ERROR("Root CA is not self signed");
         return STATUS_SGX_ROOT_CA_INVALID_ISSUER;
     }
 
     if (!crypto::verifySha256EcdsaSignature(rootCa.getSignature(), rootCa.getInfo(), rootCa.getPubKey()))
     {
+        LOG_ERROR("Root CA signature is invalid");
         return STATUS_SGX_ROOT_CA_INVALID_ISSUER;
     }
 
@@ -84,11 +90,13 @@ Status CommonVerifier::verifyIntermediate(const dcap::parser::x509::Certificate 
 {
     if (intermediate.getIssuer() != root.getSubject())
     {
+        LOG_ERROR("Intermediate CA is not signed by root");
         return STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER;
     }
 
     if (!crypto::verifySha256EcdsaSignature(intermediate.getSignature(), intermediate.getInfo(), root.getPubKey()))
     {
+        LOG_ERROR("Root CA signature is invalid");
         return STATUS_SGX_INTERMEDIATE_CA_INVALID_ISSUER;
     }
 
@@ -110,6 +118,7 @@ bool CommonVerifier::checkSha256EcdsaSignature(const Bytes &signature, const std
     auto pubKey = crypto::rawToP256PubKey(publicKey);
     if (pubKey == nullptr)
     {
+        LOG_ERROR("Parsing publickey failed: {}", publicKey);
         return false;
     }
     return crypto::verifySha256EcdsaSignature(signature, message, *pubKey);

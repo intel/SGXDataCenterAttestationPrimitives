@@ -37,7 +37,7 @@ class Type;
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 
 #include <openssl/ossl_typ.h>
-
+#include <openssl/x509.h>
 #include <cstring>
 #include <string>
 #include <map>

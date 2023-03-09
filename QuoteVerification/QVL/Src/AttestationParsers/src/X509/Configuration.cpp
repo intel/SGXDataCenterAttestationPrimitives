@@ -35,6 +35,7 @@
 #include "ParserUtils.h"
 #include "OpensslHelpers/OpensslTypes.h"
 #include "OpensslHelpers/OidUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/asn1.h>
 
@@ -97,7 +98,7 @@ Configuration::Configuration(const ASN1_TYPE *configurationSeq)
         {
             std::string err = "OID tuple [" + oids::CONFIGURATION + "] expected number of elements is [2] given [" +
                               std::to_string(oidTupleEntries) + "]";
-            throw InvalidExtensionException(err);
+            LOG_AND_THROW(InvalidExtensionException, err);
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
@@ -135,8 +136,7 @@ Configuration::Configuration(const ASN1_TYPE *configurationSeq)
 
         // Now add the last element with no delimiter
         err += oids::type2Description(expectedExtensions.back()) + "]";
-
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException,err);
     }
 }
 

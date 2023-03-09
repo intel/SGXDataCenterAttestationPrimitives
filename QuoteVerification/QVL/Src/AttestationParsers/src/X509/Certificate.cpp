@@ -33,6 +33,7 @@
 
 #include "X509Constants.h"
 #include "ParserUtils.h"
+#include "Utils/Logger.h"
 
 #include <OpensslHelpers/OpensslTypes.h>
 
@@ -62,7 +63,8 @@ bool Certificate::operator==(const Certificate& other) const
            _signature == other._signature &&
            _serialNumber == other._serialNumber &&
            _pubKey == other._pubKey &&
-           _info == other._info;
+           _info == other._info &&
+           _crlDistributionPoint == other._crlDistributionPoint;
 }
 
 uint32_t Certificate::getVersion() const
@@ -115,6 +117,10 @@ const std::string& Certificate::getPem() const
     return _pem;
 }
 
+const std::string &Certificate::getCrlDistributionPoint() const {
+    return _crlDistributionPoint;
+}
+
 Certificate Certificate::parse(const std::string& pem)
 {
     return Certificate(pem);
@@ -130,7 +136,9 @@ Certificate::Certificate(const std::string &pem)
 
     auto x509 = crypto::make_unique(PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
     if (!x509) {
-        throw FormatException("PEM_read_bio_X509 failed " + getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Parsing certificate failed: {}, PEM: {}", err, pem);
+        throw FormatException("PEM_read_bio_X509 failed " + err);
     }
 
     setPublicKey(x509.get());
@@ -142,6 +150,7 @@ Certificate::Certificate(const std::string &pem)
     setIssuer(x509.get());
     setValidity(x509.get());
     setExtensions(x509.get());
+    setCrlDistributionPoint(x509.get());
 }
 
 // Private
@@ -177,7 +186,9 @@ void Certificate::setSubject(const X509 *x509)
 
     if(!subject)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Retrieve SUBJECT from certificate failed: {}", err);
+        throw FormatException(err);
     }
 
     _subject = DistinguishedName(subject);
@@ -190,7 +201,9 @@ void Certificate::setIssuer(const X509 *x509)
 
     if(!issuer)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Retrieve ISSUER from certificate failed: {}", err);
+        throw FormatException(err);
     }
 
     _issuer = DistinguishedName(issuer);
@@ -204,13 +217,17 @@ void Certificate::setValidity(const X509 *x509)
     const ASN1_TIME *notBefore = X509_get0_notBefore(x509);
     if(!notBefore)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Retrieve NOT BEFORE from certificate failed: {}", err);
+        throw FormatException(err);
     }
 
     const ASN1_TIME *notAfter = X509_get0_notAfter(x509);
     if(!notAfter)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Retrieve NOT AFTER from certificate failed: {}", err);
+        throw FormatException(err);
     }
 
     auto period = asn1TimePeriodToCTime(notBefore, notAfter);
@@ -224,7 +241,9 @@ void Certificate::setExtensions(const X509 *x509)
 
     if(extsCount < 0)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_ERROR("Error retrieving extensions from certificate {}", err);
+        throw FormatException(err);
     }
 
     std::vector<Extension> extensions(static_cast<size_t>(extsCount));
@@ -252,7 +271,7 @@ void Certificate::setExtensions(const X509 *x509)
         // Now add the last element with no delimiter
         err += oids::extension2Description(expectedExtensions.back()) + "]";
 
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 
     _extensions = extensions;
@@ -267,12 +286,13 @@ void Certificate::setSignature(const X509 *x509)
 
     if(!psig || !palg)
     {
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_AND_THROW(FormatException, err);
     }
 
     if(psig->length == 0)
     {
-        throw FormatException("Signature should not be empty");
+        LOG_AND_THROW(FormatException, "Signature should not be empty")
     }
 
     _signature = Signature(psig);
@@ -284,7 +304,7 @@ void Certificate::setPublicKey(const X509 *x509)
 
     if(asn1PubKey == nullptr)
     {
-        throw FormatException("Certificate should not be NULL");
+        LOG_AND_THROW(FormatException, "Certificate should not be NULL");
     }
 
     size_t len = static_cast<size_t>(asn1PubKey->length);
@@ -292,5 +312,18 @@ void Certificate::setPublicKey(const X509 *x509)
     _pubKey = std::vector<uint8_t>(asn1PubKey->data, asn1PubKey->data + len);
 }
 
+void Certificate::setCrlDistributionPoint(const X509 *x509)
+{
+    auto idx = X509_get_ext_by_NID(x509, NID_crl_distribution_points, -1);
+    if (idx == -1)
+    {
+        LOG_AND_THROW(InvalidExtensionException, "CRL distribution point extension not found");
+    }
+
+    auto ext = Extension(X509_get_ext(x509, idx));
+    auto end = std::find(ext.getValue().begin(), ext.getValue().end(), 0);
+
+    _crlDistributionPoint = std::string(ext.getValue().begin(), end);
+}
 
 }}}}} // namespace intel { namespace sgx { namespace dcap { namespace parser { namespace x509 {

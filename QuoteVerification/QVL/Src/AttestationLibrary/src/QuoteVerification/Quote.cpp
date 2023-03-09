@@ -31,6 +31,7 @@
 
 #include "Quote.h"
 #include "QuoteParsers.h"
+#include "Utils/Logger.h"
 
 #include <algorithm>
 #include <iterator>
@@ -42,12 +43,14 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
 {
     if(rawQuote.size() < QUOTE_MIN_BYTE_LEN)
     {
+        LOG_ERROR("Quote size {} is not at least {}.", rawQuote.size(), QUOTE_MIN_BYTE_LEN);
         return false;
     }
 
     auto from = rawQuote.cbegin();
     Header localHeader{};
     if (!copyAndAdvance(localHeader, from, HEADER_BYTE_LEN, rawQuote.cend())) {
+        LOG_ERROR("Can't read header from quote. Expected size: {}", HEADER_BYTE_LEN);
         return false;
     }
 
@@ -59,6 +62,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localEnclaveReport, from, ENCLAVE_REPORT_BYTE_LEN, rawQuote.end()))
         {
+            LOG_ERROR("Can't read SGX enclave report from quote. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
             return false;
         }
     }
@@ -66,17 +70,20 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localTdReport, from, TD_REPORT_BYTE_LEN, rawQuote.end()))
         {
+            LOG_ERROR("Can't read TDX TD Report from quote. Expected size: {}", TD_REPORT_BYTE_LEN);
             return false;
         }
     }
 
     uint32_t localAuthDataSize = 0;
     if (!copyAndAdvance(localAuthDataSize, from, rawQuote.end())) {
+        LOG_ERROR("Can't read auth data size  from quote.");
         return false;
     }
     const auto remainingDistance = std::distance(from, rawQuote.end());
     if(localAuthDataSize != remainingDistance)
     {
+        LOG_ERROR("Declared auth data size {} doesn't match remaining quote size {}", localAuthDataSize, remainingDistance);
         return false;
     }
 
@@ -86,6 +93,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localQuoteV3Auth, from, static_cast<size_t>(localAuthDataSize), rawQuote.end()))
         {
+            LOG_ERROR("Can't read QUOTE v3 Auth data. Expected size: {}", localAuthDataSize);
             return false;
         }
         qeReportSignature = localQuoteV3Auth.qeReportSignature.signature;
@@ -99,6 +107,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     {
         if (!copyAndAdvance(localQuoteV4Auth, from, static_cast<size_t>(localAuthDataSize), rawQuote.end()))
         {
+            LOG_ERROR("Can't read QUOTE v4 Auth data. Expected size: {}", localAuthDataSize);
             return false;
         }
         
@@ -122,6 +131,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
     // and it means invalid format
     if(from != rawQuote.end())
     {
+        LOG_ERROR("There is additional, not expected data in quote.");
         return false;
     }
 
@@ -148,21 +158,25 @@ bool Quote::validate() const
     if(std::find(ALLOWED_QUOTE_VERSIONS.begin(), ALLOWED_QUOTE_VERSIONS.end(), header.version) ==
        ALLOWED_QUOTE_VERSIONS.end())
     {
+        LOG_ERROR("Quote version {} is not supported", header.version);
         return false;
     }
 
     if(std::find(ALLOWED_ATTESTATION_KEY_TYPES.begin(), ALLOWED_ATTESTATION_KEY_TYPES.end(), header.attestationKeyType) ==
        ALLOWED_ATTESTATION_KEY_TYPES.end())
     {
+        LOG_ERROR("Attestation Key type {} is not supported", header.attestationKeyType);
         return false;
     }
 
     if(std::find(ALLOWED_TEE_TYPES.begin(), ALLOWED_TEE_TYPES.end(), header.teeType) == ALLOWED_TEE_TYPES.end())
     {
+        LOG_ERROR("TEE Type {} is not supported", header.teeType);
         return false;
     }
 
     if(header.qeVendorId != INTEL_QE_VENDOR_ID) {
+        LOG_ERROR("Wrong QE vendor ID. Found: {}, expected: {}", header.qeVendorId, INTEL_QE_VENDOR_ID);
         return false;
     }
 
@@ -170,10 +184,13 @@ bool Quote::validate() const
     {
         if (header.teeType != TEE_TYPE_SGX)
         {
+            LOG_ERROR("Quote v3 supports only SGX tee type but found {}", header.teeType);
             return false;
         }
         if (authDataV3.certificationData.type < 1 || authDataV3.certificationData.type > 5) // QuoteV3 supports only 1-5 types
         {
+            LOG_ERROR("Quote v3 supports certification data types from 1 to 5 but found {}",
+                      authDataV3.certificationData.type);
             return false;
         }
     }
@@ -182,10 +199,14 @@ bool Quote::validate() const
     {
         if (authDataV4.certificationData.type != constants::PCK_ID_QE_REPORT_CERTIFICATION_DATA)
         {
+            LOG_ERROR("Quote v4 supports only {} certification data type but found {}",
+                      constants::PCK_ID_QE_REPORT_CERTIFICATION_DATA, authDataV4.certificationData.type);
             return false;
         }
         if (certificationData.type < 1 || certificationData.type > 5)
         {
+            LOG_ERROR("Quote v4 supports QE Report Certification data types from 1 to 5 but found: {}",
+                      certificationData.type);
             return false;
         }
     }

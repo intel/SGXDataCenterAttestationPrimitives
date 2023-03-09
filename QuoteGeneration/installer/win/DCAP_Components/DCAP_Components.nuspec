@@ -2,15 +2,15 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>DCAP_Components</id>
-    <version>1.15.100.3</version>
+    <version>1.16.100.2</version>
     <title>DCAP Components</title>
     <authors>Intel(R) SGX</authors>
     <owners>Intel</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>DCAP Components</description>
-    <copyright>Copyright (C) 2022 Intel Corporation</copyright>
+    <copyright>Copyright (C) 2023 Intel Corporation</copyright>
     <dependencies>
-      <dependency id="SgxHeaders" version="2.17.100.1" />
+      <dependency id="SgxHeaders" version="2.18.100.2" />
     </dependencies>
   </metadata>
   <files>

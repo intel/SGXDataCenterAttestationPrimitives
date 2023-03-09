@@ -20,6 +20,8 @@ Prerequisite:
 *Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf" to install above dependencies*<br/>
 *Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*
 
+*Please make sure the config file of qcnl is configured properly
+
 1. Generate an ECDSA quote with certification data of type 5 using QuoteGenerationSample
 ```
    $ cd SampleCode/QuoteGenerationSample/

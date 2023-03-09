@@ -38,7 +38,8 @@
 #include <numeric>
 #include <iostream>
 #include <memory>
-
+#include <Utils/Logger.h>
+#include <OpensslHelpers/Bytes.h>
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -50,6 +51,8 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     /// 4.1.2.9.5
     if((enclaveReport.miscSelect & miscselectMask) != miscselect)
     {
+        LOG_ERROR("MiscSelect value from Enclave Report: {} does not match miscSelect value from Enclave Identity: {}",
+                  enclaveReport.miscSelect & miscselectMask, miscselect);
         return STATUS_SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH;
     }
 
@@ -58,6 +61,7 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     std::vector<uint8_t> attributes(attributesReport.begin(), attributesReport.end());
     if(applyMask(attributes, enclaveIdentity->getAttributesMask()) != enclaveIdentity->getAttributes())
     {
+        LOG_ERROR("Attributes value from Enclave Report does not match attributes from Enclave Identity");
         return STATUS_SGX_ENCLAVE_REPORT_ATTRIBUTES_MISMATCH;
     }
 
@@ -68,12 +72,16 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
 
     if(!enclaveIdentityMrSigner.empty() && enclaveIdentityMrSigner != mrSigner)
     {
+        LOG_ERROR("Enclave Identity contains MRSIGNER field: {} which does not match MRSIGNER value from Enclave Report: {}",
+                  bytesToHexString(enclaveIdentityMrSigner), bytesToHexString(mrSigner));
         return STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     }
 
     /// 4.1.2.9.8
     if(enclaveReport.isvProdID != enclaveIdentity->getIsvProdId())
     {
+        LOG_ERROR("Enclave Identity contains IsvProdId field: {} which does not match IsvProdId value from Enclave Report: {}",
+                  enclaveIdentity->getIsvProdId(), enclaveReport.isvProdID);
         return STATUS_SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH;
     }
 
@@ -83,8 +91,12 @@ Status EnclaveReportVerifier::verify(const EnclaveIdentityV2 *enclaveIdentity, c
     {
         if (enclaveIdentityStatus == TcbStatus::Revoked)
         {
+            LOG_ERROR("Value of tcbStatus for the selected Enclave's Identity tcbLevel (isvSvn: {}) is \"Revoked\"",
+                      enclaveReport.isvSvn);
             return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED;
         }
+        LOG_ERROR("Value of tcbStatus for the selected Enclave's Identity tcbLevel (isvSvn: {}) is \"OutOfDate\"",
+                  enclaveReport.isvSvn);
         return STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE;
     }
 

@@ -30,6 +30,7 @@
  */
 
 #include "TCBSigningChain.h"
+#include "Utils/Logger.h"
 
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
@@ -54,47 +55,67 @@ Status TCBSigningChain::verify(
         const dcap::parser::x509::Certificate &trustedRoot) const
 {
     const auto rootCert = chain.getRootCert();
-    if(!rootCert || !_baseVerifier.commonNameContains(rootCert->getSubject(), constants::SGX_ROOT_CA_CN_PHRASE))
+    if(!rootCert)
     {
+        LOG_ERROR("ROOT CA is missing");
+        return STATUS_SGX_ROOT_CA_MISSING;
+    }
+    if(!_baseVerifier.commonNameContains(rootCert->getSubject(), constants::SGX_ROOT_CA_CN_PHRASE))
+    {
+        LOG_ERROR("ROOT CA has wrong subject. Expected: {}, actual: {}", constants::SGX_ROOT_CA_CN_PHRASE,
+                  rootCert->getSubject().getCommonName());
         return STATUS_SGX_ROOT_CA_MISSING;
     }
 
     const auto rootVerificationStatus = _commonVerifier->verifyRootCACert(*rootCert);
     if(rootVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("Root CA verification failed: {}", rootVerificationStatus);
         return rootVerificationStatus;
     }
 
     const auto tcbSigningCert = chain.getTopmostCert();
-    if(!tcbSigningCert || !_baseVerifier.commonNameContains(tcbSigningCert->getSubject(), constants::SGX_TCB_SIGNING_CN_PHRASE))
+    if(!tcbSigningCert)
     {
+        LOG_ERROR("TCB Signing Cert is missing");
+        return STATUS_SGX_TCB_SIGNING_CERT_MISSING;
+    }
+    if(!_baseVerifier.commonNameContains(tcbSigningCert->getSubject(), constants::SGX_TCB_SIGNING_CN_PHRASE))
+    {
+        LOG_ERROR("TCB Signing Cert has wrong common name. Expected: {}, actual: {}", constants::SGX_TCB_SIGNING_CN_PHRASE,
+                  tcbSigningCert->getSubject().getCommonName());
         return STATUS_SGX_TCB_SIGNING_CERT_MISSING;
     }
 
     const auto tcbCertVerificationStatus = verifyTCBCert(*tcbSigningCert, *rootCert);
     if(tcbCertVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("TCB Signing cert verification failed: {}", tcbCertVerificationStatus);
         return tcbCertVerificationStatus;
     }
 
     const auto crlVerificationStatus = _crlVerifier->verify(rootCaCrl, *rootCert);
     if(crlVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("TCB Signing Root CA CRL verification failed: {}", crlVerificationStatus);
         return crlVerificationStatus;
     }
 
     if(rootCaCrl.isRevoked(*tcbSigningCert))
     {
+        LOG_ERROR("TCB Signing Cert is revoked by Root CA");
         return STATUS_SGX_TCB_SIGNING_CERT_REVOKED;
     }
 
     if(trustedRoot.getSubject() != trustedRoot.getIssuer())
     {
+        LOG_ERROR("TCB Signing Root CA is not self signed");
         return STATUS_TRUSTED_ROOT_CA_INVALID;
     }
 
     if(rootCert->getSignature().getRawDer() != trustedRoot.getSignature().getRawDer())
     {
+        LOG_ERROR("Signature of trusted root doesn't match signature of root cert from TCB Signing Chain. Chain is not trusted.");
         return STATUS_SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED;
     }
 
@@ -105,8 +126,16 @@ Status TCBSigningChain::verifyTCBCert(const dcap::parser::x509::Certificate &tcb
                                       const dcap::parser::x509::Certificate &rootCaCert) const
 {
 
-    if(tcbCert.getIssuer() != rootCaCert.getSubject() || !_commonVerifier->checkSignature(tcbCert, rootCaCert))
+    if(tcbCert.getIssuer() != rootCaCert.getSubject())
     {
+        LOG_ERROR("TCB signing certificate has different issuer than provided Root CA. RootCA common name: {}, TCB Cert issuer common name: {}",
+                  rootCaCert.getSubject().getCommonName(), tcbCert.getSubject().getCommonName());
+        return STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER;
+    }
+
+    if(!_commonVerifier->checkSignature(tcbCert, rootCaCert))
+    {
+        LOG_ERROR("TCB signing certificate signature verification failed");
         return STATUS_SGX_TCB_SIGNING_CERT_INVALID_ISSUER;
     }
 

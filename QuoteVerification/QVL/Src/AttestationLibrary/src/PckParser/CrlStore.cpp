@@ -32,6 +32,7 @@
 
 #include "CrlStore.h"
 #include "FormatException.h"
+#include "Utils/Logger.h"
 
 #include <OpensslHelpers/Assert.h>
 
@@ -76,8 +77,9 @@ bool CrlStore::parse(const std::string& crlString)
         _signature = pckparser::getSignature(*_crl);
         _crlNum = pckparser::getCrlNum(*_crl);
     }
-    catch(const FormatException&)
+    catch(const FormatException& ex)
     {
+        LOG_ERROR("Error while parsing CRL: {}", ex.what());
         return false;
     }
 

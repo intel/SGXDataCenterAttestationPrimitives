@@ -416,7 +416,7 @@ quote3_error_t tdx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
                                                                        0,
                                                                        pp_quote_collateral);
     if (ret == SGX_QL_SUCCESS) {
-        (*pp_quote_collateral)->tee_type = 0x0; // SGX
+        (*pp_quote_collateral)->tee_type = 0x81; // TDX
     } else {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
     }

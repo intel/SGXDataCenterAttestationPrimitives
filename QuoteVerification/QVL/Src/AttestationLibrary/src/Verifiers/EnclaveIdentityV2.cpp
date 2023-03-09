@@ -33,6 +33,7 @@
 #include "CertVerification/X509Constants.h"
 #include "Utils/TimeUtils.h"
 #include "QuoteVerification/QuoteConstants.h"
+#include "Utils/Logger.h"
 
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -58,6 +59,7 @@ namespace intel { namespace sgx { namespace dcap {
            || !parseID(p_body) || !parseTcbEvaluationDataNumber(p_body)
            || !parseTcbLevels(p_body))
         {
+            LOG_ERROR("Enclave Identity does not contain all the required fields in a correct format");
             status = STATUS_SGX_ENCLAVE_IDENTITY_INVALID;
             return;
         }

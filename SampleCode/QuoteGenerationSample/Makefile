@@ -35,7 +35,6 @@ SGX_DEBUG ?= 0
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
-OUT_OF_PROC ?= 0
 
 
 SGX_COMMON_CFLAGS := -m64
@@ -53,7 +52,6 @@ endif
 
 DCAP_Library_Name := sgx_dcap_ql
 Urts_Library_Name := sgx_urts
-Quote_ex_Library_Name := sgx_quote_ex
 
 App_Cpp_Files :=  App/App.cpp
 App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/common/inc
@@ -72,9 +70,6 @@ endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread
-ifeq ($(OUT_OF_PROC),1)
-	App_Link_Flags += -l$(Quote_ex_Library_Name)
-endif
 
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)

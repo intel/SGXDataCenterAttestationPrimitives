@@ -71,6 +71,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tdqe", "QuoteGeneration\quote_wrapper\tdx_quote\enclave\win\tdqe.vcxproj", "{FA74E16C-93BA-4722-8B06-434F57C0E6D0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tdx_logic", "QuoteGeneration\quote_wrapper\tdx_quote\win\tdx_logic.vcxproj", "{DF76228C-AA18-41D2-ABF6-E340AE2B6591}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7A7054A9-BBEC-45A8-A1E5-0F0998CB3A9C} = {7A7054A9-BBEC-45A8-A1E5-0F0998CB3A9C}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

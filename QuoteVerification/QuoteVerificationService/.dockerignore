@@ -1,0 +1,13 @@
+# 1. Ignore everything
+**
+
+# 2. Add files and directories that should be included
+!configuration-default/**
+!native/QuoteVerificationLibraryWrapper.node
+!native/lib/*
+!src/**
+!Dockerfile
+
+# 3. Exclude QVL Node plugin sources
+src/qvl/*
+!src/qvl/*.js

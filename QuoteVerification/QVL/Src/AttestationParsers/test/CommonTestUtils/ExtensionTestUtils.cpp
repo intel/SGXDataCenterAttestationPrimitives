@@ -30,6 +30,7 @@
  */
 
 #include "ExtensionTestUtils.h"
+#include <openssl/x509.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace parser {
 

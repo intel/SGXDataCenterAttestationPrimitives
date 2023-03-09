@@ -23,8 +23,7 @@ Prerequisite:
 * Intel(R) SGX DCAP Packages
 * Intel(R) SGX DCAP PCCS (Provisioning Certificate Caching Service)
 
-*Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf" to install above dependencies*<br/>
-*Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*<br/>
+*Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf" to install above dependencies*<br/>
 *Note that you need to install **libsgx-dcap-quote-verify-dev** for this package.*
 
 1. Generate an ECDSA quote with certification data of type 5 using *QuoteGenerationSample*

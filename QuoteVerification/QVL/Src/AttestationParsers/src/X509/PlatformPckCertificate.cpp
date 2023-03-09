@@ -34,6 +34,7 @@
 #include "OpensslHelpers/OidUtils.h"
 #include "X509Constants.h"
 #include "ParserUtils.h"
+#include "Utils/Logger.h"
 
 #include <algorithm> // find_if
 
@@ -85,7 +86,7 @@ void PlatformPckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
     {
         std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [" + std::to_string(PLATFORM_CA_EXTENSION_COUNT) +
                           "] elements when given [" + std::to_string(stackEntries) + "]";
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 
     std::vector<Extension::Type> expectedExtensions = constants::PLATFORM_PCK_REQUIRED_SGX_EXTENSIONS;
@@ -100,7 +101,7 @@ void PlatformPckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
         if (oidTupleEntries != 2) {
             std::string err = "OID tuple [" + oids::SGX_EXTENSION + "] expected number of elements is [2] given [" +
                               std::to_string(oidTupleEntries) + "]";
-            throw InvalidExtensionException(err);
+            LOG_AND_THROW(InvalidExtensionException, err);
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
@@ -133,7 +134,7 @@ void PlatformPckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
         // Now add the last element with no delimiter
         err += oids::type2Description(expectedExtensions.back()) + "]";
 
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 }
 

@@ -125,7 +125,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src;$(ProjectDir)..\..\..\prebuilt\openssl\inc;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\ThirdParty\rapidjson\include;$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
@@ -145,7 +145,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src;$(ProjectDir)..\..\..\prebuilt\openssl\inc;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\ThirdParty\rapidjson\include;$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationCommons/include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationCommons/include/Utils</AdditionalIncludeDirectories>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
@@ -168,7 +168,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src;$(ProjectDir)..\..\..\prebuilt\openssl\inc;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\ThirdParty\rapidjson\include;$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
@@ -192,7 +192,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;PCKCertSelectionLIB_EXPORTS;_WINDOWS;_USRDLL;ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src;$(ProjectDir)..\..\..\prebuilt\openssl\inc;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\ThirdParty\rapidjson\include;$(ProjectDir)..\..\..\QuoteGeneration\common\inc\internal;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationCommons/include;$(ProjectDir)\..\..\..\QuoteVerification\QVL\Src\AttestationCommons/include/Utils</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -208,6 +208,16 @@
       <AdditionalDependencies>libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <CETCompat>true</CETCompat>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Infra|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Infra|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ATTESTATIONPARSERS_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\JsonParser.cpp" />

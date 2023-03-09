@@ -1,0 +1,41 @@
+{
+    "name": "quoteverificationservice-test",
+    "scripts": {
+        "install": "cmake-js build -d qvl/ -O qvl/cmake-build-release"
+    },
+    "version": "1.0.0",
+    "license": "SEE LICENSE IN RESPECTIVE FILES",
+    "main": "bootstrap.js",
+    "dependencies": {
+        "bluebird": "^3.7.2",
+        "fast-url-parser": "^1.1.3",
+        "https-proxy-agent": "^5.0.1",
+        "js-yaml": "^4.1.0",
+        "koa": "^2.13.4",
+        "koa-bodyparser": "^4.3.0",
+        "koa-router": "^12.0.0",
+        "lodash": "^4.17.21",
+        "log4js": "^6.7.0",
+        "moment": "^2.29.4",
+        "node-addon-api": "^5.0.0",
+        "node-cache": "^5.1.2",
+        "raw-body": "^2.5.1",
+        "retry": "^0.13.1",
+        "safe-buffer": "^5.2.1",
+        "serialize-error": "^8.1.0",
+        "uuid-random": "^1.3.2",
+        "validator": "^13.7.0",
+        "z-schema": "^5.0.4"
+    },
+    "devDependencies": {
+        "chai": "^4.3.6",
+        "cmake-js": "^7.0.0",
+        "eslint": "^8.21.0",
+        "mocha": "^10.0.0",
+        "mocha-junit-reporter": "^2.0.2",
+        "mocha-multi-reporters": "^1.5.1",
+        "nyc": "^15.1.0",
+        "proxyquire": "^2.1.3",
+        "sinon": "^14.0.0"
+    }
+}

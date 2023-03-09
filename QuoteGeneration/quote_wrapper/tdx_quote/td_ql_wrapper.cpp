@@ -133,7 +133,7 @@ tee_att_error_t tee_att_create_context(const tee_att_att_key_id_t* p_att_key_id,
 #ifndef _MSC_VER
         strncpy(p_context->tdqe_path, p_qe_path, MAX_PATH - 1);
 #else
-        MultiByteToWideChar(CP_ACP, 0, p_qe_path, (int)len, p_context->tdqe_path, MAX_PATH); 
+        MultiByteToWideChar(CP_ACP, 0, p_qe_path, (int)len, p_context->tdqe_path, MAX_PATH);
 #endif
         p_context->tdqe_path[len] = '\0';
     }
@@ -479,8 +479,23 @@ tee_att_error_t tee_att_get_keyid(const tee_att_config_t* p_context,
     return TEE_ATT_SUCCESS;
 }
 
-
 #ifndef _MSC_VER
+extern "C"
+tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context,
+    void **pp_qpl_handle) {
+    void *p_local_qpl_handle = NULL;
+    if (NULL == p_context || NULL == pp_qpl_handle)
+        return TEE_ATT_ERROR_INVALID_PARAMETER;
+
+    p_local_qpl_handle = const_cast<tee_att_config_t*>(p_context)->get_qpl_handle();
+    if ( NULL == p_local_qpl_handle) {
+        return TEE_ATT_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    *pp_qpl_handle = p_local_qpl_handle;
+    return TEE_ATT_SUCCESS;
+}
+
 static tee_att_error_t sgx_set_context_path(const tee_att_config_t* p_context,
     tee_att_ae_type_t type,
     const char* p_path)
@@ -499,7 +514,7 @@ static tee_att_error_t sgx_set_context_path(const tee_att_config_t* p_context,
         break;
     case TEE_ATT_IDE:
         context_path = const_cast<char*> (p_context->ide_path);
-        break; 
+        break;
     default:
         return TEE_ATT_ERROR_INVALID_PARAMETER;
     }

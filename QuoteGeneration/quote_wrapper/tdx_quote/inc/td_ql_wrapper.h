@@ -36,6 +36,8 @@
  */
 #ifndef _TD_QL_WRAPPER_H_
 #define _TD_QL_WRAPPER_H_
+#include <stddef.h>
+#include <stdbool.h>
 #include "sgx_quote_4.h"
 
 #define TEE_ATT_MK_ERROR(x)              (0x00011000|(x))
@@ -132,7 +134,7 @@ typedef enum _tee_att_error_t {
 
 } tee_att_error_t;
 
-struct tee_att_config_t;
+typedef struct tee_att_config_t tee_att_config_t;
 
 typedef enum
 {

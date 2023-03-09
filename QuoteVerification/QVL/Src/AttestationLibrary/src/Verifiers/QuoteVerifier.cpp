@@ -41,7 +41,9 @@
 #include <OpensslHelpers/DigestUtils.h>
 #include <OpensslHelpers/KeyUtils.h>
 #include <OpensslHelpers/SignatureVerification.h>
+#include <OpensslHelpers/Bytes.h>
 #include <Verifiers/PckCertVerifier.h>
+#include <Utils/Logger.h>
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -111,6 +113,7 @@ const parser::json::TcbLevel& getMatchingTcbLevel(const dcap::parser::json::TcbI
     }
 
     /// 4.1.2.4.17.3
+    LOG_ERROR("TCB Level has not been selected");
     throw RuntimeException(STATUS_TCB_NOT_SUPPORTED);
 }
 
@@ -123,28 +126,67 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
     if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID
         && tcbLevel.getTdxTcbComponent(1).getSvn() != quote.getTdReport().teeTcbSvn[1])
     {
+        LOG_ERROR("SVNs at index 1 in TDX TCB Component SVNs ({}) and in TEE TCB SVNs array ({}) does not match",
+                  bytesToHexString(std::vector<uint8_t>{tcbLevel.getTdxTcbComponent(1).getSvn()}),
+                  bytesToHexString(std::vector<uint8_t>{quote.getTdReport().teeTcbSvn[1]}));
         return STATUS_TCB_INFO_MISMATCH;
     }
 
     const auto& tcbLevelStatus = tcbLevel.getStatus();
 
+    const auto pckTcb = pckCert.getTcb();
+    if(tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID)
+    {
+        const auto tdxComponents = tcbLevel.getTdxTcbComponents();
+        std::vector<uint8_t>tdxTcbComponentsSvnsVec;
+        for (auto component : tdxComponents)
+        {
+            tdxTcbComponentsSvnsVec.push_back(component.getSvn());
+        }
+
+        LOG_INFO("Selected TCB Level - sgx: {}, tdx: {}, pceSvn: {}, status: {},\n"
+                 "PCK TCB - cpuSvn: {}, pceSvn: {}\n"
+                 "TD Report - TdxSvn: {}",
+                 bytesToHexString(tcbLevel.getCpuSvn()),
+                 bytesToHexString(tdxTcbComponentsSvnsVec),
+                 tcbLevel.getPceSvn(),
+                 tcbLevelStatus,
+                 bytesToHexString(pckTcb.getCpuSvn()),
+                 pckTcb.getPceSvn(),
+                 bytesToHexString(std::vector<uint8_t>(begin(quote.getTdReport().teeTcbSvn), end(quote.getTdReport().teeTcbSvn))));
+    }
+    else
+    {
+        LOG_INFO("Selected TCB Level - sgx: {}, pceSvn: {}, status: {},\n"
+                 "PCK TCB - cpuSvn: {}, pceSvn: {}",
+                 bytesToHexString(tcbLevel.getCpuSvn()),
+                 tcbLevel.getPceSvn(),
+                 tcbLevelStatus,
+                 bytesToHexString(pckTcb.getCpuSvn()),
+                 pckTcb.getPceSvn());
+    }
+
     if (tcbLevelStatus == "OutOfDate")
     {
+        LOG_INFO("TCB Level status is \"OutOfDate\"");
         return STATUS_TCB_OUT_OF_DATE;
     }
 
     if (tcbLevelStatus == "Revoked")
     {
+        LOG_INFO("TCB Level status is \"Revoked\"");
         return STATUS_TCB_REVOKED;
     }
 
     if (tcbLevelStatus == "ConfigurationNeeded")
     {
+        LOG_INFO("TCB Level status is \"ConfigurationNeeded\"");
         return STATUS_TCB_CONFIGURATION_NEEDED;
     }
 
     if (tcbLevelStatus == "ConfigurationAndSWHardeningNeeded")
     {
+        LOG_INFO("TCB Level status is \"ConfigurationAndSWHardeningNeeded\"");
         return STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED;
     }
 
@@ -155,14 +197,17 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
 
     if (tcbLevelStatus == "SWHardeningNeeded")
     {
+        LOG_INFO("TCB Level status is \"SWHardeningNeeded\"");
         return STATUS_TCB_SW_HARDENING_NEEDED;
     }
 
     if(tcbInfoJson.getVersion() > 1 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
     {
+        LOG_INFO("TCB Level status is \"OutOfDateConfigurationNeeded\"");
         return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
     }
 
+    LOG_ERROR("TCB Level error status is unrecognized");
     throw RuntimeException(STATUS_TCB_UNRECOGNIZED_STATUS);
 }
 
@@ -170,6 +215,8 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
 {
     if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
     {
+        LOG_INFO("QE TCB status is \"OutOfDate\" and TCB Level status is \"{}\"",
+                  tcbLevelStatus);
         if (tcbLevelStatus == STATUS_OK ||
             tcbLevelStatus == STATUS_TCB_SW_HARDENING_NEEDED)
         {
@@ -183,6 +230,7 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
     }
     if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED)
     {
+            LOG_INFO("QE TCB status is \"Revoked\"");
             return STATUS_TCB_REVOKED;
     }
 
@@ -215,17 +263,30 @@ Status QuoteVerifier::verify(const Quote& quote,
 
     /// 4.1.2.4.4
     if (!_baseVerififer.commonNameContains(pckCert.getSubject(), constants::SGX_PCK_CN_PHRASE)) {
+        LOG_ERROR("PCK Certificate. CN in Subject field does not contain \"SGX PCK Certificate\" phrase");
         return STATUS_INVALID_PCK_CERT;
     }
 
     /// 4.1.2.4.6
-    if (!PckCrlVerifier{}.checkIssuer(crl) || crl.getIssuer().raw != pckCert.getIssuer().getRaw()) {
+    if(!PckCrlVerifier{}.checkIssuer(crl))
+    {
+        LOG_ERROR("PCK Revocation List. CN in Issuer field does not contain \"CA\" phrase");
+        return STATUS_INVALID_PCK_CRL;
+    }
+
+    const auto crlIssuerRaw = crl.getIssuer().raw;
+    const auto pckCertIssuerRaw = pckCert.getIssuer().getRaw();
+    if(crlIssuerRaw != pckCertIssuerRaw)
+    {
+        LOG_ERROR("Issuers in PCK revocation List and PCK Certificate are not the same. RL: {}, Cert: {}",
+                  crlIssuerRaw, pckCertIssuerRaw);
         return STATUS_INVALID_PCK_CRL;
     }
 
     /// 4.1.2.4.7
     if(crl.isRevoked(pckCert))
     {
+        LOG_ERROR("PCK Certificate is revoked by PCK Revocation List");
         return STATUS_PCK_REVOKED;
     }
 
@@ -234,10 +295,12 @@ Status QuoteVerifier::verify(const Quote& quote,
     {
         if(tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID && quote.getHeader().teeType != dcap::constants::TEE_TYPE_TDX)
         {
+            LOG_ERROR("TcbInfo is generated for TDX and does not match Quote's TEE");
             return STATUS_TCB_INFO_MISMATCH;
         }
         if(tcbInfoJson.getId() == parser::json::TcbInfo::SGX_ID && quote.getHeader().teeType != dcap::constants::TEE_TYPE_SGX)
         {
+            LOG_ERROR("TcbInfo is generated for SGX and does not match Quote's TEE");
             return STATUS_TCB_INFO_MISMATCH;
         }
     }
@@ -245,6 +308,7 @@ Status QuoteVerifier::verify(const Quote& quote,
     {
         if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_TDX)
         {
+            LOG_ERROR("TcbInfo version {} is invalid for TDX TEE", tcbInfoJson.getVersion());
             return STATUS_TCB_INFO_MISMATCH;
         }
     }
@@ -252,11 +316,15 @@ Status QuoteVerifier::verify(const Quote& quote,
     /// 4.1.2.4.10
     if(pckCert.getFmspc() != tcbInfoJson.getFmspc())
     {
+        LOG_ERROR("FMSPC value from TcbInfo ({}) and SGX Extension in PCK Cert ({}) do not match",
+                  bytesToHexString(tcbInfoJson.getFmspc()), bytesToHexString(pckCert.getFmspc()));
         return STATUS_TCB_INFO_MISMATCH;
     }
 
     if(pckCert.getPceId() != tcbInfoJson.getPceId())
     {
+        LOG_ERROR("PCEID value from TcbInfo ({}) and SGX Extension in PCK Cert ({}) do not match",
+                  bytesToHexString(tcbInfoJson.getPceId()), bytesToHexString(pckCert.getPceId()));
         return STATUS_TCB_INFO_MISMATCH;
     }
 
@@ -269,6 +337,7 @@ Status QuoteVerifier::verify(const Quote& quote,
     auto pubKey = crypto::rawToP256PubKey(pckCert.getPubKey());
     if (pubKey == nullptr)
     {
+        LOG_ERROR("Public key parsing error. PCK Certificate is invalid");
         return STATUS_INVALID_PCK_CERT; // if there were issues with parsing public key it means cert was invalid.
                                         // Probably it will never happen because parsing cert should fail earlier.
     }
@@ -283,6 +352,8 @@ Status QuoteVerifier::verify(const Quote& quote,
 
         if (quoteMrSignerSeam.size() != tdxModuleMrSigner.size())
         {
+            LOG_ERROR("MRSIGNERSEAM value size from TdReport in Quote ({}) and MRSIGNER value size from TcbInfo ({}) are not the same",
+                      quoteMrSignerSeam.size(), tdxModuleMrSigner.size());
             return STATUS_TDX_MODULE_MISMATCH;
         }
 
@@ -290,6 +361,9 @@ Status QuoteVerifier::verify(const Quote& quote,
         {
             if (tdxModuleMrSigner[i] != quoteMrSignerSeam[i])
             {
+                LOG_ERROR("MRSIGNERSEAM value from TdReport in Quote ({}) and MRSIGNER value from TcbInfo ({}) are not the same",
+                          bytesToHexString(std::vector<uint8_t>(begin(quoteMrSignerSeam), end(quoteMrSignerSeam))),
+                          bytesToHexString(std::vector<uint8_t>(begin(tdxModuleMrSigner), end(tdxModuleMrSigner))));
                 return STATUS_TDX_MODULE_MISMATCH;
             }
         }
@@ -297,6 +371,9 @@ Status QuoteVerifier::verify(const Quote& quote,
         std::vector<uint8_t> quoteSeamAttributes(quote.getTdReport().seamAttributes.begin(), quote.getTdReport().seamAttributes.end());
         if (applyMask(quoteSeamAttributes, tdxModule.getAttributesMask()) != tdxModule.getAttributes())
         {
+            LOG_ERROR("SEAMATTRIBUTES values from TdReport in Quote with attributesMask applied {} and from TcbInfo are not the same",
+                      bytesToHexString(applyMask(quoteSeamAttributes, tdxModule.getAttributesMask())),
+                      bytesToHexString(tdxModule.getAttributes()));
             return STATUS_TDX_MODULE_MISMATCH;
         }
     }
@@ -304,6 +381,9 @@ Status QuoteVerifier::verify(const Quote& quote,
     /// 4.1.2.4.12
     if (!crypto::verifySha256EcdsaSignature(quote.getQeReportSignature(), quote.getQeReport().rawBlob(), *pubKey))
     {
+        LOG_ERROR("QE Report Signature extracted from quote ({}) cannot be verified with the Public Key extracted from PCK Certificate ({})",
+                  bytesToHexString(std::vector<uint8_t>(begin(quote.getQeReportSignature()), end(quote.getQeReportSignature()))),
+                  bytesToHexString(pckCert.getPubKey()));
         return STATUS_INVALID_QE_REPORT_SIGNATURE;
     }
 
@@ -322,6 +402,9 @@ Status QuoteVerifier::verify(const Quote& quote,
                                                                      hashedConcatOfAttestKeyAndQeReportData.end(),
                                                                      quote.getQeReport().reportData.begin()))
     {
+        LOG_ERROR("Report Data value extracted from QE Report in Quote ({}) and the value of SHA256 calculated over the concatenation of ECDSA Attestation Key and QE Authenticated Data extracted from Quote ({}) are not the same",
+                  bytesToHexString(std::vector<uint8_t>(begin(quote.getQeReport().reportData), end(quote.getQeReport().reportData))),
+                  bytesToHexString(hashedConcatOfAttestKeyAndQeReportData));
         return STATUS_INVALID_QE_REPORT_DATA;
     }
 
@@ -332,12 +415,14 @@ Status QuoteVerifier::verify(const Quote& quote,
         {
             if(enclaveIdentity->getVersion() == 1)
             {
+                LOG_ERROR("Enclave Identity version 1 is invalid for TDX TEE");
                 return STATUS_QE_IDENTITY_MISMATCH;
             }
             else if(enclaveIdentity->getVersion() == 2)
             {
                 if(enclaveIdentity->getID() != EnclaveID::TD_QE)
                 {
+                    LOG_ERROR("Enclave Identity is not generated for TDX and does not match Quote's TEE");
                     return STATUS_QE_IDENTITY_MISMATCH;
                 }
             }
@@ -346,11 +431,13 @@ Status QuoteVerifier::verify(const Quote& quote,
         {
             if(enclaveIdentity->getID() != EnclaveID::QE)
             {
+                LOG_ERROR("Enclave Identity is not generated for SGX and does not match Quote's TEE");
                 return STATUS_QE_IDENTITY_MISMATCH;
             }
         }
         else
         {
+            LOG_ERROR("Unknown Quote's TEE. Enclave Identity cannot be valid");
             return STATUS_QE_IDENTITY_MISMATCH;
         }
 
@@ -386,6 +473,9 @@ Status QuoteVerifier::verify(const Quote& quote,
                                             quote.getSignedData(),
                                             *attestKey))
     {
+        LOG_ERROR("Quote Signature ({}) cannot be verified with ECDSA Attestation Key ({})",
+                  bytesToHexString(std::vector<uint8_t>(begin(quote.getQuoteSignature()), end(quote.getQuoteSignature()))),
+                  bytesToHexString(std::vector<uint8_t>(begin(quote.getAttestKeyData()), end(quote.getAttestKeyData()))));
         return STATUS_INVALID_QUOTE_SIGNATURE;
     }
 
@@ -408,6 +498,7 @@ Status QuoteVerifier::verify(const Quote& quote,
     }
     catch (const RuntimeException &ex)
     {
+        LOG_ERROR("RuntimeException during quote verification has occurred: {}", ex.what());
         return ex.getStatus();
     }
 }
@@ -416,6 +507,8 @@ Status QuoteVerifier::verifyCertificationData(const CertificationData& certifica
 {
     if (certificationData.parsedDataSize != certificationData.data.size())
     {
+        LOG_ERROR("Unexpected parsed data size, expected: {}, actual: {}",
+                  certificationData.data.size(), certificationData.parsedDataSize);
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 

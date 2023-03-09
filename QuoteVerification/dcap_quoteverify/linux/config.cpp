@@ -282,7 +282,10 @@ bool sgx_dcap_load_urts()
                 //try to load urts v2
                 g_urts_handle = dlopen(SGX_URTS_LIB_FILE_NAME_V2, RTLD_LAZY);
                 if (g_urts_handle == NULL) {
-                    fputs(dlerror(), stderr);
+                    char *cerror = dlerror();
+                    if(cerror != NULL){
+                        fputs(cerror, stderr);
+                    }
                     SE_TRACE(SE_TRACE_DEBUG, "Couldn't find urts library: %s, %s\n", SGX_URTS_LIB_FILE_NAME, SGX_URTS_LIB_FILE_NAME_V2);
                     break;
                 }

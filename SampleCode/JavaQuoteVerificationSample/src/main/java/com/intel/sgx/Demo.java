@@ -65,10 +65,11 @@ public class Demo {
     } catch (ArgumentParserException e) {
       parser.handleError(e);
     }
+    System.out.println("Do quote verfication:\n");
     SgxDcapVerifyQuoteJNI Verifer = new SgxDcapVerifyQuoteJNI();
 
     SgxDcapQuoteVerifyResult result = Verifer.sgxQvVerifyQuote(quoteBytes);
-    System.out.println("verify result is " + result.getVerifyResult());
+    System.out.println("Quote verify result is " + result.getVerifyResult());
     if (result.getSupplement() != null) {
       byte[] cpu_svn = result.getSupplement().getTcb_cpusvn().getSvn();
       for (int i = 0; i < cpu_svn.length; i++) {
@@ -76,6 +77,7 @@ public class Demo {
       }
     }
 
+    System.out.println("Get quote collateral:\n");
     Collateral collat = Verifer.teeQvGetCollateral(quoteBytes);
     System.out.print(collat.toString());
     TeeDcapQuoteVerifyResult teeReult = Verifer.tee_verify_quote(quoteBytes, (short) 3, 0);
