@@ -176,6 +176,10 @@ static tdx_attest_error_t get_tdx_report(
         fprintf(stderr, "\nNeed to input TDX report.");
         return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
+    if (!p_tdx_report_data) {
+        fprintf(stderr, "\nNeed to input TDX report data.");
+        return TDX_ATTEST_ERROR_INVALID_PARAMETER;
+    }
 
     struct tdx_report_req req;
     uint8_t tdx_report[TDX_REPORT_SIZE] = {0};
