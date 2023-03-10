@@ -1,10 +1,11 @@
 [package]
-name = "sgx-dcap-quoteverify-sys"
+name = "intel-tee-quote-verification-sys"
 version = "0.2.0"
 edition = "2021"
 links = "sgx_dcap_quoteverify"
 license = "BSD-3-Clause"
-description = "Rust raw FFI bindings for SGX DCAP Quote Verification Library"
+description = "Intel(R) TEE Quote Verification Rust Library"
+homepage = "https://github.com/intel/SGXDataCenterAttestationPrimitives"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
