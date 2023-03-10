@@ -35,6 +35,7 @@
  * Description: Sample application to
  * demonstrate the usage of quote generation.
  */
+
 #if defined(_MSC_VER)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -45,6 +46,10 @@
 #include <tchar.h>
 #endif
 
+#include <vector>
+#include <fstream>
+
+#include <string.h>
 #include "sgx_urts.h"
 #include "sgx_report.h"
 #include "sgx_dcap_ql_wrapper.h"
@@ -60,6 +65,8 @@
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
 #endif
+
+using namespace std;
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -97,10 +104,38 @@ CLEANUP:
         sgx_destroy_enclave(eid);
         return ret;
 }
+
+
+vector<uint8_t> readBinaryContent(const string& filePath)
+{
+    ifstream file(filePath, ios::binary);
+    if (!file.is_open())
+    {
+        printf("Error: Unable to open file %s\n", filePath.c_str());
+        return {};
+    }
+
+    file.seekg(0, ios_base::end);
+    streampos fileSize = file.tellg();
+
+    file.seekg(0, ios_base::beg);
+    vector<uint8_t> retVal(fileSize);
+    file.read(reinterpret_cast<char*>(retVal.data()), fileSize);
+    file.close();
+    return retVal;
+}
+
+void usage()
+{
+    printf("\nOption:\n");
+    printf("\tTargetInfo <path/to/target_info>\"\n");
+    printf("\t\tUse target_info in the file instead of generating it by `sgx_qe_get_target_info` fucntion.\n\n");
+}
+
+
 int main(int argc, char* argv[])
 {
-    (void)(argc);
-    (void)(argv);
+
 
     int ret = 0;
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
@@ -114,6 +149,13 @@ int main(int argc, char* argv[])
     sgx_ql_certification_data_t *p_cert_data;
     FILE *fptr = NULL;
     bool is_out_of_proc = false;
+
+    //Just for sample use, better to change solid command line args solution in production env
+    if (argc != 1 && argc != 3) {
+        usage();
+        return 0;
+    }
+
     char *out_of_proc = getenv(SGX_AESM_ADDR);
     if(out_of_proc)
         is_out_of_proc = true;
@@ -168,10 +210,29 @@ int main(int argc, char* argv[])
     qe3_ret = sgx_qe_get_target_info(&qe_target_info);
     if (SGX_QL_SUCCESS != qe3_ret) {
         printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
-                ret = -1;
+        ret = -1;
         goto CLEANUP;
     }
     printf("succeed!");
+
+    if (argv[1] && !strcmp(argv[1], "TargetInfo")) {
+        printf("\nRead target_info:");
+        vector<uint8_t> target_info = readBinaryContent(argv[2]);
+        if (target_info.empty()) {
+            usage();
+            ret = -1;
+            goto CLEANUP;
+        }
+        printf(" path: %s:", argv[2]);
+        if (sizeof(qe_target_info) != target_info.size()) {
+            printf("Error: Invalid target info file.");
+            ret = -1;
+            goto CLEANUP;
+        }
+        memcpy(&qe_target_info, target_info.data(), sizeof(qe_target_info));
+    }
+    printf("succeed!");
+
     printf("\nStep2: Call create_app_report:");
     if(true != create_app_enclave_report(qe_target_info, &app_report)) {
         printf("\nCall to create_app_report() failed\n");
@@ -180,6 +241,17 @@ int main(int argc, char* argv[])
     }
 
     printf("succeed!");
+
+#if _WIN32
+    fopen_s(&fptr, "report.dat", "wb");
+#else
+    fptr = fopen("report.dat","wb");
+#endif
+    if( fptr ) {
+        fwrite(&app_report, sizeof(app_report), 1, fptr);
+        fclose(fptr);
+    }
+
     printf("\nStep3: Call sgx_qe_get_quote_size:");
     qe3_ret = sgx_qe_get_quote_size(&quote_size);
     if (SGX_QL_SUCCESS != qe3_ret) {

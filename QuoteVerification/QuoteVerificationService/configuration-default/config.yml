@@ -1,0 +1,93 @@
+#
+# Copyright (c) 2022, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#  * Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#  * Neither the name of Intel Corporation nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+service:
+  componentName:     '${QVS_SERVICE_COMPONENT_NAME:QuoteVerificationService}'
+  componentShort:    '${QVS_SERVICE_COMPONENT_SHORT:QVS}'
+  port:              '${QVS_SERVICE_PORT:8799}'
+  certFile:          '${QVS_SERVICE_CERT_FILE:}'
+  keyFile:           '${QVS_SERVICE_KEY_FILE:}'
+  tlsServerType:     '${QVS_SERVICE_TLS_SERVER_TYPE:TLS}'
+  caCertDirectories: '${QVS_CA_CERT_DIRECTORIES:certificates/internal_ca/}'
+  bodySizeLimits:    '${QVS_SERVICE_BODY_SIZE_LIMITS:{"json":"256kb"}}'
+  restClientTimeout: '${QVS_SERVICE_REST_CLIENT_TIMEOUT:5000}'
+
+logger:
+  # Valid log levels: trace, debug, info, warn, error, fatal, off,  UPPERCASE is not valid!
+  # global_log_level_js_file is used by the ansible to determine if any logs file will be created and in case of the "off"
+  # volumen /logs will not be mounted ...
+  category:           '${QVS_LOGGER_CATEGORY:QuoteVerificationService}'
+  levelFile:          '${QVS_LOGGER_LEVEL_FILE:off}' # You have to mount a directory with r/w rights
+  levelConsole:       '${QVS_LOGGER_LEVEL_CONSOLE:info}'
+  fileName:           '${QVS_LOGGER_FILE_NAME:}' # You have to mount a directory with r/w rights
+  multilineErrorLog:  '${QVS_LOGGER_MULTILINE_ERROR_LOG:true}'
+
+healthCheck:
+  intervalMs:    '${QVS_HEALTH_CHECK_INTERVAL_MS:60000}'
+  freshnessMs:   '${QVS_HEALTH_CHECK_FRESHNESS_MS:60000}'
+
+vcsClient:
+  host:                '${QVS_VCS_CLIENT_HOST:}'
+  port:                '${QVS_VCS_CLIENT_PORT:0}'
+  retries:             '${QVS_VCS_CLIENT_RETRIES:1}'
+  initialInterval:     '${QVS_VCS_CLIENT_INITIAL_INTERVAL:100}'
+  factor:              '${QVS_VCS_CLIENT_INTERVAL_FACTOR:1}'
+  certFile:            '${QVS_VCS_CLIENT_CERT_FILE:}'
+  keyFile:             '${QVS_VCS_CLIENT_KEY_FILE:}'
+  caCertDirectories:   '${QVS_VCS_CLIENT_CA_CERT_DIRECTORIES:certificates/internal_ca/}'
+  tlsClientType:       '${QVS_VCS_CLIENT_TLS_CLIENT_TYPE:MTLS}'
+  proxy:               '${QVS_VCS_CLIENT_PROXY:}'
+  servername:          '${QVS_VCS_CLIENT_SERVERNAME:}'
+
+pcsClient:
+  host:                '${QVS_PCS_CLIENT_HOST:api.trustedservices.intel.com}'
+  port:                '${QVS_PCS_CLIENT_PORT:443}'
+  retries:             '${QVS_PCS_CLIENT_RETRIES:1}'
+  initialInterval:     '${QVS_PCS_CLIENT_INITIAL_INTERVAL:100}'
+  factor:              '${QVS_PCS_CLIENT_INTERVAL_FACTOR:1}'
+  caCertDirectories:   '${QVS_PCS_CLIENT_CA_CERT_DIRECTORIES:certificates/internal_ca/}'
+  tlsClientType:       '${QVS_PCS_CLIENT_TLS_CLIENT_TYPE:TLS}'
+  proxy:               '${QVS_PCS_CLIENT_PROXY:}'
+  servername:          '${QVS_PCS_CLIENT_SERVERNAME:}'
+
+crlClient:
+  retries:             '${QVS_CRL_CLIENT_RETRIES:2}'
+  initialInterval:     '${QVS_CRL_CLIENT_INITIAL_INTERVAL:100}'
+  factor:              '${QVS_CRL_CLIENT_INTERVAL_FACTOR:3}'
+  proxy:               '${QVS_CRL_CLIENT_PROXY:}'
+
+cache:
+  ttl:         '${QVS_CACHE_TTL:900}'
+  checkPeriod: '${QVS_CACHE_CHECK_PERIOD:60}'
+  maxKeys:     '${QVS_CACHE_MAX_KEYS:1000}'
+
+target:
+  attestationReportSigningCaCertificate: '${QVS_ATTESTATION_REPORT_SIGNING_CA_CERTIFICATE:}'
+  attestationReportSigningCertificate: '${QVS_ATTESTATION_REPORT_SIGNING_CERTIFICATE:}'
+  trustedRootPublicKey: '${QVS_TRUSTED_ROOT_PUBLIC_KEY:3059301306072a8648ce3d020106082a8648ce3d030107034200040ba9c4c0c0c86193a3fe23d6b02cda10a8bbd4e88e48b4458561a36e705525f567918e2edc88e40d860bd0cc4ee26aacc988e505a953558c453f6b0904ae7394}'

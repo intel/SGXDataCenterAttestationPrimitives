@@ -29,10 +29,10 @@
  *
  */
 
-#include "qgs/qgs.message.pb-c.h"
 #include <sys/socket.h>
 #include <linux/vm_sockets.h>
 #include "tdx_attest.h"
+#include "qgs_msg_lib.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -46,6 +46,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <syslog.h>
+#include <assert.h>
 
 #define TDX_ATTEST_DEV_PATH "/dev/tdx-attest"
 #define CFG_FILE_PATH "/etc/tdx-attest.conf"
@@ -136,7 +137,7 @@ static unsigned int get_vsock_port(void)
 
             // range is ok, so we can convert to int
             port = (unsigned int)long_num & 0xFFFFFFFF;
-            #ifdef DBUG
+            #ifdef DEBUG
             fprintf(stdout, "\nGet the vsock port number [%u]\n", port);
             #endif
             break;
@@ -196,10 +197,13 @@ tdx_attest_error_t tdx_att_get_quote(
     get_quote_blob_t *p_get_quote_blob = NULL;
     tdx_report_t tdx_report;
     uint32_t msg_size = 0;
-    Qgs__Message__Response *resp = NULL;
-    Qgs__Message__Request request = QGS__MESSAGE__REQUEST__INIT;
-    Qgs__Message__Request__GetQuoteRequest get_quote_request =
-        QGS__MESSAGE__REQUEST__GET_QUOTE_REQUEST__INIT;
+
+    qgs_msg_error_t qgs_msg_ret = QGS_MSG_SUCCESS;
+    qgs_msg_header_t *p_header = NULL;
+    uint8_t *p_req = NULL;
+    const uint8_t *p_quote = NULL;
+    const uint8_t *p_selected_id = NULL;
+    uint32_t id_size = 0;
 
     if ((!p_att_key_id_list && list_size) ||
         (p_att_key_id_list && !list_size)) {
@@ -222,7 +226,7 @@ tdx_attest_error_t tdx_att_get_quote(
     }
     if (p_att_key_id_list && memcmp(p_att_key_id_list, &g_intel_tdqe_uuid,
                     sizeof(g_intel_tdqe_uuid))) {
-        ret = TDX_ATTEST_ERROR_INVALID_PARAMETER;
+        ret = TDX_ATTEST_ERROR_UNSUPPORTED_ATT_KEY_ID;
     }
     *pp_quote = NULL;
     memset(&tdx_report, 0, sizeof(tdx_report));
@@ -244,21 +248,30 @@ tdx_attest_error_t tdx_att_get_quote(
         goto ret_point;
     }
 
-    request.type = QGS__MESSAGE__REQUEST__MSG_GET_QUOTE_REQUEST;
-    get_quote_request.report.len = sizeof(tdx_report.d);
-    get_quote_request.report.data = tdx_report.d;
-    request.msg_case = QGS__MESSAGE__REQUEST__MSG_GET_QUOTE_REQUEST;
-    request.getquoterequest = &get_quote_request;
+    qgs_msg_ret = qgs_msg_gen_get_quote_req(tdx_report.d, sizeof(tdx_report.d),
+        NULL, 0, &p_req, &msg_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+        #ifdef DEBUG
+        fprintf(stdout, "\nqgs_msg_gen_get_quote_req return 0x%x\n", qgs_msg_ret);
+        #endif
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
 
-    // Add the size header
-    msg_size = (uint32_t)qgs__message__request__get_packed_size(&request);
+    if (msg_size > sizeof(p_get_quote_blob->p_buf)) {
+        #ifdef DEBUG
+        fprintf(stdout, "\nqmsg_size[%d] is too big\n", msg_size);
+        #endif
+        ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+        goto ret_point;
+    }
+
     p_get_quote_blob->trans_len[0] = (uint8_t)((msg_size >> 24) & 0xFF);
     p_get_quote_blob->trans_len[1] = (uint8_t)((msg_size >> 16) & 0xFF);
     p_get_quote_blob->trans_len[2] = (uint8_t)((msg_size >> 8) & 0xFF);
     p_get_quote_blob->trans_len[3] = (uint8_t)(msg_size & 0xFF);
 
-    // Serialization
-    qgs__message__request__pack(&request, p_get_quote_blob->p_buf);
+    memcpy(p_get_quote_blob->p_buf, p_req, msg_size);
 
     do {
         vsock_port = get_vsock_port();
@@ -367,37 +380,40 @@ tdx_attest_error_t tdx_att_get_quote(
         #endif
     }
 
-    resp = qgs__message__response__unpack(
-        NULL, in_msg_size, p_get_quote_blob->p_buf);
-    if (!resp) {
+    qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
+        p_get_quote_blob->p_buf, in_msg_size,
+        &p_selected_id, &id_size,
+        &p_quote, &quote_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+        #ifdef DEBUG
+        fprintf(stdout, "\nqgs_msg_inflate_get_quote_resp return 0x%x", qgs_msg_ret);
+        #endif
         ret = TDX_ATTEST_ERROR_UNEXPECTED;
         goto ret_point;
     }
 
-    switch (resp->type)
-    {
-    case QGS__MESSAGE__RESPONSE__MSG_GET_QUOTE_RESPONSE:
-        if (resp->getquoteresponse->error_code != 0) {
-            ret = TDX_ATTEST_ERROR_UNEXPECTED;
-            goto ret_point;
-        }
-        quote_size = (uint32_t)resp->getquoteresponse->quote.len;
-        *pp_quote = malloc(quote_size);
-        if (!*pp_quote) {
-            ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
-            goto ret_point;
-        }
-        memcpy(*pp_quote, resp->getquoteresponse->quote.data, quote_size);
-        if (p_quote_size) {
-            *p_quote_size = quote_size;
-        }
-        if (p_att_key_id) {
-            *p_att_key_id = g_intel_tdqe_uuid;
-        }
-        break;
-    default:
+    // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
+    p_header = (qgs_msg_header_t *)p_get_quote_blob->p_buf;
+    if (p_header->error_code != 0) {
+        #ifdef DEBUG
+        fprintf(stdout, "\nerror code in resp msg is 0x%x", p_header->error_code);
+        #endif
         ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
     }
+    *pp_quote = malloc(quote_size);
+    if (!*pp_quote) {
+        ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+    memcpy(*pp_quote, p_quote, quote_size);
+    if (p_quote_size) {
+        *p_quote_size = quote_size;
+    }
+    if (p_att_key_id) {
+        *p_att_key_id = g_intel_tdqe_uuid;
+    }
+    ret = TDX_ATTEST_SUCCESS;
 
 ret_point:
     if (s >= 0) {
@@ -406,7 +422,7 @@ ret_point:
     if (-1 != devfd) {
         close(devfd);
     }
-    protobuf_c_message_free_unpacked((ProtobufCMessage *)resp, NULL);
+    qgs_msg_free(p_req);
     free(p_get_quote_blob);
 
     return ret;

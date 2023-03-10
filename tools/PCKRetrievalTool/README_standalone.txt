@@ -68,4 +68,6 @@ And the retrieved data can also be uploaded to cache server if user provide the 
        $ sudo usermod -a -G sgx_prv <user name>
   3. If you are using this tool in Ubuntu 20.04, please execute the following command:
        $ sudo mount -o remount,exec /dev
+  4. If you are using this tool in Ubuntu 22.04, please execute this tool with the following command:
+       $ LD_LIBRARY_PATH=. ./PCKIDRetrievalTool [OPTION] 
 

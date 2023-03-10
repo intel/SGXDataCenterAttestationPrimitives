@@ -34,6 +34,7 @@
 #include "OpensslHelpers/OpensslTypes.h"
 #include "ParserUtils.h"
 #include "Utils/SafeMemcpy.h"
+#include "Utils/Logger.h"
 
 #include <cstring>
 
@@ -85,7 +86,7 @@ Signature::Signature(const ASN1_BIT_STRING* pSig)
 
     if(!sig)
     {
-        throw FormatException("Invalid certificate signature value: NULL");
+        LOG_AND_THROW(FormatException, "Invalid certificate signature value: NULL");
     }
 
     // internal pointers

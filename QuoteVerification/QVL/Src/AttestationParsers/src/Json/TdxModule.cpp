@@ -32,6 +32,7 @@
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "JsonParser.h"
 #include <tuple>
+#include "Utils/Logger.h"
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {
     const std::vector<uint8_t> &TdxModule::getAttributes() const {
@@ -49,7 +50,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
     TdxModule::TdxModule(const ::rapidjson::Value& tdxModule) {
         if (!tdxModule.IsObject())
         {
-            throw FormatException("TDX Module should be an object");
+            LOG_AND_THROW(FormatException, "TDX Module should be an object");
         }
         JsonParser jsonParser;
 
@@ -58,21 +59,21 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 
         if (status != JsonParser::OK)
         {
-            throw FormatException("TDX Module JSON should have [mrsigner] field and it should be 48 bytes encoded as hexstring");
+            LOG_AND_THROW(FormatException, "TDX Module JSON should have [mrsigner] field and it should be 48 bytes encoded as hexstring");
         }
 
         std::tie(_attributes, status) = jsonParser.getBytesFieldOf(tdxModule, "attributes", 16);
 
         if (status != JsonParser::OK)
         {
-            throw FormatException("TDX Module JSON should have [attributes] field and it should be 8 bytes encoded as hexstring");
+            LOG_AND_THROW(FormatException, "TDX Module JSON should have [attributes] field and it should be 8 bytes encoded as hexstring");
         }
 
         std::tie(_attributesMask, status) = jsonParser.getBytesFieldOf(tdxModule, "attributesMask", 16);
 
         if (status != JsonParser::OK)
         {
-            throw FormatException("TDX Module JSON should have [attributesMask] field and it should be 8 bytes encoded as hexstring");
+            LOG_AND_THROW(FormatException, "TDX Module JSON should have [attributesMask] field and it should be 8 bytes encoded as hexstring");
         }
     }
 }}}}}

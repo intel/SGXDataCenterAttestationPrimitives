@@ -187,7 +187,7 @@
       <FunctionLevelLinking>
       </FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib;AttestationParsers.lib;AttestationLibrary.lib;libsgx_tsgxssl.lib;libsgx_tsgxssl_crypto.lib</AdditionalDependencies>
@@ -223,7 +223,7 @@
       <FunctionLevelLinking>
       </FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/d2FH4- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -259,7 +259,7 @@
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\Qve\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>
       </FunctionLevelLinking>
@@ -297,7 +297,7 @@
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\package\include;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/src;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QvE\Include;$(ProjectDir)..\..\../QuoteGeneration/pce_wrapper/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(SGXSDKInstallPath)include;$(SGXSDKInstallPath)include\tlibc;$(SGXSDKInstallPath)include\libc++;$(SGXSDKInstallPath)include\epid;$(VCToolsInstallDir)\include;$(ProjectDir)..\..\Qve\Enclave;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>
       </FunctionLevelLinking>
@@ -339,7 +339,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib;AttestationParsers.lib;AttestationLibrary.lib;libsgx_tsgxssl.lib;libsgx_tsgxssl_crypto.lib</AdditionalDependencies>
@@ -375,7 +375,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib;AttestationParsers.lib;AttestationLibrary.lib;libsgx_tsgxssl.lib;libsgx_tsgxssl_crypto.lib</AdditionalDependencies>
@@ -412,7 +412,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>NDEBUG;ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/d2FH4- %(AdditionalOptions)</AdditionalOptions>
       <UseFullPaths>false</UseFullPaths>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -453,7 +453,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC;SGX_TRUSTED;_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib;AttestationParsers.lib;AttestationLibrary.lib;libsgx_tsgxssl.lib;libsgx_tsgxssl_crypto.lib</AdditionalDependencies>

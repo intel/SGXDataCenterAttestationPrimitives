@@ -704,7 +704,7 @@ tee_att_error_t tee_att_config_t::getencryptedppid(sgx_target_info_t& pce_target
     }
 
     if (encrypted_ppid_ret_size != REF_RSA_OAEP_3072_MOD_SIZE) {
-        SE_TRACE(SE_TRACE_ERROR, "PCE returned unexpected returned encrypted PPID size.\n");
+        SE_TRACE(SE_TRACE_ERROR, "PCE returned incorrect encrypted PPID size.\n");
         return TEE_ATT_ERROR_UNEXPECTED;
     }
 
@@ -770,7 +770,7 @@ tee_att_error_t tee_att_config_t::write_persistent_data(const uint8_t *p_buf,
                 SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n", dlerror());
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_write_persistent_data()' in the platform library. %s\n", error);
         }
     } else {
         SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
@@ -847,7 +847,7 @@ tee_att_error_t tee_att_config_t::read_persistent_data(uint8_t *p_buf,
                 SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
         } else {
-            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %s\n", dlerror());
+            SE_TRACE(SE_TRACE_WARNING, "Couldn't find 'sgx_ql_read_persistent_data()' in the platform library. %s\n", error);
         }
     } else {
         SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());

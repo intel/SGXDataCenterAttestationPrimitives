@@ -1,11 +1,14 @@
 [package]
 name = "app"
-version = "0.1.0"
-edition = "2018"
+version = "0.2.0"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sgx-dcap-quoteverify-rs = { path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-rs"}
-sgx-dcap-quoteverify-sys = { path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-sys"}
-clap = "2.34"
+clap = { version = "4.0", features = ["derive"] }
+sgx-dcap-quoteverify-rs = { version = "0.2.1", path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-rs"}
+sgx-dcap-quoteverify-sys = { version = "0.2.0", path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-sys"}
+
+[features]
+TD_ENV = []

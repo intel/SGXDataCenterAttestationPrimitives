@@ -171,7 +171,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             if (supp_data.p_data != NULL) {
                 memset(supp_data.p_data, 0, supp_data.data_size);
             }
-            
+
             //Just print error in sample
             //
             else {
@@ -217,7 +217,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         // e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
         // https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteVerification/QvE/Enclave/linux/config.xml#L4
         // or you can get latest QvE ISVSVN in QvE Identity JSON file from
-        // https://api.trustedservices.intel.com/sgx/certification/v3/qve/identity
+        // https://api.trustedservices.intel.com/sgx/certification/v4/qve/identity
         // Make sure you are using trusted & latest QvE ISV SVN as threshold
         // Warning: The function may return erroneous result if QvE ISV SVN has been modified maliciously.
         //
@@ -290,9 +290,9 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             printf("\tInfo: Supplemental data Major Version: %d\n", p->major_version);
             printf("\tInfo: Supplemental data Minor Version: %d\n", p->minor_version);
 
-            //print SA list if exist
-
-            if (strlen(p->sa_list) > 0) {
+            //print SA list if exist, SA list is supported from version 3.1
+            //
+            if (p->version > 3 && strlen(p->sa_list) > 0) {
                 printf("\tInfo: Advisory ID: %s\n", p->sa_list);
             }
         }
@@ -404,9 +404,9 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             printf("\tInfo: Supplemental data Major Version: %d\n", p->major_version);
             printf("\tInfo: Supplemental data Minor Version: %d\n", p->minor_version);
 
-            //print SA list if exist
-
-            if (strlen(p->sa_list) > 0) {
+            //print SA list if exist, SA list is supported from version 3.1
+            //
+            if (p->version > 3 && strlen(p->sa_list) > 0) {
                 printf("\tInfo: Advisory ID: %s\n", p->sa_list);
             }
         }

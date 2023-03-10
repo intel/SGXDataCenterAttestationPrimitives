@@ -34,6 +34,8 @@
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
 
+#include "Utils/Logger.h"
+
 namespace intel { namespace sgx { namespace dcap {
 
 TCBInfoVerifier::TCBInfoVerifier()
@@ -66,27 +68,32 @@ Status TCBInfoVerifier::verify(
     if(!_commonVerifier->checkSha256EcdsaSignature(
             tcbJson.getSignature(), tcbJson.getInfoBody(), tcbSigningCert->getPubKey()))
     {
+        LOG_ERROR("TCB Info signature is invalid");
         return STATUS_TCB_INFO_INVALID_SIGNATURE;
     }
 
     const auto rootCa = chain.getRootCert();
     if(expirationDate > rootCa->getValidity().getNotAfterTime())
     {
+        LOG_ERROR("TCB Signing Chain Root CA is expired");
         return STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED;
     }
 
     if (expirationDate > tcbSigningCert->getValidity().getNotAfterTime())
     {
+        LOG_ERROR("TCB Signing Certificate is expired");
         return STATUS_SGX_SIGNING_CERT_CHAIN_EXPIRED;
     }
 
     if (rootCaCrl.expired(expirationDate))
     {
+        LOG_ERROR("ROOT CA CRL is expired");
         return STATUS_SGX_CRL_EXPIRED;
     }
 
     if(expirationDate > tcbJson.getNextUpdate())
     {
+        LOG_ERROR("TCB Info is expired");
         return STATUS_SGX_TCB_INFO_EXPIRED;
     }
 

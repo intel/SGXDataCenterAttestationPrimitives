@@ -45,6 +45,10 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE AppCore)
 
+if (BUILD_LOGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SGX_LOGS=true)
+    target_compile_definitions(AppCore PUBLIC SGX_LOGS=true)
+endif()
 ######### QVL Enclave related settings #################################################################################
 
 if (BUILD_ENCLAVE)

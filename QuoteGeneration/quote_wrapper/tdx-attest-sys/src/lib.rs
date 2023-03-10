@@ -39,11 +39,8 @@
 //! * Intel(R) SGX DCAP PCCS (Provisioning Certificate Caching Service)
 //!
 //! *Please refer to [SGX DCAP Linux installation guide](
-//! https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf)
+//! https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf)
 //! to install above dependencies.*
-//! 
-//! *Note that you need to change **\#version\#** to actual version number in URL, such as 1.4.*\
-//! *Note that you need to install **libtdx-attest-dev** and **clang** for this package.*
 
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]

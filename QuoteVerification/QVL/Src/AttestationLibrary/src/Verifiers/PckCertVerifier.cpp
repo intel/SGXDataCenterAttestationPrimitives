@@ -30,6 +30,8 @@
  */
 
 #include "PckCertVerifier.h"
+#include "Utils/Logger.h"
+#include "Utils/TimeUtils.h"
 
 #include <OpensslHelpers/SignatureVerification.h>
 #include <CertVerification/X509Constants.h>
@@ -55,48 +57,74 @@ Status PckCertVerifier::verify(const CertificateChain &chain,
                                const std::time_t& expirationDate) const
 {
     const auto x509InChainRootCa = chain.getRootCert();
-    if(!x509InChainRootCa || !_baseVerifier.commonNameContains(x509InChainRootCa->getSubject(), constants::SGX_ROOT_CA_CN_PHRASE))
+    if(!x509InChainRootCa)
     {
+        LOG_ERROR("ROOT CA is missing");
+        return STATUS_SGX_ROOT_CA_MISSING;
+    }
+
+    if(!_baseVerifier.commonNameContains(x509InChainRootCa->getSubject(), constants::SGX_ROOT_CA_CN_PHRASE))
+    {
+        LOG_ERROR("RootCa from chain. CN in Subject field does not contain \"SGX Root CA\" phrase");
         return STATUS_SGX_ROOT_CA_MISSING;
     }
 
     const auto x509InChainIntermediateCa = chain.getIntermediateCert();
-    if(!x509InChainIntermediateCa || !_baseVerifier.commonNameContains(x509InChainIntermediateCa->getSubject(), constants::SGX_INTERMEDIATE_CN_PHRASE))
+    if(!x509InChainIntermediateCa)
     {
+        LOG_ERROR("Intermediate CA is missing");
+        return STATUS_SGX_INTERMEDIATE_CA_MISSING;
+    }
+
+    if(!_baseVerifier.commonNameContains(x509InChainIntermediateCa->getSubject(), constants::SGX_INTERMEDIATE_CN_PHRASE))
+    {
+        LOG_ERROR("IntermediateCa from chain. CN in Subject field does not contain \"CA\" phrase");
         return STATUS_SGX_INTERMEDIATE_CA_MISSING;
     }
 
     const auto x509InChainPckCert = chain.getPckCert();
-    if(!x509InChainPckCert || !_baseVerifier.commonNameContains(x509InChainPckCert->getSubject(), constants::SGX_PCK_CN_PHRASE))
+    if(!x509InChainPckCert)
     {
+        LOG_ERROR("PCK cert is missing");
+        return STATUS_SGX_PCK_MISSING;
+    }
+
+    if(!_baseVerifier.commonNameContains(x509InChainPckCert->getSubject(), constants::SGX_PCK_CN_PHRASE))
+    {
+        LOG_ERROR("PCK Cert from chain. CN in Subject field does not contain \"SGX PCK Certificate\" phrase");
         return STATUS_SGX_PCK_MISSING;
     }
 
     const auto rootVerificationStatus = _commonVerifier->verifyRootCACert(*x509InChainRootCa);
     if(rootVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("Root CA verification failed: {}", rootVerificationStatus);
         return rootVerificationStatus;
     }
 
     const auto intermediateVerificationStatus = _commonVerifier->verifyIntermediate(*x509InChainIntermediateCa, *x509InChainRootCa);
     if(intermediateVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("Intermediate CA verification failed: {}", intermediateVerificationStatus);
         return intermediateVerificationStatus;
     }
 
     const auto pckVerificationStatus = verifyPCKCert(*x509InChainPckCert, *x509InChainIntermediateCa);
     if(pckVerificationStatus != STATUS_OK)
     {
+        LOG_ERROR("PCK Certificate verification failed: {}", pckVerificationStatus);
         return pckVerificationStatus;
     } 
 
     if(rootCa.getSubject() != rootCa.getIssuer())
     {
+        LOG_ERROR("PCK RootCA is not self signed");
         return STATUS_TRUSTED_ROOT_CA_INVALID;
     }
 
     if(x509InChainRootCa->getSignature().getRawDer() != rootCa.getSignature().getRawDer())
     {
+        LOG_ERROR("Signature of trusted root doesn't match signature of root cert from PCK Cert Chain. Chain is not trusted.");
         return STATUS_SGX_PCK_CERT_CHAIN_UNTRUSTED;
     }
 
@@ -106,47 +134,68 @@ Status PckCertVerifier::verify(const CertificateChain &chain,
     const auto checkRootCaCrlCorrectness = _crlVerifier->verify(rootCaCrl, *x509InChainRootCa);
     if(checkRootCaCrlCorrectness != STATUS_OK)
     {
+        LOG_ERROR("PCK Revocation lists - RootCaCrl verification failed: {}", checkRootCaCrlCorrectness);
         return checkRootCaCrlCorrectness;
     } 
 
     const auto checkIntermediateCrlCorrectness = _crlVerifier->verify(intermediateCrl, *x509InChainIntermediateCa);
     if(checkIntermediateCrlCorrectness != STATUS_OK)
     {
+        LOG_ERROR("PCK Revocation lists - IntermediateCaCrl verification failed: {}", checkIntermediateCrlCorrectness);
         return checkIntermediateCrlCorrectness;
     }
 
     if(rootCaCrl.isRevoked(*x509InChainIntermediateCa))
     {
+        LOG_ERROR("Intermediate CA Cert is revoked by Root CA");
         return STATUS_SGX_INTERMEDIATE_CA_REVOKED;
     }
 
     if(intermediateCrl.isRevoked(*x509InChainPckCert))
     {
+        LOG_ERROR("PCK Cert is revoked by Intermediate CA");
         return STATUS_SGX_PCK_REVOKED;
     }
 
-    if(expirationDate > x509InChainRootCa->getValidity().getNotAfterTime())
+    const auto validityDateRootCA = x509InChainRootCa->getValidity().getNotAfterTime();
+    if(expirationDate > validityDateRootCA)
     {
+        LOG_ERROR("PCK Cert Chain Root CA is expired. Expiration date: {}, validity: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(validityDateRootCA));
         return STATUS_SGX_PCK_CERT_CHAIN_EXPIRED;
     }
 
-    if(expirationDate > x509InChainIntermediateCa->getValidity().getNotAfterTime())
+    auto const validityDateIntermediateCA = x509InChainIntermediateCa->getValidity().getNotAfterTime();
+    if(expirationDate > validityDateIntermediateCA)
     {
+        LOG_ERROR("PCK Cert Chain Intermediate CA is expired. Expiration date: {}, validity: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(validityDateIntermediateCA));
         return STATUS_SGX_PCK_CERT_CHAIN_EXPIRED;
     }
 
-    if(expirationDate > x509InChainPckCert->getValidity().getNotAfterTime())
+    auto const validityDatePCK = x509InChainPckCert->getValidity().getNotAfterTime();
+    if(expirationDate > validityDatePCK)
     {
+        LOG_ERROR("PCK Cert Chain PCK Cert is expired. Expiration date: {}, validity: {}",
+                  logger::timeToString(expirationDate), logger::timeToString(validityDatePCK));
         return STATUS_SGX_PCK_CERT_CHAIN_EXPIRED;
     }
 
     if(rootCaCrl.expired(expirationDate))
     {
+        LOG_ERROR("ROOT CA CRL is expired. Expiration date: {}, validity date range - from: {} to: {}",
+                  logger::timeToString(expirationDate),
+                  logger::timeToString(rootCaCrl.getValidity().notBeforeTime),
+                  logger::timeToString(rootCaCrl.getValidity().notAfterTime));
         return STATUS_SGX_CRL_EXPIRED;
     }
 
     if(intermediateCrl.expired(expirationDate))
     {
+        LOG_ERROR("Intermediate CA CRL is expired. Expiration date: {}, validity date range - from: {} to: {}",
+                  logger::timeToString(expirationDate),
+                  logger::timeToString(rootCaCrl.getValidity().notBeforeTime),
+                  logger::timeToString(rootCaCrl.getValidity().notAfterTime));
         return STATUS_SGX_CRL_EXPIRED;
     }
 
@@ -156,9 +205,15 @@ Status PckCertVerifier::verify(const CertificateChain &chain,
 Status PckCertVerifier::verifyPCKCert(const dcap::parser::x509::PckCertificate &pckCert,
                                       const dcap::parser::x509::Certificate &intermediate) const
 {
-    if(pckCert.getIssuer() != intermediate.getSubject()
-        || !_commonVerifier->checkSignature(pckCert, intermediate))
+    if(pckCert.getIssuer() != intermediate.getSubject())
     {
+        LOG_ERROR("PCK Cert is not signed by Intermediate CA");
+        return STATUS_SGX_PCK_INVALID_ISSUER;
+    }
+
+    if(!_commonVerifier->checkSignature(pckCert, intermediate))
+    {
+        LOG_ERROR("PCK Cert signature is invalid");
         return STATUS_SGX_PCK_INVALID_ISSUER;
     }
 

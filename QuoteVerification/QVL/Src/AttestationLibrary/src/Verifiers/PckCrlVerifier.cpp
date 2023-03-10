@@ -30,6 +30,7 @@
  */
 
 #include "PckCrlVerifier.h"
+#include "Utils/Logger.h"
 
 #include <CertVerification/X509Constants.h>
 #include <OpensslHelpers/SignatureVerification.h>
@@ -57,16 +58,19 @@ Status PckCrlVerifier::verify(const pckparser::CrlStore &crl, const dcap::parser
        crlIssuer.locationName != certSubject.getLocationName() ||
        crlIssuer.stateName != certSubject.getStateName())
     {
+        LOG_ERROR("CRL has unknown issuer");
         return STATUS_SGX_CRL_UNKNOWN_ISSUER;
     }
 
     if(!_commonVerifier->checkStandardExtensions(crl.getExtensions(), dcap::constants::CRL_REQUIRED_EXTENSIONS))
     {
+        LOG_ERROR("CRL does not contain all the required, valid extensions");
         return STATUS_SGX_CRL_INVALID_EXTENSIONS;
     }
 
     if(!_commonVerifier->checkSignature(crl, cert))
     {
+        LOG_ERROR("CRL signature verification failure");
         return STATUS_SGX_CRL_INVALID_SIGNATURE;
     }
 

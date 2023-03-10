@@ -55,6 +55,8 @@ pub use tdx_attest_sys::tdx_uuid_t;
 /// # Return
 /// - ***TDX_ATTEST_SUCCESS***\
 /// Successfully generated the Quote.\
+/// - ***TDX_ATTEST_ERROR_UNSUPPORTED_ATT_KEY_ID***\
+/// The platform Quoting infrastructure does not support any of the keys.\
 /// - ***TDX_ATT_ERROR_INVALID_PARAMETER***\
 /// The parameter is incorrect.\
 /// - ***TDX_ATTEST_ERROR_DEVICE_FAILURE***\
@@ -178,6 +180,8 @@ pub fn tdx_att_get_report(
 /// The parameter is incorrect.
 /// - ***TDX_ATTEST_ERROR_DEVICE_FAILURE***\
 /// Failed to acess tdx attest device.\
+/// - ***TDX_ATTEST_ERROR_INVALID_RTMR_INDEX***\
+/// Only supported RTMR index is 2 and 3.\
 /// - ***TDX_ATTEST_ERROR_EXTEND_FAILURE***\
 /// Failed to extend data.\
 /// - ***TDX_ATTEST_ERROR_NOT_SUPPORTED***\
@@ -225,19 +229,13 @@ pub fn tdx_att_extend(
 /// ```
 pub fn tdx_att_get_supported_att_key_ids(
 ) -> (tdx_attest_error_t, Option<Vec<tdx_uuid_t>>){
-    const MAX_ATT_KEY_ID_COUNT: usize = 20;
     let mut list_count = 0;
     unsafe {
         let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(std::ptr::null_mut() as *mut tdx_uuid_t, &mut list_count);
         match result {
             tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                if list_count > MAX_ATT_KEY_ID_COUNT as u32 {
-                    return (tdx_attest_error_t::TDX_ATTEST_ERROR_UNEXPECTED, None);
-                }
-                let box_buf: Box<[tdx_uuid_t; MAX_ATT_KEY_ID_COUNT]> = Box::new([tdx_uuid_t{d: [0; 16usize],}; MAX_ATT_KEY_ID_COUNT]);
-                let p_buf = Box::into_raw(box_buf);
-                let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(p_buf as *mut tdx_uuid_t, &mut list_count);
-                let att_key_id_list = Box::from_raw(p_buf)[..list_count as usize].to_vec();
+                let mut att_key_id_list = vec![tdx_uuid_t{d: [0; 16usize],}; list_count as usize];
+                let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(att_key_id_list.as_mut_ptr(), &mut list_count);
                 match result {
                     tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                         return (result, Some(att_key_id_list))

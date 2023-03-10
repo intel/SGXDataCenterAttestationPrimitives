@@ -59,6 +59,7 @@ jni_dcap_quoteverify_lib := libjni_dcap_quoteverify.so
 
 
 QvL_BUILD_PATH := ../../QuoteVerification/dcap_quoteverify/linux
+DISTDIR := src/main/c/lib
 JNI_C_SRCS := src/main/c/jni/sgx_dcap_quoteverify_wrap.c
 JNI_C_SRCS += src/main/c/jni/jni_native_lib_init.c
 JNI_C_OBJS := $(JNI_C_SRCS:.c=.o)
@@ -69,7 +70,8 @@ CFLAGS += $(INCLUDE_DIR)
 CFLAGS += -fvisibility=hidden
 
 lib_jni_dcap_quoteverify: $(JNI_C_OBJS)
-	$(CC) -shared -Wl,-soname=$(jni_dcap_quoteverify_lib) -o src/main/c/lib/$(jni_dcap_quoteverify_lib).$(JNI_WRAPPER_VERSION) $^
+	test -d "$(DISTDIR)" || mkdir "$(DISTDIR)"
+	$(CC) -shared -Wl,-soname=$(jni_dcap_quoteverify_lib) -o $(DISTDIR)/$(jni_dcap_quoteverify_lib).$(JNI_WRAPPER_VERSION) $^
 	ldconfig -n src/main/c/lib
 
 %.o : %.c

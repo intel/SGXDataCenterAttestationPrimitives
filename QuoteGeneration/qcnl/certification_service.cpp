@@ -61,7 +61,7 @@ string CertificationService::get_custom_param_string() {
     s = regex_replace(s, regex("\\+"), "%2B");
     s = regex_replace(s, regex("\\/"), "%2F");
     s = regex_replace(s, regex("\\="), "%3D");
-    return "customParameters=" + s;
+    return "customParameter=" + s;
 }
 
 sgx_qcnl_error_t CertificationService::build_pckcert_options(const sgx_ql_pck_cert_id_t *p_pck_cert_id,

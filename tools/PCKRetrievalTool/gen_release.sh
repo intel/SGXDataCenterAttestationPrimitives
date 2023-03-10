@@ -53,9 +53,6 @@ cp ../../../../build/linux/libsgx_enclave_common.so $rel_dir_name/libsgx_enclave
 cp ../../../../build/linux/libsgx_urts.so $rel_dir_name/libsgx_urts.so
 cp README_standalone.txt $rel_dir_name/README.txt
 cp License.txt $rel_dir_name
-cd $rel_dir_name
-ln -s libsgx_urts.so libsgx_urts.so.1
-cd ..
 
 tar cvpzf $rel_dir_name.tar.gz $rel_dir_name
 

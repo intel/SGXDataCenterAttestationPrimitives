@@ -182,7 +182,7 @@ ret_point:
  *                  PPID_RSA3072_ENCRYPTED.
  *
  * @param key_size [In] The size in bytes of the supplied p_public_key buffer.  Currently, it must be equal to the size
- *                 of an RSA3072 public key. 4 byte 'e' and 256 byte 'n'.
+ *                 of an RSA3072 public key. 4 bytes 'e' and 384 bytes 'n'.
  * @param p_public_key
  *                 [In, Out] Pointer to the buffer that will contain the public key used to encrypt the PPID. It must
  *                 not be NULL and the buffer must reside within the enclave's memory space.

@@ -42,6 +42,7 @@ def main():
     parser_fetch.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/")
     parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.json")
     parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals; default: platform_collaterals.json")
+    parser_fetch.add_argument("-p", "--platform", help="Specify what kind of platform you want to fetch FMSPCs and tcbinfos for; default: all", choices=['all','client','E3','E5'])
     parser_fetch.set_defaults(func=pcs_fetch)
 
     #  subparser for collect 
@@ -171,6 +172,9 @@ def pcs_fetch(args):
         output_file = "platform_collaterals.json"
         if args.output_file:
             output_file = args.output_file
+        fmspc_platform = "all"
+        if args.platform:
+            fmspc_platform = args.platform
 
         # Get PCS ApiKey from keyring
         credential = Credentials()
@@ -272,6 +276,12 @@ def pcs_fetch(args):
                     break
                 if save_to_file.lower() == "n":
                     break
+        
+        # Get fmspcs for specified platform
+        fmspcs = pcsclient.get_fmspcs(fmspc_platform, 'ascii')
+        if fmspcs != None:
+            for fmspc in fmspcs:
+                fmspc_set.add(fmspc['fmspc'])
 
         # output.collaterals.tcbinfos
         for fmspc in fmspc_set:

@@ -63,5 +63,9 @@ target_link_libraries(${SUBPROJECT_NAME}
     GTest::gmock_main
 )
 
+if(MSVC)
+	target_compile_definitions(${SUBPROJECT_NAME} PUBLIC ATTESTATIONPARSERS_STATIC)
+endif()
+
 install(TARGETS ${SUBPROJECT_NAME} DESTINATION bin)
 add_test(NAME ${SUBPROJECT_NAME} COMMAND <TARGET_FILE:${SUBPROJECT_NAME}>)

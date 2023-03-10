@@ -33,6 +33,7 @@
 #include <OpensslHelpers/Bytes.h>
 #include "EnclaveIdentityParser.h"
 #include "EnclaveIdentityV2.h"
+#include "Utils/Logger.h"
 
 #include <tuple>
 #include <memory>
@@ -43,11 +44,13 @@ namespace intel { namespace sgx { namespace dcap {
     {
         if (!jsonParser.parse(input))
         {
+            LOG_ERROR("Enclave Identity format error. Enclave Identity: {}", input);
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT);
         }
 
         if (!jsonParser.getRoot()->IsObject())
         {
+            LOG_ERROR("Invalid Enclave Identity. A valid root has not been supplied");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -55,11 +58,20 @@ namespace intel { namespace sgx { namespace dcap {
 
         if (signature == nullptr)
         {
+            LOG_ERROR("Enclave Identity format error. Enclave Identity: {}", input);
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_FORMAT);
         }
 
-        if(!signature->IsString() || signature->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
+        if(!signature->IsString())
         {
+            LOG_ERROR("Invalid Enclave Identity. A signature is not a string");
+            throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
+        }
+
+        if(signature->GetStringLength() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2)
+        {
+            LOG_ERROR("Invalid Enclave Identity. A signature: {} has wrong length. Expected: {}, actual: {}",
+                      signature->GetString(), constants::ECDSA_P256_SIGNATURE_BYTE_LEN * 2, signature->GetStringLength());
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -72,12 +84,14 @@ namespace intel { namespace sgx { namespace dcap {
 
         if (identityField == nullptr || !identityField->IsObject())
         {
+            LOG_ERROR("Invalid Enclave Identity. A valid identityField has not been supplied.");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
         std::tie(version, status) = jsonParser.getIntFieldOf(*identityField, "version");
         if (status != JsonParser::OK)
         {
+            LOG_ERROR("Invalid Enclave Identity. A version of IdentityField is not valid.");
             throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_INVALID);
         }
 
@@ -89,13 +103,17 @@ namespace intel { namespace sgx { namespace dcap {
                 std::unique_ptr<dcap::EnclaveIdentityV2> identity = std::unique_ptr<dcap::EnclaveIdentityV2>(new EnclaveIdentityV2(*identityField)); // TODO make std::make_unique work in SGX enclave
                 if (identity->getStatus() != STATUS_OK)
                 {
+                    LOG_ERROR("EnclaveIdentityV2 parsing error: {}", identity->getStatus());
                     throw ParserException(identity->getStatus());
                 }
                 identity->setSignature(signatureBytes);
                 return identity;
             }
             default:
+            {
+                LOG_ERROR("Enclave Identity version: {} is not supported", version);
                 throw ParserException(STATUS_SGX_ENCLAVE_IDENTITY_UNSUPPORTED_VERSION);
+            }
         }
     }
 

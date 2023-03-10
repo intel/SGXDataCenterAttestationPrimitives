@@ -9,6 +9,5 @@ Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
 Package: sgx-ra-service
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends},libsgx-ra-uefi (>= @dep_version@),libsgx-ra-network (>= @dep_version@)
-Description: Intel(R) Software Guard Extensions Multi-Package Registration Agent Service
- Enables SGX Remote attestation for Multi-Package platforms
+Description: Intel(R) Software Guard Extensions Multi-Package Registration Agent Service: Enables SGX Remote Attestation for Multi-Package platforms
 

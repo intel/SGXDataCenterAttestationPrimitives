@@ -33,6 +33,7 @@
 
 #include "OpensslHelpers/OidUtils.h"
 #include "ParserUtils.h"
+#include "Utils/Logger.h"
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace x509 {
 
@@ -65,7 +66,7 @@ void ProcessorPckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
     {
         std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [" + std::to_string(PROCESSOR_CA_EXTENSION_COUNT) +
                           "] elements when given [" + std::to_string(stackEntries) + "]";
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 }
 

@@ -59,6 +59,7 @@ struct PCE_status {
     sgx_ql_request_policy_t m_pce_enclave_load_policy;
     sgx_enclave_id_t m_pce_eid;
     sgx_misc_attribute_t m_pce_attributes;
+    metadata_t m_pce_metadata;
     char pce_path[MAX_PATH];
 
     PCE_status() :
@@ -67,6 +68,7 @@ struct PCE_status {
     {
         se_mutex_init(&m_pce_mutex);
         memset(&m_pce_attributes, 0, sizeof(m_pce_attributes));
+        memset(&m_pce_metadata, 0, sizeof(m_pce_metadata));
         memset(pce_path, 0, sizeof(pce_path));
     }
     ~PCE_status() {
@@ -150,17 +152,16 @@ bool get_pce_path(
 
 static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
     sgx_misc_attribute_t *p_pce_attributes,
-    sgx_launch_token_t *p_launch_token)
+    metadata_t *p_metadata)
 {
     sgx_status_t sgx_status = SGX_SUCCESS;
+    sgx_pce_error_t ret = SGX_PCE_INTERFACE_UNAVAILABLE;
     int enclave_lost_retry_time = 1;
-    int launch_token_updated = 0;
 #if defined(_MSC_VER)
     TCHAR pce_enclave_path[MAX_PATH] = _T("");
 #else
     char pce_enclave_path[MAX_PATH] = "";
 #endif
-    memset(p_launch_token, 0, sizeof(*p_launch_token));
 
     int rc = se_mutex_lock(&g_pce_status.m_pce_mutex);
     if (rc != 1)
@@ -169,54 +170,61 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
         return SGX_PCE_INTERFACE_UNAVAILABLE;
     }
 
-    // Load the PCE
-    if (g_pce_status.m_pce_eid == 0)
-    {
-        if (!get_pce_path(pce_enclave_path, MAX_PATH))
-            return SGX_PCE_INTERFACE_UNAVAILABLE;
-        do
+    do {
+        // Load the PCE
+        if (g_pce_status.m_pce_eid == 0)
         {
-            SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for PCE. %s\n", pce_enclave_path);
-            sgx_status = sgx_create_enclave(pce_enclave_path,
-                0,
-                p_launch_token,
-                &launch_token_updated,
-                p_pce_eid,
-                p_pce_attributes);
-            if (SGX_SUCCESS != sgx_status)
-            {
-                SE_PROD_LOG("Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
-            }
+            if (!get_pce_path(pce_enclave_path, MAX_PATH))
+                break;
+            if (SGX_SUCCESS != sgx_get_metadata(pce_enclave_path, &g_pce_status.m_pce_metadata))
+                break;
 
-            // Retry in case there was a power transition that resulted is losing the enclave.
-        } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
-        if (sgx_status != SGX_SUCCESS)
-        {
-            rc = se_mutex_unlock(&g_pce_status.m_pce_mutex);
-            if (rc != 1)
+            do
             {
-                SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
-                return SGX_PCE_INTERFACE_UNAVAILABLE;
+                sgx_launch_token_t launch_token = { 0 };
+                int launch_token_updated;
+                SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for PCE. %s\n", pce_enclave_path);
+                sgx_status = sgx_create_enclave(pce_enclave_path,
+                    0,
+                    &launch_token,
+                    &launch_token_updated,
+                    p_pce_eid,
+                    p_pce_attributes);
+                if (SGX_SUCCESS != sgx_status)
+                {
+                    SE_PROD_LOG("Error, call sgx_create_enclave for PCE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                }
+
+                // Retry in case there was a power transition that resulted is losing the enclave.
+            } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
+            if (sgx_status != SGX_SUCCESS)
+            {
+                if (sgx_status == SGX_ERROR_OUT_OF_EPC)
+                    ret = SGX_PCE_OUT_OF_EPC;
+                else
+                    ret = SGX_PCE_INTERFACE_UNAVAILABLE;
+                break;
             }
-            if (sgx_status == SGX_ERROR_OUT_OF_EPC)
-                return SGX_PCE_OUT_OF_EPC;
-            else
-                return SGX_PCE_INTERFACE_UNAVAILABLE;
+            g_pce_status.m_pce_eid = *p_pce_eid;
+            memcpy_s(&g_pce_status.m_pce_attributes, sizeof(sgx_misc_attribute_t), p_pce_attributes, sizeof(sgx_misc_attribute_t));
         }
-        g_pce_status.m_pce_eid = *p_pce_eid;
-        memcpy_s(&g_pce_status.m_pce_attributes, sizeof(sgx_misc_attribute_t), p_pce_attributes, sizeof(sgx_misc_attribute_t));
-    }
-    else {
-        *p_pce_eid = g_pce_status.m_pce_eid;
-        memcpy_s(p_pce_attributes, sizeof(sgx_misc_attribute_t), &g_pce_status.m_pce_attributes, sizeof(sgx_misc_attribute_t));
-    }
+        else {
+            *p_pce_eid = g_pce_status.m_pce_eid;
+            memcpy_s(p_pce_attributes, sizeof(sgx_misc_attribute_t), &g_pce_status.m_pce_attributes, sizeof(sgx_misc_attribute_t));
+        }
+        if (p_metadata)
+                memcpy_s(p_metadata, sizeof(metadata_t), &g_pce_status.m_pce_metadata, sizeof(metadata_t));
+
+        ret = SGX_PCE_SUCCESS;
+    } while(0);
+
     rc = se_mutex_unlock(&g_pce_status.m_pce_mutex);
     if (rc != 1)
     {
         SE_TRACE(SE_TRACE_ERROR, "Failed to unlock mutex");
         return SGX_PCE_INTERFACE_UNAVAILABLE;
     }
-    return SGX_PCE_SUCCESS;
+    return ret;
 }
 
 static void unload_pce(bool force = false)
@@ -260,31 +268,17 @@ sgx_pce_error_t sgx_pce_get_target(sgx_target_info_t *p_target,
 {
     sgx_misc_attribute_t pce_attributes;
     sgx_enclave_id_t pce_eid = 0;
-    sgx_launch_token_t launch_token = { 0 };
     metadata_t metadata;
-#if defined(_MSC_VER)
-    TCHAR pce_enclave_path[MAX_PATH] = _T("");
-#else
-    char pce_enclave_path[MAX_PATH] = "";
-#endif
     if ((NULL == p_target) ||
         (NULL == p_isvsvn))
     {
         return(SGX_PCE_INVALID_PARAMETER);
     }
 
-    if (!get_pce_path(pce_enclave_path, MAX_PATH))
-        return SGX_PCE_INTERFACE_UNAVAILABLE;
-
-    if (SGX_SUCCESS != sgx_get_metadata(pce_enclave_path, &metadata))
-    {
-        return SGX_PCE_INTERFACE_UNAVAILABLE;
-    }
-
     // Load the PCE enclave
     sgx_pce_error_t pce_status = load_pce(&pce_eid,
         &pce_attributes,
-        &launch_token);
+        &metadata);
     if (SGX_PCE_SUCCESS != pce_status)
     {
         return pce_status;
@@ -319,7 +313,6 @@ sgx_pce_error_t sgx_get_pce_info(const sgx_report_t *p_report,
     sgx_enclave_id_t pce_eid = 0;
     sgx_status_t sgx_status = SGX_SUCCESS;
     sgx_misc_attribute_t pce_attributes;
-    sgx_launch_token_t launch_token = { 0 };
     uint32_t ae_error;
     uint32_t enclave_lost_retry_time = 1;
     pce_info_t pce_info;
@@ -339,7 +332,7 @@ sgx_pce_error_t sgx_get_pce_info(const sgx_report_t *p_report,
         // Load the PCE enclave
         pce_status = load_pce(&pce_eid,
             &pce_attributes,
-            &launch_token);
+            NULL);
         if (SGX_PCE_SUCCESS != pce_status)
         {
             return pce_status;
@@ -420,7 +413,6 @@ sgx_pce_error_t sgx_get_pce_info_without_ppid(sgx_isv_svn_t* p_pce_isvsvn, uint1
     sgx_enclave_id_t pce_eid = 0;
     sgx_status_t sgx_status = SGX_SUCCESS;
     sgx_misc_attribute_t pce_attributes;
-    sgx_launch_token_t launch_token = { 0 };
     uint32_t ae_error;
     uint32_t enclave_lost_retry_time = 1;
     pce_info_t pce_info;
@@ -435,7 +427,7 @@ sgx_pce_error_t sgx_get_pce_info_without_ppid(sgx_isv_svn_t* p_pce_isvsvn, uint1
         // Load the PCE enclave
         pce_status = load_pce(&pce_eid,
             &pce_attributes,
-            &launch_token);
+            NULL);
         if (SGX_PCE_SUCCESS != pce_status)
         {
             return pce_status;
@@ -499,7 +491,6 @@ sgx_pce_error_t sgx_pce_sign_report(const sgx_isv_svn_t *p_isv_svn,
     sgx_enclave_id_t pce_eid = 0;
     sgx_status_t sgx_status = SGX_SUCCESS;
     sgx_misc_attribute_t pce_attributes;
-    sgx_launch_token_t launch_token = { 0 };
     uint32_t ae_error;
     uint32_t enclave_lost_retry_time = 1;
     psvn_t psvn;
@@ -520,7 +511,7 @@ sgx_pce_error_t sgx_pce_sign_report(const sgx_isv_svn_t *p_isv_svn,
         // Load the PCE enclave
         pce_status = load_pce(&pce_eid,
             &pce_attributes,
-            &launch_token);
+            NULL);
         if (SGX_PCE_SUCCESS != pce_status)
         {
             return pce_status;

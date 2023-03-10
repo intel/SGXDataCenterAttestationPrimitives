@@ -83,7 +83,7 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name,
 #else
 #define PCE_ENCLAVE_NAME  "libsgx_pce.signed.so.1"
 #define ID_ENCLAVE_NAME   "libsgx_id_enclave.signed.so.1"
-#define SGX_URTS_LIBRARY "libsgx_urts.so.1"             
+#define SGX_URTS_LIBRARY "libsgx_urts.so"             
 #define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY "libmpa_uefi.so.1"
 #define FINDFUNCTIONSYM   dlsym
 #define CLOSELIBRARYHANDLE  dlclose
@@ -380,7 +380,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
         p_mp_uefi_get_request == NULL ||
         p_mp_uefi_get_registration_status == NULL ||
         p_mp_uefi_terminate == NULL) {
-        printf("Error: coulnd't find uefi function interface(s) in the UEFI shared library.\n");
+        printf("Error: couldn't find uefi function interface(s) in the UEFI shared library.\n");
         CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
@@ -477,7 +477,7 @@ uefi_status_t set_registration_status()
     if (p_mp_uefi_init == NULL ||
         p_mp_uefi_set_registration_status == NULL ||
         p_mp_uefi_terminate == NULL) {
-        printf("Error: cound't find uefi function interface(s) in the multi-package agent shared library.\n");
+        printf("Error: couldn't find uefi function interface(s) in the multi-package agent shared library.\n");
         CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }

@@ -85,7 +85,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_WINDOWS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4101</DisableSpecificWarnings>
@@ -106,7 +106,7 @@
       <Optimization>Disabled</Optimization>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WINDOWS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4101</DisableSpecificWarnings>
@@ -128,7 +128,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\QVL/Src/;$(ProjectDir)..\..\QVL/Src/ThirdParty/rapidjson/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include;$(ProjectDir)..\..\QVL/Src/AttestationCommons/include/Utils;$(ProjectDir)..\..\QVL/Src/AttestationParsers/include/;$(ProjectDir)..\..\QVL/Src/AttestationParsers/src;$(ProjectDir)..\..\QVL/Src/AttestationLibrary/include/;..\Include;$(ProjectDir)..\..\../QuoteGeneration/quote_wrapper/common/inc;$(ProjectDir)..\..\../QuoteGeneration/common/inc/internal;$(VCToolsInstallDir)\include;$(SolutionDir)prebuilt\openssl\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;OPENSSL_NO_FILENAMES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;OPENSSL_NO_FILENAMES;ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4101</DisableSpecificWarnings>
@@ -155,7 +155,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>_WINDOWS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;ATTESTATIONLIBRARY_STATIC;ATTESTATIONPARSERS_STATIC</PreprocessorDefinitions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4101</DisableSpecificWarnings>

@@ -34,6 +34,7 @@ import Constants from '../constants/index.js';
 import { sequelize, PcsVersion } from '../dao/models/index.js';
 import Umzug from 'umzug';
 import * as fs from 'fs';
+import url from 'url';
 
 export function get_api_version_from_url(url) {
   if (!url) return 0;
@@ -110,7 +111,7 @@ async function db_migration() {
               }
               return Promise.all(queries);
             } else {
-              const migration = await import(path);
+              const migration = await import(url.pathToFileURL(path));
               return migration.default.up(sequelize);
             }
           },
@@ -126,7 +127,7 @@ async function db_migration() {
                 return Promise.all(queries);
               }
             } else {
-              const migration = await import(path);
+              const migration = await import(url.pathToFileURL(path));
               return migration.default.down(sequelize);
             }
           },

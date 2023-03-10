@@ -139,14 +139,14 @@ public:
     tee_att_error_t ecdsa_get_quote(const sgx_report2_t* p_app_report,
         sgx_quote4_t* p_quote,
         uint32_t quote_size);
-
-private:
 #ifndef _MSC_VER
-    void*
+    void *
 #else
     HMODULE
 #endif
-        get_qpl_handle();
+    get_qpl_handle();
+
+  private:
     bool get_qe_path(tee_att_ae_type_t type,
         TCHAR* p_file_path,
         size_t buf_size);

@@ -107,6 +107,7 @@ TEST_F(CertificateUT, certificateConstructors)
     ASSERT_EQ(copyCertificate.getPubKey(), certificate.getPubKey());
     ASSERT_EQ(copyCertificate.getInfo(), certificate.getInfo());
     ASSERT_EQ(copyCertificate.getPem(), certificate.getPem());
+    ASSERT_EQ(copyCertificate.getCrlDistributionPoint(), certificate.getCrlDistributionPoint());
 }
 
 TEST_F(CertificateUT, certificateGetters)
@@ -132,6 +133,8 @@ TEST_F(CertificateUT, certificateGetters)
     const std::vector<x509::Extension> expectedExtensions = constants::REQUIRED_X509_EXTENSIONS;
     ASSERT_THAT(certificate.getExtensions().size(), expectedExtensions.size());
 
+    ASSERT_EQ(certificate.getCrlDistributionPoint(),
+              "Full Name:  URI:https://certificates.trustedservices.intel.com/IntelSGXRootCA.crl");
     free(pubKey);
 }
 

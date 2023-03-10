@@ -94,7 +94,7 @@ typedef struct _sgx_ql_qv_supplemental_t
         uint32_t version;                       ///< 'version' is the backward compatible legacy representation
         struct {
             uint16_t major_version;             ///< If this major version doesn't change, the size of the structure may change and new fields appended to the end but old minor version structure can still be 'cast'
-                                                ///< If this major version does changed, then the strucutre has been modified in a way that makes the older definitions non-backwards compatible. i.e. You cannot 'cast' older definitions
+                                                ///< If this major version does change, then the structure has been modified in a way that makes the older definitions non-backwards compatible. i.e. You cannot 'cast' older definitions
             uint16_t minor_version;             ///< If this version changes, new fields have been appended to the end of the previous minor version definition of the structure
                                                 ///< Set to 1 to support SA_List.  Set to 0 to support everything except the SA List
         };
@@ -135,11 +135,11 @@ typedef struct _sgx_ql_qv_supplemental_t
 typedef struct _tee_supp_data_descriptor_t
 {
     uint16_t major_version;             ///< Input. Major version of supplemental data
-                                        ///< If == 0, then return latest version of the sgx_ql_qv_supplemental_t structure 
+                                        ///< If == 0, then return latest version of the sgx_ql_qv_supplemental_t structure
                                         ///< If <= latest supported, return the latest minor version associated with that major version
                                         ///< > latest supported, return an error (SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED)
-    
-    uint32_t data_size;                 ///< Output. Supplemental data size of `p_data`, which returned by API `tee_verify_quote()`
+
+    uint32_t data_size;                 ///< Input. Supplemental data size of `p_data`, which returned by API `tee_get_supplemental_data_version_and_size()`
     uint8_t *p_data;                    ///< Output. Pointer to supplemental data
 }tee_supp_data_descriptor_t;
 

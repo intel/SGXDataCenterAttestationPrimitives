@@ -35,6 +35,7 @@ PACKAGE_ROOT_FOLDER=pkgroot
 PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
 USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
+USR_INC_PATH=/usr/$(INC_DIR)
 
 USR_LIB_VER=1.0.0
 SPLIT_VERSION=$(word $2,$(subst ., ,$1))
@@ -60,4 +61,6 @@ $(PACKAGES):
 	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(ETC_DIR)/.*), \
 		install -d $(shell readlink -m $(DESTDIR)/$@/$(ETC_DIR)) && \
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(ETC_DIR)/* $(DESTDIR)/$@/$(ETC_DIR))
-
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/.*), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_INC_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/* $(DESTDIR)/$@/$(USR_INC_PATH))

@@ -31,7 +31,6 @@
 
 
 TOP_DIR := ../../../..
-MITIGATION-CVE-2020-0551 := LOAD
 include $(TOP_DIR)/ae/buildenv.mk
 
 AENAME := tdqe

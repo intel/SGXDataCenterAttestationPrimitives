@@ -1,0 +1,2 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/qpl/inc/sgx_default_quote_provider.h	<installdir>/include/sgx_default_quote_provider.h	0	main	STP

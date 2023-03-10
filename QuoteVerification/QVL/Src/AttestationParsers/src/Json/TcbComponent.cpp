@@ -32,6 +32,7 @@
 #include <tuple>
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "JsonParser.h"
+#include "Utils/Logger.h"
 
 namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {
     uint8_t TcbComponent::getSvn() const {
@@ -49,7 +50,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
     TcbComponent::TcbComponent(const ::rapidjson::Value& tcbComponent) {
         if (!tcbComponent.IsObject())
         {
-            throw FormatException("TCB Component should be an object");
+            LOG_AND_THROW(FormatException, "TCB Component should be an object");
         }
         _svn = 0;
         JsonParser jsonParser;
@@ -60,7 +61,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 
         if (status != JsonParser::OK)
         {
-            throw FormatException("TCB Component JSON should has [svn] field and it should be unsigned integer");
+            LOG_AND_THROW(FormatException, "TCB Component JSON should has [svn] field and it should be unsigned integer");
         }
 
         _svn = static_cast<uint8_t>(svnTemporary);
@@ -68,13 +69,13 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
         std::tie(_category, status)  = jsonParser.getStringFieldOf(tcbComponent, "category");
         if (status == JsonParser::Invalid)
         {
-            throw FormatException("TCB Component JSON's [category] field should be string");
+            LOG_AND_THROW(FormatException, "TCB Component JSON's [category] field should be string");
         }
 
         std::tie(_type, status)  = jsonParser.getStringFieldOf(tcbComponent, "type");
         if (status == JsonParser::Invalid)
         {
-            throw FormatException("TCB Component JSON's [type] field should be string");
+            LOG_AND_THROW(FormatException, "TCB Component JSON's [type] field should be string");
         }
     }
 

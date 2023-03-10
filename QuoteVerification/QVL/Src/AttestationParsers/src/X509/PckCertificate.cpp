@@ -34,6 +34,7 @@
 #include "ParserUtils.h"
 #include "X509Constants.h"
 #include "OpensslHelpers/OidUtils.h"
+#include "Utils/Logger.h"
 
 #include <algorithm> // find_if
 
@@ -103,7 +104,7 @@ stack_st_ASN1_TYPE* PckCertificate::getSgxExtensions()
     if(sgxExtension == _extensions.end())
     {
         // Certificate has no SGX extensions, probably Root CA or Intermediate CA
-        throw InvalidExtensionException("Certificate is missing SGX Extensions OID[" + oids::SGX_EXTENSION + "]");
+        LOG_AND_THROW(InvalidExtensionException, "Certificate is missing SGX Extensions OID[" + oids::SGX_EXTENSION + "]");
     }
 
     // WARNING! Using this temporary pointer is mandatory!
@@ -113,7 +114,8 @@ stack_st_ASN1_TYPE* PckCertificate::getSgxExtensions()
 
     if(!topSequence)
     {
-        throw InvalidExtensionException("d2i_ASN1_TYPE cannot parse data to correct type " + getLastError());
+        auto err = "d2i_ASN1_TYPE cannot parse data to correct type " + getLastError();
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 
     crypto::validateOid(oids::SGX_EXTENSION, topSequence.get(), V_ASN1_SEQUENCE);
@@ -129,7 +131,7 @@ void PckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
         std::string err = "OID [" + oids::SGX_EXTENSION + "] expected to contain [" +
                 std::to_string(PROCESSOR_CA_EXTENSION_COUNT) + "] or [" + std::to_string(PLATFORM_CA_EXTENSION_COUNT) +
                 "] elements when given [" + std::to_string(stackEntries) + "]";
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException,err);
     }
 
     std::vector<Extension::Type> expectedExtensions = constants::PCK_REQUIRED_SGX_EXTENSIONS;
@@ -146,7 +148,7 @@ void PckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
         {
             std::string err = "OID tuple [" + oids::SGX_EXTENSION + "] expected number of elements is [2] given [" +
                                std::to_string(oidTupleEntries) + "]";
-            throw InvalidExtensionException(err);
+            LOG_AND_THROW(InvalidExtensionException, err);
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
@@ -195,8 +197,7 @@ void PckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
 
         // Now add the last element with no delimiter
         err += oids::type2Description(expectedExtensions.back()) + "]";
-
-        throw InvalidExtensionException(err);
+        LOG_AND_THROW(InvalidExtensionException, err);
     }
 }
 

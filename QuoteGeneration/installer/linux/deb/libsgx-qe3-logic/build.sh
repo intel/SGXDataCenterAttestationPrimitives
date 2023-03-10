@@ -35,6 +35,7 @@ set -e
 
 SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR="${SCRIPT_DIR}/../../../../"
+LINUX_BUILD_DIR=$(readlink -m "${SGX_SDK}/lib64")
 LINUX_INSTALLER_DIR="${ROOT_DIR}/installer/linux"
 LINUX_INSTALLER_COMMON_DIR="${LINUX_INSTALLER_DIR}/common"
 LINUX_INSTALLER_COMMON_QE3_LOGIC_DIR="${LINUX_INSTALLER_COMMON_DIR}/libsgx-qe3-logic"
@@ -111,7 +112,7 @@ rename_tarball() {
 
 build_deb_package() {
     pushd ${SCRIPT_DIR}/${DEB_BUILD_FOLDER}
-    SOURCE_DATE_EPOCH="$(date +%s)" dpkg-buildpackage -us -uc
+    SOURCE_DATE_EPOCH="$(date +%s)" LINUX_BUILD_DIR="${LINUX_BUILD_DIR}" dpkg-buildpackage -us -uc
     popd
 }
 

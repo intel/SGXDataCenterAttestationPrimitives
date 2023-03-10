@@ -52,6 +52,9 @@ endif()
 hunter_add_package(OpenSSL)
 find_package(OpenSSL 1.1.1 EXACT REQUIRED)
 
+hunter_add_package(spdlog)
+find_package(spdlog CONFIG REQUIRED)
+
 file(GLOB SOURCE_FILES src/*.cpp
         src/Json/*.cpp
         src/X509/*.cpp
@@ -76,6 +79,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson
+        spdlog::spdlog_header_only
         )
 
 target_link_libraries(${PROJECT_NAME}Static PUBLIC
@@ -83,6 +87,7 @@ target_link_libraries(${PROJECT_NAME}Static PUBLIC
         OpenSSL::SSL
         OpenSSL::Crypto
         rapidjson
+        spdlog::spdlog_header_only
         )
 
 ######### QVL Enclave related settings #################################################################################

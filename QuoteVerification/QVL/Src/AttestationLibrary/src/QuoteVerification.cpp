@@ -53,6 +53,10 @@
 
 #include <SgxEcdsaAttestation/QuoteVerification.h>
 #include <Version/Version.h>
+#include <Utils/Logger.h>
+
+// On Windows in one of headers STATUS_INVALID_PARAMETER macro is defined and it conflicts with our status name so undef it.
+#undef STATUS_INVALID_PARAMETER
 
 static constexpr size_t EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN = 3;
 static constexpr size_t EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN = 2;
@@ -84,6 +88,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
     }
     catch (const std::runtime_error&)
     {
+        LOG_ERROR("Can't get current time or it was not provided");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -93,6 +98,7 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         !crls[0] ||
         !crls[1])
     {
+        LOG_ERROR("pemCertChain, pemRootCaCertificate, CRLs (RootCaCrl, IntermediateCaCrl) was not provided");
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
@@ -101,17 +107,27 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
 
     if(status != STATUS_OK)
     {
+        LOG_ERROR("PCK Cert Chain parse error: {}", status);
         return status;
     }
 
     if(chain.length() != EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN)
     {
+        LOG_ERROR("PCK chain length is not correct. Expected: {}, actual: {}, cert chain: {}",
+                  EXPECTED_CERTIFICATE_COUNT_IN_PCK_CHAIN, chain.length(), pemCertChain);
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
     dcap::pckparser::CrlStore rootCaCrl, intermediateCrl;
-    if(!rootCaCrl.parse(crls[0]) || !intermediateCrl.parse(crls[1]))
+    if(!rootCaCrl.parse(crls[0]))
     {
+        LOG_ERROR("rootCaCrl parsing failed. RootCaCrl: {}", crls[0]);
+        return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
+    }
+
+    if(!intermediateCrl.parse(crls[1]))
+    {
+        LOG_ERROR("IntermediateCaCrl parsing failed. IntermediateCaCrl: {}", crls[1]);
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
@@ -120,8 +136,9 @@ Status sgxAttestationVerifyPCKCertificate(const char *pemCertChain, const char *
         auto rootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return dcap::PckCertVerifier{}.verify(chain, rootCaCrl, intermediateCrl, rootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex)
     {
+        LOG_ERROR("Trusted RootCA parsing failed: {}", ex.what());
         return STATUS_TRUSTED_ROOT_CA_UNSUPPORTED_FORMAT;
     }
 }
@@ -172,6 +189,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     }
     catch (const std::runtime_error&)
     {
+        LOG_ERROR("Can't get current time or it was not provided");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -180,6 +198,7 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
        !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
+        LOG_ERROR("TcbInfo, pemCertChain, stringRootCaCrl, pemRootCaCertificate was not provided");
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
@@ -188,12 +207,14 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     {
         tcbInfoJson = dcap::parser::json::TcbInfo::parse(tcbInfo);
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex)
     {
+        LOG_ERROR("TcbInfo format error: {}, tcbInfo: {}", ex.what(), tcbInfo);
         return STATUS_SGX_TCB_INFO_UNSUPPORTED_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException&)
+    catch (const dcap::parser::InvalidExtensionException& ex)
     {
+        LOG_ERROR("TcbInfo invalid extension error: {}, tcbInfo: {}", ex.what(), tcbInfo);
         return STATUS_SGX_TCB_INFO_INVALID;
     }
 
@@ -201,17 +222,21 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
     const auto status = chain.parse(pemCertChain);
     if (status != STATUS_OK)
     {
+        LOG_ERROR("TCBInfo Signing chain parse error: {}", status);
         return status;
     }
 
     if(chain.length() != EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN)
     {
+        LOG_ERROR("TCBInfo Signing chain length is not correct. Expected: {}, actual: {}, cert chain: {}",
+                  EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN, chain.length(), pemCertChain);
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
     dcap::pckparser::CrlStore rootCaCrl;
     if(!rootCaCrl.parse(stringRootCaCrl))
     {
+        LOG_ERROR("RootCA CRL parsing failed. CRL: {}", stringRootCaCrl);
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
@@ -220,12 +245,14 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return dcap::TCBInfoVerifier{}.verify(tcbInfoJson, chain, rootCaCrl, trustedRootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex)
     {
+        LOG_ERROR("Trusted RootCA parsing failed: {}", ex.what());
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException&)
+    catch (const dcap::parser::InvalidExtensionException& ex)
     {
+        LOG_ERROR("Trusted RootCA parsing failed: {}", ex.what());
         return STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS;
     }
 }
@@ -233,7 +260,6 @@ Status sgxAttestationVerifyTCBInfo(const char *tcbInfo, const char *pemCertChain
 Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, const char *pemCertChain, const char *stringRootCaCrl,
         const char *pemRootCaCertificate, const time_t* expirationDate)
 {
-
     time_t currentTime;
     try
     {
@@ -241,6 +267,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     }
     catch (const std::runtime_error&)
     {
+        LOG_ERROR("Can't get current time or it was not provided");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -249,6 +276,7 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
        !stringRootCaCrl ||
        !pemRootCaCertificate)
     {
+        LOG_ERROR("enclaveIdentityString, pemCertChain, stringRootCaCrl, pemRootCaCertificate was not provided");
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
@@ -267,17 +295,21 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
     const auto status = chain.parse(pemCertChain);
     if(status != STATUS_OK)
     {
+        LOG_ERROR("TCBInfo Signing chain parse error: {}", status);
         return status;
     }
 
     if(chain.length() != EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN)
     {
+        LOG_ERROR("TCBInfo Signing chain length is not correct. Expected: {}, actual: {}, cert chain: {}",
+                  EXPECTED_CERTIFICATE_COUNT_IN_TCB_CHAIN, chain.length(), pemCertChain);
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
 
     dcap::pckparser::CrlStore rootCaCrl;
     if(!rootCaCrl.parse(stringRootCaCrl))
     {
+        LOG_ERROR("RootCA CRL parsing failed. CRL: {}", stringRootCaCrl);
         return STATUS_SGX_CRL_UNSUPPORTED_FORMAT;
     }
 
@@ -286,12 +318,14 @@ Status sgxAttestationVerifyEnclaveIdentity(const char *enclaveIdentityString, co
         auto trustedRootCa = dcap::parser::x509::Certificate::parse(pemRootCaCertificate);
         return dcap::EnclaveIdentityVerifier{}.verify(*enclaveIdentity, chain, rootCaCrl, trustedRootCa, currentTime);
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex)
     {
+        LOG_ERROR("Trusted RootCA parsing failed: {}", ex.what());
         return STATUS_UNSUPPORTED_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException&)
+    catch (const dcap::parser::InvalidExtensionException& ex)
     {
+        LOG_ERROR("Trusted RootCA parsing failed: {}", ex.what());
         return STATUS_SGX_ROOT_CA_INVALID_EXTENSIONS;
     }
 }
@@ -305,6 +339,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
        !pckCrl ||
        !tcbInfoJson)
     {
+        LOG_ERROR("rawQuote, pemPckCertificate, pckCrl, tcbInfoJson was not provided");
         return STATUS_MISSING_PARAMETERS;
     }
    
@@ -316,6 +351,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     dcap::Quote quote;
     if(!quote.parse(vecQuote) || !quote.validate())
     {
+        LOG_ERROR("Quote format verification failure");
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
@@ -323,6 +359,7 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     dcap::pckparser::CrlStore pckCrlStore;
     if(!pckCrlStore.parse(pckCrl))
     {
+        LOG_ERROR("PCK Revocation list is invalid. pckCrl: {}", pckCrl);
         return STATUS_UNSUPPORTED_PCK_RL_FORMAT;
     }
 
@@ -332,12 +369,14 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
     {
         tcbInfo = dcap::parser::json::TcbInfo::parse(tcbInfoJson);
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex)
     {
+        LOG_ERROR("TcbInfo format error: {}", ex.what());
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException&)
+    catch (const dcap::parser::InvalidExtensionException& ex)
     {
+        LOG_ERROR("TcbInfo invalid extension error: {}", ex.what());
         return STATUS_UNSUPPORTED_TCB_INFO_FORMAT;
     }
 
@@ -348,23 +387,26 @@ Status sgxAttestationVerifyQuote(const uint8_t* rawQuote, uint32_t quoteSize, co
         try {
             enclaveIdentity = parser.parse(qeIdentityJson);
         }
-        catch (const dcap::ParserException&)
+        catch (const dcap::ParserException& ex)
         {
+            LOG_ERROR("Enclave Identity parsing error: {}", ex.what());
             return STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
         }
     }
 
     try
     {
-        auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate); /// 4.1.2.4.3
+        auto pckCert = dcap::parser::x509::PckCertificate::parse(pemPckCertificate);
         return dcap::QuoteVerifier{}.verify(quote, pckCert, pckCrlStore, tcbInfo, enclaveIdentity.get(), dcap::EnclaveReportVerifier());
     }
-    catch (const dcap::parser::FormatException&)
+    catch (const dcap::parser::FormatException& ex) /// 4.1.2.4.3
     {
+        LOG_ERROR("PCK Certificate format error: {}", ex.what());
         return STATUS_UNSUPPORTED_PCK_CERT_FORMAT;
     }
-    catch (const dcap::parser::InvalidExtensionException&) /// 4.1.2.4.4
+    catch (const dcap::parser::InvalidExtensionException& ex) /// 4.1.2.4.4
     {
+        LOG_ERROR("PCK Certificate invalid extension error: {}", ex.what());
         return STATUS_INVALID_PCK_CERT;
     }
 }
@@ -373,6 +415,7 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
 {
     if(!enclaveReport || !enclaveIdentity)
     {
+        LOG_ERROR("enclaveReport, enclaveIdentity was not provided");
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
@@ -386,11 +429,13 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
                                      dcap::constants::ENCLAVE_REPORT_BYTE_LEN,
                                      end))
     {
+        LOG_ERROR("Enclave Report parsing as binary data representation failure");
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
     if(from != end)
     {
+        LOG_ERROR("Enclave Report parsing as binary data representation failure. EnclaveReport could not be iterated through {} bytes", end - from);
         return STATUS_SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT;
     }
 
@@ -401,9 +446,10 @@ Status sgxAttestationVerifyEnclaveReport(const uint8_t* enclaveReport, const cha
     {
         enclaveIdentityParsed = parser.parse(enclaveIdentity);
     }
-    catch(const dcap::ParserException &e)
+    catch(const dcap::ParserException &ex)
     {
-        return e.getStatus();
+        LOG_ERROR("Enclave identity parsing error: {}", ex.what());
+        return ex.getStatus();
     }
 
     return dcap::EnclaveReportVerifier{}.verify(enclaveIdentityParsed.get(), eReport);
@@ -417,6 +463,7 @@ Status sgxAttestationGetQECertificationDataSize(
     if(!rawQuote ||
        !qeCertificationDataSize)
     {
+        LOG_ERROR("Quote or output pointer for size was not provided.");
         return STATUS_MISSING_PARAMETERS;
     }
 
@@ -427,6 +474,7 @@ Status sgxAttestationGetQECertificationDataSize(
     dcap::Quote quote;
     if(!quote.parse(vecQuote) || !quote.validate())
     {
+        LOG_ERROR("Can't parse or validate quote");
         return Status::STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
@@ -446,6 +494,7 @@ Status sgxAttestationGetQECertificationData(
        !qeCertificationData||
        !qeCertificationDataType)
     {
+        LOG_ERROR("Quote, certifation data or certification date type was not provided");
         return STATUS_MISSING_PARAMETERS;
     }
 
@@ -457,6 +506,7 @@ Status sgxAttestationGetQECertificationData(
 
     if(!quote.parse(vecQuote) || !quote.validate())
     {
+        LOG_ERROR("Can't parse or validate quote");
         return STATUS_UNSUPPORTED_QUOTE_FORMAT;
     }
 
@@ -464,6 +514,7 @@ Status sgxAttestationGetQECertificationData(
 
     if(qeCertificationDataSize != quoteCertificationData.parsedDataSize)
     {
+        LOG_ERROR("Provided certification data size doesn't match one in quote");
         return STATUS_INVALID_QE_CERTIFICATION_DATA_SIZE;
     }
 
@@ -473,4 +524,33 @@ Status sgxAttestationGetQECertificationData(
     std::copy(std::begin(quoteCertificationData.data), std::end(quoteCertificationData.data), qeCertificationData);
 
     return STATUS_OK;
+}
+
+
+void sgxAttestationLoggerSetup(const char *name, const char *consoleLogLevel, const char *fileLogLevel,
+                               const char *fileName, const char *pattern)
+{
+#ifndef SGX_LOGS
+    // suppress unused variable warning when building enclave
+    (void)name;
+    (void)consoleLogLevel;
+    (void)fileLogLevel;
+    (void)fileName;
+    (void)pattern;
+#endif
+#ifdef SGX_LOGS
+    logger::init(name, consoleLogLevel, fileLogLevel, fileName, pattern);
+#endif
+}
+
+void sgxAttestationLoggerSetCustomField(const char *key, const char *value)
+{
+#ifndef SGX_LOGS
+    // suppress unused variable warning when building enclave
+    (void)key;
+    (void)value;
+#endif
+#ifdef SGX_LOGS
+    logger::setCustomField(key, value);
+#endif
 }

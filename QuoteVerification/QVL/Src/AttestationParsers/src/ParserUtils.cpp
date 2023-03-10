@@ -34,6 +34,7 @@
 #include "ParserUtils.h"
 #include "OpensslHelpers/OpensslTypes.h"
 #include "Utils/TimeUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/objects.h>
 #include <openssl/x509.h>
@@ -51,6 +52,7 @@ std::string obj2Str(const ASN1_OBJECT* obj)
 {
     if(!obj)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -66,6 +68,7 @@ std::vector<uint8_t> bn2Vec(const BIGNUM* bn)
 {
     if(!bn)
     {
+        LOG_WARN("Provided object is NULL");
         return {};
     }
 
@@ -86,6 +89,7 @@ std::string x509NameToString(const X509_NAME* name)
 {
     if(!name)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -115,6 +119,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(!name)
     {
+        LOG_WARN("Provided object is NULL");
         return "";
     }
 
@@ -124,6 +129,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(X509_NAME_entry_count(name) <= 0)
     {
+        LOG_WARN("Can't get any entries");
         return "";
     }
 
@@ -131,6 +137,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(position == -1)
     {
+        LOG_WARN("NID {} can't be found", nid);
         return "";
     }
 
@@ -138,6 +145,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(!entry)
     {
+        LOG_WARN("Entry at position {} can't be found");
         return "";
     }
 
@@ -145,6 +153,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
     const int asn1EstimatedStrLen = ASN1_STRING_length(asn1);
     if(asn1EstimatedStrLen <= 0)
     {
+        LOG_WARN("Can't get data for entry");
         return "";
     }
 
@@ -154,6 +163,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
 
     if(len < 0)
     {
+        LOG_WARN("Can't convert ASN1_STRING to UTF8");
         return "";
     }
 
@@ -162,6 +172,7 @@ std::string getNameEntry(X509_NAME* name, int nid)
     // shouldn't happened, but who knows
     if(asn1EstimatedStrLen != len)
     {
+        LOG_WARN("Estimated string length is not equal to actual length {} != {}", asn1EstimatedStrLen, len);
         return "";
     }
 
@@ -189,7 +200,8 @@ std::time_t asn1TimeToTimet(
     {
         // We're here if the format is invalid, thus
         // validity settings in cert should be considered invalid
-        throw FormatException(getLastError());
+        auto err = getLastError();
+        LOG_AND_THROW(FormatException, err);
     }
 
     return resultTime + pday * SECONDS_IN_A_DAY + psec;

@@ -123,7 +123,7 @@ force_look:
 
 clean:
 	@rm -f .config_* $(Quote_Name)  $(Quote_C_Objects) $(Quote_Cpp_Objects) \
-	    tdqe_u.* id_enclave_u.*
+	    $(Quote_C_Depends) $(Quote_Cpp_Depends) tdqe_u.* id_enclave_u.*
 	@make -C $(PCE_Library_Dir) clean
 	@make -C $(TDQE_Dir) clean
 	@make -C $(ID_ENCLAVE_Dir) clean

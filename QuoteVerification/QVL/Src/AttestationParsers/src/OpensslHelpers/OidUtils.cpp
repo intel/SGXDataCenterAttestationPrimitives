@@ -33,6 +33,7 @@
 
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "ParserUtils.h"
+#include "Utils/Logger.h"
 
 #include <openssl/asn1.h>
 
@@ -47,7 +48,7 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
     {
         std::string err = "OID [" + oidName + "] type expected [" + std::to_string(expectedType) +
                           "] given [" + std::to_string(oidValue->type) + "]";
-        throw parser::FormatException(err);
+        LOG_AND_THROW(parser::FormatException, err);
     }
 }
 
@@ -73,14 +74,14 @@ void validateOid(const std::string& oidName, const ASN1_TYPE *oidValue, int expe
         default:
         {
             std::string err = "Unsupported OID [" + oidName + "] type [" + std::to_string(oidValue->type) + "]";
-            throw parser::FormatException(err);
+            LOG_AND_THROW(parser::FormatException, err);
         }
     }
     if (oidValueLen != expectedLength)
     {
         std::string err = "OID [" + oidName + "] length expected [" + std::to_string(expectedLength) + "] given [" +
                           std::to_string(oidValueLen) + "]";
-        throw parser::FormatException(err);
+        LOG_AND_THROW(parser::FormatException, err);
     }
 }
 
@@ -119,7 +120,8 @@ STACK_OF_ASN1TYPE_uptr oidToStack(const ASN1_TYPE *oidValue)
 
     if(!stack)
     {
-        throw parser::FormatException("d2i_ASN1_SEQUENCE_ANY failed " + parser::getLastError());
+        auto err = "d2i_ASN1_SEQUENCE_ANY failed " + parser::getLastError();
+        LOG_AND_THROW(parser::FormatException, err);
     }
 
     return stack;
