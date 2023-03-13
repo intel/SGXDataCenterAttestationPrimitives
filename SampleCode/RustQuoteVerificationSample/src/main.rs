@@ -37,8 +37,8 @@ use std::time::{Duration, SystemTime};
 
 use clap::Parser;
 
-use sgx_dcap_quoteverify_rs::*;
-use sgx_dcap_quoteverify_sys as qvl_sys;
+use intel_tee_quote_verification_rs::*;
+use intel_tee_quote_verification_sys as qvl_sys;
 
 #[cfg(debug_assertions)]
 const SGX_DEBUG_FLAG: i32 = 1;
