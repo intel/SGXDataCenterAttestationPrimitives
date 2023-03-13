@@ -34,7 +34,7 @@
 //!
 //! This is a safe wrapper for **sgx-dcap-quoteverify-sys**.
 
-use sgx_dcap_quoteverify_sys as qvl_sys;
+use intel_tee_quote_verification_sys as qvl_sys;
 
 pub use qvl_sys::quote3_error_t;
 pub use qvl_sys::sgx_ql_request_policy_t;
@@ -70,7 +70,7 @@ pub use qvl_sys::tee_supp_data_descriptor_t;
 ///
 /// # Examples
 /// ```
-/// use sgx_dcap_quoteverify_rs::*;
+/// use intel_tee_quote_verification_rs::*;
 ///
 /// let policy = sgx_ql_request_policy_t::SGX_QL_DEFAULT;
 /// let ret = sgx_qv_set_enclave_load_policy(policy);
@@ -93,7 +93,7 @@ pub fn sgx_qv_set_enclave_load_policy(policy: sgx_ql_request_policy_t) -> quote3
 ///
 /// # Examples
 /// ```
-/// use sgx_dcap_quoteverify_rs::*;
+/// use intel_tee_quote_verification_rs::*;
 ///
 /// let data_size = sgx_qv_get_quote_supplemental_data_size().unwrap();
 ///
@@ -195,7 +195,7 @@ pub fn sgx_qv_verify_quote(
 ///
 /// # Examples
 /// ```
-/// use sgx_dcap_quoteverify_rs::*;
+/// use intel_tee_quote_verification_rs::*;
 ///
 /// let data_size = tdx_qv_get_quote_supplemental_data_size().unwrap();
 ///
