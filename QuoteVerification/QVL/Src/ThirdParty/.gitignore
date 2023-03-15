@@ -1,5 +1,7 @@
-openssl
+hunter/openssl/*
+!hunter/openssl/hunter.cmake
 gtest
 hunter/_Base
 toolchain
 cmake.lock
+
