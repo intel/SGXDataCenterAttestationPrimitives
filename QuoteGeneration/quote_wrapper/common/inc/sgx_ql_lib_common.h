@@ -72,7 +72,7 @@ typedef enum _quote3_error_t {
     SGX_QL_UNABLE_TO_GENERATE_QE_REPORT = SGX_QL_MK_ERROR(0x0017),   ///< The QE was unable to generate its own report targeting the application enclave either
                                                                      ///< because the QE doesn't support this feature there is an enclave compatibility issue.
                                                                      ///< Please call again with the p_qe_report_info to NULL.
-    SGX_QL_KEY_CERTIFCATION_ERROR = SGX_QL_MK_ERROR(0x0018),         ///< Caused when the provider library returns an invalid TCB (too high).
+    SGX_QL_KEY_CERTIFICATION_ERROR = SGX_QL_MK_ERROR(0x0018),        ///< Caused when the provider library returns an invalid TCB (too high).
     SGX_QL_NETWORK_ERROR = SGX_QL_MK_ERROR(0x0019),                  ///< Network error when retrieving PCK certs
     SGX_QL_MESSAGE_ERROR = SGX_QL_MK_ERROR(0x001a),                  ///< Message error when retrieving PCK certs
     SGX_QL_NO_QUOTE_COLLATERAL_DATA = SGX_QL_MK_ERROR(0x001b),       ///< The platform does not have the quote verification collateral data available.
@@ -159,8 +159,8 @@ typedef struct _sgx_ql_pck_cert_id_t
     uint32_t qe3_id_size;                  ///< The Size of hte QE_ID (currenlty 16 bytes)
     sgx_cpu_svn_t *p_platform_cpu_svn;     ///< Pointer to the platform's raw CPUSVN
     sgx_isv_svn_t *p_platform_pce_isv_svn; ///< Pointer to the platform's raw PCE ISVSVN
-    uint8_t *p_encrypted_ppid;             ///< Pointer to the enccrypted PPID (Optional)
-    uint32_t encrypted_ppid_size;          ///< Size of encrytped PPID.
+    uint8_t *p_encrypted_ppid;             ///< Pointer to the encrypted PPID (Optional)
+    uint32_t encrypted_ppid_size;          ///< Size of encrypted PPID.
     uint8_t crypto_suite;                  ///< Crypto algorithm used to encrypt the PPID
     uint16_t pce_id;                       ///< Identifies the PCE-Version used to generate the encrypted PPID.
 }sgx_ql_pck_cert_id_t;
@@ -178,7 +178,7 @@ typedef struct _sgx_ql_config_t
     sgx_cpu_svn_t cert_cpu_svn;     ///< The CPUSVN used to generate the PCK Signature used to certify the attestation key.
     sgx_isv_svn_t cert_pce_isv_svn; ///< The PCE ISVSVN used to generate the PCK Signature used to certify the attestation key.
     uint32_t cert_data_size;        ///< The size of the buffer pointed to by p_cert_data
-    uint8_t *p_cert_data;           ///< The certificaton data used for the quote.
+    uint8_t *p_cert_data;           ///< The certification data used for the quote.
                                     ///todo: It is the assumed to be the PCK Cert Chain.  May want to change to support other cert types.
 } sgx_ql_config_t;
 
