@@ -173,9 +173,6 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 QGS_LOG_ERROR("qgs_msg_inflate_get_collateral_req return error\n");
             } else {
                 do {
-                    extern tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context,
-                                                                void **pp_qpl_handle);
-
                     char *error1 = NULL;
                     char *error2 = NULL;
                     void *p_handle = NULL;
@@ -223,6 +220,40 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 free_func(p_collateral);
             } else {
                 qgs_msg_error_ret = qgs_msg_gen_error_resp(resp_error_code, GET_COLLATERAL_RESP, &p_resp, &resp_size);
+            }
+            if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
+                QGS_LOG_ERROR("call qgs_msg_gen function failed\n");
+                qgs_msg_free(p_resp);
+                return {};
+            }
+            break;
+        }
+        case GET_PLATFORM_INFO_REQ: {
+            tee_platform_info_t platform_info;
+            qgs_msg_error_ret = qgs_msg_inflate_get_platform_info_req(p_req, req_size);
+            if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
+                // TODO: need to define the error code list for R3AAL
+                resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
+                QGS_LOG_ERROR("qgs_msg_inflate_get_platform_info_req return error\n");
+            } else {
+                QGS_LOG_INFO("call tee_att_init_quote\n");
+                tee_att_ret = tee_att_get_platform_info(ptr.get(), &platform_info);
+                if (TEE_ATT_SUCCESS != tee_att_ret) {
+                    resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
+                    QGS_LOG_ERROR("tee_att_get_platform_info return 0x%x\n", tee_att_ret);
+                } else {
+                    resp_error_code = QGS_MSG_SUCCESS;
+                    QGS_LOG_INFO("tee_att_get_platform_info return Success\n");
+                }
+            }
+            if (resp_error_code == QGS_MSG_SUCCESS) {
+                qgs_msg_error_ret = qgs_msg_gen_get_platform_info_resp(platform_info.tdqe_isv_svn,
+                                                                       platform_info.pce_isv_svn,
+                                                                       (uint8_t *)&(platform_info.platform_id), sizeof(platform_info.platform_id),
+                                                                       (uint8_t *)&(platform_info.cpu_svn), sizeof(platform_info.cpu_svn),
+                                                                       &p_resp, &resp_size);
+            } else {
+                qgs_msg_error_ret = qgs_msg_gen_error_resp(resp_error_code, GET_PLATFORM_INFO_RESP, &p_resp, &resp_size);
             }
             if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
                 QGS_LOG_ERROR("call qgs_msg_gen function failed\n");

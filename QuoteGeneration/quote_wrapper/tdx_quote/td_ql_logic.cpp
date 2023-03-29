@@ -1154,6 +1154,20 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         }
         SE_TRACE(SE_TRACE_DEBUG, "Successfully verified ECDSA Blob.\n");
         p_qe_target_info->mr_enclave = tdqe_report_body.mr_enclave;
+
+        if (NULL == m_tdqe_report_body) {
+            m_tdqe_report_body = (sgx_report_body_t*)malloc(sizeof(sgx_report_body_t));
+            if (!m_tdqe_report_body) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = TEE_ATT_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+            if (0 != memcpy_s(m_tdqe_report_body, sizeof(sgx_report_body_t), &tdqe_report_body, sizeof(tdqe_report_body))) {
+                refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
+                goto CLEANUP;
+            }
+        }
+
         if (resealed) {
             SE_TRACE(SE_TRACE_DEBUG, "ECDSA Blob was resealed. Store it disk.\n");
             refqt_ret = write_persistent_data((uint8_t *)m_ecdsa_blob,
@@ -1403,10 +1417,23 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
             goto CLEANUP;
         }
 
-        if(0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
-                    &tdqe_report.body.mr_enclave, sizeof(tdqe_report.body.mr_enclave))) {
+        if (0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
+                &tdqe_report.body.mr_enclave, sizeof(tdqe_report.body.mr_enclave))) {
             refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
             goto CLEANUP;
+        }
+
+        if (NULL == m_tdqe_report_body) {
+            m_tdqe_report_body = (sgx_report_body_t*)malloc(sizeof(sgx_report_body_t));
+            if (!m_tdqe_report_body) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = TEE_ATT_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+            if (0 != memcpy_s(m_tdqe_report_body, sizeof(sgx_report_body_t), &tdqe_report.body, sizeof(tdqe_report.body))) {
+                refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
+                goto CLEANUP;
+            }
         }
 
         if (NULL == m_qe_id)
@@ -1547,7 +1574,6 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
     uint32_t cert_data_size;
     sgx_sealed_data_t *p_sealed_ecdsa;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
-    sgx_report_body_t tdqe_report_body;
     sgx_psvn_t pce_cert_psvn;
     uint8_t resealed = 0;
     sgx_ql_pck_cert_id_t pck_cert_id;
@@ -1605,14 +1631,13 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
         refqt_ret = TEE_ATT_ATT_KEY_NOT_INITIALIZED;
         goto CLEANUP;
     }
-    memset(&tdqe_report_body, 0, sizeof(tdqe_report_body));
     // If exists, verify blob.
     sgx_status = verify_blob(m_eid,
                              (uint32_t*)&tdqe_error,
                              (uint8_t*)m_ecdsa_blob,
                              sizeof(m_ecdsa_blob),
                              &resealed,
-                             &tdqe_report_body,
+                             NULL,
                              0,
                              NULL);
     if (SGX_SUCCESS != sgx_status) {
@@ -1766,7 +1791,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     sgx_ql_pck_cert_id_t pck_cert_id;
     sgx_sealed_data_t *p_sealed_ecdsa;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
-    sgx_report_body_t tdqe_report_body;
     sgx_ql_certification_data_t *p_certification_data = NULL;
     sgx_psvn_t pce_cert_psvn;
     int blob_mutex_rc = 0;
@@ -1812,7 +1836,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
         refqt_ret = TEE_ATT_ATT_KEY_NOT_INITIALIZED;
         goto CLEANUP;
     }
-    memset(&tdqe_report_body, 0, sizeof(tdqe_report_body));
     // If exists, verify blob.
     SE_TRACE(SE_TRACE_DEBUG, "Verify blob\n");
     sgx_status = verify_blob(m_eid,
@@ -1820,7 +1843,7 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
                              (uint8_t*)m_ecdsa_blob,
                              sizeof(m_ecdsa_blob),
                              &resealed,
-                             &tdqe_report_body,
+                             NULL,
                              sizeof(blob_ecdsa_id),
                              (uint8_t*)&blob_ecdsa_id);
     if (SGX_SUCCESS != sgx_status) {
@@ -1982,4 +2005,73 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     }
 
     return(refqt_ret);
+}
+
+
+tee_att_error_t tee_att_config_t::get_platform_info(sgx_key_128bit_t* p_platform_id,
+    sgx_cpu_svn_t* p_cpu_svn,
+    sgx_isv_svn_t* p_tdqe_isv_svn,
+    sgx_isv_svn_t* p_pce_isv_svn)
+{
+    tee_att_error_t refqt_ret = TEE_ATT_SUCCESS;
+
+    if ((p_cpu_svn || p_tdqe_isv_svn) && !m_tdqe_report_body) {
+        sgx_target_info_t qe_target_info;
+        ref_sha256_hash_t pub_key_id;
+        refqt_ret = ecdsa_init_quote(PPID_RSA3072_ENCRYPTED,
+            &qe_target_info,
+            false,
+            &pub_key_id);
+        //No need to complete whole flow.
+        if (TEE_ATT_SUCCESS != refqt_ret && !m_tdqe_report_body) {
+            return refqt_ret;
+        }
+    }
+
+    if (p_platform_id) {
+        if (NULL == m_qe_id) {
+            m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                return TEE_ATT_ERROR_OUT_OF_MEMORY;
+            }
+
+            refqt_ret = load_id_enclave_get_id(m_qe_id);
+            if (TEE_ATT_SUCCESS != refqt_ret) {
+                return refqt_ret;
+            }
+        }
+        if (0 != memcpy_s(p_platform_id, sizeof(*p_platform_id), m_qe_id, sizeof(*m_qe_id))) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+    }
+
+    if (p_pce_isv_svn) {
+        if (0xFFFF == m_raw_pce_isvsvn) {
+            sgx_target_info_t pce_target_info;
+            sgx_pce_error_t pce_error = sgx_pce_get_target(&pce_target_info, p_pce_isv_svn);
+            if (SGX_PCE_SUCCESS != pce_error) {
+                SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_pce_get_target [%s], pce_error:%04x.\n", __FUNCTION__, pce_error);
+                return translate_pce_errors(pce_error);
+            }
+        }
+        else {
+            *p_pce_isv_svn = m_raw_pce_isvsvn;
+        }
+    }
+
+    if (p_cpu_svn) {
+        if (!m_tdqe_report_body ||
+            0 != memcpy_s(p_cpu_svn, sizeof(*p_cpu_svn),
+                &m_tdqe_report_body->cpu_svn, sizeof(m_tdqe_report_body->cpu_svn))) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+    }
+    if (p_tdqe_isv_svn) {
+        if (!m_tdqe_report_body) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+        *p_tdqe_isv_svn = m_tdqe_report_body->isv_svn;
+    }
+    return TEE_ATT_SUCCESS;
 }

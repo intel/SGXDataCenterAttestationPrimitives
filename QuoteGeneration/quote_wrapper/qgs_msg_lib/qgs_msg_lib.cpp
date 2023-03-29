@@ -363,6 +363,9 @@ qgs_msg_error_t qgs_msg_gen_error_resp(
     case GET_COLLATERAL_RESP:
         buf_size = sizeof(qgs_msg_get_collateral_resp_t);
         break;
+    case GET_PLATFORM_INFO_RESP:
+        buf_size = sizeof(qgs_msg_get_platform_info_resp_t);
+        break;
     default:
         ret = QGS_MSG_ERROR_INVALID_TYPE;
         goto ret_point;
@@ -437,9 +440,8 @@ qgs_msg_error_t qgs_msg_gen_get_quote_resp(
     if (id_size) {
         memcpy(p_resp->id_quote, p_selected_id, id_size);
     }
-    if (quote_size) {
-        memcpy(p_resp->id_quote + id_size, p_quote, quote_size);
-    }
+    memcpy(p_resp->id_quote + id_size, p_quote, quote_size);
+
     *pp_resp = (uint8_t *)p_resp;
     *p_resp_size = buf_size;
     ret = QGS_MSG_SUCCESS;
@@ -816,6 +818,242 @@ uint32_t qgs_msg_get_type(const uint8_t *p_serialized_msg, uint32_t size, uint32
         goto ret_point;
     }
     *p_type = p_header->type;
+    ret = QGS_MSG_SUCCESS;
+ret_point:
+    return ret;
+}
+
+qgs_msg_error_t qgs_msg_gen_get_platform_info_req(
+    uint8_t **pp_req, uint32_t *p_req_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_req_t *p_req = NULL;
+
+    if (!pp_req || !p_req_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_req = (qgs_msg_get_platform_info_req_t *)calloc(sizeof(*p_req), sizeof(uint8_t));
+    if (!p_req) {
+        ret = QGS_MSG_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+
+    p_req->header.major_version = QGS_MSG_LIB_MAJOR_VER;
+    p_req->header.minor_version = QGS_MSG_LIB_MINOR_VER;
+    p_req->header.type = GET_PLATFORM_INFO_REQ;
+    p_req->header.size = sizeof(*p_req);
+    p_req->header.error_code = 0;
+
+    *pp_req = (uint8_t *)p_req;
+    *p_req_size = sizeof(*p_req);
+    ret = QGS_MSG_SUCCESS;
+
+ret_point:
+    return ret;
+}
+
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_req(
+    const uint8_t *p_serialized_req, uint32_t size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_req_t *p_req = NULL;
+
+    if (!p_serialized_req || !size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    // sanity check, the size shouldn't smaller than qgs_msg_get_platform_info_req_t
+    if (size < sizeof(qgs_msg_get_platform_info_req_t)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_req = (qgs_msg_get_platform_info_req_t *)p_serialized_req;
+    // Only major version is checked, minor change is deemed as compatible.
+    if (p_req->header.major_version != QGS_MSG_LIB_MAJOR_VER) {
+        ret = QGS_MSG_ERROR_INVALID_VERSION;
+        goto ret_point;
+    }
+
+    if (p_req->header.type != GET_PLATFORM_INFO_REQ) {
+        ret = QGS_MSG_ERROR_INVALID_TYPE;
+        goto ret_point;
+    }
+
+    if (p_req->header.size != size) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    if (p_req->header.error_code != 0) {
+        ret = QGS_MSG_ERROR_INVALID_CODE;
+        goto ret_point;
+    }
+
+ret_point:
+    return ret;
+}
+
+qgs_msg_error_t qgs_msg_gen_get_platform_info_resp(
+    uint16_t tdqe_isvsvn, uint16_t pce_isvsvn,
+    const uint8_t *p_platform_id, uint32_t platform_id_size,
+    const uint8_t *p_cpusvn, uint32_t cpusvn_size,
+    uint8_t **pp_resp, uint32_t *p_resp_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_resp_t *p_resp = NULL;
+    uint32_t buf_size = 0;
+    uint64_t temp = 0;
+    uint8_t *p_ptr = NULL;
+
+    if (!pp_resp || !p_resp_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if ((!p_platform_id || !platform_id_size)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if (!p_cpusvn || !cpusvn_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    temp = sizeof(tdqe_isvsvn) + sizeof(pce_isvsvn) + sizeof(*p_resp);
+    temp += platform_id_size + cpusvn_size;
+    if (temp < UINT32_MAX) {
+        buf_size = temp & UINT32_MAX;
+    } else {
+        ret = QGS_MSG_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+    p_resp = (qgs_msg_get_platform_info_resp_t *)calloc(buf_size, sizeof(uint8_t));
+    if (!p_resp) {
+        ret = QGS_MSG_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+
+    p_resp->header.major_version = QGS_MSG_LIB_MAJOR_VER;
+    p_resp->header.minor_version = QGS_MSG_LIB_MINOR_VER;
+    p_resp->header.type = GET_PLATFORM_INFO_RESP;
+    p_resp->header.size = buf_size;
+    p_resp->header.error_code = QGS_MSG_SUCCESS;
+
+    p_resp->platform_id_size = platform_id_size;
+    p_resp->cpusvn_size = cpusvn_size;
+
+    p_resp->tdqe_isvsvn = tdqe_isvsvn;
+    p_resp->pce_isvsvn = pce_isvsvn;
+
+    p_ptr = p_resp->platform_id_cpusvn;
+    memcpy(p_ptr, p_platform_id, platform_id_size);
+    p_ptr += platform_id_size;
+
+    memcpy(p_ptr, p_cpusvn, cpusvn_size);
+
+    *pp_resp = (uint8_t *)p_resp;
+    *p_resp_size = buf_size;
+    ret = QGS_MSG_SUCCESS;
+
+ret_point:
+    return ret;
+}
+
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_resp(
+    const uint8_t *p_serialized_resp, uint32_t size,
+    uint16_t *p_tdqe_isvsvn, uint16_t *p_pce_isvsvn,
+    const uint8_t **pp_platform_id, uint32_t *p_platform_id_size,
+    const uint8_t **pp_cpusvn, uint32_t *p_cpusvn_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_resp_t *p_resp = NULL;
+    uint64_t temp = 0;
+
+    if (!p_serialized_resp || !size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if (!pp_platform_id || !p_platform_id_size
+        || !pp_cpusvn  || !p_cpusvn_size
+        || !p_tdqe_isvsvn || !p_pce_isvsvn) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    // sanity check, the size shouldn't smaller than qgs_msg_get_quote_req_t
+    if (size < sizeof(qgs_msg_get_platform_info_resp_t)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_resp = (qgs_msg_get_platform_info_resp_t *)p_serialized_resp;
+    // Only major version is checked, minor change is deemed as compatible.
+    if (p_resp->header.major_version != QGS_MSG_LIB_MAJOR_VER) {
+        ret = QGS_MSG_ERROR_INVALID_VERSION;
+        goto ret_point;
+    }
+
+    if (p_resp->header.type != GET_PLATFORM_INFO_RESP) {
+        ret = QGS_MSG_ERROR_INVALID_TYPE;
+        goto ret_point;
+    }
+
+    if (p_resp->header.size != size) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    temp = sizeof(p_resp->tdqe_isvsvn) + sizeof(p_resp->pce_isvsvn) + sizeof(*p_resp);
+    temp += p_resp->platform_id_size;
+    temp += p_resp->cpusvn_size;
+    if (temp >= UINT32_MAX) {
+        ret = QGS_MSG_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+    if (p_resp->header.size != temp) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    if (p_resp->header.error_code == QGS_MSG_SUCCESS) {
+        // It makes no sense to return success and empty platform info
+        if (!p_resp->platform_id_size || !p_resp->cpusvn_size) {
+            ret = QGS_MSG_ERROR_INVALID_SIZE;
+            goto ret_point;
+        }
+        *p_tdqe_isvsvn = p_resp->tdqe_isvsvn;
+        *p_pce_isvsvn = p_resp->pce_isvsvn;
+
+        *pp_platform_id = p_resp->platform_id_cpusvn;
+        *p_platform_id_size = p_resp->platform_id_size;
+
+        *pp_cpusvn = *pp_platform_id + p_resp->platform_id_size;
+        *p_cpusvn_size = p_resp->cpusvn_size;
+
+    } else if (p_resp->header.error_code < QGS_MSG_ERROR_MAX) {
+        if (p_resp->platform_id_size || p_resp->cpusvn_size) {
+            ret = QGS_MSG_ERROR_INVALID_SIZE;
+            goto ret_point;
+        }
+        *p_tdqe_isvsvn = 0;
+        *p_pce_isvsvn = 0;
+
+        *pp_platform_id = NULL;
+        *p_platform_id_size = 0;
+
+        *pp_cpusvn = NULL;
+        *p_cpusvn_size = 0;
+    } else {
+        ret = QGS_MSG_ERROR_INVALID_CODE;
+        goto ret_point;
+    }
+
     ret = QGS_MSG_SUCCESS;
 ret_point:
     return ret;
