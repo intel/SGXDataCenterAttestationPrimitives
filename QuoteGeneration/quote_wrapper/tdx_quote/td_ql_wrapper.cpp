@@ -479,6 +479,17 @@ tee_att_error_t tee_att_get_keyid(const tee_att_config_t* p_context,
     return TEE_ATT_SUCCESS;
 }
 
+tee_att_error_t tee_att_get_platform_info(const tee_att_config_t* p_context,
+    tee_platform_info_t* p_platform_info)
+{
+    if (NULL == p_context || NULL == p_platform_info)
+        return TEE_ATT_ERROR_INVALID_PARAMETER;
+    return const_cast<tee_att_config_t*>(p_context)->get_platform_info(
+        &p_platform_info->platform_id, &p_platform_info->cpu_svn,
+        &p_platform_info->tdqe_isv_svn, &p_platform_info->pce_isv_svn);
+}
+
+
 #ifndef _MSC_VER
 extern "C"
 tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context,

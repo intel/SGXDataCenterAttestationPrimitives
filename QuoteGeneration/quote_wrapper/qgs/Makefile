@@ -48,7 +48,7 @@ ifeq ($(CC_NO_LESS_THAN_8), 1)
     QGS_CXXFLAGS += -fcf-protection=none
 endif
 
-DEPENDS = ${QGS_OBJS:.o=.d}
+DEPENDS = ${QGS_OBJS test_client.o:.o=.d}
 
 # SGX related libraries
 QGS_LFLAGS = -L$(TOP_DIR)/build/linux -lsgx_tdx_logic -lsgx_pce_logic -ldl \
@@ -62,12 +62,15 @@ vpath %.c $(COMMON_DIR)/src
 
 -include ${DEPENDS}
 
-all: qgs
+all: qgs test_client
 
 qgs: $(QGS_OBJS)
 	make -C ../qgs_msg_lib/linux
 	make -C ../tdx_quote/linux
 	$(CXX) -o $@ $^ $(QGS_LFLAGS)
+
+test_client: test_client.o
+	$(CC) -o $@ $^ -L../qgs_msg_lib/linux -lqgs_msg
 
 %.o: %.cpp
 	$(CXX) -c $(QGS_CXXFLAGS) $<

@@ -80,6 +80,7 @@ private:
         HMODULE
 #endif
             m_qpl_handle;
+    sgx_report_body_t* m_tdqe_report_body;
 public:
     TCHAR tdqe_path[MAX_PATH];
     TCHAR qpl_path[MAX_PATH];
@@ -90,7 +91,8 @@ public:
         m_pencryptedppid(NULL),
         m_qe_id(NULL),
         m_raw_pce_isvsvn(0xFFFF),
-        m_qpl_handle(NULL)
+        m_qpl_handle(NULL),
+        m_tdqe_report_body(NULL)
     {
         se_mutex_init(&m_enclave_load_mutex);
         se_mutex_init(&m_ecdsa_blob_mutex);
@@ -128,6 +130,11 @@ public:
 #endif
             m_qpl_handle = NULL;
         }
+        if (m_tdqe_report_body)
+        {
+            free(m_tdqe_report_body);
+            m_tdqe_report_body = NULL;
+        }
     }
     tee_att_error_t ecdsa_init_quote(sgx_ql_cert_key_type_t certification_key_type,
         sgx_target_info_t* p_qe_target_info,
@@ -139,6 +146,11 @@ public:
     tee_att_error_t ecdsa_get_quote(const sgx_report2_t* p_app_report,
         sgx_quote4_t* p_quote,
         uint32_t quote_size);
+
+    tee_att_error_t get_platform_info(sgx_key_128bit_t* p_platform_id,
+        sgx_cpu_svn_t* p_cpu_svn,
+        sgx_isv_svn_t* p_tdqe_isv_svn,
+        sgx_isv_svn_t* p_pce_isv_svn);
 #ifndef _MSC_VER
     void *
 #else

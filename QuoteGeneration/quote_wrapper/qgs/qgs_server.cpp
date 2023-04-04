@@ -150,7 +150,7 @@ class QgsConnection : public boost::enable_shared_from_this<QgsConnection> {
             unsigned msg_len = decode_header(m_readbuf);
             QGS_LOG_INFO("body should be [%d] bytes!\n", msg_len);
             if (!msg_len) {
-                QGS_LOG_INFO("Failed to decode heaer, stop\n");
+                QGS_LOG_INFO("Failed to decode header, stop\n");
                 m_timer.cancel();
                 stop();
             } else {

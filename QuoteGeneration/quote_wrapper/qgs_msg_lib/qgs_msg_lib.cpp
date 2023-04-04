@@ -363,6 +363,9 @@ qgs_msg_error_t qgs_msg_gen_error_resp(
     case GET_COLLATERAL_RESP:
         buf_size = sizeof(qgs_msg_get_collateral_resp_t);
         break;
+    case GET_PLATFORM_INFO_RESP:
+        buf_size = sizeof(qgs_msg_get_platform_info_resp_t);
+        break;
     default:
         ret = QGS_MSG_ERROR_INVALID_TYPE;
         goto ret_point;
@@ -437,9 +440,8 @@ qgs_msg_error_t qgs_msg_gen_get_quote_resp(
     if (id_size) {
         memcpy(p_resp->id_quote, p_selected_id, id_size);
     }
-    if (quote_size) {
-        memcpy(p_resp->id_quote + id_size, p_quote, quote_size);
-    }
+    memcpy(p_resp->id_quote + id_size, p_quote, quote_size);
+
     *pp_resp = (uint8_t *)p_resp;
     *p_resp_size = buf_size;
     ret = QGS_MSG_SUCCESS;
@@ -798,6 +800,15 @@ ret_point:
     return ret;
 }
 
+/**
+ * @brief Get the message type from the serialized message buffer.
+ *
+ * @param p_serialized_msg Pointer to the serialized message buffer.
+ * @param size Size of the serialized message buffer.
+ * @param p_type Pointer to a uint32_t variable to store the message type.
+ *
+ * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
+ */
 uint32_t qgs_msg_get_type(const uint8_t *p_serialized_msg, uint32_t size, uint32_t *p_type) {
     qgs_msg_error_t ret = QGS_MSG_SUCCESS;
     const qgs_msg_header_t *p_header = (const qgs_msg_header_t *)p_serialized_msg;
@@ -816,6 +827,294 @@ uint32_t qgs_msg_get_type(const uint8_t *p_serialized_msg, uint32_t size, uint32
         goto ret_point;
     }
     *p_type = p_header->type;
+    ret = QGS_MSG_SUCCESS;
+ret_point:
+    return ret;
+}
+
+/**
+ * @brief Generates a GET_PLATFORM_INFO request message
+ *
+ * This function generates a GET_PLATFORM_INFO request message and returns it
+ * as a byte array.
+ *
+ * @param pp_req A pointer to a pointer to the generated request message byte
+ *               array. The caller is responsible for freeing this memory after
+ *               use.
+ * @param p_req_size A pointer to the size of the generated request message in
+ *                   bytes. Upon successful execution, the function updates this
+ *                   value to reflect the size of the generated message.
+ *
+ * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
+ */
+qgs_msg_error_t qgs_msg_gen_get_platform_info_req(
+    uint8_t **pp_req, uint32_t *p_req_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_req_t *p_req = NULL;
+
+    if (!pp_req || !p_req_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_req = (qgs_msg_get_platform_info_req_t *)calloc(sizeof(*p_req), sizeof(uint8_t));
+    if (!p_req) {
+        ret = QGS_MSG_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+
+    p_req->header.major_version = QGS_MSG_LIB_MAJOR_VER;
+    p_req->header.minor_version = QGS_MSG_LIB_MINOR_VER;
+    p_req->header.type = GET_PLATFORM_INFO_REQ;
+    p_req->header.size = sizeof(*p_req);
+    p_req->header.error_code = 0;
+
+    *pp_req = (uint8_t *)p_req;
+    *p_req_size = sizeof(*p_req);
+    ret = QGS_MSG_SUCCESS;
+
+ret_point:
+    return ret;
+}
+
+/**
+ * @brief Inflate a serialized GET_PLATFORM_INFO_REQ message and validate it.
+ *
+ * @param p_serialized_req A pointer to the serialized GET_PLATFORM_INFO_REQ
+ *                         message.
+ * @param size The size of the serialized message in bytes.
+ * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
+ */
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_req(
+    const uint8_t *p_serialized_req, uint32_t size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_req_t *p_req = NULL;
+
+    if (!p_serialized_req || !size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    // sanity check, the size shouldn't smaller than qgs_msg_get_platform_info_req_t
+    if (size < sizeof(qgs_msg_get_platform_info_req_t)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_req = (qgs_msg_get_platform_info_req_t *)p_serialized_req;
+    // Only major version is checked, minor change is deemed as compatible.
+    if (p_req->header.major_version != QGS_MSG_LIB_MAJOR_VER) {
+        ret = QGS_MSG_ERROR_INVALID_VERSION;
+        goto ret_point;
+    }
+
+    if (p_req->header.type != GET_PLATFORM_INFO_REQ) {
+        ret = QGS_MSG_ERROR_INVALID_TYPE;
+        goto ret_point;
+    }
+
+    if (p_req->header.size != size) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    if (p_req->header.error_code != 0) {
+        ret = QGS_MSG_ERROR_INVALID_CODE;
+        goto ret_point;
+    }
+
+ret_point:
+    return ret;
+}
+
+/**
+ * @brief Generates a response message with the given information about the platform.
+ *
+ * @param tdqe_isvsvn ISVSVN of the TDQE enclave in the platform.
+ * @param pce_isvsvn ISVSVN of the PCE enclave in the platform.
+ * @param p_platform_id Pointer to an array of bytes that contains the platform
+ *                      identification.
+ * @param platform_id_size The size in bytes of the platform identification.
+ * @param p_cpusvn Pointer to an array of bytes that contains the CPUSVN.
+ * @param cpusvn_size The size in bytes of the CPUSVN.
+ * @param pp_resp Pointer to a pointer to the response message buffer.
+                  The caller is responsible for freeing this memory after use.
+ * @param p_resp_size Pointer to the size of the response message buffer.
+ *
+ * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
+ */
+qgs_msg_error_t qgs_msg_gen_get_platform_info_resp(
+    uint16_t tdqe_isvsvn, uint16_t pce_isvsvn,
+    const uint8_t *p_platform_id, uint32_t platform_id_size,
+    const uint8_t *p_cpusvn, uint32_t cpusvn_size,
+    uint8_t **pp_resp, uint32_t *p_resp_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_resp_t *p_resp = NULL;
+    uint32_t buf_size = 0;
+    uint64_t temp = 0;
+    uint8_t *p_ptr = NULL;
+
+    if (!pp_resp || !p_resp_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if ((!p_platform_id || !platform_id_size)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if (!p_cpusvn || !cpusvn_size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    temp = sizeof(tdqe_isvsvn) + sizeof(pce_isvsvn) + sizeof(*p_resp);
+    temp += platform_id_size + cpusvn_size;
+    if (temp < UINT32_MAX) {
+        buf_size = temp & UINT32_MAX;
+    } else {
+        ret = QGS_MSG_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+    p_resp = (qgs_msg_get_platform_info_resp_t *)calloc(buf_size, sizeof(uint8_t));
+    if (!p_resp) {
+        ret = QGS_MSG_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+
+    p_resp->header.major_version = QGS_MSG_LIB_MAJOR_VER;
+    p_resp->header.minor_version = QGS_MSG_LIB_MINOR_VER;
+    p_resp->header.type = GET_PLATFORM_INFO_RESP;
+    p_resp->header.size = buf_size;
+    p_resp->header.error_code = QGS_MSG_SUCCESS;
+
+    p_resp->platform_id_size = platform_id_size;
+    p_resp->cpusvn_size = cpusvn_size;
+
+    p_resp->tdqe_isvsvn = tdqe_isvsvn;
+    p_resp->pce_isvsvn = pce_isvsvn;
+
+    p_ptr = p_resp->platform_id_cpusvn;
+    memcpy(p_ptr, p_platform_id, platform_id_size);
+    p_ptr += platform_id_size;
+
+    memcpy(p_ptr, p_cpusvn, cpusvn_size);
+
+    *pp_resp = (uint8_t *)p_resp;
+    *p_resp_size = buf_size;
+    ret = QGS_MSG_SUCCESS;
+
+ret_point:
+    return ret;
+}
+
+/**
+ * @brief Extracts platform information from a serialized response message.
+ *
+ * @param p_serialized_resp Pointer to the serialized response message.
+ * @param size The size of the serialized response message.
+ * @param p_tdqe_isvsvn Pointer to the TDQE ISVSVN.
+ * @param p_pce_isvsvn Pointer to the PCE ISVSVN.
+ * @param pp_platform_id Pointer to a pointer to the platform ID.
+ * @param p_platform_id_size Pointer to the size of the platform ID.
+ * @param pp_cpusvn Pointer to a pointer to the CPUSVN.
+ * @param p_cpusvn_size Pointer to the size of the CPUSVN.
+ * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
+ */
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_resp(
+    const uint8_t *p_serialized_resp, uint32_t size,
+    uint16_t *p_tdqe_isvsvn, uint16_t *p_pce_isvsvn,
+    const uint8_t **pp_platform_id, uint32_t *p_platform_id_size,
+    const uint8_t **pp_cpusvn, uint32_t *p_cpusvn_size)
+{
+    qgs_msg_error_t ret = QGS_MSG_SUCCESS;
+    qgs_msg_get_platform_info_resp_t *p_resp = NULL;
+    uint64_t temp = 0;
+
+    if (!p_serialized_resp || !size) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if (!pp_platform_id || !p_platform_id_size
+        || !pp_cpusvn  || !p_cpusvn_size
+        || !p_tdqe_isvsvn || !p_pce_isvsvn) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    // sanity check, the size shouldn't smaller than qgs_msg_get_quote_req_t
+    if (size < sizeof(qgs_msg_get_platform_info_resp_t)) {
+        ret = QGS_MSG_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_resp = (qgs_msg_get_platform_info_resp_t *)p_serialized_resp;
+    // Only major version is checked, minor change is deemed as compatible.
+    if (p_resp->header.major_version != QGS_MSG_LIB_MAJOR_VER) {
+        ret = QGS_MSG_ERROR_INVALID_VERSION;
+        goto ret_point;
+    }
+
+    if (p_resp->header.type != GET_PLATFORM_INFO_RESP) {
+        ret = QGS_MSG_ERROR_INVALID_TYPE;
+        goto ret_point;
+    }
+
+    if (p_resp->header.size != size) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    temp = sizeof(p_resp->tdqe_isvsvn) + sizeof(p_resp->pce_isvsvn) + sizeof(*p_resp);
+    temp += p_resp->platform_id_size;
+    temp += p_resp->cpusvn_size;
+    if (temp >= UINT32_MAX) {
+        ret = QGS_MSG_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+    if (p_resp->header.size != temp) {
+        ret = QGS_MSG_ERROR_INVALID_SIZE;
+        goto ret_point;
+    }
+
+    if (p_resp->header.error_code == QGS_MSG_SUCCESS) {
+        // It makes no sense to return success and empty platform info
+        if (!p_resp->platform_id_size || !p_resp->cpusvn_size) {
+            ret = QGS_MSG_ERROR_INVALID_SIZE;
+            goto ret_point;
+        }
+        *p_tdqe_isvsvn = p_resp->tdqe_isvsvn;
+        *p_pce_isvsvn = p_resp->pce_isvsvn;
+
+        *pp_platform_id = p_resp->platform_id_cpusvn;
+        *p_platform_id_size = p_resp->platform_id_size;
+
+        *pp_cpusvn = *pp_platform_id + p_resp->platform_id_size;
+        *p_cpusvn_size = p_resp->cpusvn_size;
+
+    } else if (p_resp->header.error_code < QGS_MSG_ERROR_MAX) {
+        if (p_resp->platform_id_size || p_resp->cpusvn_size) {
+            ret = QGS_MSG_ERROR_INVALID_SIZE;
+            goto ret_point;
+        }
+        *p_tdqe_isvsvn = 0;
+        *p_pce_isvsvn = 0;
+
+        *pp_platform_id = NULL;
+        *p_platform_id_size = 0;
+
+        *pp_cpusvn = NULL;
+        *p_cpusvn_size = 0;
+    } else {
+        ret = QGS_MSG_ERROR_INVALID_CODE;
+        goto ret_point;
+    }
+
     ret = QGS_MSG_SUCCESS;
 ret_point:
     return ret;

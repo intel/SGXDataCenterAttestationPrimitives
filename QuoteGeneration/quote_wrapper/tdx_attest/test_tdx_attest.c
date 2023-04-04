@@ -38,7 +38,6 @@
 #define devname		"/dev/tdx-attest"
 
 #define HEX_DUMP_SIZE	16
-#define MAX_ROW_SIZE	70
 
 static void print_hex_dump(const char *title, const char *prefix_str,
 		const uint8_t *buf, int len)
