@@ -278,7 +278,7 @@ quote3_error_t tee_get_supplemental_data_version_and_size(
  * @param p_quote_verification_result[OUT] - Address of the outputted quote verification result.
  * @param p_qve_report_info[IN/OUT] - This parameter can be used in 2 ways.
  *        If p_qve_report_info is NOT NULL, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.
- *        if p_qve_report_info is NULL, the API will use QVL library to perform quote verification, not that the results can not be cryptographically authenticated in this mode.
+ *        if p_qve_report_info is NULL, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
  * @param p_supp_datal_descriptor[IN/OUT] - Pointer to tee_supp_data_descriptor_t structure
  *        You can specify the major version of supplemental data by setting p_supp_datal_descriptor->major_version
  *        If p_supp_datal_descriptor == NULL, no supplemental data is returned
