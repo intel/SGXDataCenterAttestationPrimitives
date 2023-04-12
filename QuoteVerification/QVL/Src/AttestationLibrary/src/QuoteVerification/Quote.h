@@ -45,10 +45,17 @@ public:
     bool validate() const;
 
     const Header& getHeader() const;
+    const Body& getBody() const;
     const EnclaveReport& getEnclaveReport() const;
-    const TDReport& getTdReport() const;
+    const TDReport10& getTdReport10() const;
+    const TDReport15& getTdReport15() const;
     uint32_t getAuthDataSize() const;
+
+    // Access helpers
     const std::vector<uint8_t>& getSignedData() const;
+    const std::array<uint8_t, 16>& getTeeTcbSvn() const;
+    const std::array<uint8_t, 48>& getMrSignerSeam() const;
+    const std::array<uint8_t, 8>& getSeamAttributes() const;
 
     // Auth data getters
     const Ecdsa256BitQuoteV3AuthData& getAuthDataV3() const;
@@ -62,8 +69,10 @@ public:
 
 protected:
     Header header{};
+    Body body{};
     EnclaveReport enclaveReport{};
-    TDReport tdReport{};
+    TDReport10 tdReport10{};
+    TDReport15 tdReport15{};
     uint32_t authDataSize;
     std::vector<uint8_t> signedData{};
 

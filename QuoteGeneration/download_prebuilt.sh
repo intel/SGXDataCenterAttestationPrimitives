@@ -32,6 +32,7 @@
 
 top_dir=`dirname $0`
 out_dir=$top_dir
+ae_prebuilt_dir=$top_dir/psw/ae/data/prebuilt/
 ae_file_name=prebuilt_dcap_1.16.tar.gz
 checksum_file=SHA256SUM_prebuilt_dcap_1.16.cfg
 server_url_path=https://download.01.org/intel-sgx/sgx-dcap/1.16/linux/
@@ -60,7 +61,15 @@ if [ $? -ne 0 ]; then
     exit -1
 fi
 
+pushd $ae_prebuilt_dir
+mv libsgx_tdqe.signed.so libsgx_tdqe.signed.so.tmp
+mv README.md README.md.tmp
+popd
 tar -zxf $ae_file_name
+pushd $ae_prebuilt_dir
+mv -f libsgx_tdqe.signed.so.tmp libsgx_tdqe.signed.so
+mv -f README.md.tmp README.md
+popd
 rm -f $ae_file_name
 rm -f $checksum_file
 

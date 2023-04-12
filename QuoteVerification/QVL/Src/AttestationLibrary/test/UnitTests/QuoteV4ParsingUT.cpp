@@ -31,8 +31,6 @@
 
 
 #include "QuoteV4Generator.h"
-#include "QuoteV4Generator.h"
-#include "QuoteUtils.h"
 #include <QuoteVerification/Quote.h>
 
 #include <gtest/gtest.h>
@@ -76,7 +74,7 @@ bool operator==(const dcap::test::QuoteV4Generator::CertificationData& testCerti
         && testCertificationData.keyData == certificationData.data;
 }
 
-bool operator==(const dcap::test::QuoteV4Generator::TDReport& testTdReport, const dcap::TDReport& tdReport)
+bool operator==(const dcap::test::QuoteV4Generator::TDReport& testTdReport, const dcap::TDReport10& tdReport)
 {
     return
             testTdReport.teeTcbSvn == tdReport.teeTcbSvn
@@ -221,7 +219,7 @@ TEST_F(QuoteV4ParsingUT, shouldParseAndNotValidateBecauseQeVendorIdNotSupported)
     EXPECT_TRUE(testHeader == quoteObj.getHeader());
 }
 
-TEST_F(QuoteV4ParsingUT, shouldNotParseBecauseVersionNotSupported)
+TEST_F(QuoteV4ParsingUT, shouldParseButNotValidateBecauseVersionNotSupported)
 {
     dcap::test::QuoteV4Generator::QuoteHeader testHeader;
     testHeader.version = 2; // Not supported
@@ -236,9 +234,10 @@ TEST_F(QuoteV4ParsingUT, shouldNotParseBecauseVersionNotSupported)
 
     dcap::Quote quoteObj;
 
-    ASSERT_FALSE(quoteObj.parse(quote));
+    ASSERT_TRUE(quoteObj.parse(quote));
 
     EXPECT_TRUE(testHeader == quoteObj.getHeader());
+    ASSERT_FALSE(quoteObj.validate());
 }
 
 TEST_F(QuoteV4ParsingUT, shouldNotParseBecauseTeeTypeNotSupported)
@@ -354,7 +353,7 @@ TEST_F(QuoteV4ParsingUT, shouldParseTDReport)
     const auto bytes = testReport.bytes();
 
     auto from = bytes.begin();
-    dcap::TDReport report{};
+    dcap::TDReport10 report{};
     report.insert(from, bytes.cend());
 
     ASSERT_TRUE(from == bytes.cend());

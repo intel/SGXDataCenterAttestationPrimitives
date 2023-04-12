@@ -6,9 +6,12 @@
 namespace intel { namespace sgx { namespace dcap { namespace test {
 
 static constexpr size_t QUOTE_HEADER_SIZE = 48;
+static constexpr size_t QUOTE_BODY_SIZE = 6;
 static constexpr size_t ENCLAVE_REPORT_SIGNATURE_SIZE = 64;
 static constexpr size_t ECDSA_PUBLIC_KEY_SIZE = 64;
 static constexpr size_t ENCLAVE_REPORT_SIZE = 384;
+static constexpr size_t TD_REPORT_10_SIZE = 584;
+static constexpr size_t TD_REPORT_15_SIZE = 648;
 static constexpr size_t BODY_SIZE = ENCLAVE_REPORT_SIZE;
 
 static constexpr size_t QE_CERT_DATA_MIN_SIZE = 6;

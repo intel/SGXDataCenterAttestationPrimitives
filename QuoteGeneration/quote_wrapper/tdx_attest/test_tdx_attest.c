@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
     tdx_report_t tdx_report = {{0}};
     tdx_uuid_t selected_att_key_id = {0};
     uint8_t *p_quote_buf = NULL;
+    tdx_rtmr_event_t rtmr_event = {0};
     FILE *fptr = NULL;
 
     gen_report_data(report_data.d);
@@ -107,6 +108,26 @@ int main(int argc, char *argv[])
     }
     fprintf(stdout, "\nWrote TD Quote to quote.dat\n");
 
+    rtmr_event.version = 1;
+    rtmr_event.rtmr_index = 2;
+    for (int i = 0; i < sizeof(rtmr_event.extend_data); i++) {
+        rtmr_event.extend_data[i] = 1;
+    }
+    rtmr_event.event_data_size = 0;
+
+    if (TDX_ATTEST_SUCCESS != tdx_att_extend(&rtmr_event)) {
+        fprintf(stderr, "\nFailed to extend rtmr[2]\n");
+    } else {
+        fprintf(stderr, "\nSuccessfully extended rtmr[2]\n");
+    }
+
+    rtmr_event.rtmr_index = 3;
+
+    if (TDX_ATTEST_SUCCESS != tdx_att_extend(&rtmr_event)) {
+        fprintf(stderr, "\nFailed to extend rtmr[3]\n");
+    } else {
+        fprintf(stderr, "\nSuccessfully extended rtmr[3]\n");
+    }
     tdx_att_free_quote(p_quote_buf);
     return 0;
 }

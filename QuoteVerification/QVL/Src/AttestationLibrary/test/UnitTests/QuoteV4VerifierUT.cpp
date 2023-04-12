@@ -42,13 +42,13 @@
 #include "Mocks/TcbInfoMock.h"
 #include "DigestUtils.h"
 #include "QuoteV4Generator.h"
-#include "QuoteV4Generator.h"
 #include "KeyHelpers.h"
 #include "Constants/QuoteTestConstants.h"
 #include "EcdsaSignatureGenerator.h"
 #include "CertVerification/X509Constants.h"
 
 using namespace intel::sgx;
+using namespace dcap::parser::json;
 using namespace ::testing;
 
 namespace {
@@ -99,8 +99,8 @@ struct QuoteV4VerifierUT: public testing::Test
 {
     QuoteV4VerifierUT()
             : ppid(16, 0xaa), cpusvn(16, 0x40), fmspc(6, 0xde), pcesvn{0xaa, 0xbb},
-              sgxTcbComponents(16, dcap::parser::json::TcbComponent(0x00)),
-              tdxTcbComponents(16, dcap::parser::json::TcbComponent(0x00))
+              sgxTcbComponents(16, TcbComponent(0x00)),
+              tdxTcbComponents(16, TcbComponent(0x00))
     {
 
     }
@@ -113,15 +113,20 @@ struct QuoteV4VerifierUT: public testing::Test
     const std::vector<uint8_t> pcesvn{ 7, 8 };
     const std::vector<uint8_t> pceId{ 0, 1};
     const std::vector<dcap::pckparser::Revoked> emptyRevoked{};
-    const std::vector<dcap::parser::json::TcbComponent> sgxTcbComponents;
-    const std::vector<dcap::parser::json::TcbComponent> tdxTcbComponents;
+    const std::vector<TcbComponent> sgxTcbComponents;
+    const std::vector<TcbComponent> tdxTcbComponents;
     const std::vector<uint8_t> tdxModuleMrSigner = std::vector<uint8_t>(48, 0x00);
     const std::vector<uint8_t> tdxModuleAttributes = std::vector<uint8_t>(8, 0x00);
     const std::vector<uint8_t> tdxModuleAttributesMask = std::vector<uint8_t>(8, 0xFF);
-    const dcap::parser::json::TdxModule tdxModule = dcap::parser::json::TdxModule(tdxModuleMrSigner, tdxModuleAttributes,
+    const TdxModule tdxModule = TdxModule(tdxModuleMrSigner, tdxModuleAttributes,
                                                                                   tdxModuleAttributesMask);
-
-    std::set<dcap::parser::json::TcbLevel, std::greater<dcap::parser::json::TcbLevel>> tcbs{};
+    TdxModuleTcbLevel tdxModuleTcbLevel = TdxModuleTcbLevel(
+            TdxModuleTcb(2),
+            1, "UpToDate", std::vector<std::string>());
+    std::set<TdxModuleTcbLevel, std::greater<TdxModuleTcbLevel>> tdxModuleTcbLevels = { tdxModuleTcbLevel };
+    const TdxModuleIdentity tdxModuleIdentity = TdxModuleIdentity("TDX_01", tdxModuleMrSigner, tdxModuleAttributes, tdxModuleAttributesMask, tdxModuleTcbLevels);
+    const std::vector<TdxModuleIdentity> tdxModuleIdentities = std::vector<TdxModuleIdentity>(1, tdxModuleIdentity);
+    std::set<TcbLevel, std::greater<TcbLevel>> tcbs{};
 
     NiceMock<test::ValidityMock> validityMock;
     NiceMock<test::TcbMock> tcbMock;
@@ -166,6 +171,8 @@ struct QuoteV4VerifierUT: public testing::Test
         ON_CALL(tcbInfoJson, getTcbLevels()).WillByDefault(testing::ReturnRef(tcbs));
         ON_CALL(tcbInfoJson, getNextUpdate()).WillByDefault(testing::Return(currentTime));
         ON_CALL(tcbInfoJson, getTdxModule()).WillByDefault(testing::ReturnRef(tdxModule));
+        ON_CALL(tcbInfoJson, getTdxModuleIdentities()).WillByDefault(testing::ReturnRef(tdxModuleIdentities));
+
         ON_CALL(enclaveIdentityV2, getVersion()).WillByDefault(Return(2));
         ON_CALL(enclaveIdentityV2, getStatus()).WillByDefault(Return(STATUS_OK));
         ON_CALL(enclaveReportVerifier, verify(_, _, _)).WillByDefault(Return(STATUS_OK));
@@ -262,7 +269,7 @@ TEST_F(QuoteV4VerifierUT, shouldVerifySgxCorrectly)
     const auto quoteBin = gen.buildSgxQuote();
 
     tcbs.insert(tcbs.begin(),
-                dcap::parser::json::TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+                TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -283,7 +290,7 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectly)
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(tcbs.begin(), TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
@@ -294,31 +301,7 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectly)
     EXPECT_EQ(STATUS_OK, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
 }
 
-TEST_F(QuoteV4VerifierUT, shouldFailWithTcbInfoMismatchWhenTdxQuoteSvnDoesntMatchTcbInfo)
-{
-    auto header = dcap::test::QuoteV4Generator::QuoteHeader{};
-    header.version = 4;
-    header.teeType = dcap::constants::TEE_TYPE_TDX;
-    auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    gen.withTDReport(tdReport);
-    gen.withHeader(header);
-    gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
-    const auto quoteBin = gen.buildTdxQuote();
-
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
-    EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
-    EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
-    EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
-    EXPECT_CALL(enclaveIdentityV2, getID()).WillOnce(testing::Return(EnclaveID::TD_QE));
-
-    dcap::Quote quote;
-    ASSERT_TRUE(quote.parse(quoteBin));
-    EXPECT_EQ(STATUS_TCB_INFO_MISMATCH, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
-}
-
-TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectlyWhenTdReportSeamAttributesMaskedMatch)
+TEST_F(QuoteV4VerifierUT, shouldReturnSatusTdxModuleMismatchWhenTdReportSeamAttributesNotZeroed)
 {
     auto header = dcap::test::QuoteV4Generator::QuoteHeader{};
     header.version = 4;
@@ -332,16 +315,12 @@ TEST_F(QuoteV4VerifierUT, shouldVerifyTdxCorrectlyWhenTdReportSeamAttributesMask
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(tcbs.begin(), TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
-    EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
-    EXPECT_CALL(enclaveIdentityV2, getID()).WillOnce(testing::Return(EnclaveID::TD_QE));
-    auto tdxModuleWithDifferentMask = dcap::parser::json::TdxModule(tdxModule.getMrSigner(), tdxModule.getAttributes(), {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF});
-    EXPECT_CALL(tcbInfoJson, getTdxModule()).WillOnce(testing::ReturnRef(tdxModuleWithDifferentMask));
     dcap::Quote quote;
     ASSERT_TRUE(quote.parse(quoteBin));
-    EXPECT_EQ(STATUS_OK, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
+    EXPECT_EQ(STATUS_TDX_MODULE_MISMATCH, dcap::QuoteVerifier{}.verify(quote, pck, crl, tcbInfoJson, &enclaveIdentityV2, enclaveReportVerifier));
 }
 
 TEST_F(QuoteV4VerifierUT, shouldReturnStatusQEIdentityMismatchWhenTdxQuoteAndEnclaveIdentityV2NotTD_QE)
@@ -353,7 +332,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnStatusQEIdentityMismatchWhenTdxQuoteAndEnc
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(tcbs.begin(), TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
     EXPECT_CALL(enclaveIdentityV2, getID()).WillOnce(testing::Return(EnclaveID::QE));
@@ -443,7 +422,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnTcbRevokedOnLatestRevokedEqualPckTCB)
 {
     const auto quoteBin = gen.buildSgxQuote();
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"});
+    tcbs.insert(tcbs.begin(), TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -461,8 +440,8 @@ TEST_F(QuoteV4VerifierUT, shouldMatchToLowerTCBWhenBothSVNsAreLowerAndReturnConf
     const std::vector<uint8_t> higherPcesvn = {0xff, 0xff};
     const std::vector<uint8_t> lowerPcesvn = {0x00, 0x00};
 
-    tcbs.insert(dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "ConfigurationNeeded"});
-    tcbs.insert(dcap::parser::json::TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
+    tcbs.insert(TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "ConfigurationNeeded"});
+    tcbs.insert(TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -480,8 +459,8 @@ TEST_F(QuoteV4VerifierUT, shouldMatchToLowerTCBWhenBothSVNsAreLowerAndReturnConf
     const std::vector<uint8_t> higherPcesvn = {0xff, 0xff};
     const std::vector<uint8_t> lowerPcesvn = {0x00, 0x00};
 
-    tcbs.insert(dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "ConfigurationNeeded"});
-    tcbs.insert(dcap::parser::json::TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
+    tcbs.insert(TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "ConfigurationNeeded"});
+    tcbs.insert(TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
     ON_CALL(tcbInfoJson, getVersion()).WillByDefault(testing::Return(2));
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
@@ -500,8 +479,8 @@ TEST_F(QuoteV4VerifierUT, shouldMatchToLowerTCBWhenBothSVNsAreLowerAndReturnOutO
     const std::vector<uint8_t> higherPcesvn = {0xff, 0xff};
     const std::vector<uint8_t> lowerPcesvn = {0x00, 0x00};
 
-    tcbs.insert(dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "OutOfDateConfigurationNeeded"});
-    tcbs.insert(dcap::parser::json::TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
+    tcbs.insert(TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "OutOfDateConfigurationNeeded"});
+    tcbs.insert(TcbLevel{higherCpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
     ON_CALL(tcbInfoJson, getVersion()).WillByDefault(testing::Return(2));
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
@@ -517,8 +496,8 @@ TEST_F(QuoteV4VerifierUT, shouldMatchToLowerTCBAndReturnConfigurationNeeded)
     std::vector<uint8_t> higherCpusvn = { 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x3F, 0x3F, 0x41, 0x3F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40 };
     std::vector<uint8_t> lowerCpusvn = { 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x3F, 0x3F, 0x40, 0x3F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40 };
 
-    auto higherTcb = dcap::parser::json::TcbLevel{higherCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"};
-    auto lowerTcb = dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "ConfigurationNeeded"};
+    auto higherTcb = TcbLevel{higherCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"};
+    auto lowerTcb = TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "ConfigurationNeeded"};
     tcbs.insert(lowerTcb);
     tcbs.insert(higherTcb);
     EXPECT_EQ(tcbs.size(), 2);
@@ -540,8 +519,8 @@ TEST_F(QuoteV4VerifierUT, shouldMatchToLowerTCBAndReturnConfigurationAndSwHarden
     std::vector<uint8_t> higherCpusvn = { 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x3F, 0x3F, 0x41, 0x3F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40 };
     std::vector<uint8_t> lowerCpusvn = { 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x3F, 0x3F, 0x40, 0x3F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40 };
 
-    auto higherTcb = dcap::parser::json::TcbLevel{higherCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"};
-    auto lowerTcb = dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "ConfigurationAndSWHardeningNeeded"};
+    auto higherTcb = TcbLevel{higherCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"};
+    auto lowerTcb = TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "ConfigurationAndSWHardeningNeeded"};
     tcbs.insert(lowerTcb);
     tcbs.insert(higherTcb);
     EXPECT_EQ(tcbs.size(), 2);
@@ -562,7 +541,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnTcbNotSupportedWhenOnlyPceSvnIsHigher)
 
     const std::vector<uint8_t> higherPcesvn = {0xff, 0xff};
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{cpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
+    tcbs.insert(tcbs.begin(), TcbLevel{cpusvn, toUint16(higherPcesvn[1], higherPcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -577,7 +556,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnTcbRevokedWhenOnlyCpuSvnIsLower)
     std::vector<uint8_t> lowerCpusvn = cpusvn;
     lowerCpusvn[8]--;
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"});
+    tcbs.insert(tcbs.begin(), TcbLevel{lowerCpusvn, toUint16(pcesvn[1], pcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -591,7 +570,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnTcbRevokedWhenOnlyPcesvnIsLower)
 
     const std::vector<uint8_t> lowerPcesvn = {0x21, 0x12};
 
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{cpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "Revoked"});
+    tcbs.insert(tcbs.begin(), TcbLevel{cpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -608,8 +587,8 @@ TEST_F(QuoteV4VerifierUT, shouldNOTReturnTcbRevokedWhenRevokedPcesvnAndCpusvnAre
     std::vector<uint8_t> lowerPcesvn = pcesvn;
     lowerPcesvn[0]--;
 
-    tcbs.insert(dcap::parser::json::TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
-    tcbs.insert(dcap::parser::json::TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "Revoked"});
+    tcbs.insert(TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(TcbLevel{lowerCpusvn, toUint16(lowerPcesvn[1], lowerPcesvn[0]), "Revoked"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -626,7 +605,7 @@ TEST_F(QuoteV4VerifierUT, shouldReturnSwHardeningNeeded)
     std::vector<uint8_t> lowerPcesvn = pcesvn;
     lowerPcesvn[0]--;
 
-    tcbs.insert(dcap::parser::json::TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "SWHardeningNeeded"});
+    tcbs.insert(TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "SWHardeningNeeded"});
     EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
 
     dcap::Quote quote;
@@ -649,7 +628,7 @@ TEST_P(QuoteV4VerifierUTQeIdentityStatusParametrized, testAllStatuses)
     const auto quoteBin = gen.buildSgxQuote();
     dcap::Quote quote;
     ASSERT_TRUE(quote.parse(quoteBin));
-    tcbs.insert(tcbs.begin(), dcap::parser::json::TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(tcbs.begin(), TcbLevel{cpusvn, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
     if (params.enclaveVerifierStatus == STATUS_OK)
     {
         EXPECT_CALL(tcbInfoJson, getTcbLevels()).WillOnce(testing::ReturnRef(tcbs));
@@ -673,8 +652,8 @@ TEST_F(QuoteV4VerifierUT, shouldBackoffToLowerLevelBecauseTdReportTeeSvnIsOutOfD
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
 
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, std::vector<dcap::parser::json::TcbComponent>(16, dcap::parser::json::TcbComponent(0xF0)), toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, std::vector<TcbComponent>(16, TcbComponent(0xF0)), toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
 
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
@@ -698,10 +677,10 @@ TEST_F(QuoteV4VerifierUT, shouldBackoffToLowerLevelBecauseNoAllSvnsAreHigher)
     gen.withHeader(header);
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
-    std::vector<dcap::parser::json::TcbComponent> tdxComponents = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    std::vector<TcbComponent> tdxComponents = {0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, tdxComponents, toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, tdxTcbComponents, toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
 
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));
@@ -719,15 +698,15 @@ TEST_F(QuoteV4VerifierUT, shouldReturnTcbNotSupportedIfNotMatchingTcbLevelIsFoun
     header.version = 4;
     header.teeType = dcap::constants::TEE_TYPE_TDX;
     auto tdReport = dcap::test::QuoteV4Generator::TDReport{};
-    tdReport.teeTcbSvn = {0x50, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    tdReport.teeTcbSvn = {0x50, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     gen.withTDReport(tdReport);
     gen.withHeader(header);
     gen.getAuthData().ecdsaSignature.signature = signAndGetRaw(concat(gen.getHeader().bytes(), gen.getTdReport().bytes()), *privKey);
     const auto quoteBin = gen.buildTdxQuote();
 
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, std::vector<dcap::parser::json::TcbComponent>(16, dcap::parser::json::TcbComponent(0xF0)), toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
-    tcbs.insert(dcap::parser::json::TcbLevel{"TDX", sgxTcbComponents, std::vector<dcap::parser::json::TcbComponent>(16, dcap::parser::json::TcbComponent(0x60)), toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, std::vector<TcbComponent>(16, TcbComponent(0xF0)), toUint16(pcesvn[1], pcesvn[0]), "UpToDate"});
+    tcbs.insert(TcbLevel{"TDX", sgxTcbComponents, std::vector<TcbComponent>(16, TcbComponent(0x60)), toUint16(pcesvn[1], pcesvn[0]), "OutOfDate"});
 
     EXPECT_CALL(tcbInfoJson, getId()).WillRepeatedly(testing::Return("TDX"));
     EXPECT_CALL(tcbInfoJson, getVersion()).WillRepeatedly(testing::Return(3));

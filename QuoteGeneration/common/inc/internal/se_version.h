@@ -28,21 +28,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#define STRFILEVER    "1.16.100.2"
+#define STRFILEVER    "1.16.90.3"
 #define COPYRIGHT      "Copyright (C) 2023 Intel Corporation"
-#define FILEVER        1,16,100,2
-#define PRODUCTVER     1,16,100,2
-#define STRPRODUCTVER  "1.16.100.2"
+#define FILEVER        1,16,90,3
+#define PRODUCTVER     1,16,90,3
+#define STRPRODUCTVER  "1.16.90.3"
 #define COMPANYNAME    "Intel Corporation"
 #define PRODUCTNAME    "Intel® Software Guard Extensions"
 
-#define DEFAULT_QPL_VERSION          "1.13.103.2"
-#define QUOTE_VERIFIER_VERSION       "1.12.103.2"
-#define QUOTE_LOADER_VERSION         "1.11.106.2"
-#define TDQE_WRAPPER_VERSION         "1.14.103.2"
-#define PCE_WRAPPER_VERSION          "1.14.103.2"
+#define DEFAULT_QPL_VERSION          "1.13.103.3"
+#define QUOTE_VERIFIER_VERSION       "1.12.103.3"
+#define QUOTE_LOADER_VERSION         "1.11.106.3"
+#define TDQE_WRAPPER_VERSION         "1.14.103.3"
+#define PCE_WRAPPER_VERSION          "1.14.103.3"
 
 #define QE3_VERSION                  "1.16.100.1"
 #define QVE_VERSION                  "1.16.100.1"
 #define IDE_VERSION                  "1.16.100.1"
-#define TDQE_VERSION                 "1.16.100.1"
+#define TDQE_VERSION                 "1.16.90.2"

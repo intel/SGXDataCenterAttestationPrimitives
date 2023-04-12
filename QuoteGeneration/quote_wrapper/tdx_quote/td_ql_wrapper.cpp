@@ -372,7 +372,7 @@ tee_att_error_t tee_att_get_quote(const tee_att_config_t* p_context,
     }
 
     ret_val = const_cast<tee_att_config_t*>(p_context)->ecdsa_get_quote(
-        (sgx_report2_t*)p_report, (sgx_quote4_t*)p_quote, quote_size);
+        (sgx_report2_t*)p_report, p_quote, quote_size);
     if (TEE_ATT_SUCCESS != ret_val) {
         if ((ret_val < TEE_ATT_ERROR_MIN) ||
             (ret_val > TEE_ATT_ERROR_MAX))
