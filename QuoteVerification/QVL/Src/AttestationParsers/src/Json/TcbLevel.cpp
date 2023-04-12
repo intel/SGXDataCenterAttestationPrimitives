@@ -43,6 +43,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser { namespace 
 
 static constexpr size_t SGX_TCB_SVN_COMP_COUNT = 16;
 
+// Deprecated as a part of TcbInfo version 2 structure. Please use the newest TcbLevel constructor instead.
 TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                    uint32_t pceSvn,
                    const std::string& status): _version(TcbInfo::Version::V2),
@@ -52,6 +53,7 @@ TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                                                _tcbDate(0)
 {}
 
+// Deprecated as a part of TcbInfo version 2 structure. Please use the newest TcbLevel constructor instead.
 TcbLevel::TcbLevel(const std::vector<uint8_t>& cpuSvnComponents,
                    const uint32_t pceSvn,
                    const std::string& status,
@@ -95,6 +97,7 @@ bool TcbLevel::operator>(const TcbLevel& other) const
     return _cpuSvnComponents > other._cpuSvnComponents;
 }
 
+// Deprecated as a part of TcbInfo version 2 structure. Please use getSgxTcbComponent instead.
 uint32_t TcbLevel::getSgxTcbComponentSvn(uint32_t componentNumber) const
 {
     if (componentNumber > constants::CPUSVN_BYTE_LEN)
@@ -158,6 +161,7 @@ const std::vector<TcbComponent>& TcbLevel::getTdxTcbComponents() const
     return _tdxTcbComponents;
 }
 
+// Deprecated as a part of TcbInfo version 3 structure. Please use getSgxTcbComponents with getSvn instead
 const std::vector<uint8_t>& TcbLevel::getCpuSvn() const
 {
     return _cpuSvnComponents;
@@ -192,7 +196,7 @@ TcbLevel::TcbLevel(const ::rapidjson::Value& tcbLevel, const uint32_t version, c
     _id = id;
     switch(version)
     {
-        case 2:
+        case 2: // deprecated
             parseTcbLevelV2(tcbLevel, jsonParser);
             break;
         case 3:
@@ -225,6 +229,7 @@ void TcbLevel::parseStatus(const ::rapidjson::Value &tcbLevel,
     }
 }
 
+// Deprecated as a part of TcbInfo version 2 structure. Please use newer structure instead.
 void TcbLevel::parseSvns(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
 {
     if(!tcbLevel.HasMember("tcb"))
@@ -278,6 +283,8 @@ void TcbLevel::parseTcbLevelCommon(const ::rapidjson::Value& tcbLevel, JsonParse
             {{"UpToDate", "OutOfDate", "ConfigurationNeeded", "Revoked", "OutOfDateConfigurationNeeded", "SWHardeningNeeded", "ConfigurationAndSWHardeningNeeded"}};
     parseStatus(tcbLevel, validStatuses, "tcbStatus");
 }
+
+// TcbInfo version 2 is deprecated. Please use recent tcbLevel parser with newer structure instead.
 void TcbLevel::parseTcbLevelV2(const ::rapidjson::Value &tcbLevel, JsonParser& jsonParser)
 {
     parseTcbLevelCommon(tcbLevel, jsonParser);
@@ -358,6 +365,7 @@ void TcbLevel::setTcbComponents(const rapidjson::Value &tcb) {
     }
 }
 
+// Deprecated as a part of TcbInfo version 2 structure. Please use setTcbComponents instead.
 void TcbLevel::setCpuSvn(const ::rapidjson::Value& tcb, JsonParser& jsonParser)
 {
 

@@ -66,8 +66,10 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 
-ifneq ($(MAKECMDGOALS),clean)
-include $(SGX_SDK)/buildenv.mk
+ifndef _TD_MIGRATION
+    ifneq ($(MAKECMDGOALS),clean)
+    include $(SGX_SDK)/buildenv.mk
+    endif
 endif
 
 ifeq ($(shell getconf LONG_BIT), 32)
@@ -188,6 +190,10 @@ ifneq ($(MITIGATION-CVE-2020-0551), LOAD)
     endif
 endif
 
+ifdef _TD_MIGRATION
+COMMON_FLAGS += -D_TD_MIGRATION
+endif
+
 CFLAGS   += $(COMMON_FLAGS)
 CXXFLAGS += $(COMMON_FLAGS)
 
@@ -210,3 +216,12 @@ ENCLAVE_CXXFLAGS = $(ENCLAVE_CFLAGS) -nostdinc++
 ENCLAVE_LDFLAGS  = $(COMMON_LDFLAGS) -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
                    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
                    -Wl,--defsym,__ImageBase=0
+
+TD_MIGRATION_LINUX_TRUNK_ROOT_PATH := $(ROOT_DIR)/../../..
+TD_MIGRATION_STD_INC_PATH := $(TD_MIGRATION_LINUX_TRUNK_ROOT_PATH)/common/inc
+TD_MIGRATION_STD_LIB_PATH := $(TD_MIGRATION_LINUX_TRUNK_ROOT_PATH)/build/linux
+TD_MIGRATION_CFLAGS := $(CFLAGS) -ffreestanding -nostdinc -fPIC -fvisibility=hidden -D_TD_MIGRATION
+TD_MIGRATION_CXXFLAGS := $(TD_MIGRATION_CFLAGS) -nostdinc++
+TD_MIGRATION_LDFLAGS := -nostdlib -nodefaultlibs -nostartfiles  \
+                        -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--export-dynamic -Wl,--gc-sections -g
+TD_MIGRATION_BUILD_DIR := $(BUILD_DIR)/td_migration

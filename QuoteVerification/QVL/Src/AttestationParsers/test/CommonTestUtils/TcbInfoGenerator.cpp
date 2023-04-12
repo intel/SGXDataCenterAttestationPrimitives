@@ -119,6 +119,10 @@ const std::string validTdxTcbV3 = R"json(
         ],
         "pcesvn": 30865
     })json";
+const std::string validTdxModuleTcb = R"json(
+    "tcb": {
+        "isvsvn": 1
+    })json";
 const std::string validUpToDateStatus = R"json("tcbStatus": "UpToDate")json";
 const std::string validOutOfDateStatus = R"json("tcbStatus": "OutOfDate")json";
 const std::string validRevokedStatus = R"json("tcbStatus": "Revoked")json";
@@ -126,6 +130,7 @@ const std::string validConfigurationNeededStatus = R"json("tcbStatus": "Configur
 const std::string validTcbLevelV2Template = R"json({%s, %s, %s, %s})json";
 // the same as V2 bud new variable for code clarity
 const std::string validTcbLevelV3Template = validTcbLevelV2Template;
+const std::string validTdxModuleTcbLevelTemplate = validTcbLevelV2Template;
 
 const std::string validTcbInfoV2Template = R"json({
         "tcbInfo": {
@@ -155,6 +160,7 @@ const std::string validTdxTcbInfoV3Template = R"json({
                 "attributes": "0000000000000000",
                 "attributesMask": "FFFFFFFFFFFFFFFF"
             },
+            %s
             "tcbLevels": [%s]
         },
         %s})json";
@@ -171,6 +177,19 @@ const std::string validSgxTcbInfoV3Template = R"json({
             "tcbLevels": [%s]
         },
         %s})json";
+
+const std::string validTdxModuleIdentitiesTemplate = R"(
+        "tdxModuleIdentities": [
+            {
+                "id": "TDX_O0",
+                "mrsigner": "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F",
+                "attributes": "0000000000000000",
+                "attributesMask": "FFFFFFFFFFFFFFFF",
+                "tcbLevels": [%s]
+            }
+        ],
+    )";
+
 const std::string validSignatureTemplate = R"json("signature": "62f2eb97227d906c158e8500964c8d10029e1a318e0e95054fbc1b9636913555d7147ceefe07c4cb7ac1ac700093e2ee3fd4f7d00c7caf135dc5243be51e1def")json";
 
 const int DEFAULT_TCB_TYPE = 1;
@@ -290,6 +309,18 @@ std::string TcbInfoGenerator::generateTcbInfo(const std::string &tcbInfoTemplate
 	return tcbInfo;
 }
 
+std::string TcbInfoGenerator::generateTdxTcbInfo(const std::string &tcbInfoTemplate,
+                                                 const std::string &tcbLevelsJson,
+                                                 const std::string &tdxModuleIdentities,
+                                                 const std::string &signature)
+{
+    auto jsonSize = tcbInfoTemplate.length() + tdxModuleIdentities.length() + tcbLevelsJson.length() + signature.length() + 1;
+    std::string tcbInfo;
+    tcbInfo.resize(jsonSize);
+    snprintf(&tcbInfo[0], jsonSize, tcbInfoTemplate.c_str(), tdxModuleIdentities.c_str(), tcbLevelsJson.c_str(), signature.c_str());
+    return tcbInfo;
+}
+
 std::string TcbInfoGenerator::generateTcbLevelV2(const std::string &tcbLevelTemplate,
                                                  const std::string &tcb,
                                                  const std::string &status,
@@ -311,5 +342,25 @@ std::string TcbInfoGenerator::generateTcbLevelV3(const std::string &tcbLevelTemp
                                                  const std::string &advisoryIDs)
 {
     return generateTcbLevelV2(tcbLevelTemplate, tcb, status, tcbDate, advisoryIDs);
+}
+
+std::string TcbInfoGenerator::generateTdxModuleTcbLevel(const std::string &tcbLevelTemplate,
+                                                        const std::string &tcb,
+                                                        const std::string &status,
+                                                        const std::string &tcbDate,
+                                                        const std::string &advisoryIDs)
+{
+    return generateTcbLevelV2(tcbLevelTemplate, tcb, status, tcbDate, advisoryIDs);;
+}
+
+std::string TcbInfoGenerator::generateTdxModuleIdentities(const std::string &tdxModuleIdentitiesTemplate,
+                                                          const std::string &tcbModuleIdentityLevelsJson)
+{
+    auto jsonSize = tdxModuleIdentitiesTemplate.length() + tcbModuleIdentityLevelsJson.length() + 1;
+    std::string value;
+    value.resize(jsonSize);
+    snprintf(&value[0], jsonSize, tdxModuleIdentitiesTemplate.c_str(), tcbModuleIdentityLevelsJson.c_str());
+    value.resize(value.find('\000'));
+    return value;
 }
 }}}

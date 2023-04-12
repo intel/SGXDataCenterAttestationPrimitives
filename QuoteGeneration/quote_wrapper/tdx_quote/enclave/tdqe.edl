@@ -32,7 +32,7 @@
 enclave {
 include "sgx_report.h"
 include "sgx_quote.h"
-include "sgx_quote_4.h"
+include "sgx_report2.h"
 include "user_types.h"
 include "ecdsa_quote.h"
 

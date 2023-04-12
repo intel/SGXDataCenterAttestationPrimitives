@@ -129,6 +129,22 @@ const TdxModule& TcbInfo::getTdxModule() const
 
     return _tdxModule;
 }
+
+const std::vector<TdxModuleIdentity>& TcbInfo::getTdxModuleIdentities() const
+{
+    if (_version < Version::V3)
+    {
+        LOG_AND_THROW(FormatException, "TdxModuleIdentities is not a valid field in TCB Info V1 and V2 structure");
+    }
+
+    if (_id != TDX_ID)
+    {
+        LOG_AND_THROW(FormatException, "TdxModuleIdentities is only valid for TDX TCB Info");
+    }
+
+    return _tdxModuleIdentities;
+}
+
 // private
 
 TcbInfo::TcbInfo(const std::string& jsonString)
@@ -291,7 +307,6 @@ TcbInfo::TcbInfo(const std::string& jsonString)
         std::tie(std::ignore, inserted) = _tcbLevels.emplace(TcbLevel(tcbs[tcbLevelIndex], static_cast<uint32_t>(_version), _id));
         if (!inserted)
         {
-
             LOG_AND_THROW(InvalidExtensionException, "Detected duplicated TCB levels");
         }
     }
@@ -344,10 +359,18 @@ void TcbInfo::parsePartV2(const ::rapidjson::Value &tcbInfo, JsonParser &jsonPar
 void TcbInfo::parsePartV3(const ::rapidjson::Value &tcbInfo)
 {
     auto tdxModuleExists = tcbInfo.HasMember("tdxModule");
+    auto tdxModuleIdentitiesExists = tcbInfo.HasMember("tdxModuleIdentities");
 
-    if (_id == TcbInfo::SGX_ID && tdxModuleExists)
+    if (_id == TcbInfo::SGX_ID)
     {
-        LOG_AND_THROW(InvalidExtensionException, "TCB Info JSON for SGX should not have [tdxModule] field");
+        if (tdxModuleExists)
+        {
+            LOG_AND_THROW(InvalidExtensionException, "TCB Info JSON for SGX should not have [tdxModule] field");
+        }
+        if (tdxModuleIdentitiesExists)
+        {
+            LOG_AND_THROW(InvalidExtensionException, "TCB Info JSON for SGX should not have [tdxModuleIdentities] field");
+        }
     }
     else if (_id == TcbInfo::TDX_ID)
     {
@@ -361,6 +384,25 @@ void TcbInfo::parsePartV3(const ::rapidjson::Value &tcbInfo)
             LOG_AND_THROW(FormatException, "[tdxModule] field should be an object");
         }
         _tdxModule = TdxModule(*tdxModuleJson);
+
+        if (!tdxModuleIdentitiesExists)
+        {
+            return;
+        }
+        const auto tdxModuleIdentities = &tcbInfo["tdxModuleIdentities"];
+        if(!tdxModuleIdentities->IsArray())
+        {
+            LOG_AND_THROW(InvalidExtensionException, "[tdxModuleIdentities] field of TCB info JSON should be a nonempty array");
+        }
+
+        for (rapidjson::Value::ConstValueIterator itr = tdxModuleIdentities->Begin(); itr != tdxModuleIdentities->End(); ++itr) {
+            _tdxModuleIdentities.emplace_back(TdxModuleIdentity(*itr));
+        }
+
+        if(_tdxModuleIdentities.empty())
+        {
+            LOG_AND_THROW(InvalidExtensionException, "Number of parsed [tdxModuleIdentities] should not be 0");
+        }
     }
 }
 }}}}} // namespace intel { namespace sgx { namespace dcap { namespace parser { namespace json {

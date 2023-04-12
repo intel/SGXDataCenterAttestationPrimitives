@@ -29,6 +29,7 @@
  *
  */
 
+#ifndef _TD_MIGRATION
 #include <sys/socket.h>
 #include <linux/vm_sockets.h>
 #include "tdx_attest.h"
@@ -48,20 +49,24 @@
 #include <syslog.h>
 #include <assert.h>
 
-#define TDX_ATTEST_DEV_PATH "/dev/tdx-guest"
+#define TDX_ATTEST_DEV_PATH "/dev/tdx_guest"
 #define CFG_FILE_PATH "/etc/tdx-attest.conf"
 // TODO: Should include kernel header, but the header file are included by
 // different package in differnt distro, and installed in different locations.
 // So add these defines here. Need to remove them later when kernel header
 // became stable.
-#define TDX_CMD_GET_REPORT _IOWR('T', 0x01, __u64)
-#define TDX_CMD_GET_QUOTE _IOR('T', 0x02, __u64)
+#define TDX_CMD_GET_REPORT0     _IOWR('T', 1, struct tdx_report_req)
+#define TDX_CMD_VERIFY_REPORT	_IOR('T', 2, struct tdx_verify_report_req)
+#define TDX_CMD_EXTEND_RTMR		_IOR('T', 3, struct tdx_extend_rtmr_req)
+#define TDX_CMD_GET_QUOTE		_IOR('T', 4, struct tdx_quote_req)
 
 /* TD Quote status codes */
-#define GET_QUOTE_SUCCESS 0
-#define GET_QUOTE_IN_FLIGHT 0xffffffffffffffff
-#define GET_QUOTE_ERROR 0x8000000000000000
-#define GET_QUOTE_SERVICE_UNAVAILABLE 0x8000000000000001
+#define GET_QUOTE_SUCCESS               0
+#define GET_QUOTE_IN_FLIGHT             0xffffffffffffffff
+#define GET_QUOTE_ERROR                 0x8000000000000000
+#define GET_QUOTE_SERVICE_UNAVAILABLE   0x8000000000000001
+
+#define TDX_EXTEND_RTMR_DATA_LEN        48
 
 #ifdef DEBUG
 #define TDX_TRACE                                          \
@@ -74,11 +79,13 @@
 #endif
 
 struct tdx_report_req {
-    __u8 subtype;
-    __u64 reportdata;
-    __u32 rpd_len;
-    __u64 tdreport;
-    __u32 tdr_len;
+	__u8 reportdata[TDX_REPORT_DATA_SIZE];
+	__u8 tdreport[TDX_REPORT_SIZE];
+};
+
+struct tdx_extend_rtmr_req {
+	__u8 data[TDX_EXTEND_RTMR_DATA_LEN];
+	__u8 index;
 };
 
 struct tdx_quote_hdr {
@@ -176,21 +183,18 @@ static tdx_attest_error_t get_tdx_report(
         fprintf(stderr, "\nNeed to input TDX report.");
         return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
+    if (!p_tdx_report_data) {
+        fprintf(stderr, "\nNeed to input TDX report data.");
+        return TDX_ATTEST_ERROR_INVALID_PARAMETER;
+    }
+    struct tdx_report_req req = {0};
+    memcpy(req.reportdata, p_tdx_report_data->d, sizeof(req.reportdata));
 
-    struct tdx_report_req req;
-    uint8_t tdx_report[TDX_REPORT_SIZE] = {0};
-
-    req.subtype = 0;
-    req.reportdata = (__u64)p_tdx_report_data->d;
-    req.rpd_len = TDX_REPORT_DATA_SIZE;
-    req.tdreport = (__u64)tdx_report;
-    req.tdr_len = TDX_REPORT_SIZE;
-
-    if (-1 == ioctl(devfd, TDX_CMD_GET_REPORT, &req)) {
+    if (-1 == ioctl(devfd, TDX_CMD_GET_REPORT0, &req)) {
         TDX_TRACE;
         return TDX_ATTEST_ERROR_REPORT_FAILURE;
     }
-    memcpy(p_tdx_report->d, tdx_report, sizeof(p_tdx_report->d));
+    memcpy(p_tdx_report->d, req.tdreport, sizeof(p_tdx_report->d));
     return TDX_ATTEST_SUCCESS;
 }
 
@@ -508,12 +512,15 @@ tdx_attest_error_t tdx_att_extend(
 {
 #ifdef TDX_CMD_EXTEND_RTMR
     int devfd = -1;
-    uint64_t extend_data_size = 0;
+    struct tdx_extend_rtmr_req req;
     if (!p_rtmr_event || p_rtmr_event->version != 1) {
         return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
     if (p_rtmr_event->event_data_size) {
         return TDX_ATTEST_ERROR_NOT_SUPPORTED;
+    }
+    if (p_rtmr_event->rtmr_index > 3) {
+        return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
 
     devfd = open(TDX_ATTEST_DEV_PATH, O_RDWR | O_SYNC);
@@ -522,13 +529,11 @@ tdx_attest_error_t tdx_att_extend(
         return TDX_ATTEST_ERROR_DEVICE_FAILURE;
     }
 
-    if (-1 == ioctl(devfd, TDX_CMD_GET_EXTEND_SIZE, &extend_data_size)) {
-        TDX_TRACE;
-        close(devfd);
-        return TDX_ATTEST_ERROR_EXTEND_FAILURE;
-    }
-    assert(extend_data_size == sizeof(p_rtmr_event->extend_data));
-    if (-1 == ioctl(devfd, TDX_CMD_EXTEND_RTMR, &p_rtmr_event->rtmr_index)) {
+    static_assert(TDX_EXTEND_RTMR_DATA_LEN == sizeof(p_rtmr_event->extend_data),
+                  "rtmr extend size mismatch!");
+    req.index = (uint8_t)p_rtmr_event->rtmr_index;
+    memcpy(req.data, p_rtmr_event->extend_data, TDX_EXTEND_RTMR_DATA_LEN);
+    if (-1 == ioctl(devfd, TDX_CMD_EXTEND_RTMR, &req)) {
         TDX_TRACE;
         close(devfd);
         if (EINVAL == errno) {
@@ -543,3 +548,137 @@ tdx_attest_error_t tdx_att_extend(
     return TDX_ATTEST_ERROR_NOT_SUPPORTED;
 #endif
 }
+
+#else
+
+#include "tdx_attest.h"
+#include "migtd_com.h"
+#include "migtd_external.h"
+#include "qgs_msg_lib.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+__attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_report (
+               const void *p_tdx_report,
+               uint32_t tdx_report_size,
+               void *p_quote,
+               uint32_t *p_quote_size)
+{
+    uint32_t quote_size = 0;
+    uint32_t in_msg_size = 0;
+    tdx_attest_error_t ret = TDX_ATTEST_ERROR_UNEXPECTED;
+    struct migtd_tdx_quote_hdr *p_get_quote_blob = NULL;
+    uint8_t *p_blob_payload = NULL;
+    uint32_t msg_size = 0;
+    int migtd_get_quote_ret = 0;
+    const uint8_t *tmp_p_quote = NULL;
+    const uint8_t *p_selected_id = NULL;
+    uint32_t id_size = 0;
+    qgs_msg_error_t qgs_msg_ret = QGS_MSG_SUCCESS;
+    qgs_msg_header_t *p_header = NULL;
+    uint8_t *p_req = NULL;
+
+    if (NULL == p_tdx_report || TDX_REPORT_SIZE != tdx_report_size) {
+        ret = TDX_ATTEST_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    if (NULL == p_quote || NULL == p_quote_size || 0 == *p_quote_size) {
+        ret = TDX_ATTEST_ERROR_INVALID_PARAMETER;
+        goto ret_point;
+    }
+
+    p_get_quote_blob = (struct migtd_tdx_quote_hdr *)malloc(MIGTD_REQ_BUF_SIZE);
+    if (!p_get_quote_blob) {
+        ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+    
+    qgs_msg_ret = qgs_msg_gen_get_quote_req(p_tdx_report, tdx_report_size,
+        NULL, 0, &p_req, &msg_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+
+    if (msg_size > MIGTD_REQ_BUF_SIZE - sizeof(struct migtd_tdx_quote_hdr) - MIGTD_HEADER_SIZE) {
+        ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+        goto ret_point;
+    }
+
+    p_blob_payload = (uint8_t *)&p_get_quote_blob->data;
+    p_blob_payload[0] = (uint8_t)((msg_size >> 24) & 0xFF);
+    p_blob_payload[1] = (uint8_t)((msg_size >> 16) & 0xFF);
+    p_blob_payload[2] = (uint8_t)((msg_size >> 8) & 0xFF);
+    p_blob_payload[3] = (uint8_t)(msg_size & 0xFF);
+
+    // Serialization
+    memcpy(p_blob_payload + MIGTD_HEADER_SIZE, p_req, msg_size);
+    
+    p_get_quote_blob->version = 1;
+    p_get_quote_blob->status = 0;
+    p_get_quote_blob->in_len = MIGTD_HEADER_SIZE + msg_size;
+    p_get_quote_blob->out_len = 0;
+
+    migtd_get_quote_ret = migtd_get_quote(p_get_quote_blob, MIGTD_REQ_BUF_SIZE);
+    if (migtd_get_quote_ret) {
+        ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+        goto ret_point;
+    }
+
+    if (p_get_quote_blob->status
+        || p_get_quote_blob->out_len <= MIGTD_HEADER_SIZE) {
+        if (GET_QUOTE_IN_FLIGHT == p_get_quote_blob->status) {
+            ret = TDX_ATTEST_ERROR_BUSY;
+        } else if (GET_QUOTE_SERVICE_UNAVAILABLE == p_get_quote_blob->status) {
+            ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+        } else {
+            ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        }
+        goto ret_point;
+    }
+
+    //in_msg_size is the size of serialized response, remove 4bytes header
+    for (unsigned i = 0; i < MIGTD_HEADER_SIZE; ++i) {
+        in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
+    }
+    if (in_msg_size != p_get_quote_blob->out_len - MIGTD_HEADER_SIZE) {
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+
+    qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
+        p_blob_payload + MIGTD_HEADER_SIZE, in_msg_size,
+        &p_selected_id, &id_size,
+        (const uint8_t **)&tmp_p_quote, &quote_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+
+    // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
+    p_header = (qgs_msg_header_t *)(p_blob_payload + MIGTD_HEADER_SIZE);
+    if (p_header->error_code != 0) {
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+
+    if (quote_size > *p_quote_size) {
+        ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+        goto ret_point;
+    }
+    memcpy(p_quote, tmp_p_quote, quote_size);
+    
+    *p_quote_size = quote_size;
+    ret = TDX_ATTEST_SUCCESS;
+
+ret_point:
+    qgs_msg_free(p_req);
+    SAFE_FREE(p_get_quote_blob);
+    return ret;
+}
+
+#endif

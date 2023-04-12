@@ -225,7 +225,7 @@ TEST(QuoteV3ParsingUT, shouldParseAndNotValidateBecauseQeVendorIdNotSupported)
     EXPECT_TRUE(testHeader == quoteObj.getHeader());
 }
 
-TEST(QuoteV3ParsingUT, shouldNotParseBecauseVersionNotSupported)
+TEST(QuoteV3ParsingUT, shouldParseButNotValidateBecauseVersionNotSupported)
 {
     dcap::test::QuoteV3Generator::QuoteHeader testHeader;
     testHeader.version = 2; // Not supported
@@ -243,9 +243,10 @@ TEST(QuoteV3ParsingUT, shouldNotParseBecauseVersionNotSupported)
 
     dcap::Quote quoteObj;
 
-    ASSERT_FALSE(quoteObj.parse(quote));
+    ASSERT_TRUE(quoteObj.parse(quote));
 
     EXPECT_TRUE(testHeader == quoteObj.getHeader());
+    ASSERT_FALSE(quoteObj.validate());
 }
 
 TEST(QuoteV3ParsingUT, shouldNotParseBecauseTeeTypeNotSupported)
@@ -395,12 +396,12 @@ TEST(QuoteV3ParsingUT, shouldParseCustomQeAuth)
     EXPECT_TRUE(qeAuthData == quote.getAuthDataV3().qeAuthData);
 }
 
-TEST(QuoteV3ParsingUT, shouldNotParseWhenQuoteAuthDataSizeMatchButQeAuthDataSizeDoNotMatch)
+TEST(QuoteV3ParsingUT, shouldNotParseWhenQuoteAuthDataSizeBiggerThanRemainingBuffer)
 {
     dcap::test::QuoteV3Generator gen;
 
     dcap::test::QuoteV3Generator::QeAuthData qeAuthData;
-    qeAuthData.data = {0x00, 0xaa, 0xff};
+    qeAuthData.data = {0x00, 0xaa};
     qeAuthData.size = 2;
 
     gen.withQeAuthData(qeAuthData);
@@ -445,7 +446,7 @@ TEST(QuoteV3ParsingUT, shouldParsecertificationData)
     EXPECT_EQ(qeCert.keyDataType, quote.getAuthDataV3().certificationData.type);
 }
 
-TEST(QuoteV3ParsingUT, shouldNotParseWhenAuthDataSizeMatchButcertificationDataParsedSizeDoesNotMatch)
+TEST(QuoteV3ParsingUT, shouldParseWhenAuthDataSizeMatchButcertificationDataParsedSizeDoesNotMatch)
 {
     dcap::test::QuoteV3Generator gen;
 
@@ -458,7 +459,8 @@ TEST(QuoteV3ParsingUT, shouldNotParseWhenAuthDataSizeMatchButcertificationDataPa
     gen.getAuthSize() += 4;
 
     dcap::Quote quote;
-    ASSERT_FALSE(quote.parse(gen.buildQuote()));
+    ASSERT_TRUE(quote.parse(gen.buildQuote()));
+    ASSERT_TRUE(quote.validate());
 }
 
 TEST(QuoteV3ParsingUT, shouldNotParseWhenAuthDataSizeMatchButcertificationDataParsedSizeIsTooMuch)

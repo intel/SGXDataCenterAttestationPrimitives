@@ -46,7 +46,6 @@ INCLUDE := -I$(SGX_SDK)/include                        \
            -I$(COMMON_DIR)/inc/internal                \
            -I$(COMMON_DIR)/inc/internal/linux          \
            -I$(TOP_DIR)/ae/inc/internal                \
-           -I../../inc                                 \
            -I../../../common/inc                       \
            -I../../../../pce_wrapper/inc               \
            -I..                                        \
@@ -69,7 +68,7 @@ $(SONAME): $(OBJS)
 
 quoting_enclave_tdqe.o: $(AENAME)_t.c
 
-%.o:%.cpp 
+%.o:%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(DEFINES) -fno-exceptions -c $< -o $@
 
 $(AENAME)_t.c: ../$(AENAME).edl
@@ -80,7 +79,7 @@ clean:
 	@$(RM) *.o
 	@$(RM) *.so
 	@$(RM) *.map
-	@$(RM) *_t.* 
+	@$(RM) *_t.*
 
 .PHONY: rebuild
 rebuild:

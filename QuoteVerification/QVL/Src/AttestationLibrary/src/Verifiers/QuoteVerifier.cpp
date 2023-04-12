@@ -32,6 +32,7 @@
 #include "QuoteVerifier.h"
 #include "EnclaveIdentityV2.h"
 #include "Utils/RuntimeException.h"
+#include "Utils/Logger.h"
 
 #include <algorithm>
 #include <functional>
@@ -43,7 +44,6 @@
 #include <OpensslHelpers/SignatureVerification.h>
 #include <OpensslHelpers/Bytes.h>
 #include <Verifiers/PckCertVerifier.h>
-#include <Utils/Logger.h>
 
 namespace intel { namespace sgx { namespace dcap {
 
@@ -69,13 +69,19 @@ bool isCpuSvnHigherOrEqual(const dcap::parser::x509::PckCertificate& pckCert,
     return CPUSVN_EQUAL_OR_HIGHER;
 }
 
-bool isTdxTcbHigherOrEqual(const dcap::quote::TDReport& tdReport,
+bool isTdxTcbHigherOrEqual(const Quote& quote,
                            const dcap::parser::json::TcbLevel& tcbLevel)
 {
-    for(uint32_t index = 0; index < constants::CPUSVN_BYTE_LEN; ++index)
+    const auto& teeTcbSvn = quote.getTeeTcbSvn();
+    uint32_t index = 0;
+    if (quote.getHeader().version > constants::QUOTE_VERSION_3 && teeTcbSvn[1] > 0)
     {
-        const auto componentValue = tdReport.teeTcbSvn[index];
-        const auto otherComponentValue = tcbLevel.getTdxTcbComponent(index);
+        index = 2;
+    }
+    for(; index < constants::CPUSVN_BYTE_LEN; ++index)
+    {
+        const auto componentValue = teeTcbSvn[index];
+        const auto& otherComponentValue = tcbLevel.getTdxTcbComponent(index);
         if(componentValue < otherComponentValue.getSvn())
         {
             // If *ANY* SVN is lower then TCB level is considered lower
@@ -90,17 +96,20 @@ const parser::json::TcbLevel& getMatchingTcbLevel(const dcap::parser::json::TcbI
                                        const Quote &quote)
 {
     const auto &tcbs = tcbInfo.getTcbLevels();
-    const auto certPceSvn = pckCert.getTcb().getPceSvn();
+    const auto &pckTcb = pckCert.getTcb();
+    const auto certPceSvn = pckTcb.getPceSvn();
 
     for (const auto& tcb : tcbs)
     {
+        /// 4.1.2.4.17.1 & 4.1.2.4.17.2
         if(isCpuSvnHigherOrEqual(pckCert, tcb) && certPceSvn >= tcb.getPceSvn())
         {
             if (tcbInfo.getVersion() >= 3 &&
                 tcbInfo.getId() == parser::json::TcbInfo::TDX_ID &&
                 quote.getHeader().teeType == constants::TEE_TYPE_TDX)
             {
-                if (isTdxTcbHigherOrEqual(quote.getTdReport(), tcb))
+                /// 4.1.2.4.17.3
+                if (isTdxTcbHigherOrEqual(quote, tcb))
                 {
                     return tcb;
                 }
@@ -112,60 +121,70 @@ const parser::json::TcbLevel& getMatchingTcbLevel(const dcap::parser::json::TcbI
         }
     }
 
-    /// 4.1.2.4.17.3
+    /// 4.1.2.4.17.5
     LOG_ERROR("TCB Level has not been selected");
     throw RuntimeException(STATUS_TCB_NOT_SUPPORTED);
 }
 
-Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert,
-        const Quote& quote)
+Status checkTdxModuleTcbStatus(const parser::json::TcbInfo &tcbInfoJson,
+                               const Quote &quote)
 {
-    /// 4.1.2.4.17.1 & 4.1.2.4.17.2
-    const auto& tcbLevel = getMatchingTcbLevel(tcbInfoJson, pckCert, quote);
+    /// 4.1.2.4.17.4
+    const auto &tdxModuleVersion = quote.getTeeTcbSvn()[1];
+    const auto &tdxModuleIsvSvn = quote.getTeeTcbSvn()[0];
 
-    if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID
-        && tcbLevel.getTdxTcbComponent(1).getSvn() != quote.getTdReport().teeTcbSvn[1])
+    if (quote.getHeader().version > constants::QUOTE_VERSION_3 && tdxModuleVersion == 0)
     {
-        LOG_ERROR("SVNs at index 1 in TDX TCB Component SVNs ({}) and in TEE TCB SVNs array ({}) does not match",
-                  bytesToHexString(std::vector<uint8_t>{tcbLevel.getTdxTcbComponent(1).getSvn()}),
-                  bytesToHexString(std::vector<uint8_t>{quote.getTdReport().teeTcbSvn[1]}));
-        return STATUS_TCB_INFO_MISMATCH;
+        return STATUS_OK;
     }
 
-    const auto& tcbLevelStatus = tcbLevel.getStatus();
+    const std::string tdxModuleIdentityId = "TDX_" + bytesToHexString({ tdxModuleVersion });
 
-    const auto pckTcb = pckCert.getTcb();
-    if(tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID)
-    {
-        const auto tdxComponents = tcbLevel.getTdxTcbComponents();
-        std::vector<uint8_t>tdxTcbComponentsSvnsVec;
-        for (auto component : tdxComponents)
-        {
-            tdxTcbComponentsSvnsVec.push_back(component.getSvn());
-        }
-
-        LOG_INFO("Selected TCB Level - sgx: {}, tdx: {}, pceSvn: {}, status: {},\n"
-                 "PCK TCB - cpuSvn: {}, pceSvn: {}\n"
-                 "TD Report - TdxSvn: {}",
-                 bytesToHexString(tcbLevel.getCpuSvn()),
-                 bytesToHexString(tdxTcbComponentsSvnsVec),
-                 tcbLevel.getPceSvn(),
-                 tcbLevelStatus,
-                 bytesToHexString(pckTcb.getCpuSvn()),
-                 pckTcb.getPceSvn(),
-                 bytesToHexString(std::vector<uint8_t>(begin(quote.getTdReport().teeTcbSvn), end(quote.getTdReport().teeTcbSvn))));
+    const auto &found = std::find_if(tcbInfoJson.getTdxModuleIdentities().begin(),
+                                     tcbInfoJson.getTdxModuleIdentities().end(),
+                                     [&](const auto &tdxModuleIdentity)
+                                     {
+                                         std::string id = tdxModuleIdentity.getId();
+                                         std::transform(id.begin(), id.end(), id.begin(),
+                                                        ::toupper); // convert to uppercase
+                                         return (id == tdxModuleIdentityId);
+                                     });
+    if (found == std::end(tcbInfoJson.getTdxModuleIdentities())) {
+        LOG_ERROR("Missing matching TDX Module Identity ({}) for given TEE TDX version ({})",
+                  tdxModuleIdentityId, tdxModuleVersion);
+        return STATUS_TDX_MODULE_MISMATCH;
     }
-    else
+    const auto &foundTdxModuleTcbLevel = std::find_if(found->getTcbLevels().begin(),
+                                                      found->getTcbLevels().end(),
+                                                      [&](const auto &tdxModuleTcbLevel)
+                                                      {
+                                                          return tdxModuleIsvSvn >= tdxModuleTcbLevel.getTcb().getIsvSvn();
+                                                      });
+    if (foundTdxModuleTcbLevel == std::end(found->getTcbLevels()))
     {
-        LOG_INFO("Selected TCB Level - sgx: {}, pceSvn: {}, status: {},\n"
-                 "PCK TCB - cpuSvn: {}, pceSvn: {}",
-                 bytesToHexString(tcbLevel.getCpuSvn()),
-                 tcbLevel.getPceSvn(),
-                 tcbLevelStatus,
-                 bytesToHexString(pckTcb.getCpuSvn()),
-                 pckTcb.getPceSvn());
+        LOG_ERROR("Missing matching TDX Module Identity TCB Level (ISVSVN: {})", tdxModuleIsvSvn);
+        return STATUS_TCB_NOT_SUPPORTED;
     }
+    LOG_INFO("Matched to TDX Module Identity TCB Level with ISVSVN({}) from ID({})", foundTdxModuleTcbLevel->getTcb().getIsvSvn(), found->getId());
+    const auto tcbLevelStatus = foundTdxModuleTcbLevel->getStatus();
+    if (tcbLevelStatus == "UpToDate")
+    {
+        return STATUS_OK;
+    }
+    if (tcbLevelStatus == "OutOfDate")
+    {
+        return STATUS_TCB_OUT_OF_DATE;
+    }
+    if (tcbLevelStatus == "Revoked")
+    {
+        return STATUS_TCB_REVOKED;
+    }
+    LOG_ERROR("TDX Module TCB Level error status is unrecognized");
+    throw RuntimeException(STATUS_TCB_UNRECOGNIZED_STATUS);
+}
 
+Status stringToTcbStatus(const dcap::parser::json::TcbInfo& tcbInfo, const std::string& tcbLevelStatus)
+{
     if (tcbLevelStatus == "OutOfDate")
     {
         LOG_INFO("TCB Level status is \"OutOfDate\"");
@@ -201,7 +220,7 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
         return STATUS_TCB_SW_HARDENING_NEEDED;
     }
 
-    if(tcbInfoJson.getVersion() > 1 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
+    if(tcbInfo.getVersion() > 1 && tcbLevelStatus == "OutOfDateConfigurationNeeded")
     {
         LOG_INFO("TCB Level status is \"OutOfDateConfigurationNeeded\"");
         return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
@@ -211,12 +230,50 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
     throw RuntimeException(STATUS_TCB_UNRECOGNIZED_STATUS);
 }
 
-Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
+Status convergeTcbStatusWithTdxModuleStatus(Status tcbLevelStatus, Status tdxModuleStatus)
+{
+    if (tdxModuleStatus == STATUS_TCB_OUT_OF_DATE)
+    {
+        LOG_INFO("TDX Module TCB status is \"OutOfDate\" and TCB Level status is \"{}\"",
+                 tcbLevelStatus);
+        if (tcbLevelStatus == STATUS_OK ||
+            tcbLevelStatus == STATUS_TCB_SW_HARDENING_NEEDED)
+        {
+            return STATUS_TCB_OUT_OF_DATE;
+        }
+        if (tcbLevelStatus == STATUS_TCB_CONFIGURATION_NEEDED ||
+            tcbLevelStatus == STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED)
+        {
+            return STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
+        }
+    }
+    if (tdxModuleStatus == STATUS_TCB_REVOKED)
+    {
+        LOG_INFO("TDX Module TCB status is \"Revoked\"");
+        return STATUS_TCB_REVOKED;
+    }
+
+    switch (tcbLevelStatus)
+    {
+        case STATUS_TCB_OUT_OF_DATE:
+        case STATUS_TCB_REVOKED:
+        case STATUS_TCB_CONFIGURATION_NEEDED:
+        case STATUS_TCB_OUT_OF_DATE_CONFIGURATION_NEEDED:
+        case STATUS_TCB_SW_HARDENING_NEEDED:
+        case STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED:
+        case STATUS_OK:
+            return tcbLevelStatus;
+        default:
+            return STATUS_TCB_UNRECOGNIZED_STATUS;
+    }
+}
+
+Status convergeTcbStatusWithQeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
 {
     if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE)
     {
         LOG_INFO("QE TCB status is \"OutOfDate\" and TCB Level status is \"{}\"",
-                  tcbLevelStatus);
+                 tcbLevelStatus);
         if (tcbLevelStatus == STATUS_OK ||
             tcbLevelStatus == STATUS_TCB_SW_HARDENING_NEEDED)
         {
@@ -230,8 +287,8 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
     }
     if (qeTcbStatus == STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED)
     {
-            LOG_INFO("QE TCB status is \"Revoked\"");
-            return STATUS_TCB_REVOKED;
+        LOG_INFO("QE TCB status is \"Revoked\"");
+        return STATUS_TCB_REVOKED;
     }
 
     switch (tcbLevelStatus)
@@ -248,6 +305,54 @@ Status convergeTcbStatus(Status tcbLevelStatus, Status qeTcbStatus)
             /// 4.1.2.4.16.4
             return STATUS_TCB_UNRECOGNIZED_STATUS;
     }
+}
+
+Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap::parser::x509::PckCertificate& pckCert,
+                     const Quote& quote)
+{
+    const auto& tcbLevel = getMatchingTcbLevel(tcbInfoJson, pckCert, quote);
+    const auto tcbLevelStatus = tcbLevel.getStatus();
+
+    if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID)
+    {
+        const auto tdxModuleTcbStatus = checkTdxModuleTcbStatus(tcbInfoJson, quote);
+        if (tdxModuleTcbStatus == STATUS_TCB_NOT_SUPPORTED || tdxModuleTcbStatus == STATUS_TDX_MODULE_MISMATCH)
+        {
+            return tdxModuleTcbStatus;
+        }
+
+        const auto tdxComponents = tcbLevel.getTdxTcbComponents();
+        std::vector<uint8_t>tdxTcbComponentsSvnsVec;
+        for (const auto& component : tdxComponents)
+        {
+            tdxTcbComponentsSvnsVec.push_back(component.getSvn());
+        }
+
+        LOG_INFO("Selected TCB Level - sgx: {}, tdx: {}, pceSvn: {}, status: {},\n"
+                 "PCK TCB - cpuSvn: {}, pceSvn: {}\n"
+                 "TD Report - TdxSvn: {}",
+                 bytesToHexString(tcbLevel.getCpuSvn()),
+                 bytesToHexString(tdxTcbComponentsSvnsVec),
+                 tcbLevel.getPceSvn(),
+                 tcbLevelStatus,
+                 bytesToHexString(pckCert.getTcb().getCpuSvn()),
+                 pckCert.getTcb().getPceSvn(),
+                 bytesToHexString(std::vector<uint8_t>(begin(quote.getTeeTcbSvn()), end(quote.getTeeTcbSvn()))));
+
+        return convergeTcbStatusWithTdxModuleStatus(stringToTcbStatus(tcbInfoJson, tcbLevelStatus), tdxModuleTcbStatus);
+    }
+    else // deprecated
+    {
+        LOG_INFO("Selected TCB Level - sgx: {}, pceSvn: {}, status: {},\n"
+                 "PCK TCB - cpuSvn: {}, pceSvn: {}",
+                 bytesToHexString(tcbLevel.getCpuSvn()),
+                 tcbLevel.getPceSvn(),
+                 tcbLevelStatus,
+                 bytesToHexString(pckCert.getTcb().getCpuSvn()),
+                 pckCert.getTcb().getPceSvn());
+    }
+
+    return stringToTcbStatus(tcbInfoJson, tcbLevelStatus);
 }
 
 }//anonymous namespace
@@ -304,7 +409,7 @@ Status QuoteVerifier::verify(const Quote& quote,
             return STATUS_TCB_INFO_MISMATCH;
         }
     }
-    else
+    else // deprecated
     {
         if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_TDX)
         {
@@ -342,14 +447,51 @@ Status QuoteVerifier::verify(const Quote& quote,
                                         // Probably it will never happen because parsing cert should fail earlier.
     }
 
-    /// 4.1.2.4.11
     if (tcbInfoJson.getVersion() >= 3 && tcbInfoJson.getId() == parser::json::TcbInfo::TDX_ID)
     {
+        /// 4.1.2.4.11
         const auto& tdxModule = tcbInfoJson.getTdxModule();
+        const auto& quoteMrSignerSeam = quote.getMrSignerSeam();
+        const auto& quoteSeamAttributes = quote.getSeamAttributes();
 
-        const auto quoteMrSignerSeam = quote.getTdReport().mrSignerSeam;
-        const auto& tdxModuleMrSigner = tdxModule.getMrSigner();
+        const auto& tdxModuleVersion = quote.getTeeTcbSvn()[1];
+        auto tdxModuleMrSigner = tdxModule.getMrSigner(); // can be overwritten by value from TDX Module Identity
+        auto tdxModuleAttributes = tdxModule.getAttributes(); // can be overwritten by value from TDX Module Identity
+        auto tdxModuleAttributesMask = tdxModule.getAttributesMask(); // can be overwritten by value from TDX Module Identity
 
+        if (quote.getHeader().version > constants::QUOTE_VERSION_3 && tdxModuleVersion > 0)
+        {
+            try
+            {
+                tcbInfoJson.getTdxModuleIdentities();
+            }
+            catch (const parser::FormatException& ex)
+            {
+                LOG_ERROR("TDX Module version is {} but TCB Info structure returned: {}", tdxModuleVersion, ex.what());
+                return STATUS_TCB_INFO_MISMATCH;
+            }
+
+            const std::string tdxModuleIdentityId = "TDX_" + bytesToHexString({ tdxModuleVersion });
+
+            const auto& found = std::find_if(tcbInfoJson.getTdxModuleIdentities().begin(),
+                                             tcbInfoJson.getTdxModuleIdentities().end(),
+            [&](const auto &tdxModuleIdentity)
+            {
+                std::string id = tdxModuleIdentity.getId();
+                std::transform(id.begin(), id.end(), id.begin(), ::toupper); // convert to uppercase
+                return (id == tdxModuleIdentityId);
+            });
+            if (found == std::end(tcbInfoJson.getTdxModuleIdentities()))
+            {
+                LOG_ERROR("Missing matching TDX Module Identity ({}) for given TEE TDX version ({})", tdxModuleIdentityId, tdxModuleVersion);
+                return STATUS_TDX_MODULE_MISMATCH;
+            }
+            tdxModuleMrSigner = found->getMrSigner();
+            tdxModuleAttributes = found->getAttributes();
+            tdxModuleAttributesMask = found->getAttributesMask();
+        }
+
+        /// 4.1.2.4.11.1
         if (quoteMrSignerSeam.size() != tdxModuleMrSigner.size())
         {
             LOG_ERROR("MRSIGNERSEAM value size from TdReport in Quote ({}) and MRSIGNER value size from TcbInfo ({}) are not the same",
@@ -368,13 +510,23 @@ Status QuoteVerifier::verify(const Quote& quote,
             }
         }
 
-        std::vector<uint8_t> quoteSeamAttributes(quote.getTdReport().seamAttributes.begin(), quote.getTdReport().seamAttributes.end());
-        if (applyMask(quoteSeamAttributes, tdxModule.getAttributesMask()) != tdxModule.getAttributes())
+        /// 4.1.2.4.11.2
+        if (quoteSeamAttributes.size() != tdxModuleAttributes.size())
         {
-            LOG_ERROR("SEAMATTRIBUTES values from TdReport in Quote with attributesMask applied {} and from TcbInfo are not the same",
-                      bytesToHexString(applyMask(quoteSeamAttributes, tdxModule.getAttributesMask())),
-                      bytesToHexString(tdxModule.getAttributes()));
+            LOG_ERROR("SEAMATTRIBUTES value size from TdReport in Quote ({}) and TDXMODULEATTRIBUTES value size from TcbInfo ({}) are not the same",
+                      quoteMrSignerSeam.size(), tdxModuleMrSigner.size());
             return STATUS_TDX_MODULE_MISMATCH;
+        }
+
+        for (uint32_t i = 0; i < quoteSeamAttributes.size(); i++)
+        {
+            if (quoteSeamAttributes[i] != 0 || quoteSeamAttributes[i] != tdxModuleAttributes[i])
+            {
+                LOG_ERROR("SEAMATTRIBUTES values from TdReport in Quote ({}) and TDXMODULEATTRIBUTES from TcbInfo ({}) are not the same or not zeroed",
+                          bytesToHexString(Bytes(quoteSeamAttributes.begin(), quoteSeamAttributes.end())),
+                          bytesToHexString(tdxModuleAttributes));
+                return STATUS_TDX_MODULE_MISMATCH;
+            }
         }
     }
 
@@ -491,14 +643,13 @@ Status QuoteVerifier::verify(const Quote& quote,
 
         if (enclaveIdentity)
         {
-            return convergeTcbStatus(tcbLevelStatus, qeIdentityStatus);
+            return convergeTcbStatusWithQeTcbStatus(tcbLevelStatus, qeIdentityStatus);
         }
 
         return tcbLevelStatus;
     }
     catch (const RuntimeException &ex)
     {
-        LOG_ERROR("RuntimeException during quote verification has occurred: {}", ex.what());
         return ex.getStatus();
     }
 }

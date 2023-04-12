@@ -138,6 +138,101 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         };
 
         /**
+         * Class representing properties of Intel’s TDX SEAM Module TCB.
+         */
+        class ATTESTATION_PARSERS_API TdxModuleTcb
+        {
+        public:
+            TdxModuleTcb() = default;
+            explicit TdxModuleTcb(uint16_t isvSvn);
+            virtual ~TdxModuleTcb() = default;
+
+
+            virtual uint16_t getIsvSvn() const;
+
+        private:
+            uint16_t _isvsvn{};
+            explicit TdxModuleTcb(const ::rapidjson::Value& tdxModuleTcb);
+            friend class TdxModuleTcbLevel;
+        };
+
+        /**
+         * Class representing properties of Intel’s TDX SEAM Module TCB level.
+         */
+        class ATTESTATION_PARSERS_API TdxModuleTcbLevel
+        {
+        public:
+            TdxModuleTcbLevel() = default;
+            explicit TdxModuleTcbLevel(const TdxModuleTcb& tcb, const std::time_t& tcbDate,
+                                       const std::string& tcbStatus, const std::vector<std::string>& advisoryIDs);
+            virtual ~TdxModuleTcbLevel() = default;
+            virtual bool operator>(const TdxModuleTcbLevel& other) const;
+
+            virtual const TdxModuleTcb& getTcb() const;
+            virtual const std::time_t& getTcbDate() const;
+            virtual const std::string& getStatus() const;
+            virtual const std::vector<std::string>& getAdvisoryIDs() const;
+        private:
+            TdxModuleTcb _tcb;
+            std::time_t _tcbDate;
+            std::string _tcbStatus;
+            std::vector<std::string> _advisoryIDs{};
+
+            explicit TdxModuleTcbLevel(const ::rapidjson::Value& tdxModuleTcbLevel);
+            friend class TdxModuleIdentity;
+        };
+
+        /**
+         * Class representing properties of Intel’s TDX SEAM Module Identity.
+         */
+        class ATTESTATION_PARSERS_API TdxModuleIdentity
+        {
+        public:
+            TdxModuleIdentity() = default;
+            explicit TdxModuleIdentity(const std::string& id, const std::vector<uint8_t>& mrsigner,
+                                       const std::vector<uint8_t>& attributes, const std::vector<uint8_t>& attributesMask,
+                                       const std::set<TdxModuleTcbLevel, std::greater<TdxModuleTcbLevel>>& tcbLevels);
+            virtual ~TdxModuleIdentity() = default;
+            virtual std::string getId() const;
+
+            /**
+             * Get MRSIGNER
+             * @return vector of bytes representing the measurement of a TDX SEAM module identity’s signer
+             *          (48 bytes with SHA384 hash, value: 0’ed for Intel SEAM module).
+             */
+            virtual const std::vector<uint8_t>& getMrSigner() const;
+
+            /**
+             * Get attributes
+             * @return vector of bytes representing attributes "golden" value (upon applying mask) for TDX SEAM module
+             *          identity (value: 8 bytes set to 0x00).
+             */
+            virtual const std::vector<uint8_t>& getAttributes() const;
+
+            /**
+             * Get attributes mask
+             * @return vector of bytes representing representing mask to be applied to TDX SEAM module identity’s
+             *          attributes value retrieved from the platform (value: 8 bytes set to 0xFF).
+             */
+            virtual const std::vector<uint8_t>& getAttributesMask() const;
+
+            /**
+             * Get sorted list of TDX Module TCB levels for given TDX module identity
+             * @return array of TCB Level objects
+             */
+            virtual const std::set<TdxModuleTcbLevel, std::greater<TdxModuleTcbLevel>>& getTcbLevels() const;
+        private:
+            std::string _id;
+            std::vector<uint8_t> _mrsigner;
+            std::vector<uint8_t> _attributes;
+            std::vector<uint8_t> _attributesMask;
+            std::set<TdxModuleTcbLevel, std::greater<TdxModuleTcbLevel>> _tcbLevels;
+
+            explicit TdxModuleIdentity(const ::rapidjson::Value& tdxModuleIdentity);
+            friend class TcbInfo;
+        };
+
+        /**
          * Class representing a TCB information structure which holds information about TCB Levels for specific FMSPC
          */
         class ATTESTATION_PARSERS_API TcbInfo
@@ -245,6 +340,8 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              */
             virtual const TdxModule& getTdxModule() const;
 
+            virtual const std::vector<TdxModuleIdentity>& getTdxModuleIdentities() const;
+
             /**
              * Staic function that parses JSON text from a string into TCB Info object
              * @param string with text in JSON Format
@@ -265,6 +362,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
             std::vector<uint8_t> _signature;
             std::vector<uint8_t> _infoBody;
             TdxModule _tdxModule;
+            std::vector<TdxModuleIdentity> _tdxModuleIdentities;
             int _tcbType{};
             uint32_t _tcbEvaluationDataNumber{};
 
@@ -425,7 +523,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         private:
             std::string _id;
             TcbInfo::Version _version = TcbInfo::Version::V2;
-            std::vector<uint8_t> _cpuSvnComponents;
+            std::vector<uint8_t> _cpuSvnComponents; // backward compatibility
             std::vector<TcbComponent> _sgxTcbComponents;
             std::vector<TcbComponent> _tdxTcbComponents;
             uint32_t _pceSvn;

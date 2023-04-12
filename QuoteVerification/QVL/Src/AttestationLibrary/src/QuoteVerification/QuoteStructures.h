@@ -52,6 +52,14 @@ struct Header
     bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
 };
 
+struct Body
+{
+    uint16_t bodyType;
+    uint32_t size;
+
+    bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+};
+
 struct EnclaveReport
 {
     std::array<uint8_t, 16> cpuSvn;
@@ -71,7 +79,7 @@ struct EnclaveReport
     std::array<uint8_t, constants::ENCLAVE_REPORT_BYTE_LEN> rawBlob() const;
 };
 
-struct TDReport
+struct TDReport10
 {
     std::array<uint8_t, 16> teeTcbSvn;
     std::array<uint8_t, 48> mrSeam;
@@ -90,10 +98,17 @@ struct TDReport
     std::array<uint8_t, 64> reportData;
 
     bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
-    std::array<uint8_t, constants::TD_REPORT_BYTE_LEN> rawBlob() const;
 
-    /// Retrieve SeamSvn from TEE TCB SVN
-    uint32_t getSeamSvn() const;
+    std::array<uint8_t, constants::TD_REPORT10_BYTE_LEN> rawBlob() const;
+};
+
+struct TDReport15 : public TDReport10
+{
+    std::array<uint8_t, 16> teeTcbSvn2;
+    std::array<uint8_t, 48> mrServiceTd;
+
+    bool insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end);
+    std::array<uint8_t, constants::TD_REPORT15_BYTE_LEN> rawBlob() const;
 };
 
 struct Ecdsa256BitSignature

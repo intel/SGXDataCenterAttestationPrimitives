@@ -59,7 +59,20 @@ if [ ! -f $build_script ]; then
 	rm $sgxssl_dir/$sgxssl_file_name.zip || exit 1
 	rm -rf $sgxssl_dir/intel-sgx-ssl-$sgxssl_file_name || exit 1
 fi
+if [[ "$*" == *_TD_MIGRATION* ]];then
+	if [ -f $build_script ]; then
+		sed -i 's/no-idea/no-idea\ no-threads/' $build_script
+	fi
+	if [ -f $bypass_fun_header ]; then
+		sed -i '/sgxssl_gmtime_r$/a #define\ gmtime\ sgxssl_gmtime' $bypass_fun_header
+		sed -i 's/D),\ 0/D),\ 3/' Makefile    #for test project fail sigle thread
+		sed -i 's/__thread//' $tls_time_source_file
+	fi
 
+	if [ -f $test_makefile ]; then
+		sed -i 's/D),\ 0/D),\ 3/' $test_makefile
+	fi
+fi
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
 	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
 	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
@@ -77,7 +90,11 @@ if [ "$1" = "nobuild" ]; then
 fi
 
 pushd $sgxssl_dir/Linux/
+if [[ "$*" == *_TD_MIGRATION* ]];then
+make clean sgxssl_no_mitigation NO_THREADS=1 LINUX_SGX_BUILD=2 _TD_MIGRATION=1
+else
 make clean sgxssl_no_mitigation 
+fi
 popd
 
 
