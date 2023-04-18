@@ -934,7 +934,7 @@ static quote3_error_t getencryptedppid(sgx_target_info_t& pce_target_info, uint8
  * @param buf_size Size in bytes pointed to by p_buf.  Must be no larger than MAX_PATH.
  * @param p_label String of the label for the data to be stored.  Must not be NULL.
  *
- * @return SGX_QE_PLATFORM_LIB_UNAVAILABLE
+ * @return SGX_QL_PLATFORM_LIB_UNAVAILABLE
  * @return SGX_QL_ERROR_UNEXPECTED
  * @return SGX_QL_ERROR_INVALID_PARAMETER
  * @return SGX_QL_FILE_ACCESS_ERROR
@@ -1015,7 +1015,7 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
  * @param p_label String of the label for the data to be stored.  Must not be NULL.
  *
  * @return SGX_QL_SUCCESS
- * @return SGX_QE_PLATFORM_LIB_UNAVAILABLE
+ * @return SGX_QL_PLATFORM_LIB_UNAVAILABLE
  * @return SGX_QL_ERROR_UNEXPECTED
  * @return SGX_QL_ERROR_INVALID_PARAMETER
  * @return SGX_QL_FILE_ACCESS_ERROR
