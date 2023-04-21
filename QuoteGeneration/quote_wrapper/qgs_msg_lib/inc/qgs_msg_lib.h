@@ -65,6 +65,8 @@ typedef enum _qgs_msg_type_t {
     GET_QUOTE_RESP = 1,
     GET_COLLATERAL_REQ = 2,
     GET_COLLATERAL_RESP = 3,
+    GET_PLATFORM_INFO_REQ = 4,
+    GET_PLATFORM_INFO_RESP = 5,
     QGS_MSG_TYPE_MAX
 } qgs_msg_type_t;
 
@@ -110,6 +112,19 @@ typedef struct _qgs_msg_get_collateral_resp_s {
     uint32_t qe_identity_size;
     uint8_t collaterals[];      // payload filled in same order as upper sizes parameters
 } qgs_msg_get_collateral_resp_t;
+
+typedef struct _qgs_msg_get_platform_info_req_t {
+    qgs_msg_header_t header;  // header.type = GET_PLATFORM_INFO_REQ
+} qgs_msg_get_platform_info_req_t;
+
+typedef struct _qgs_msg_get_platform_info_resp_s {
+    qgs_msg_header_t header;   // header.type = GET_PLATFORM_INFO_RESP
+    uint16_t tdqe_isvsvn;
+    uint16_t pce_isvsvn;
+    uint32_t platform_id_size;
+    uint32_t cpusvn_size;
+    uint8_t platform_id_cpusvn[];
+} qgs_msg_get_platform_info_resp_t;
 
 #pragma pack(pop)
 
@@ -170,6 +185,21 @@ qgs_msg_error_t qgs_msg_inflate_get_collateral_resp(
     const uint8_t **pp_qe_identity_issuer_chain, uint32_t *p_qe_identity_issuer_chain_size,
     const uint8_t **pp_qe_identity, uint32_t *p_qe_identity_size);
 uint32_t qgs_msg_get_type(const uint8_t *p_serialized_msg, uint32_t size, uint32_t *p_type);
+
+qgs_msg_error_t qgs_msg_gen_get_platform_info_req(
+    uint8_t **pp_req, uint32_t *p_req_size);
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_req(
+    const uint8_t *p_serialized_req, uint32_t size);
+qgs_msg_error_t qgs_msg_gen_get_platform_info_resp(
+    uint16_t tdqe_isvsvn, uint16_t pce_isvsvn,
+    const uint8_t *p_platform_id, uint32_t platform_id_size,
+    const uint8_t *p_cpusvn, uint32_t cpusvn_size,
+    uint8_t **pp_resp, uint32_t *p_resp_size);
+qgs_msg_error_t qgs_msg_inflate_get_platform_info_resp(
+    const uint8_t *p_serialized_resp, uint32_t size,
+    uint16_t *p_tdqe_isvsvn, uint16_t *p_pce_isvsvn,
+    const uint8_t **pp_platform_id, uint32_t *p_platform_id_size,
+    const uint8_t **pp_cpusvn, uint32_t *p_cpusvn_size);
 
 #if defined(__cplusplus)
 }

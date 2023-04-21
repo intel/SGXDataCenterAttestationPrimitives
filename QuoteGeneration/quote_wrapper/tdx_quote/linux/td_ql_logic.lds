@@ -8,6 +8,7 @@ global:
     tee_att_get_keyid;
     tee_att_set_path;
     tee_att_get_qpl_handle;
+    tee_att_get_platform_info;
 local:
     *;
 };
