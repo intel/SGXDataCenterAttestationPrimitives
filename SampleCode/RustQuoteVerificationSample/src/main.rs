@@ -396,14 +396,17 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
 
         // print SA list if it is a valid UTF-8 string
 
-        let sa_list = unsafe {
+        let sa_list_slice = unsafe {
             std::slice::from_raw_parts(
                 supp_data.sa_list.as_ptr() as *const u8,
                 mem::size_of_val(&supp_data.sa_list),
             )
         };
-        if let Ok(s) = std::str::from_utf8(sa_list) {
-            println!("\tInfo: Advisory ID: {}", s);
+        let sa_list = std::ffi::CStr::from_bytes_until_nul(sa_list_slice)
+            .ok()
+            .and_then(|s| std::ffi::CStr::to_str(s).ok());
+        if let Some(s) = sa_list {
+            println!("\tInfo: Advisory ID: {s}");
         }
     }
 }
