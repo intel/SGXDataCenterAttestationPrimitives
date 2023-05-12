@@ -28,11 +28,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-use std::io::{self, BufReader, Read};
+use sgx_dcap_ql_rs;
 use std::fs::{self, File};
+use std::io::{self, BufReader, Read};
 use std::slice;
 use structopt::StructOpt;
-use sgx_dcap_ql_rs;
 
 #[derive(StructOpt)]
 /// demostrate the usage of sgx_dcap_ql_rs Crate
@@ -57,7 +57,9 @@ fn read_struct<T>(path: std::path::PathBuf) -> io::Result<T> {
     unsafe {
         let mut r = core::mem::MaybeUninit::<T>::uninit();
         let buffer = slice::from_raw_parts_mut(r.as_mut_ptr() as *mut u8, struct_size);
-        reader.read_exact(buffer).expect("Unable to read report file.");
+        reader
+            .read_exact(buffer)
+            .expect("Unable to read report file.");
         Ok(r.assume_init())
     }
 }
@@ -72,18 +74,21 @@ fn get_target_info(path: std::path::PathBuf) {
     println!("Successfully get the target_info.");
 
     unsafe {
-        fs::write(path,
+        fs::write(
+            path,
             ::std::slice::from_raw_parts(
                 &target_info as *const sgx_dcap_ql_rs::sgx_target_info_t as *const u8,
-                ::std::mem::size_of::<sgx_dcap_ql_rs::sgx_target_info_t>()))
-            .expect("Unable to write target_info file.");
+                ::std::mem::size_of::<sgx_dcap_ql_rs::sgx_target_info_t>(),
+            ),
+        )
+        .expect("Unable to write target_info file.");
     }
     println!("Successfully write the target_info.");
 }
 
 fn get_quote(path: std::path::PathBuf) {
-    let sgx_report = read_struct::<sgx_dcap_ql_rs::sgx_report_t>(path)
-        .expect("Unable to read report file.");
+    let sgx_report =
+        read_struct::<sgx_dcap_ql_rs::sgx_report_t>(path).expect("Unable to read report file.");
     println!("Successfully read the report.");
     match std::env::var("SGX_AESM_ADDR") {
         Ok(_) => (),
@@ -91,7 +96,7 @@ fn get_quote(path: std::path::PathBuf) {
             println!("Need to call sgx_qe_get_target_info first in out-of-proc mode.");
             let mut target_info: sgx_dcap_ql_rs::sgx_target_info_t = Default::default();
             sgx_dcap_ql_rs::sgx_qe_get_target_info(&mut target_info);
-        },
+        }
     }
     let (result, quote) = sgx_dcap_ql_rs::sgx_qe_get_quote(&sgx_report);
     if result != sgx_dcap_ql_rs::quote3_error_t::SGX_QL_SUCCESS {
@@ -103,20 +108,20 @@ fn get_quote(path: std::path::PathBuf) {
             println!("quote data: {:?}", q);
             println!("Successfully get the SGX Quote.");
             fs::write("quote.dat", q).expect("Unable to write quote file.");
-        },
+        }
         None => {
             return;
-        },
+        }
     }
 }
 
 fn main() {
     match Sample::from_args() {
-        Sample::TargetInfo{target_info} => {
+        Sample::TargetInfo { target_info } => {
             get_target_info(target_info);
-        },
-        Sample::Quote{report} => {
+        }
+        Sample::Quote { report } => {
             get_quote(report);
-        },
+        }
     }
 }

@@ -49,7 +49,7 @@ fn main() {
             sdk_inc.push_str("-I");
             sdk_inc.push_str(&val);
             sdk_inc.push_str("/include/");
-        },
+        }
         _ => (),
     }
 
@@ -67,7 +67,6 @@ fn main() {
         // Disable debug trait for packed C structures
         .derive_debug(false)
         .derive_default(true)
-        
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
