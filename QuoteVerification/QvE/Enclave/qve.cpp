@@ -77,6 +77,7 @@
 #include "QuoteVerification/Quote.h"
 #include "PckParser/CrlStore.h"
 #include "CertVerification/CertificateChain.h"
+#include "CertVerification/X509Constants.h"
 #include "Utils/TimeUtils.h"
 #include "SgxEcdsaAttestation/AttestationParsers.h"
 #include "sgx_qve_header.h"
@@ -354,35 +355,45 @@ static std::string bin2hex(char *in, uint32_t size)
     return result;
 }
 
-#define TCB_LEVELS_COUNT 16
-static bool isPCKCertSGXTCBLevelHigherOrEqual(const x509::PckCertificate& pckCert, const json::TcbLevel& tcbLevel)
+#define TCB_COMPONENT_LEN   16
+
+static bool isTdxTcbHigherOrEqual(const Quote& quote,
+                           const parser::json::TcbLevel& tcbLevel)
 {
-    for (unsigned int index = 0; index < TCB_LEVELS_COUNT; ++index)
+    const auto& teeTcbSvn = quote.getTeeTcbSvn();
+    uint32_t index = 0;
+    if (quote.getHeader().version > constants::QUOTE_VERSION_3 && teeTcbSvn[1] > 0)
     {
-        const auto componentValue = pckCert.getTcb().getSgxTcbComponentSvn(index);
-        const auto otherComponentValue = tcbLevel.getSgxTcbComponentSvn(index);
-        if (componentValue < otherComponentValue)
+        index = 2;
+    }
+    for(; index < TCB_COMPONENT_LEN; ++index)
+    {
+        const auto componentValue = teeTcbSvn[index];
+        const auto& otherComponentValue = tcbLevel.getTdxTcbComponent(index);
+        if(componentValue < otherComponentValue.getSvn())
         {
-            // If *ANY* SGX_TCB_LEVEL component is lower then PCKCertSGXTCBLevel is considered lower
+            // If *ANY* TCB component SVN is lower than TCB level is considered lower
             return false;
         }
     }
+    // but for TCB level to be considered higher it requires *EVERY* SVN to be higher or equal
     return true;
 }
 
-static bool isPCKCertTdxTcbHigherOrEqual(const quote::TDReport10& tdReport, const json::TcbLevel& tcbLevel)
+static bool isTcbComponentSvnHigherOrEqual(const parser::x509::PckCertificate& pckCert,
+                           const parser::json::TcbLevel& tcbLevel)
 {
-    for(uint32_t index = 0; index < TCB_LEVELS_COUNT; ++index)
+    for(uint32_t index = 0; index < TCB_COMPONENT_LEN; ++index)
     {
-        const auto componentValue = tdReport.teeTcbSvn[index];
-        const auto otherComponentValue = tcbLevel.getTdxTcbComponent(index);
-        if(componentValue < otherComponentValue.getSvn())
+        const auto componentValue = pckCert.getTcb().getSgxTcbComponentSvn(index);
+        const auto otherComponentValue = tcbLevel.getSgxTcbComponentSvn(index);
+        if(componentValue < otherComponentValue)
         {
-            // If *ANY* SVN is lower then TCB level is considered lower
+            // If *ANY* TCB component SVN is lower than TCB component SVN is considered lower
             return false;
-         }
-     }
-    // but for TCB level to be considered higher it requires *EVERY* SVN to be higher or equal
+        }
+    }
+    // but for TCB component SVN to be considered higher it requires that *EVERY* TCB component SVN to be higher or equal
     return true;
 }
 
@@ -395,35 +406,23 @@ const json::TcbLevel& getMatchingTcbLevel(const json::TcbInfo *tcbInfo,
 
     for (const auto& tcb : tcbs)
     {
-        if (isPCKCertSGXTCBLevelHigherOrEqual(pckCert, tcb) && certPceSvn >= tcb.getPceSvn())
+        if(isTcbComponentSvnHigherOrEqual(pckCert, tcb) && certPceSvn >= tcb.getPceSvn())
         {
             if (tcbInfo->getVersion() >= 3 &&
-                tcbInfo->getId() == parser::json::TcbInfo::TDX_ID) {
-                if (quote.getHeader().version > 4)
+                tcbInfo->getId() == parser::json::TcbInfo::TDX_ID &&
+                quote.getHeader().teeType == constants::TEE_TYPE_TDX)
+            {
+                if (isTdxTcbHigherOrEqual(quote, tcb))
                 {
-                    if (quote.getBody().bodyType == BODY_TD_REPORT10_TYPE) {
-                        if (isPCKCertTdxTcbHigherOrEqual(quote.getTdReport10(), tcb)) {
-                            return tcb;
-                        }
-                    } else if (quote.getBody().bodyType == BODY_TD_REPORT15_TYPE) {
-                        if (isPCKCertTdxTcbHigherOrEqual(quote.getTdReport15(), tcb)) {
-                            return tcb;
-                        }
-                    }
-                } else if (quote.getHeader().version > 3){
-                    if (quote.getHeader().teeType == TEE_TYPE_TDX) {
-                        if (isPCKCertTdxTcbHigherOrEqual(quote.getTdReport10(), tcb)) {
-                            return tcb;
-                        }
-                    }
+                    return tcb;
                 }
             }
             else
             {
                 return tcb;
             }
-         }
-     }
+        }
+    }
 
     throw SGX_QL_TCBINFO_UNSUPPORTED_FORMAT;
 }
