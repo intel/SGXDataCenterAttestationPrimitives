@@ -34,6 +34,11 @@
 //!
 //! This is a safe wrapper for **sgx-dcap-quoteverify-sys**.
 
+use std::marker::PhantomPinned;
+use std::mem;
+use std::pin::Pin;
+use std::slice;
+
 use intel_tee_quote_verification_sys as qvl_sys;
 
 pub use qvl_sys::quote3_error_t;
@@ -140,7 +145,7 @@ pub fn sgx_qv_get_quote_supplemental_data_size() -> Result<u32, quote3_error_t> 
 ///
 pub fn sgx_qv_verify_quote(
     quote: &[u8],
-    quote_collateral: Option<&sgx_ql_qve_collateral_t>,
+    quote_collateral: Option<&Collateral>,
     expiration_check_date: i64,
     qve_report_info: Option<&mut sgx_ql_qe_report_info_t>,
     supplemental_data_size: u32,
@@ -150,10 +155,13 @@ pub fn sgx_qv_verify_quote(
     let mut collateral_expiration_status = 1u32;
     let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    let p_quote_collateral = match quote_collateral {
-        Some(p) => p,
-        None => std::ptr::null(),
-    };
+    let quote_collateral = quote_collateral.map(Pin::<Box<SgxQlQveCollateralT>>::from);
+    // ref_quote_collateral is a reference to the inner field of the Pin<Box<SgxQlQveCollateralT>>
+    // and holds the lifetime of the Pin until it goes out of scope at the end of the function.
+    let ref_quote_collateral: Option<&sgx_ql_qve_collateral_t> =
+        quote_collateral.as_ref().map(|p| &p.inner);
+    let p_quote_collateral = ref_quote_collateral.map_or(std::ptr::null(), |p| p);
+
     let p_qve_report_info = match qve_report_info {
         Some(p) => p,
         None => std::ptr::null_mut(),
@@ -242,7 +250,7 @@ pub fn tdx_qv_get_quote_supplemental_data_size() -> Result<u32, quote3_error_t> 
 ///
 pub fn tdx_qv_verify_quote(
     quote: &[u8],
-    quote_collateral: Option<&tdx_ql_qve_collateral_t>,
+    quote_collateral: Option<&Collateral>,
     expiration_check_date: i64,
     qve_report_info: Option<&mut sgx_ql_qe_report_info_t>,
     supplemental_data_size: u32,
@@ -252,10 +260,13 @@ pub fn tdx_qv_verify_quote(
     let mut collateral_expiration_status = 1u32;
     let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    let p_quote_collateral = match quote_collateral {
-        Some(p) => p,
-        None => std::ptr::null(),
-    };
+    let quote_collateral = quote_collateral.map(Pin::<Box<SgxQlQveCollateralT>>::from);
+    // ref_quote_collateral is a reference to the inner field of the Pin<Box<SgxQlQveCollateralT>>
+    // and holds the lifetime of the Pin until it goes out of scope at the end of the function.
+    let ref_quote_collateral: Option<&sgx_ql_qve_collateral_t> =
+        quote_collateral.as_ref().map(|p| &p.inner);
+    let p_quote_collateral = ref_quote_collateral.map_or(std::ptr::null(), |p| p);
+
     let p_qve_report_info = match qve_report_info {
         Some(p) => p,
         None => std::ptr::null_mut(),
@@ -303,8 +314,126 @@ pub fn tdx_qv_verify_quote(
 #[cfg(target_os = "linux")]
 pub fn sgx_qv_set_path(path_type: sgx_qv_path_type_t, path: &str) -> quote3_error_t {
     match std::ffi::CString::new(path) {
-        Ok(path) => unsafe { qvl_sys::sgx_qv_set_path(path_type, path.as_ptr()) }
+        Ok(path) => unsafe { qvl_sys::sgx_qv_set_path(path_type, path.as_ptr()) },
         _ => quote3_error_t::SGX_QL_ERROR_INVALID_PARAMETER,
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Collateral {
+    pub major_version: u16,
+    pub minor_version: u16,
+    pub tee_type: u32,
+    pub pck_crl_issuer_chain: Box<[u8]>,
+    pub root_ca_crl: Box<[u8]>,
+    pub pck_crl: Box<[u8]>,
+    pub tcb_info_issuer_chain: Box<[u8]>,
+    pub tcb_info: Box<[u8]>,
+    pub qe_identity_issuer_chain: Box<[u8]>,
+    pub qe_identity: Box<[u8]>,
+}
+
+impl TryFrom<&sgx_ql_qve_collateral_t> for Collateral {
+    type Error = ();
+
+    fn try_from(value: &sgx_ql_qve_collateral_t) -> Result<Self, Self::Error> {
+        fn to_boxed_slice(p: *mut ::std::os::raw::c_char, size: u32) -> Result<Box<[u8]>, ()> {
+            if p.is_null() {
+                return Err(());
+            }
+            Ok(Box::from(unsafe {
+                slice::from_raw_parts(p as _, size as _)
+            }))
+        }
+
+        Ok(Collateral {
+            major_version: unsafe { value.__bindgen_anon_1.__bindgen_anon_1.major_version },
+            minor_version: unsafe { value.__bindgen_anon_1.__bindgen_anon_1.minor_version },
+            tee_type: value.tee_type,
+            pck_crl_issuer_chain: to_boxed_slice(
+                value.pck_crl_issuer_chain,
+                value.pck_crl_issuer_chain_size,
+            )?,
+            root_ca_crl: to_boxed_slice(value.root_ca_crl, value.root_ca_crl_size)?,
+            pck_crl: to_boxed_slice(value.pck_crl, value.pck_crl_size)?,
+            tcb_info_issuer_chain: to_boxed_slice(
+                value.tcb_info_issuer_chain,
+                value.tcb_info_issuer_chain_size,
+            )?,
+            tcb_info: to_boxed_slice(value.tcb_info, value.tcb_info_size)?,
+            qe_identity_issuer_chain: to_boxed_slice(
+                value.qe_identity_issuer_chain,
+                value.qe_identity_issuer_chain_size,
+            )?,
+            qe_identity: to_boxed_slice(value.qe_identity, value.qe_identity_size)?,
+        })
+    }
+}
+
+// self referential struct, must be pinned
+struct SgxQlQveCollateralT<'a> {
+    data: &'a Collateral,
+    inner: sgx_ql_qve_collateral_t,
+    _pinned: PhantomPinned,
+}
+
+// create the self referential struct
+impl<'a> From<&'a Collateral> for Pin<Box<SgxQlQveCollateralT<'a>>> {
+    fn from(value: &'a Collateral) -> Self {
+        let mut this = Box::pin(SgxQlQveCollateralT {
+            data: value,
+            inner: sgx_ql_qve_collateral_t {
+                __bindgen_anon_1: Default::default(),
+                tee_type: 0,
+                pck_crl_issuer_chain: std::ptr::null_mut(),
+                pck_crl_issuer_chain_size: 0,
+                root_ca_crl: std::ptr::null_mut(),
+                root_ca_crl_size: 0,
+                pck_crl: std::ptr::null_mut(),
+                pck_crl_size: 0,
+                tcb_info_issuer_chain: std::ptr::null_mut(),
+                tcb_info_issuer_chain_size: 0,
+                tcb_info: std::ptr::null_mut(),
+                tcb_info_size: 0,
+                qe_identity_issuer_chain: std::ptr::null_mut(),
+                qe_identity_issuer_chain_size: 0,
+                qe_identity: std::ptr::null_mut(),
+                qe_identity_size: 0,
+            },
+            _pinned: PhantomPinned,
+        });
+        unsafe {
+            let this_mut = this.as_mut().get_unchecked_mut();
+            this_mut.inner = sgx_ql_qve_collateral_t {
+                __bindgen_anon_1: Default::default(),
+                tee_type: this_mut.data.tee_type,
+                pck_crl_issuer_chain: this_mut.data.pck_crl_issuer_chain.as_ptr() as _,
+                pck_crl_issuer_chain_size: this_mut.data.pck_crl_issuer_chain.len() as _,
+                root_ca_crl: this_mut.data.root_ca_crl.as_ptr() as _,
+                root_ca_crl_size: this_mut.data.root_ca_crl.len() as _,
+                pck_crl: this_mut.data.pck_crl.as_ptr() as _,
+                pck_crl_size: this_mut.data.pck_crl.len() as _,
+                tcb_info_issuer_chain: this_mut.data.tcb_info_issuer_chain.as_ptr() as _,
+                tcb_info_issuer_chain_size: this_mut.data.tcb_info_issuer_chain.len() as _,
+                tcb_info: this_mut.data.tcb_info.as_ptr() as _,
+                tcb_info_size: this_mut.data.tcb_info.len() as _,
+                qe_identity_issuer_chain: this_mut.data.qe_identity_issuer_chain.as_ptr() as _,
+                qe_identity_issuer_chain_size: this_mut.data.qe_identity_issuer_chain.len() as _,
+                qe_identity: this_mut.data.qe_identity.as_ptr() as _,
+                qe_identity_size: this_mut.data.qe_identity.len() as _,
+            };
+            this_mut
+                .inner
+                .__bindgen_anon_1
+                .__bindgen_anon_1
+                .major_version = this_mut.data.major_version;
+            this_mut
+                .inner
+                .__bindgen_anon_1
+                .__bindgen_anon_1
+                .minor_version = this_mut.data.minor_version;
+        }
+        this
     }
 }
 
@@ -330,77 +459,25 @@ pub fn sgx_qv_set_path(path_type: sgx_qv_path_type_t, path: &str) -> quote3_erro
 /// - *SGX_QL_NO_QUOTE_COLLATERAL_DATA*
 /// - *SGX_QL_ERROR_UNEXPECTED*
 ///
-pub fn tee_qv_get_collateral(quote: &[u8]) -> Result<Vec<u8>, quote3_error_t> {
+pub fn tee_qv_get_collateral(quote: &[u8]) -> Result<Collateral, quote3_error_t> {
     let mut buf = std::ptr::null_mut();
     let mut buf_len = 0u32;
 
-    unsafe {
-        match qvl_sys::tee_qv_get_collateral(
-            quote.as_ptr(),
-            quote.len() as u32,
-            &mut buf,
-            &mut buf_len,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS => {
-                assert!(!buf.is_null());
-                assert!(buf_len > 0);
-                let mut collateral = vec![0u8; buf_len as usize];
-                let orig_collateral = &*(buf as *const sgx_ql_qve_collateral_t);
-
-                // copy the original collateral
-                let mut index = 0usize;
-                collateral[..std::mem::size_of::<sgx_ql_qve_collateral_t>()]
-                    .copy_from_slice(std::slice::from_raw_parts(buf, std::mem::size_of::<sgx_ql_qve_collateral_t>()));
-
-                // copy pck_crl_issuer_chain field
-                index += std::mem::size_of::<sgx_ql_qve_collateral_t>();
-                collateral[index..(index + orig_collateral.pck_crl_issuer_chain_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl_issuer_chain as *const u8, orig_collateral.pck_crl_issuer_chain_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).pck_crl_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy root_ca_crl field
-                index += orig_collateral.pck_crl_issuer_chain_size as usize;
-                collateral[index..(index + orig_collateral.root_ca_crl_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.root_ca_crl as *const u8, orig_collateral.root_ca_crl_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).root_ca_crl = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy pck_crl field
-                index += orig_collateral.root_ca_crl_size as usize;
-                collateral[index..(index + orig_collateral.pck_crl_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl as *const u8, orig_collateral.pck_crl_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).pck_crl = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy tcb_info_issuer_chain field
-                index += orig_collateral.pck_crl_size as usize;
-                collateral[index..(index + orig_collateral.tcb_info_issuer_chain_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info_issuer_chain as *const u8, orig_collateral.tcb_info_issuer_chain_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).tcb_info_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy tcb_info field
-                index += orig_collateral.tcb_info_issuer_chain_size as usize;
-                collateral[index..(index + orig_collateral.tcb_info_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info as *const u8, orig_collateral.tcb_info_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).tcb_info = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy qe_identity_issuer_chain field
-                index += orig_collateral.tcb_info_size as usize;
-                collateral[index..(index + orig_collateral.qe_identity_issuer_chain_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity_issuer_chain as *const u8, orig_collateral.qe_identity_issuer_chain_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).qe_identity_issuer_chain = &mut collateral[index] as *mut u8 as *mut i8;
-
-                // copy qe_identity field
-                index += orig_collateral.qe_identity_issuer_chain_size as usize;
-                collateral[index..(index + orig_collateral.qe_identity_size as usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity as *const u8, orig_collateral.qe_identity_size as usize));
-                (*(collateral.as_mut_ptr() as *mut sgx_ql_qve_collateral_t)).qe_identity = &mut collateral[index] as *mut u8 as *mut i8;
-
-                match qvl_sys::tee_qv_free_collateral(buf) {
-                    quote3_error_t::SGX_QL_SUCCESS => Ok(collateral),
-                    error_code => Err(error_code),
-                }
-            }
-            error_code => Err(error_code),
+    match unsafe {
+        qvl_sys::tee_qv_get_collateral(quote.as_ptr(), quote.len() as u32, &mut buf, &mut buf_len)
+    } {
+        quote3_error_t::SGX_QL_SUCCESS => {
+            assert!(!buf.is_null());
+            assert!(buf_len > 0);
+            assert_eq!(
+                (buf as usize) % mem::align_of::<sgx_ql_qve_collateral_t>(),
+                0
+            );
+            // SAFETY: buf is not null, buf_len is not zero, and buf is aligned.
+            let orig_collateral = &unsafe { *(buf as *const sgx_ql_qve_collateral_t) };
+            Collateral::try_from(orig_collateral).map_err(|_| quote3_error_t::SGX_QL_ERROR_MAX)
         }
+        error_code => Err(error_code),
     }
 }
 
@@ -472,7 +549,7 @@ pub fn tee_get_supplemental_data_version_and_size(
 ///
 pub fn tee_verify_quote(
     quote: &[u8],
-    quote_collateral: Option<&[u8]>,
+    quote_collateral: Option<&Collateral>,
     expiration_check_date: i64,
     qve_report_info: Option<&mut sgx_ql_qe_report_info_t>,
     supp_data_descriptor: Option<&mut tee_supp_data_descriptor_t>,
@@ -481,24 +558,22 @@ pub fn tee_verify_quote(
     let mut collateral_expiration_status = 1u32;
     let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    let p_quote_collateral = match quote_collateral {
-        Some(p) => p.as_ptr(),
-        None => std::ptr::null(),
-    };
-    let p_qve_report_info = match qve_report_info {
-        Some(p) => p,
-        None => std::ptr::null_mut(),
-    };
-    let p_supp_data_descriptor = match supp_data_descriptor {
-        Some(p) => p,
-        None => std::ptr::null_mut(),
-    };
+    let quote_collateral = quote_collateral.map(Pin::<Box<SgxQlQveCollateralT>>::from);
+    // ref_quote_collateral is a reference to the inner field of the Pin<Box<SgxQlQveCollateralT>>
+    // and holds the lifetime of the Pin until it goes out of scope at the end of the function.
+    let ref_quote_collateral: Option<&sgx_ql_qve_collateral_t> =
+        quote_collateral.as_ref().map(|p| &p.inner);
+    let p_quote_collateral = ref_quote_collateral.map_or(std::ptr::null(), |p| p);
+
+    let p_qve_report_info = qve_report_info.map_or(std::ptr::null_mut(), |p| p);
+
+    let p_supp_data_descriptor = supp_data_descriptor.map_or(std::ptr::null_mut(), |p| p);
 
     unsafe {
         match qvl_sys::tee_verify_quote(
             quote.as_ptr(),
             quote.len() as u32,
-            p_quote_collateral,
+            p_quote_collateral as _,
             expiration_check_date,
             &mut collateral_expiration_status,
             &mut quote_verification_result,
