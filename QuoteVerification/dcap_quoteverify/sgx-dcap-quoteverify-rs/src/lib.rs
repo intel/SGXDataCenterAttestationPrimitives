@@ -34,6 +34,9 @@
 //!
 //! This is a safe wrapper for **sgx-dcap-quoteverify-sys**.
 
+#[cfg(test)]
+mod test;
+
 use std::marker::PhantomPinned;
 use std::mem;
 use std::pin::Pin;
