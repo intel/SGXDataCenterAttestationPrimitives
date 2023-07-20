@@ -259,5 +259,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile" />
+    <None Include="PCKCertSelectionLib.def">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

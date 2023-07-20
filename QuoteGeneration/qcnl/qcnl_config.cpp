@@ -38,7 +38,6 @@
 #include "qcnl_config.h"
 #include "error/en.h"
 #include "error/error.h"
-#include "sgx_default_qcnl_wrapper.h"
 #include <fstream>
 #include <istreamwrapper.h>
 #include <mutex>
@@ -54,7 +53,7 @@ std::shared_ptr<QcnlConfig> QcnlConfig::Instance() {
 
     if (!myInstance) {
         QcnlConfigJson *pConfigJson = new QcnlConfigJson();
-        if (pConfigJson->load_config()) {
+        if (pConfigJson->load_config() == SGX_QCNL_SUCCESS) {
             myInstance.reset(pConfigJson);
         } else {
             delete pConfigJson;
@@ -68,7 +67,7 @@ std::shared_ptr<QcnlConfig> QcnlConfig::Instance() {
     return myInstance;
 }
 
-bool QcnlConfig::load_config_json(const TCHAR *json_file) {
+sgx_qcnl_error_t QcnlConfig::load_config_json(const TCHAR *json_file) {
     ifstream ifs(json_file);
     IStreamWrapper isw(ifs);
 
@@ -83,10 +82,11 @@ bool QcnlConfig::load_config_json(const TCHAR *json_file) {
         if (ifs.get(first_byte) && first_byte == '{') {
             qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Load JSON config error: %s (offset %u).\n",
                      GetParseError_En(ok.Code()), ok.Offset());
+            return SGX_QCNL_CONFIG_INVALID_JSON;
         } else {
             qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Failed to load config file in JSON format. \n");
+            return SGX_QCNL_CONFIG_NOT_JSON;
         }
-        return false;
     } else {
         qcnl_log(SGX_QL_LOG_INFO, "[QCNL] JSON config file %s is loaded successfully. \n", json_file);
     }
@@ -165,5 +165,11 @@ bool QcnlConfig::load_config_json(const TCHAR *json_file) {
             custom_request_options_.CopyFrom(val, custom_request_options_.GetAllocator());
     }
 
-    return true;
+    if (config.HasMember("local_cache_only")) {
+        Value &val = config["local_cache_only"];
+        if (val.IsBool())
+            this->local_cache_only_ = val.GetBool();
+    }
+
+    return SGX_QCNL_SUCCESS;
 }

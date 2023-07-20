@@ -33,8 +33,9 @@
 SGX_DEBUG ?= 0
 
 SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
 SGX_ARCH ?= x64
+SGX_QPL_LOGGING ?= 1
+
 
 
 SGX_COMMON_CFLAGS := -m64
@@ -54,7 +55,7 @@ DCAP_Library_Name := sgx_dcap_ql
 Urts_Library_Name := sgx_urts
 
 App_Cpp_Files :=  App/App.cpp
-App_Include_Paths := -I$(SGX_SDK)/include -I../../QuoteGeneration/quote_wrapper/common/inc
+App_Include_Paths := -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -71,8 +72,19 @@ endif
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread
 
+ifneq ($(SGX_QPL_LOGGING), 0)
+App_Link_Flags += -ldcap_quoteprov
+ifeq ($(SGX_QPL_LOGGING), 1)
+App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_ERROR
+else ifeq ($(SGX_QPL_LOGGING), 2)
+App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_INFO
+endif
+else
+App_Cpp_Flags += -USGX_QPL_LOGGING
+endif
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
+
 
 App_Name := app
 
@@ -140,7 +152,7 @@ endif
 run: all
 ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
-	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
+	@echo "RUN  =>  $(App_Name) [$(SGX_ARCH), OK]"
 endif
 
 

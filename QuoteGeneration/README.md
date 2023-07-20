@@ -8,6 +8,8 @@ For Windows* OS
    * Windows* Server 2016 (Long-Term Servicing Channel)
    * Windows* Server 2019 (Long-Term Servicing Channel)
 - Ensure that you have the following required hardware:
+  * 3rd or 4th Generation Intel(R) Xeon(R) Scalable Processor
+  * Intel(R) Xeon(R) D Processors from the 17xx and 27xx series
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.
@@ -37,7 +39,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.16/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.17/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -50,6 +52,8 @@ For Linux* OS
   * Red Hat Enterprise Linux Server release 8.5 64bits
   * CentOS Stream 8 64bits
 - Ensure that you have the following required hardware:
+  * 3rd or 4th Generation Intel(R) Xeon(R) Scalable Processor
+  * Intel(R) Xeon(R) D Processors from the 17xx and 27xx series
   * 8th Generation Intel(R) Core(TM) Processor or newer with **Flexible Launch Control** support*
   * Intel(R) Atom(TM) Processor with **Flexible Launch Control** support*
 - Configure the system with the **SGX hardware enabled** option.

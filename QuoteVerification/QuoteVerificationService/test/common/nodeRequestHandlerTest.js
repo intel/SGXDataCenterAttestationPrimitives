@@ -31,56 +31,47 @@
 
 'use strict';
 
+const proxyquire = require('proxyquire');
 const assert = require('assert');
 const sinon = require('sinon');
-const PassThrough = require('stream').PassThrough;
-const https = require('https');
 const Buffer = require('safe-buffer').Buffer;
 
-const httpsHandler = require('../../src/common/nodeRequestHandler');
-
-let request;
+const request = sinon.stub();
+const httpsHandler = proxyquire('../../src/common/nodeRequestHandler', {
+    axios: request
+});
 
 describe('nodeRequestHandler unit tests', () => {
-    beforeEach(() => {
-        request = sinon.stub(https, 'request');
-    });
-
-    afterEach(() => {
-        https.request.restore();
-    });
-
     it('should convert json result to object', async() => {
         const expected = { hello: 'world' };
-        const response = new PassThrough();
-        response.write(JSON.stringify(expected));
-        response.statusCode = 200;
-        response.headers = { 'content-type': 'application/json' };
-        response.end();
+        const response = {
+            data:    expected,
+            status:  200,
+            headers: { 'content-type': 'application/json' }
+        };
 
-        const req = new PassThrough();
-
-        request.callsArgWith(1, response)
-            .returns(req);
+        request.resolves(response);
 
         const res = await httpsHandler({}, '');
         assert.deepEqual(res.body, { hello: 'world' });
         assert.deepEqual(res.statusCode, 200);
         assert.deepEqual(res.headers, { 'content-type': 'application/json' });
+        assert(request.withArgs(sinon.match({
+            maxContentLength: sinon.match.number,
+            maxBodyLength:    sinon.match.number,
+            responseType:     'json'
+        })).calledOnce);
     });
 
     it('should return string object', async() => {
         const expected = 'expected response';
-        const response = new PassThrough();
-        response.write(JSON.stringify(expected));
-        response.statusCode = 200;
-        response.headers = { 'content-type': 'text/plain' };
-        response.end();
+        const response = {
+            data:    JSON.stringify(expected),
+            status:  200,
+            headers: { 'content-type': 'text/plain' }
+        };
 
-        const req = new PassThrough();
-
-        request.callsArgWith(1, response)
-            .returns(req);
+        request.resolves(response);
 
         const res = await httpsHandler({}, '');
         assert.deepEqual(res.body, '"expected response"');
@@ -94,77 +85,61 @@ describe('nodeRequestHandler unit tests', () => {
         const expectedResponseBody = Buffer.from([1, 2, 3]);
         const expectedResponseHeaders = { 'content-type': 'application/pkix-crl' };
 
-        const response = new PassThrough();
-        response.write(expectedResponseBody);
-        response.statusCode = 200;
-        response.headers = expectedResponseHeaders;
-        response.end();
+        const response = {
+            data:    expectedResponseBody,
+            status:  200,
+            headers: expectedResponseHeaders
+        };
 
-        const req = new PassThrough();
-
-        request.callsArgWith(1, response)
-            .returns(req);
+        request.resolves(response);
 
         const res = await httpsHandler({}, '', isResponseBinary);
         assert.deepEqual(res.body, expectedResponseBody);
         assert.deepEqual(res.statusCode, 200);
         assert.deepEqual(res.headers, expectedResponseHeaders);
+        assert(request.withArgs(sinon.match({ responseType: 'arraybuffer' })).calledOnce);
     });
 
     it('should return string object when no content type given', async() => {
         const expected = 'expected response';
-        const response = new PassThrough();
-        response.write(JSON.stringify(expected));
-        response.statusCode = 200;
-        response.end();
+        const response = {
+            data:   expected,
+            status: 200
+        };
 
-        const req = new PassThrough();
-
-        request.callsArgWith(1, response)
-            .returns(req);
+        request.resolves(response);
 
         const res = await httpsHandler({}, '');
-        assert.deepEqual(res.body, '"expected response"');
+        assert.deepEqual(res.body, 'expected response');
         assert.deepEqual(res.statusCode, 200);
         assert.deepEqual(res.headers, undefined);
     });
 
-    it('should call write when json', () => {
+    it('should send body', async() => {
         const body = { somekey: 'somevalue' };
-        const expected = JSON.stringify(body);
 
-        const req = new PassThrough();
-        const write = sinon.spy(req, 'write');
+        request.resolves({});
 
-        request.returns(req);
-
-        httpsHandler({}, body);
-        assert(write.withArgs(expected).calledOnce);
+        await httpsHandler({}, body);
+        assert(request.withArgs(sinon.match({ data: body })).calledOnce);
     });
 
-    it('should call write when Uint8Array', () => {
-        const body = new Uint8Array([21, 31]);
+    it('should return body with unsuccessful status', async() => {
+        const expectedError = new Error('expected error');
+        expectedError.response = {
+            status: 404
+        };
+        request.throws(expectedError);
 
-        const req = new PassThrough();
-        const write = sinon.spy(req, 'write');
-
-        request.returns(req);
-
-        httpsHandler({}, body);
-        assert(write.withArgs(new Uint8Array([21, 31])).calledOnce);
+        const res = await httpsHandler({}, '');
+        assert.deepEqual(res.body, undefined);
+        assert.deepEqual(res.statusCode, 404);
+        assert.deepEqual(res.headers, undefined);
     });
 
     it('should reject request error', async() => {
         const expectedError = new Error('expected error');
-        const req = new PassThrough();
-        const response = new PassThrough();
-        response.on('end', () => {
-            req.emit('error', expectedError);
-        });
-        response.end();
-
-        request.callsArgWith(1, response)
-            .returns(req);
+        request.throws(expectedError);
 
         try {
             await httpsHandler({}, '');
@@ -173,5 +148,13 @@ describe('nodeRequestHandler unit tests', () => {
         catch (err) {
             assert.deepEqual(err, expectedError);
         }
+    });
+
+    it('should use provided options', async() => {
+        const method = 'post';
+        request.resolves({});
+
+        await httpsHandler({ method }, '');
+        assert(request.withArgs(sinon.match({ method })).calledOnce);
     });
 });

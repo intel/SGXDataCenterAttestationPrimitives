@@ -71,14 +71,6 @@ export function startup_check() {
   return true;
 }
 
-async function test_connection() {
-  try {
-    return await sequelize.authenticate();
-  } catch (err) {
-    throw new Error('Failed to connect to the database.');
-  }
-}
-
 async function test_db_status() {
   const sql = 'select * from pck_crl';
   try {
@@ -143,8 +135,6 @@ async function db_migration() {
 
 export async function database_check() {
   try {
-    await test_connection();
-
     if (Config.has('init_db') && Config.get('init_db') == false) {
       return true;
     }

@@ -38,7 +38,8 @@ openssl_ver_name=openssl-1.1.1t
 sgxssl_github_archive=https://github.com/01org/intel-sgx-ssl/archive
 sgxssl_file_name=lin_2.19_1.1.1t
 build_script=$sgxssl_dir/Linux/build_openssl.sh
-server_url_path=https://www.openssl.org/source/
+#server_url_path=https://www.openssl.org/source/
+server_url_path=https://sgx-localserver.sh.intel.com/prebuilt/ssl
 full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/1.1.1/$openssl_ver_name.tar.gz
 
@@ -61,7 +62,8 @@ if [ ! -f $build_script ]; then
 fi
 
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
-	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
+#	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
+	wget $full_openssl_url -P $openssl_out_dir --no-check-certificate || exit 1
 	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
 	grep $openssl_chksum $sgxssl_dir/check_sum_openssl.txt
 	if [ $? -ne 0 ]; then
@@ -77,6 +79,8 @@ if [ "$1" = "nobuild" ]; then
 fi
 
 pushd $sgxssl_dir/Linux/
+sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/pcy_*.* crypto/x509v3/.' build_openssl.sh
+sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/x509_vfy.c crypto/x509/.' build_openssl.sh
 make clean sgxssl_no_mitigation 
 popd
 

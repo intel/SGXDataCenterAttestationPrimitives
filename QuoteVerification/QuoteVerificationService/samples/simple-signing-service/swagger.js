@@ -28,16 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+'use strict';
 
+const swaggerAutogen = require('swagger-autogen')();
 
+const outputFile = './swagger.json';
+const endpointsFiles = ['./simple-signing-service.js'];
 
-enclave {
-    include "sgx_report.h"
-
-    trusted {
-        /* define ECALLs here. */
-        public uint32_t enclave_create_report([in]const sgx_target_info_t* p_qe3_target,
-                                              [out]sgx_report_t* p_report);
-
-    };
+const doc = {
+  info: {
+    version:     '1.0.0',
+    title:       'Simple Signing Service',
+    description: 'Documentation automatically generated from comments in SSS code'
+  },
+  host:        'localhost:8797',
+  basePath:    '/',
+  schemes:     ['https'],
+  consumes:    ['application/json'],
+  produces:    ['application/json'],
+  definitions: {
+    PositiveHealthReport: {
+      status:      'OK',
+      version:     '1.0.0',
+      lastChecked: '2023-03-07T10:30:29.282Z'
+    },
+    NegativeHealthReport: {
+      status:      'FAILED',
+      version:     '1.0.0',
+      lastChecked: '2023-03-07T10:30:29.282Z'
+    },
+    SignatureResponse: {
+      signature: 'M5iPd/7XrQlhweDBzKzou8kIamLAfDR/Hc1bC8RCEtxpDLlRhRWjxlUNpIwcDoxvRSt7fMQujO4JPaTV9+bTW3b74rhSmkiuTdxMnF7eYZl29cge6OFCpyz9M/c4U61IlYE8yAFoaSrbd0zHH0jUx//AzsD1Iw03P8YL2G/rUbBAtOGpZUF7hRmHDVGqGhjN6n0HIX4yMZ8CHQQTTziJokn+HSIN8tDQWV5DVFfCLFmUQ5Fyf3UIh07FmX+3HDukR/601FvbBvoaw3ERTjtLH30d+3Px/EVq8ZwRy6SCE9+3MJpIXFZttL4wO45mNEiHNdMPnBTBPJylN2a5mkz1Ww=='
+    }
+  }
 };
+
+swaggerAutogen(outputFile, endpointsFiles, doc);

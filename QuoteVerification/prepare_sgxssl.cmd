@@ -45,7 +45,8 @@ set sgxssl_ver_name=win_2.18_1.1.1t
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
-set server_url_path=https://www.openssl.org/source/
+@Rem set server_url_path=https://www.openssl.org/source/
+set server_url_path=https://sgx-localserver.sh.intel.com/prebuilt/ssl
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
 set sgxssl_chksum=665ADEC6329A8EAE40E9F45AF2EDBF4FB2F2BB5CED172813CF6A237F894AAEED
@@ -72,7 +73,8 @@ if not exist %build_script% (
 )
 
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
-	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+@Rem	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+	call powershell -Command " [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}; (New-Object Net.WebClient).DownloadFile('%full_openssl_url%', '%openssl_out_dir%\%openssl_ver_name%.tar.gz'); exit" > nul
 )
 call powershell -Command " $opensslfilehash = Get-FileHash %openssl_out_dir%\%openssl_ver_name%.tar.gz; Write-Output $opensslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_openssl.txt -encoding ascii"
 findstr /i %openssl_chksum% %sgxssl_dir%\check_sum_openssl.txt>nul
@@ -84,6 +86,8 @@ if !errorlevel! NEQ 0  (
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
+	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\x509_vfy.c crypto\x509\.`n\" + $content[148]; Set-Content build_package.cmd $content"
+	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\pcy_*.* crypto\x509v3\.`n\" + $content[148]; Set-Content build_package.cmd $content"
 	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 

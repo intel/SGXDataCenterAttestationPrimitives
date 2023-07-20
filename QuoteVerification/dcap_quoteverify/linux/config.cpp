@@ -161,6 +161,16 @@ bool sgx_dcap_load_qpl()
             }
         }
 
+        // search for sgx_qpl_global_init in dcap_quoteprov library and call it if found
+        sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(g_qpl_handle, "sgx_qpl_global_init");
+        if (dlerror() == NULL && p_sgx_qpl_global_init) {
+            quote3_error_t ql_ret = p_sgx_qpl_global_init();
+            if (ql_ret != SGX_QL_SUCCESS) {
+                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
+                break;
+            }
+        }
+
         //search for sgx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library
         //
         p_sgx_ql_get_quote_verification_collateral = (sgx_get_quote_verification_collateral_func_t)dlsym(g_qpl_handle, QL_API_GET_QUOTE_VERIFICATION_COLLATERAL);
@@ -282,8 +292,9 @@ bool sgx_dcap_load_urts()
                 //try to load urts v2
                 g_urts_handle = dlopen(SGX_URTS_LIB_FILE_NAME_V2, RTLD_LAZY);
                 if (g_urts_handle == NULL) {
-                    if(dlerror() != NULL){
-                        fputs(dlerror(), stderr);
+                    char *cerror = dlerror();
+                    if(cerror != NULL){
+                        fputs(cerror, stderr);
                     }
                     SE_TRACE(SE_TRACE_DEBUG, "Couldn't find urts library: %s, %s\n", SGX_URTS_LIB_FILE_NAME, SGX_URTS_LIB_FILE_NAME_V2);
                     break;

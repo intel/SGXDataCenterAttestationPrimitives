@@ -73,7 +73,7 @@ typedef enum _network_proxy_type {
 } network_proxy_type;
 
 // Use secure HTTPS certificate or not
-static bool g_use_secure_cert = true;
+extern bool g_use_secure_cert;
 
 /**
 * Method converts byte containing value from 0x00-0x0F into its corresponding ASCII code,
@@ -188,6 +188,9 @@ static network_post_error_t curl_error_to_network_post_error(CURLcode curl_error
 static bool process_configuration_setting(const char *config_file_name, string& url, string &proxy_type, string &proxy_url, string &user_token)
 {
     bool ret = true;
+    bool config_file_exist = true;
+    bool config_file_provide_pccs_url=false;
+
     ifstream ifs(config_file_name);
     string line;
     if (ifs.is_open()) {
@@ -207,6 +210,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                 else {
                     url = server_url_string + "/sgx/certification/v4/platforms";
                 }
+                config_file_provide_pccs_url = true;
             }
             else if (name.compare("USE_SECURE_CERT") == 0) {
                 if (use_secure_cert_string.empty() == true) {
@@ -214,9 +218,6 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                     if (value.compare("FALSE") == 0) {
                         g_use_secure_cert = false;
                     }
-                }
-                else if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-                    g_use_secure_cert = false;
                 }
             }
             else if (name.compare("PROXY_TYPE") == 0) {
@@ -241,13 +242,21 @@ static bool process_configuration_setting(const char *config_file_name, string& 
         }
     }
     else {
-        if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-            g_use_secure_cert = false;
-        }
+        config_file_exist = false;
 
-        url = server_url_string + "/sgx/certification/v2/platforms";
+        if(server_url_string.empty() == false) {
+            url = server_url_string + "/sgx/certification/v4/platforms";
+        }
         ret = false;
     }
+
+    //configruaton file exist, however it doesn't provide pccs url
+    if(config_file_exist && config_file_provide_pccs_url == false) {
+        if(server_url_string.empty() == false) {
+            url = server_url_string + "/sgx/certification/v4/platforms";
+        }
+    }
+
     return ret;
 }
 
@@ -269,6 +278,11 @@ static void network_configuration(string &url, string &proxy_type, string &proxy
     }
     if (ret){
         process_configuration_setting(local_configuration_file_path,url, proxy_type, proxy_url, user_token);
+    }
+    else {
+        if(server_url_string.empty() == false) {
+            url = server_url_string + "/sgx/certification/v4/platforms";
+        }
     }
 }
 

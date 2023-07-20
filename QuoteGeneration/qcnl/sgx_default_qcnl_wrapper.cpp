@@ -374,3 +374,21 @@ sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger,
     g_loglevel = loglevel;
     return SGX_QCNL_SUCCESS;
 }
+
+sgx_qcnl_error_t sgx_qcnl_clear_cache(uint32_t cache_type) {
+    LocalCache::Instance().clear_cache(cache_type);
+    return SGX_QCNL_SUCCESS;
+}
+
+sgx_qcnl_error_t sgx_qcnl_global_init() {
+    sgx_qcnl_error_t ret = SGX_QCNL_SUCCESS;
+    QcnlConfigJson *pConfigJson = new QcnlConfigJson();
+    if (pConfigJson->load_config() == SGX_QCNL_CONFIG_INVALID_JSON)
+        ret = SGX_QCNL_CONFIG_INVALID_JSON;
+    delete pConfigJson;
+    return ret;
+}
+
+sgx_qcnl_error_t sgx_qcnl_global_cleanup() {
+    return SGX_QCNL_SUCCESS;
+}

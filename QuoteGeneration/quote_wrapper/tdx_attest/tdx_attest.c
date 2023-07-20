@@ -48,13 +48,20 @@
 #include <syslog.h>
 #include <assert.h>
 
-#define TDX_ATTEST_DEV_PATH "/dev/tdx-attest"
+#define TDX_ATTEST_DEV_PATH "/dev/tdx-guest"
 #define CFG_FILE_PATH "/etc/tdx-attest.conf"
-//TODO: Should include kernel header
-#define TDX_CMD_GET_TDREPORT _IOWR('T', 0x01, __u64)
-#define TDX_CMD_EXTEND_RTMR _IOR('T', 0x04, __u64)
-#define TDX_CMD_GET_EXTEND_SIZE	_IOR('T', 0x05, __u64)
-#define TDX_CMD_GEN_QUOTE _IOR('T', 0x02, __u64)
+// TODO: Should include kernel header, but the header file are included by
+// different package in differnt distro, and installed in different locations.
+// So add these defines here. Need to remove them later when kernel header
+// became stable.
+#define TDX_CMD_GET_REPORT _IOWR('T', 0x01, __u64)
+#define TDX_CMD_GET_QUOTE _IOR('T', 0x02, __u64)
+
+/* TD Quote status codes */
+#define GET_QUOTE_SUCCESS 0
+#define GET_QUOTE_IN_FLIGHT 0xffffffffffffffff
+#define GET_QUOTE_ERROR 0x8000000000000000
+#define GET_QUOTE_SERVICE_UNAVAILABLE 0x8000000000000001
 
 #ifdef DEBUG
 #define TDX_TRACE                                          \
@@ -66,28 +73,34 @@
 #define TDX_TRACE
 #endif
 
-#pragma pack(push, 1)
-// It's a 4*4K byte structure
-typedef struct _get_quote_blob_t
-{
-    // Following fields are used for transport layer, LE
-    uint64_t version;
-    uint64_t status;
-    uint32_t in_len;
-    uint32_t out_len;
-     // Following fields are consumed by QGS and this library
-    uint8_t trans_len[4];   // BE
-    uint8_t p_buf[4 * 4 * 1024 - 28];
-} get_quote_blob_t;
+struct tdx_report_req {
+    __u8 subtype;
+    __u64 reportdata;
+    __u32 rpd_len;
+    __u64 tdreport;
+    __u32 tdr_len;
+};
 
-typedef struct _get_quote_ioctl_arg_t
-{
-    void *p_blob;
-    size_t len;
-} get_quote_ioctl_arg_t;
-#pragma pack(pop)
+struct tdx_quote_hdr {
+    /* Quote version, filled by TD */
+    __u64 version;
+    /* Status code of Quote request, filled by VMM */
+    __u64 status;
+    /* Length of TDREPORT, filled by TD */
+    __u32 in_len;
+    /* Length of Quote, filled by VMM */
+    __u32 out_len;
+    /* Actual Quote data or TDREPORT on input */
+    __u64 data[0];
+};
+
+struct tdx_quote_req {
+    __u64 buf;
+    __u64 len;
+};
 
 static const unsigned HEADER_SIZE = 4;
+static const size_t REQ_BUF_SIZE = 4 * 4 * 1024; // 4 pages
 static const tdx_uuid_t g_intel_tdqe_uuid = {TDX_SGX_ECDSA_ATTESTATION_ID};
 
 static unsigned int get_vsock_port(void)
@@ -163,13 +176,21 @@ static tdx_attest_error_t get_tdx_report(
         fprintf(stderr, "\nNeed to input TDX report.");
         return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
-
-    uint8_t tdx_report[TDX_REPORT_SIZE] = {0};
-    if (p_tdx_report_data) {
-        memcpy(tdx_report, p_tdx_report_data->d, sizeof(p_tdx_report_data->d));
+    if (!p_tdx_report_data) {
+        fprintf(stderr, "\nNeed to input TDX report data.");
+        return TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
 
-    if (-1 == ioctl(devfd, TDX_CMD_GET_TDREPORT, tdx_report)) {
+    struct tdx_report_req req;
+    uint8_t tdx_report[TDX_REPORT_SIZE] = {0};
+
+    req.subtype = 0;
+    req.reportdata = (__u64)p_tdx_report_data->d;
+    req.rpd_len = TDX_REPORT_DATA_SIZE;
+    req.tdreport = (__u64)tdx_report;
+    req.tdr_len = TDX_REPORT_SIZE;
+
+    if (-1 == ioctl(devfd, TDX_CMD_GET_REPORT, &req)) {
         TDX_TRACE;
         return TDX_ATTEST_ERROR_REPORT_FAILURE;
     }
@@ -194,7 +215,8 @@ tdx_attest_error_t tdx_att_get_quote(
     uint32_t in_msg_size = 0;
     unsigned int vsock_port = 0;
     tdx_attest_error_t ret = TDX_ATTEST_ERROR_UNEXPECTED;
-    get_quote_blob_t *p_get_quote_blob = NULL;
+    struct tdx_quote_hdr *p_get_quote_blob = NULL;
+    uint8_t *p_blob_payload = NULL;
     tdx_report_t tdx_report;
     uint32_t msg_size = 0;
 
@@ -230,7 +252,7 @@ tdx_attest_error_t tdx_att_get_quote(
     }
     *pp_quote = NULL;
     memset(&tdx_report, 0, sizeof(tdx_report));
-    p_get_quote_blob = (get_quote_blob_t *)malloc(sizeof(get_quote_blob_t));
+    p_get_quote_blob = (struct tdx_quote_hdr *)malloc(REQ_BUF_SIZE);
     if (!p_get_quote_blob) {
         ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
         goto ret_point;
@@ -258,20 +280,21 @@ tdx_attest_error_t tdx_att_get_quote(
         goto ret_point;
     }
 
-    if (msg_size > sizeof(p_get_quote_blob->p_buf)) {
-        #ifdef DEBUG
+    if (msg_size > REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE) {
+#ifdef DEBUG
         fprintf(stdout, "\nqmsg_size[%d] is too big\n", msg_size);
         #endif
         ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
         goto ret_point;
     }
 
-    p_get_quote_blob->trans_len[0] = (uint8_t)((msg_size >> 24) & 0xFF);
-    p_get_quote_blob->trans_len[1] = (uint8_t)((msg_size >> 16) & 0xFF);
-    p_get_quote_blob->trans_len[2] = (uint8_t)((msg_size >> 8) & 0xFF);
-    p_get_quote_blob->trans_len[3] = (uint8_t)(msg_size & 0xFF);
+    p_blob_payload = (uint8_t *)&p_get_quote_blob->data;
+    p_blob_payload[0] = (uint8_t)((msg_size >> 24) & 0xFF);
+    p_blob_payload[1] = (uint8_t)((msg_size >> 16) & 0xFF);
+    p_blob_payload[2] = (uint8_t)((msg_size >> 8) & 0xFF);
+    p_blob_payload[3] = (uint8_t)(msg_size & 0xFF);
 
-    memcpy(p_get_quote_blob->p_buf, p_req, msg_size);
+    memcpy(p_blob_payload + HEADER_SIZE, p_req, msg_size);
 
     do {
         vsock_port = get_vsock_port();
@@ -296,7 +319,7 @@ tdx_attest_error_t tdx_att_get_quote(
         }
 
         // Write to socket
-        if (HEADER_SIZE + msg_size != send(s, p_get_quote_blob->trans_len,
+        if (HEADER_SIZE + msg_size != send(s, p_blob_payload,
             HEADER_SIZE + msg_size, 0)) {
             TDX_TRACE;
             ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
@@ -304,7 +327,7 @@ tdx_attest_error_t tdx_att_get_quote(
         }
 
         // Read the response size header
-        if (HEADER_SIZE != recv(s, p_get_quote_blob->trans_len,
+        if (HEADER_SIZE != recv(s, p_blob_payload,
             HEADER_SIZE, 0)) {
             TDX_TRACE;
             ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
@@ -313,8 +336,7 @@ tdx_attest_error_t tdx_att_get_quote(
 
         // decode the size
         for (unsigned i = 0; i < HEADER_SIZE; ++i) {
-            in_msg_size = in_msg_size * 256
-                          + ((p_get_quote_blob->trans_len[i]) & 0xFF);
+            in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
         }
 
         // prepare the buffer and read the reply body
@@ -322,8 +344,7 @@ tdx_attest_error_t tdx_att_get_quote(
         fprintf(stdout, "\nReply message body is %u bytes", in_msg_size);
         #endif
 
-        if (sizeof(p_get_quote_blob->p_buf) < in_msg_size)
-        {
+        if (REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE < in_msg_size) {
             #ifdef DEBUG
             fprintf(stdout, "\nReply message body is too big");
             #endif
@@ -331,7 +352,7 @@ tdx_attest_error_t tdx_att_get_quote(
             goto ret_point;
         }
         while( recieved_bytes < in_msg_size) {
-            int recv_ret = (int)recv(s, p_get_quote_blob->p_buf + recieved_bytes,
+            int recv_ret = (int)recv(s, p_blob_payload + HEADER_SIZE + recieved_bytes,
                                      in_msg_size - recieved_bytes, 0);
             if (recv_ret < 0) {
                 ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
@@ -347,15 +368,15 @@ tdx_attest_error_t tdx_att_get_quote(
 
     if (use_tdvmcall) {
         int ioctl_ret = 0;
-        get_quote_ioctl_arg_t arg;
+        struct tdx_quote_req arg;
         p_get_quote_blob->version = 1;
         p_get_quote_blob->status = 0;
         p_get_quote_blob->in_len = HEADER_SIZE + msg_size;
-        p_get_quote_blob->out_len = (uint32_t)(sizeof(*p_get_quote_blob) - 24);
-        arg.p_blob = p_get_quote_blob;
-        arg.len = sizeof(*p_get_quote_blob);
+        p_get_quote_blob->out_len = 0;
+        arg.buf = (__u64)p_get_quote_blob;
+        arg.len = REQ_BUF_SIZE;
 
-        ioctl_ret = ioctl(devfd, TDX_CMD_GEN_QUOTE, &arg);
+        ioctl_ret = ioctl(devfd, TDX_CMD_GET_QUOTE, &arg);
         if (EBUSY == ioctl_ret) {
             TDX_TRACE;
             ret = TDX_ATTEST_ERROR_BUSY;
@@ -368,20 +389,32 @@ tdx_attest_error_t tdx_att_get_quote(
         if (p_get_quote_blob->status
             || p_get_quote_blob->out_len <= HEADER_SIZE) {
             TDX_TRACE;
-            ret = TDX_ATTEST_ERROR_UNEXPECTED;
+            if (GET_QUOTE_IN_FLIGHT == p_get_quote_blob->status) {
+                ret = TDX_ATTEST_ERROR_BUSY;
+            } else if (GET_QUOTE_SERVICE_UNAVAILABLE == p_get_quote_blob->status) {
+                ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+            } else {
+                ret = TDX_ATTEST_ERROR_UNEXPECTED;
+            }
             goto ret_point;
         }
 
-        //in_msg_size is the size of serialized response, remove 4bytes header
-        //TODO: Decode the HEAD and compare it with out_len as defense-in-depth
-        in_msg_size = p_get_quote_blob->out_len - HEADER_SIZE;
+        //in_msg_size is the size of serialized response
+        for (unsigned i = 0; i < HEADER_SIZE; ++i) {
+            in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
+        }
+        if (in_msg_size != p_get_quote_blob->out_len - HEADER_SIZE) {
+            TDX_TRACE;
+            ret = TDX_ATTEST_ERROR_UNEXPECTED;
+            goto ret_point;
+        }
         #ifdef DEBUG
         fprintf(stdout, "\nGet %u bytes response from tdvmcall", in_msg_size);
         #endif
     }
 
     qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
-        p_get_quote_blob->p_buf, in_msg_size,
+        p_blob_payload + HEADER_SIZE, in_msg_size,
         &p_selected_id, &id_size,
         &p_quote, &quote_size);
     if (QGS_MSG_SUCCESS != qgs_msg_ret) {
@@ -393,7 +426,7 @@ tdx_attest_error_t tdx_att_get_quote(
     }
 
     // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
-    p_header = (qgs_msg_header_t *)p_get_quote_blob->p_buf;
+    p_header = (qgs_msg_header_t *)(p_blob_payload + HEADER_SIZE);
     if (p_header->error_code != 0) {
         #ifdef DEBUG
         fprintf(stdout, "\nerror code in resp msg is 0x%x", p_header->error_code);
@@ -477,6 +510,7 @@ tdx_attest_error_t tdx_att_get_supported_att_key_ids(
 tdx_attest_error_t tdx_att_extend(
     const tdx_rtmr_event_t *p_rtmr_event)
 {
+#ifdef TDX_CMD_EXTEND_RTMR
     int devfd = -1;
     uint64_t extend_data_size = 0;
     if (!p_rtmr_event || p_rtmr_event->version != 1) {
@@ -508,4 +542,8 @@ tdx_attest_error_t tdx_att_extend(
     }
     close(devfd);
     return TDX_ATTEST_SUCCESS;
+#else
+    (void)p_rtmr_event;
+    return TDX_ATTEST_ERROR_NOT_SUPPORTED;
+#endif
 }

@@ -7,3 +7,4 @@ EXPORTS
     tee_att_get_quote_size     @4
     tee_att_get_quote          @5
     tee_att_get_keyid          @6
+    tee_att_get_platform_info  @7

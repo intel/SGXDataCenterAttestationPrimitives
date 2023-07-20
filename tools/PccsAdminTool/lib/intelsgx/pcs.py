@@ -26,6 +26,7 @@ class PCS:
     HDR_TCB_INFO_ISSUER_CHAIN = 'SGX-TCB-Info-Issuer-Chain'
     HDR_PCK_Certificate_Issuer_Chain = 'SGX-PCK-Certificate-Issuer-Chain'
     HDR_Enclave_Identity_Issuer_Chain = 'SGX-Enclave-Identity-Issuer-Chain'
+    HDR_FMSPC = 'SGX-FMSPC'
 
     def __init__(self, url, apiVersion,key):
         self.BaseUrl = url
@@ -139,10 +140,12 @@ class PCS:
         # the first byte, prepend 0x00 to indicate an unsigned value.
 
         r= signature[0:32]
+        r= r.lstrip(b'\x00')
         if r[0] & 0x80:
             r= bytes([0])+r
 
         s= signature[32:]
+        s= s.lstrip(b'\x00')
         if s[0] & 0x80:
             s= bytes([0])+s
 
@@ -457,7 +460,7 @@ class PCS:
             self.error("Could not validate certificate using trust chain")
             return None
 
-        return [certs_available, certs_not_available, response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]]
+        return [certs_available, certs_not_available, response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain], response.headers[PCS.HDR_FMSPC]]
 
 
 #----------------------------------------------------------------------------

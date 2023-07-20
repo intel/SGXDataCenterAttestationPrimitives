@@ -32,9 +32,10 @@
 ######## SGX SDK Settings ########
 
 SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
+SGX_QPL_LOGGING ?= 1
+
 
 # Don't support 32bit in this sample
 SGX_COMMON_FLAGS := -m64
@@ -62,11 +63,9 @@ SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes 
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
 ######## App Settings ########
-ifneq ($(SGX_MODE), HW)
-	Urts_Library_Name := sgx_urts_sim
-else
-	Urts_Library_Name := sgx_urts
-endif
+
+Urts_Library_Name := sgx_urts
+
 
 App_Cpp_Files := App/App.cpp
 App_Include_Paths := -IApp -I$(SGX_SDK)/include
@@ -92,22 +91,29 @@ endif
 App_Cpp_Flags := $(App_C_Flags)
 App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_dcap_quoteverify -l$(Urts_Library_Name) -lpthread -ldl
 
+ifneq ($(SGX_QPL_LOGGING), 0)
+App_Link_Flags += -ldcap_quoteprov
+ifeq ($(SGX_QPL_LOGGING), 1)
+App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_ERROR
+else ifeq ($(SGX_QPL_LOGGING), 2)
+App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_INFO
+endif
+else
+App_Cpp_Flags += -USGX_QPL_LOGGING
+endif
+
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 
 App_Name := app
 
 ######## Enclave Settings ########
 
-ifneq ($(SGX_MODE), HW)
-	Trts_Library_Name := sgx_trts_sim
-	Service_Library_Name := sgx_tservice_sim
-else
-	Trts_Library_Name := sgx_trts
-	Service_Library_Name := sgx_tservice
-endif
+
+Trts_Library_Name := sgx_trts
+Service_Library_Name := sgx_tservice
+
 Crypto_Library_Name := sgx_tcrypto
 DCAP_DIR  ?= ../../
-DCAP_QG_DIR  ?= $(DCAP_DIR)/QuoteGeneration/
 
 Enclave_Cpp_Files := Enclave/Enclave.cpp
 Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
@@ -148,22 +154,12 @@ Signed_Enclave_Name := enclave.signed.so
 Enclave_Config_File := Enclave/Enclave.config.xml
 Enclave_Test_Key := Enclave/Enclave_private_sample.pem
 
-ifeq ($(SGX_MODE), HW)
 ifeq ($(SGX_DEBUG), 1)
 	Build_Mode = HW_DEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
 	Build_Mode = HW_PRERELEASE
 else
 	Build_Mode = HW_RELEASE
-endif
-else
-ifeq ($(SGX_DEBUG), 1)
-	Build_Mode = SIM_DEBUG
-else ifeq ($(SGX_PRERELEASE), 1)
-	Build_Mode = SIM_PRERELEASE
-else
-	Build_Mode = SIM_RELEASE
-endif
 endif
 
 
@@ -178,21 +174,16 @@ target:  $(App_Name) $(Enclave_Name)
 	@echo "To sign the enclave use the command:"
 	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <your key> -enclave $(Enclave_Name) -out <$(Signed_Enclave_Name)> -config $(Enclave_Config_File)"
 	@echo "You can also sign the enclave using an external signing tool."
-	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 
 
 else
 target: $(App_Name) $(Signed_Enclave_Name)
 ifeq ($(Build_Mode), HW_DEBUG)
 	@echo "The project has been built in debug hardware mode."
-else ifeq ($(Build_Mode), SIM_DEBUG)
-	@echo "The project has been built in debug simulation mode."
 else ifeq ($(Build_Mode), HW_PRERELEASE)
 	@echo "The project has been built in pre-release hardware mode."
-else ifeq ($(Build_Mode), SIM_PRERELEASE)
-	@echo "The project has been built in pre-release simulation mode."
 else
-	@echo "The project has been built in release simulation mode."
+	@echo "The project has been built in release mode."
 endif
 
 endif
@@ -200,7 +191,7 @@ endif
 run: all
 ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
-	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
+	@echo "RUN  =>  $(App_Name) [$(SGX_ARCH), OK]"
 endif
 
 .config_$(Build_Mode)_$(SGX_ARCH):

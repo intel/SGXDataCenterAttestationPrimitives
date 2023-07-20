@@ -66,6 +66,8 @@ extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
 extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
 extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
 
+extern sgx_qpl_global_init_func_t p_sgx_qpl_global_init;
+
 extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
 extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
 extern sgx_ecall_func_t p_sgx_urts_ecall;
@@ -74,7 +76,6 @@ extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_
 extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
 extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
 extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
-
 
 
 bool sgx_dcap_load_qpl()
@@ -107,10 +108,20 @@ bool sgx_dcap_load_qpl()
 
         //try to dynamically load dcap_quoteprov.dll
         //
-		g_qpl_handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
+        g_qpl_handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
         if (g_qpl_handle == NULL) {
             SE_TRACE(SE_TRACE_ERROR, "Couldn't load the Quote Provider library %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
             break;
+        }
+
+        // search for sgx_qpl_global_init in dcap_quoteprov library and call it if found
+        p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)GetProcAddress(g_qpl_handle, QL_API_QPL_GLOBAL_INIT);
+        if (p_sgx_qpl_global_init != NULL) {
+            quote3_error_t ql_ret = p_sgx_qpl_global_init();
+            if (ql_ret != SGX_QL_SUCCESS) {
+                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
+                break;
+	    }
         }
 
         //search for sgx_ql_get_quote_verification_collateral symbol in dcap_quoteprov library

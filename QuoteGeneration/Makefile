@@ -57,7 +57,7 @@ dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper
 opt_check_failed:
 	@echo "Please run download_prebuilt.sh before compiling"
 	@echo "Exiting......"
-	@exit -2
+	@exit 3
 
 pce_logic:
 	$(MAKE) -C pce_wrapper/linux
@@ -76,7 +76,7 @@ qve_wrapper:
 
 
 .PHONY: deb_sgx_dcap_ql_pkg
-deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic qve_wrapper
+deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic
 	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
 .PHONY: deb_sgx_dcap_quote_verify_pkg

@@ -146,8 +146,8 @@ public:
 
 class sgx_qv_trusted : public sgx_qv {
 public:
-    sgx_qv_trusted(sgx_enclave_id_t id) : m_qve_id(id) {};
-    virtual ~sgx_qv_trusted() { m_qve_id = 0; };
+    sgx_qv_trusted() { load_qve(); };
+    virtual ~sgx_qv_trusted();
 
     virtual quote3_error_t tee_verify_evidence(
         const uint8_t *p_quote,
@@ -172,8 +172,12 @@ public:
         unsigned char* p_ca_from_quote,
         uint32_t ca_from_quote_size);
 
+    sgx_status_t load_qve();
+
+    void unload_qve();
+
 private:
-    sgx_enclave_id_t m_qve_id;
+    sgx_enclave_id_t m_qve_id = 0;
 };
 
 class tdx_qv : public sgx_qv {
@@ -192,8 +196,8 @@ public:
 
 class tdx_qv_trusted : public tdx_qv {
 public:
-    tdx_qv_trusted(sgx_enclave_id_t id) : m_qve_id(id) {};
-    virtual ~tdx_qv_trusted() { m_qve_id = 0; };
+    tdx_qv_trusted() { load_qve(); };
+    virtual ~tdx_qv_trusted();
 
     virtual quote3_error_t tee_verify_evidence(
         const uint8_t *p_quote,
@@ -218,8 +222,12 @@ public:
         unsigned char* p_ca_from_quote,
         uint32_t ca_from_quote_size);
 
+    sgx_status_t load_qve();
+
+    void unload_qve();
+
 private:
-    sgx_enclave_id_t m_qve_id;
+    sgx_enclave_id_t m_qve_id = 0;
 };
 
 

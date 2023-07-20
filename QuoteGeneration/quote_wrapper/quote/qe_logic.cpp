@@ -295,6 +295,16 @@ void * get_qpl_handle()
                         SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME_LEGACY);
             }
         }
+        if (NULL != handle) {
+            sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(handle, "sgx_qpl_global_init");
+            if (dlerror() == NULL && p_sgx_qpl_global_init) {
+                quote3_error_t ret = p_sgx_qpl_global_init();
+                if (ret != SGX_QL_SUCCESS) {
+                    dlclose(handle);
+                    handle = NULL;
+                }
+            }
+        }
     }
     return handle;
 }
@@ -425,7 +435,7 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
             SE_PROD_LOG("Couldn't find 'sgx_ql_get_quote_config()' and 'sgx_ql_free_quote_config()' in the platform library. %s\n", dlerror());
         }
     } else {
-        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't load the platform library. %s\n", dlerror());
     }
 
     CLEANUP:
@@ -441,6 +451,17 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
     if (handle != NULL) {
         SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+
+        sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)GetProcAddress(handle, "sgx_qpl_global_init");
+        if (NULL != p_sgx_qpl_global_init) {
+            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qpl_global_init API.\n");
+            ret_val = p_sgx_qpl_global_init();
+            if (SGX_QL_SUCCESS != ret_val) {
+                SE_PROD_LOG("Error returned from the sgx_qpl_global_init API. 0x%04x\n", ret_val);
+                goto CLEANUP;
+            }
+        }
+
         p_sgx_get_quote_config = (sgx_get_quote_config_func_t)GetProcAddress(handle, "sgx_ql_get_quote_config");
         p_sgx_free_quote_config = (sgx_free_quote_config_func_t)GetProcAddress(handle, "sgx_ql_free_quote_config");
         if ((NULL != p_sgx_get_quote_config) &&
@@ -934,7 +955,7 @@ static quote3_error_t getencryptedppid(sgx_target_info_t& pce_target_info, uint8
  * @param buf_size Size in bytes pointed to by p_buf.  Must be no larger than MAX_PATH.
  * @param p_label String of the label for the data to be stored.  Must not be NULL.
  *
- * @return SGX_QE_PLATFORM_LIB_UNAVAILABLE
+ * @return SGX_QL_PLATFORM_LIB_UNAVAILABLE
  * @return SGX_QL_ERROR_UNEXPECTED
  * @return SGX_QL_ERROR_INVALID_PARAMETER
  * @return SGX_QL_FILE_ACCESS_ERROR
@@ -1015,7 +1036,7 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
  * @param p_label String of the label for the data to be stored.  Must not be NULL.
  *
  * @return SGX_QL_SUCCESS
- * @return SGX_QE_PLATFORM_LIB_UNAVAILABLE
+ * @return SGX_QL_PLATFORM_LIB_UNAVAILABLE
  * @return SGX_QL_ERROR_UNEXPECTED
  * @return SGX_QL_ERROR_INVALID_PARAMETER
  * @return SGX_QL_FILE_ACCESS_ERROR

@@ -42,7 +42,7 @@ RAD_CONF_DEL=$(if $(wildcard /run/systemd/system/.),mpa_registration_tool.conf,$
 RAD_CONF_PATH=$(if $(wildcard /run/systemd/system/.),$(if $(wildcard /lib/systemd/system/.),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.),/etc/init/))
 
 ifeq ($(RAD_CONF_NAME),)
-ifneq ($(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup),)
+ifeq ($(BUILD_PLATFORM),docker)
 RAD_CONF_NAME=mpa_registration_tool.service
 RAD_CONF_DEL=mpa_registration.conf
 RAD_CONF_PATH=/lib/systemd/system

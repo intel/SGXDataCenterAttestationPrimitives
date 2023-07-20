@@ -37,7 +37,7 @@ Release:        1%{?dist}
 Summary:        Intel(R) Software Guard Extensions Data Center Attestation Primitives
 Group:          Development/Libraries
 Requires:       libsgx-qe3-logic >= %{version}-%{release} libsgx-pce-logic >= %{version}-%{release}
-Recommends:     libsgx-dcap-quote-verify >= %{version}-%{release} libsgx-quote-ex >= 2.19
+Recommends:     libsgx-dcap-quote-verify >= %{version}-%{release} libsgx-quote-ex >= 2.20
 
 License:        BSD License
 URL:            https://github.com/intel/SGXDataCenterAttestationPrimitives
@@ -49,7 +49,7 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives
 %package devel
 Summary:        Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers
 Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release} libsgx-headers >= 2.19
+Requires:       %{name} = %{version}-%{release} libsgx-headers >= 2.20
 
 %description devel
 Intel(R) Software Guard Extensions Data Center Attestation Primitives for Developers

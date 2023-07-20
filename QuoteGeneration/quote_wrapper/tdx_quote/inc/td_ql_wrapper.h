@@ -37,6 +37,7 @@
 #ifndef _TD_QL_WRAPPER_H_
 #define _TD_QL_WRAPPER_H_
 #include <stddef.h>
+#include <stdbool.h>
 #include "sgx_quote_4.h"
 
 #define TEE_ATT_MK_ERROR(x)              (0x00011000|(x))
@@ -129,11 +130,22 @@ typedef enum _tee_att_error_t {
     TEE_ATT_COLLATERAL_VERSION_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0053),  ///< SGX quote verification collateral version not supported by QVL/QvE
     TEE_ATT_TDX_MODULE_MISMATCH = TEE_ATT_MK_ERROR(0x0060),            ///< TDX SEAM module identity is NOT match to Intel signed TDX SEAM module
 
-    TEE_ATT_ERROR_MAX = TEE_ATT_MK_ERROR(0x00FF),                      ///< Indicate max error to allow better translation.
+    TEE_ATT_QEIDENTITY_NOT_FOUND = TEE_ATT_MK_ERROR(0x0061),            ///< QE identity was not found
+    TEE_ATT_TCBINFO_NOT_FOUND = TEE_ATT_MK_ERROR(0x0062),               ///< TCB Info was not found
+    TEE_ATT_INTERNAL_SERVER_ERROR = TEE_ATT_MK_ERROR(0x0063),           ///< Internal server error
+
+    TEE_ATT_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0064),       ///< The supplemental data version is not supported
+
+    TEE_ATT_ROOT_CA_UNTRUSTED = TEE_ATT_MK_ERROR(0x0065),               ///< The certificate used to establish SSL session is untrusted
+    TEE_ATT_TCB_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0066),               ///< Current TCB level cannot be found in platform/enclave TCB info 
+
+    TEE_ATT_CONFIG_INVALID_JSON = TEE_ATT_MK_ERROR(0x0067),             ///< The QPL's config file is in JSON format but has a format error
+
+    TEE_ATT_ERROR_MAX = TEE_ATT_MK_ERROR(0x00FF),                       ///< Indicate max error to allow better translation.
 
 } tee_att_error_t;
 
-struct tee_att_config_t;
+typedef struct tee_att_config_t tee_att_config_t;
 
 typedef enum
 {
@@ -142,6 +154,19 @@ typedef enum
     TEE_ATT_QPL,
     TEE_ATT_IDE,
 } tee_att_ae_type_t;
+
+
+
+#pragma pack(push, 1)
+
+typedef struct _tee_platform_info_t {
+    sgx_key_128bit_t platform_id;
+    sgx_cpu_svn_t cpu_svn;
+    sgx_isv_svn_t tdqe_isv_svn;
+    sgx_isv_svn_t pce_isv_svn;
+} tee_platform_info_t;
+
+#pragma pack(pop)
 
 
 #if defined(__cplusplus)
@@ -337,6 +362,29 @@ tee_att_error_t tee_att_get_quote(const tee_att_config_t* p_context,
  */
 tee_att_error_t tee_att_get_keyid(const tee_att_config_t* p_context,
     tee_att_att_key_id_t* p_att_key_id);
+
+/**
+ * The application can call this function to get the platform info.
+ *
+ * @param p_context The context that contains information during quote generation flow.
+ * @param p_platform_info Pointer to returned information of current platform. It cannot be NULL.
+ * @return TEE_ATT_SUCCESS Successfully retrived platform info.
+ * @return TEE_ATT_ATT_KEY_NOT_INITIALIZED The Attestaion key has not been generated, certified or requires
+ *                                         recertification yet. Need to call InitQuote first/again to get attestaion
+ *                                         key regenerated/receritifed.
+ * @return TEE_ATT_ERROR_INVALID_PARAMETER Invalid parameter if p_platform_info is NULL. Or p_context is not valid.
+ * @return TEE_ATT_ERROR_OUT_OF_MEMORY There is not enough EPC memory to load one of the Architecture Enclaves
+ *                                     needed to complete this operation.
+ * @return TEE_ATT_ENCLAVE_LOST Enclave lost after power transition or used in child process created by
+ *                              linux:fork().
+ * @return TEE_ATT_ENCLAVE_LOAD_ERROR Unable to load the enclaves required to initialize the attestation key.
+ *                                    Could be due to file I/O error, loading infrastructure error or insufficient
+ *                                    enclave memory.
+ * @return TEE_ATT_ERROR_INVALID_PRIVILEGE No enough privilege to perform the operation.
+ * @return TEE_ATT_ERROR_UNEXPECTED Unexpected internal error.
+ */
+tee_att_error_t tee_att_get_platform_info(const tee_att_config_t* p_context,
+    tee_platform_info_t* p_platform_info);
 
 #ifndef _MSC_VER
 /**

@@ -48,7 +48,7 @@ static struct init_solib {
     }
 } _init_solib;
 
-bool QcnlConfigLegacy::load_config() {
+sgx_qcnl_error_t QcnlConfigLegacy::load_config() {
     // read configuration File
     bool use_collateral_service = false;
     ifstream ifs("/etc/sgx_default_qcnl.conf");
@@ -106,6 +106,9 @@ bool QcnlConfigLegacy::load_config() {
                 } catch (const invalid_argument &) {
                     continue;
                 }
+            } else if (name.compare("LOCAL_CACHE_ONLY") == 0 &&
+                       (value.compare("TRUE") == 0 || value.compare("true") == 0)) {
+                local_cache_only_ = true;
             } else {
                 continue;
             }
@@ -115,9 +118,9 @@ bool QcnlConfigLegacy::load_config() {
         collateral_service_url_ = server_url_;
     }
 
-    return true;
+    return SGX_QCNL_SUCCESS;
 }
 
-bool QcnlConfigJson::load_config() {
+sgx_qcnl_error_t QcnlConfigJson::load_config() {
     return this->load_config_json("/etc/sgx_default_qcnl.conf");
 }

@@ -66,6 +66,8 @@ typedef enum _sgx_qcnl_error_t {
     SGX_QCNL_CACHE_MISSING = SGX_QCNL_MK_ERROR(0x0031),                    ///< Cache missing
     SGX_QCNL_CACHE_EXPIRED = SGX_QCNL_MK_ERROR(0x0032),                    ///< Cache expired
     SGX_QCNL_ROOT_CA_UNTRUSTED = SGX_QCNL_MK_ERROR(0x0033),                ///< The certificate used to establish SSL session is untrusted
+    SGX_QCNL_CONFIG_INVALID_JSON = SGX_QCNL_MK_ERROR(0x0035),              ///< The config file is in JSON format but has a format error
+    SGX_QCNL_CONFIG_NOT_JSON = SGX_QCNL_MK_ERROR(0x0036),                  ///< The config file is not in JSON format
 } sgx_qcnl_error_t;
 
 typedef enum _sgx_qe_type_t {
@@ -133,6 +135,11 @@ bool sgx_qcnl_get_api_version(uint16_t *p_major_ver, uint16_t *p_minor_ver);
 sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel = SGX_QL_LOG_ERROR);
 
 void qcnl_log(sgx_ql_log_level_t level, const char *fmt, ...);
+
+sgx_qcnl_error_t sgx_qcnl_clear_cache(uint32_t cache_type);
+
+sgx_qcnl_error_t sgx_qcnl_global_init();
+sgx_qcnl_error_t sgx_qcnl_global_cleanup();
 
 #if defined(__cplusplus)
 }

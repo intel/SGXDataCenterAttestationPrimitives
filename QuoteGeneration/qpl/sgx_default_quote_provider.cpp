@@ -104,6 +104,8 @@ static quote3_error_t qcnl_error_to_ql_error(sgx_qcnl_error_t ret) {
         return SGX_QL_UNKNOWN_MESSAGE_RESPONSE;
     case SGX_QCNL_ERROR_STATUS_SERVICE_UNAVAILABLE:
         return SGX_QL_SERVICE_UNAVAILABLE;
+    case SGX_QCNL_CONFIG_INVALID_JSON:
+        return SGX_QL_CONFIG_INVALID_JSON;
     default:
         return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -407,7 +409,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
     return ret;
 }
 quote3_error_t tdx_ql_get_quote_verification_collateral(const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
-                                                        sgx_ql_qve_collateral_t **pp_quote_collateral) {
+                                                        tdx_ql_qv_collateral_t **pp_quote_collateral) {
     quote3_error_t ret = ql_get_quote_verification_collateral_internal(SGX_PROD_TYPE_TDX,
                                                                        fmspc,
                                                                        fmspc_size,
@@ -416,7 +418,28 @@ quote3_error_t tdx_ql_get_quote_verification_collateral(const uint8_t *fmspc, ui
                                                                        0,
                                                                        pp_quote_collateral);
     if (ret == SGX_QL_SUCCESS) {
-        (*pp_quote_collateral)->tee_type = 0x0; // SGX
+        (*pp_quote_collateral)->tee_type = 0x81; // TDX
+    } else {
+        qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
+    }
+    return ret;
+}
+quote3_error_t tdx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc, 
+                                                        uint16_t fmspc_size, 
+                                                        const char *pck_ca,
+                                                        const void* custom_param,
+                                                        const uint16_t custom_param_length,
+                                                        tdx_ql_qv_collateral_t **pp_quote_collateral)
+{
+    quote3_error_t ret = ql_get_quote_verification_collateral_internal(SGX_PROD_TYPE_TDX,
+                                                                       fmspc,
+                                                                       fmspc_size,
+                                                                       pck_ca,
+                                                                       custom_param,
+                                                                       custom_param_length,
+                                                                       pp_quote_collateral);
+    if (ret == SGX_QL_SUCCESS) {
+        (*pp_quote_collateral)->tee_type = 0x81; // TDX
     } else {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Failed to get SGX quote verification collateral : %d\n", ret);
     }
@@ -426,8 +449,8 @@ quote3_error_t sgx_ql_free_quote_verification_collateral(sgx_ql_qve_collateral_t
     return ql_free_quote_verification_collateral_internal(p_quote_collateral);
 }
 
-quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qve_collateral_t *p_quote_collateral) {
-    return ql_free_quote_verification_collateral_internal((tdx_ql_qve_collateral_t *)p_quote_collateral);
+quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qv_collateral_t *p_quote_collateral) {
+    return ql_free_quote_verification_collateral_internal((tdx_ql_qv_collateral_t *)p_quote_collateral);
 }
 
 quote3_error_t sgx_ql_get_qve_identity(char **pp_qve_identity,
@@ -517,4 +540,22 @@ quote3_error_t sgx_ql_set_logging_callback(sgx_ql_logging_callback_t logger, sgx
     g_loglevel = loglevel;
     sgx_qcnl_set_logging_callback(logger, g_loglevel);
     return SGX_QL_SUCCESS;
+}
+
+quote3_error_t sgx_qpl_clear_cache(uint32_t cache_type) {
+    if ((cache_type & ~(SGX_QPL_CACHE_CERTIFICATE | SGX_QPL_CACHE_QV_COLLATERAL | SGX_QPL_CACHE_MULTICERTS)) != 0)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+
+    sgx_qcnl_error_t ret = sgx_qcnl_clear_cache(cache_type);
+
+    return qcnl_error_to_ql_error(ret);
+}
+quote3_error_t sgx_qpl_global_init()
+{
+    return qcnl_error_to_ql_error(sgx_qcnl_global_init());
+}
+
+quote3_error_t sgx_qpl_global_cleanup()
+{
+    return qcnl_error_to_ql_error(sgx_qcnl_global_cleanup());
 }

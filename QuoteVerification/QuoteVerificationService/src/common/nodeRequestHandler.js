@@ -31,11 +31,7 @@
 
 'use strict';
 
-const http = require('http');
-const https = require('https');
-const Buffer = require('safe-buffer').Buffer;
-
-const jsonUtils = require('../util/jsonUtils');
+const axios = require('axios');
 
 /**
  * IntelliJ IDEA has long lasting bugs:
@@ -46,20 +42,6 @@ const jsonUtils = require('../util/jsonUtils');
  * @typedef {import('../jsDoc/types').KoaResponse} KoaResponse
  * @typedef {import('../jsDoc/types').Logger} Logger
  */
-
-/**
- * Check if content is JSON
- *
- * @param {KoaResponse} res
- *
- * @returns {boolean}
- */
-function isContentTypeJson(res) {
-    if (res.headers && res.headers.hasOwnProperty('content-type')) {
-        return res.headers['content-type'].startsWith('application/json');
-    }
-    return false;
-}
 
 /**
  * Create result
@@ -76,18 +58,11 @@ function createResult(statusCode, headers, body) {
 
 /**
  * @typedef {Object} NodeRequestOptions
- * @property {string[]} ca
- * @property {string} secureProtocol
- * @property {string} ciphers
- * @property {boolean} requestCert
- * @property {boolean} rejectUnauthorized
- * @property {boolean} strictSSL
- * @property {Object} agent
- * @property {string} protocol
+ * @property {?Object} httpAgent
+ * @property {?Object} httpsAgent
+ * @property {number} timeout
  * @property {string} method
- * @property {string} host
- * @property {number} port
- * @property {string} path
+ * @property {string} url
  * @property {Object} headers
  */
 
@@ -100,67 +75,26 @@ const limit10MB = 1024 * 1024 * 10; // 10 MB
  * @param {boolean=} isResponseBinary - default false
  */
 async function nodeRequest(options, body, isResponseBinary = false) {
-    return new Promise((resolve, reject) => {
-        const requestFunctionForSelectedProtocol = options.protocol === 'http:' ? http.request : https.request;
-        const req = requestFunctionForSelectedProtocol(options, (res) => {
-            let remainingLimit = limit10MB;
-            if (res.headers && res.headers['content-length'] > remainingLimit) {
-                // Calling this will cause remaining data in the response to be dropped and the socket to be destroyed.
-                // Will emit error and close events.
-                req.destroy(new Error(`Expected response size is too big. Rejected to download ${res.headers['content-length']} bytes`));
-                return;
-            }
-            if (isResponseBinary) {
-                let buffer = Buffer.from([]);
-                res.on('data', (b) => {
-                    remainingLimit -= b.length;
-                    if (remainingLimit < 0) {
-                        // Calling this will cause remaining data in the response to be dropped and the socket to be destroyed.
-                        // Will emit error and close events.
-                        req.destroy(new Error('Response size limit exceeded'));
-                    }
-                    buffer = Buffer.concat([buffer, b], buffer.length + b.length);
-                });
-                res.on('end', () => {
-                    const result = createResult(res.statusCode, res.headers, buffer);
-                    resolve(result);
-                });
-            }
-            else {
-                let data = '';
-                res.on('data', (d) => {
-                    remainingLimit -= d.length;
-                    if (remainingLimit < 0) {
-                        // Calling this will cause remaining data in the response to be dropped and the socket to be destroyed.
-                        // Will emit error and close events.
-                        req.destroy(new Error('Response size limit exceeded'));
-                    }
-                    data += d;
-                });
-                res.on('end', () => {
-                    const result = isContentTypeJson(res) ?
-                        createResult(res.statusCode, res.headers, jsonUtils.parse(data)) :
-                        createResult(res.statusCode, res.headers, data);
-                    resolve(result);
-                });
-            }
-        });
-        req.on('timeout', () => {
-            req.destroy();
-        });
-        req.on('error', (err) => {
-            reject(err);
-        });
-        if (body) {
-            if (body instanceof Uint8Array) {
-                req.write(body);
-            }
-            else {
-                req.write(JSON.stringify(body));
-            }
+    const axiosOptions = {
+        ...options,
+        maxContentLength: limit10MB,
+        maxBodyLength:    limit10MB,
+        responseType:     isResponseBinary ? 'arraybuffer' : 'json',
+    };
+    if (body) {
+        axiosOptions.data = body;
+    }
+    try {
+        const response = await axios(axiosOptions);
+        return createResult(response.status, response.headers, response.data);
+    }
+    catch (error) {
+        const response = error.response;
+        if (response) {
+            return createResult(response.status, response.headers, response.data);
         }
-        req.end();
-    });
+        throw error;
+    }
 }
 
 module.exports = nodeRequest;

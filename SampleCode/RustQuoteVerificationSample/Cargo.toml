@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
-sgx-dcap-quoteverify-rs = { version = "0.2.1", path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-rs"}
-sgx-dcap-quoteverify-sys = { version = "0.2.0", path = "../../QuoteVerification/dcap_quoteverify/sgx-dcap-quoteverify-sys"}
+intel-tee-quote-verification-rs = "0.2"
+intel-tee-quote-verification-sys = "0.2"
 
 [features]
 TD_ENV = []

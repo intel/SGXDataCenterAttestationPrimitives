@@ -13,3 +13,7 @@ EXPORTS
     sgx_ql_get_quote_verification_collateral_with_params @10
     tdx_ql_get_quote_verification_collateral    @11
     tdx_ql_free_quote_verification_collateral   @12
+    tdx_ql_get_quote_verification_collateral_with_params    @13
+    sgx_qpl_clear_cache                         @14
+    sgx_qpl_global_init                         @15
+    sgx_qpl_global_cleanup                      @16

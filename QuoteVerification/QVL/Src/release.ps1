@@ -23,12 +23,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+param ($checkoutdir)
+
 trap {
-	Set-Location -Path $cwd
+	Set-Location -Path $pwd
 	exit $LastExitCode
 }
 
 $vsBasePath = "C:\Program Files (x86)\Microsoft Visual Studio\" # base path for VS
+
 
 $anyVs2017Pattern = "$vsBasePath\2017\*"
 $cmake = $(
@@ -63,7 +66,7 @@ $cwd = Get-Location
 New-Item -ItemType Directory -Force -Path ${PSScriptRoot}\Build\solution
 Set-Location -Path ${PSScriptRoot}\Build\solution
 
-$cmakeArguments = @('-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_CONFIGURATION_TYPES="Release"', '-DATTESTATION_APP=ON', '-G', 'Visual Studio 15 2017 Win64', ${PSScriptRoot})
+$cmakeArguments = @('-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_CONFIGURATION_TYPES="Release"', '-DATTESTATION_APP=ON', '-G', 'Visual Studio 15 2017 Win64', ${PSScriptRoot}, "-DHUNTER_WINDOWS_BUILD_DIR=$checkoutdir")
 
 Write-Host "--------------"
 Write-Host "Command: $cmake $cmakeArguments"

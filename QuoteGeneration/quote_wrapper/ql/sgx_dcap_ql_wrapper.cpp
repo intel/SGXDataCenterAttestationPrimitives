@@ -322,7 +322,7 @@ extern "C" quote3_error_t sgx_qe_get_target_info(sgx_target_info_t *p_qe_target_
     if(false == g_out_of_proc)
     {
         // Call Init Quote
-        // Generates a new ECDSA Attestation key of one does not exist.
+        // Generates a new ECDSA Attestation key if it does not exist.
         // Returns the qe_target_info so that the app enclave can generate a report.
         // Certifies the ECDSA Attestation key if a new key is generated.
         // Stores the ECDSA key in a file for later use
@@ -370,7 +370,7 @@ extern "C" quote3_error_t sgx_qe_get_target_info(sgx_target_info_t *p_qe_target_
         func_sgx_init_quote_ex_t func = init_quote_ex_function();
         if (NULL == func) {
             SE_TRACE(SE_TRACE_ERROR,"Error in get symbol %s.\n", SGX_INIT_QUOTE_EX);
-            quote_ret = SGX_QL_ERROR_UNEXPECTED;
+            quote_ret = SGX_QL_SERVICE_UNAVAILABLE;
             goto CLEANUP;
         }
         quote_ret= sgx_status_to_quote3_error(func(&g_att_keyid,
@@ -460,7 +460,7 @@ extern "C" quote3_error_t sgx_qe_get_quote_size(uint32_t *p_quote_size)
         func_sgx_get_quote_size_ex_t func = get_quote_size_ex_function();
         if (NULL == func) {
             SE_TRACE(SE_TRACE_ERROR,"Error in get symbol %s.\n", SGX_GET_QUOTE_SIZE_EX);
-            quote_ret = SGX_QL_ERROR_UNEXPECTED;
+            quote_ret = SGX_QL_SERVICE_UNAVAILABLE;
             goto CLEANUP;
         }
         quote_ret = sgx_status_to_quote3_error(func(&g_att_keyid, p_quote_size));
@@ -556,7 +556,7 @@ extern "C" quote3_error_t sgx_qe_get_quote(const sgx_report_t *p_app_report,
         func_sgx_get_quote_ex_t func = get_quote_ex_function();
         if (NULL == func) {
             SE_TRACE(SE_TRACE_ERROR,"Error in get symbol %s.\n", SGX_GET_QUOTE_EX);
-            quote_ret = SGX_QL_ERROR_UNEXPECTED;
+            quote_ret = SGX_QL_SERVICE_UNAVAILABLE;
             goto CLEANUP;
         }
         quote_ret = sgx_status_to_quote3_error(func(p_app_report, &g_att_keyid, NULL, p_quote, quote_size));

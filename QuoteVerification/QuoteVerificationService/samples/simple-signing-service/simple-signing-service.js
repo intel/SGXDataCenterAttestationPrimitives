@@ -65,10 +65,42 @@ const options = {
 };
 
 router.get('/health', (ctx) => {
+    /*
+        #swagger.description = 'Checks health and version of the service'
+        #swagger.produces = ["application/json"]
+        #swagger.responses[200] = {
+            schema: {
+                '$ref': '#/definitions/PositiveHealthReport'
+            },
+            description: 'Health report'
+        }
+        #swagger.responses[503] = {
+            schema: {
+                '$ref': '#/definitions/NegativeHealthReport'
+            },
+            description: 'Health report'
+        }
+     */
     ctx.body = { status: 'OK', version: '0.0.1', lastChecked: new Date(Date.now()).toISOString() };
 });
 
 router.post('/sign/attestation-verification-report', (ctx) => {
+    /*
+        #swagger.description = 'Prepare a signature of received body'
+        #swagger.consumes = ["application/json"]
+        #swagger.produces = ["application/json"]
+        #swagger.parameters['payload'] = {
+            in: 'body',
+            description: 'Attestation Verification Report to be signed',
+            type: 'string'
+        }
+        #swagger.responses[200] = {
+            schema: {
+                '$ref': '#/definitions/SignatureResponse'
+            },
+            description: 'Signature of the request body'
+        }
+    */
     console.log('[Request]' + JSON.stringify(ctx.request.body));
 
     const bodyJsonToString = JSON.stringify(ctx.request.body);

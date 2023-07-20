@@ -54,14 +54,14 @@ using namespace std;
 #define REG_VALUE_QCNL_CONFIG_FILE _T("CONFIG_FILE")
 
 
-bool QcnlConfigLegacy::load_config() {
+sgx_qcnl_error_t QcnlConfigLegacy::load_config() {
     // read registry
     // Read configuration data from registry
     // Open the Registry Key
     HKEY key = NULL;
     LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REG_KEY_SGX_QCNL, 0, KEY_READ, &key);
     if (ERROR_SUCCESS != status) {
-        return false;
+        return SGX_QCNL_INVALID_CONFIG;
     }
 
     DWORD type, count;
@@ -169,17 +169,17 @@ bool QcnlConfigLegacy::load_config() {
 
     RegCloseKey(key);
 
-    return true;
+    return SGX_QCNL_SUCCESS;
 }
 
-bool QcnlConfigJson::load_config() {
+sgx_qcnl_error_t QcnlConfigJson::load_config() {
 
     // read registry to get config file location
     // Open the Registry Key
     HKEY key = NULL;
     LSTATUS status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REG_KEY_SGX_QCNL, 0, KEY_READ, &key);
     if (ERROR_SUCCESS != status) {
-        return false;
+        return SGX_QCNL_INVALID_CONFIG;
     }
 
     DWORD type, count;
@@ -195,6 +195,6 @@ bool QcnlConfigJson::load_config() {
         return this->load_config_json(config_path);
     }
     else {
-        return false;
+        return SGX_QCNL_INVALID_CONFIG;
     }
 }

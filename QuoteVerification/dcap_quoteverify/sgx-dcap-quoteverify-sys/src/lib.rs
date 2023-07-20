@@ -28,15 +28,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-//! Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP)
+//! Intel®️ Software Guard Extensions Data Center Attestation Primitives (Intel®️ SGX DCAP)\
 //! Rust raw FFI bindings for Quote Verification Library
 //! ================================================
 //!
 //! Please install the following prerequisite:
-//! * Intel(R) SGX DCAP Driver
-//! * Intel(R) SGX SDK
-//! * Intel(R) SGX DCAP Packages
-//! * Intel(R) SGX DCAP PCCS (Provisioning Certificate Caching Service)
+//! * Intel®️ SGX DCAP Driver
+//! * Intel®️ SGX SDK
+//! * Intel®️ SGX DCAP Packages
+//! * Intel®️ SGX DCAP PCCS (Provisioning Certificate Caching Service)
 //!
 //! *Please refer to [SGX DCAP Linux installation guide](
 //! https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf)

@@ -38,11 +38,93 @@
 #include "sgx_dcap_qv_internal.h"
 #include "sgx_dcap_pcs_com.h"
 #include "se_trace.h"
-#ifndef _MSC_VER
-#include "linux/qve_u.h"
-#else //_MSC_VER
+#include "sgx_urts_wrapper.h"
+
+#if defined(_MSC_VER)
 #include "win/qve_u.h"
-#endif //_MSC_VER
+#include <tchar.h>
+bool get_qve_path(TCHAR *p_file_path, size_t buf_size);
+#else
+#include <limits.h>
+#include "linux/qve_u.h"
+#define MAX_PATH PATH_MAX
+bool get_qve_path(char *p_file_path, size_t buf_size);
+
+#endif
+
+extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
+extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
+
+static sgx_status_t load_qve_once(sgx_enclave_id_t *p_qve_eid)
+{
+    sgx_status_t sgx_status = SGX_ERROR_UNEXPECTED;
+    int enclave_lost_retry_time = 1;
+    sgx_launch_token_t token = {0};
+    int updated = 0;
+
+#if defined(_MSC_VER)
+    TCHAR qve_enclave_path[MAX_PATH] = _T("");
+#else
+    char qve_enclave_path[MAX_PATH] = "";
+#endif
+
+    // Try to load urts lib first
+    //
+    if (!sgx_dcap_load_urts()) {
+        return SGX_ERROR_FEATURE_NOT_SUPPORTED;
+    }
+
+    if (!get_qve_path(qve_enclave_path, MAX_PATH)) {
+
+        return SGX_ERROR_UNEXPECTED; //SGX_QvE_INTERFACE_UNAVAILABLE;
+    }
+
+    do
+    {
+        SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QvE. %s\n", qve_enclave_path);
+        if (p_sgx_urts_create_enclave) {
+            sgx_status = p_sgx_urts_create_enclave(qve_enclave_path,
+                0, // Don't support debug load QvE by default
+                &token,
+                &updated,
+                p_qve_eid,
+                NULL);
+            if (SGX_SUCCESS != sgx_status) {
+                SE_TRACE(SE_TRACE_DEBUG, "Info, call sgx_create_enclave for QvE fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+            }
+            else {
+                break;
+            }
+        }
+        else
+            return SGX_ERROR_UNEXPECTED; //urts handle has been closed;
+
+            // Retry in case there was a power transition that resulted is losing the enclave.
+        } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
+
+    return sgx_status;
+}
+
+static void unload_qve_once(sgx_enclave_id_t *p_qve_eid)
+{
+    // Try to load urts lib first
+    //
+    if (!sgx_dcap_load_urts()) {
+        SE_TRACE(SE_TRACE_ERROR, "Error, failed to load SGX uRTS library\n");
+        return;
+    }
+
+    if (*p_qve_eid != 0) {
+        SE_TRACE(SE_TRACE_DEBUG, "unload qve enclave 0X%llX\n", *p_qve_eid);
+        if (p_sgx_urts_destroy_enclave) {
+            p_sgx_urts_destroy_enclave(*p_qve_eid);
+        }
+        *p_qve_eid = 0;
+    }
+
+    return;
+}
+
 
 //SGX untrusted quote verification
 //
@@ -142,6 +224,7 @@ quote3_error_t sgx_qv::tee_free_qve_identity(
         p_qveid_issue_chain,
         p_root_ca_crl);
 }
+
 
 //SGX trusted quote verification
 //
@@ -269,6 +352,40 @@ quote3_error_t sgx_qv_trusted::tee_get_fmspc_ca_from_quote(
     return qv_ret;
 }
 
+sgx_status_t sgx_qv_trusted::load_qve() {
+
+    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+
+    if (m_qve_id == 0) {
+      ret = load_qve_once(&m_qve_id);
+
+      if (ret != SGX_SUCCESS) {
+        SE_TRACE(SE_TRACE_ERROR, "Error: Load QvE failed with error 0x%08x.\n", ret);
+        m_qve_id = 0;
+      }
+    }
+
+    return ret;
+}
+
+void sgx_qv_trusted::unload_qve() {
+
+    if (m_qve_id != 0) {
+      unload_qve_once(&m_qve_id);
+      m_qve_id = 0;
+    }
+
+    return;
+}
+
+sgx_qv_trusted::~sgx_qv_trusted() {
+    extern thread_local sgx_ql_request_policy_t qve_policy_per_thread;
+
+    if (qve_policy_per_thread == SGX_QL_PERSISTENT) {
+        unload_qve();
+    }
+}
+
 quote3_error_t tdx_qv::tee_get_verification_endorsement(
         const char *fmspc,
         uint16_t fmspc_size,
@@ -312,7 +429,7 @@ quote3_error_t tdx_qv_trusted::tee_verify_evidence(
         &qv_ret,
         p_quote,
         quote_size,
-        (const tdx_ql_qve_collateral_t*) p_quote_collateral,
+        (const tdx_ql_qv_collateral_t*) p_quote_collateral,
         expiration_check_date,
         p_collateral_expiration_status,
         (sgx_ql_qv_result_t *)p_quote_verification_result,
@@ -412,4 +529,38 @@ quote3_error_t tdx_qv_trusted::tee_get_fmspc_ca_from_quote(
     }
 
     return qv_ret;
+}
+
+sgx_status_t tdx_qv_trusted::load_qve() {
+
+    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+
+    if (m_qve_id == 0) {
+      ret = load_qve_once(&m_qve_id);
+
+      if (ret != SGX_SUCCESS) {
+        SE_TRACE(SE_TRACE_ERROR, "Error: Load QvE failed with error 0x%08x.\n", ret);
+        m_qve_id = 0;
+      }
+    }
+
+    return ret;
+}
+
+void tdx_qv_trusted::unload_qve() {
+
+    if (m_qve_id != 0) {
+      unload_qve_once(&m_qve_id);
+      m_qve_id = 0;
+    }
+
+    return;
+}
+
+tdx_qv_trusted::~tdx_qv_trusted() {
+    extern thread_local sgx_ql_request_policy_t qve_policy_per_thread;
+
+    if (qve_policy_per_thread == SGX_QL_PERSISTENT) {
+        unload_qve();
+    }
 }

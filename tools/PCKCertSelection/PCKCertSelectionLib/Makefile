@@ -32,6 +32,9 @@
 #
 # main make file for PCK Cert Selection library project
 #
+############ SGX SDK Settings ###################
+TOP_DIR = ../../../QuoteGeneration
+include $(TOP_DIR)/buildenv.mk
 
 ifndef VERBOSE
 	PCKCERTSEL_VERBOSE:=@
@@ -126,13 +129,15 @@ LIB_SYM			:= $(LIB_NAME).sym
 DEBUG_FLAGS := -m64 -O0 -g
 
 # release mode
-RELEASE_FLAGS := -m64 -O2
+RELEASE_FLAGS := -m64 -O2 $(COMMON_FLAGS)
 
 # basic library c build flags
 C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror $(LIB_INCLUDE_PATHS) 
+C_FLAGS += -UPCK_CERT_SELECTION_WITH_COMPONENT
 
 # link flags, link openssl crypto
 LINK_FLAGS := -shared -L$(OPENSSL_LIB) -lcrypto -lpthread -ldl
+LINK_FLAGS += -Wl,--version-script=pck_cert_selection.lds -Wl,--gc-sections
 
 # debug/release switch
 # release build is built with debug flags and stripped
@@ -196,7 +201,7 @@ all: $(BIN_DIR) $(LIB_NAME)
 # build library - link into output dir
 $(LIB_NAME): $(LIB_CPP_OBJECTS)
 	$(PCKCERTSEL_VERBOSE)echo "Linking..."
-	$(PCKCERTSEL_VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS)
+	$(PCKCERTSEL_VERBOSE)$(CXX) $^ -o $(BIN_DIR)/$@ $(LINK_FLAGS) -Wl,-soname=$@.$(SGX_MAJOR_VER)
 	$(PCKCERTSEL_VERBOSE)cp $(BIN_DIR)/$@ $(BIN_DIR)/$(LIB_SYM)
 	$(PCKCERTSEL_VERBOSE)echo "Stripping..."
 	$(PCKCERTSEL_VERBOSE)$(STRIP_CMD) $(BIN_DIR)/$@
@@ -210,7 +215,8 @@ release:
 
 clean:
 	$(PCKCERTSEL_VERBOSE)echo -n "Clean $(LIB_NAME)..."
-	$(PCKCERTSEL_VERBOSE)rm -f $(BIN_DIR)/$(LIB_NAME)* $(LIB_CPP_OBJECTS)
+	$(PCKCERTSEL_VERBOSE)rm -rf $(BIN_DIR)/$(LIB_NAME)* $(LIB_CPP_OBJECTS)
+	$(PCKCERTSEL_VERBOSE)rm -rf $(BIN_DIR)
 	$(PCKCERTSEL_VERBOSE)echo done
 
 $(BIN_DIR):

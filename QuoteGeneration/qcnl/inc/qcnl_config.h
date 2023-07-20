@@ -37,6 +37,7 @@
 #define QCNLCONFIG_H_
 #pragma once
 
+#include "sgx_default_qcnl_wrapper.h"
 #include "document.h"
 #include <memory>
 #include <string>
@@ -76,6 +77,8 @@ protected:
     double verify_collateral_expire_hours_;
     // custom request options for Azure
     Document custom_request_options_;
+    // Local cache only mode
+    bool local_cache_only_;
 
     QcnlConfig() : server_url_("https://localhost:8081/sgx/certification/v4/"),
                    use_secure_cert_(true),
@@ -85,7 +88,8 @@ protected:
                    retry_delay_(0),
                    local_pck_url_(""),
                    pck_cache_expire_hours_(0),
-                   verify_collateral_expire_hours_(0) {}
+                   verify_collateral_expire_hours_(0),
+                   local_cache_only_(false) {}
     virtual ~QcnlConfig(){};
 
 public:
@@ -137,7 +141,11 @@ public:
         return custom_request_options_;
     }
 
-    bool load_config_json(const TCHAR *json_file);
+    bool is_local_cache_only() {
+        return local_cache_only_;
+    }
+
+    sgx_qcnl_error_t load_config_json(const TCHAR *json_file);
 };
 
 class QcnlConfigLegacy : public QcnlConfig {
@@ -146,7 +154,7 @@ public:
     ~QcnlConfigLegacy() {}
 
 public:
-    bool load_config();
+    sgx_qcnl_error_t load_config();
 };
 
 class QcnlConfigJson : public QcnlConfig {
@@ -155,7 +163,7 @@ public:
     ~QcnlConfigJson() {}
 
 public:
-    bool load_config();
+    sgx_qcnl_error_t load_config();
 };
 
 #endif // QCNLCONFIG_H_

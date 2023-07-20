@@ -124,8 +124,7 @@ extern "C" {
  *
  * @param p_tdx_report_data [in] Pointer to data that the caller/TD wants to
  *                               cryptographically bind to the Quote,
- *                               typically a hash. May be NULL, in which case,
- *                               all zeros will be used for the Report data.
+ *                               typically a hash. Cannot be NULL. 
  * @param att_key_id_list [in] List (array) of the attestation key IDs supported
  *                             by the Quote verifier. The function compares the
  *                             key IDs in att_key_id_list to the key IDs that
@@ -187,8 +186,7 @@ tdx_attest_error_t tdx_att_free_quote(
  *
  * @param p_tdx_report_data [in] Pointer to data that the caller/TD wants to
  *                               cryptographically bind to the Quote, typically
- *                               a hash. May be NULL, in which case, all zeros
- *                               will be used for the Report data.
+ *                               a hash. Cannot be NULL. 
  * @param p_tdx_report [out] Pointer to the buffer that will contain the
  *                           generated TDX Report. Must not be NULL.
  * @return TDX_ATTEST_SUCCESS: Successfully generated the Report.

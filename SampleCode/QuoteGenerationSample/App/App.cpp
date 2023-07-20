@@ -48,7 +48,12 @@
 
 #include <vector>
 #include <fstream>
-
+#if !defined(_MSC_VER)
+#include <getopt.h>
+#include <dlfcn.h>
+#else
+#include "getopt.h"
+#endif
 #include <string.h>
 #include "sgx_urts.h"
 #include "sgx_report.h"
@@ -56,17 +61,29 @@
 #include "sgx_pce.h"
 #include "sgx_error.h"
 #include "sgx_quote_3.h"
+#ifdef SGX_QPL_LOGGING
+#include "sgx_default_quote_provider.h"
+#endif
 
 #include "Enclave_u.h"
 
 #define SGX_AESM_ADDR "SGX_AESM_ADDR"
 #if defined(_MSC_VER)
 #define ENCLAVE_PATH _T("enclave.signed.dll")
+#define strcasecmp _stricmp
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
+typedef quote3_error_t (*sgx_qpl_clear_cache_func_t)(uint32_t);
 #endif
 
 using namespace std;
+
+#define log(msg, ...)                             \
+    do                                            \
+    {                                             \
+        printf("[APP] " msg "\n", ##__VA_ARGS__); \
+        fflush(stdout);                           \
+    } while (0)
 
 bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
 {
@@ -84,7 +101,7 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
                 &eid,
                 NULL);
         if (SGX_SUCCESS != sgx_status) {
-                printf("Error, call sgx_create_enclave fail [%s], SGXError:%04x.\n", __FUNCTION__, sgx_status);
+                log("Error: call sgx_create_enclave fail [%s], SGXError:%04x.", __FUNCTION__, sgx_status);
                 ret = false;
                 goto CLEANUP;
         }
@@ -95,7 +112,7 @@ bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *a
                 &qe_target_info,
                 app_report);
         if ((SGX_SUCCESS != sgx_status) || (0 != retval)) {
-                printf("\nCall to get_app_enclave_report() failed\n");
+                log("Error: Call to get_app_enclave_report() failed");
                 ret = false;
                 goto CLEANUP;
         }
@@ -105,13 +122,37 @@ CLEANUP:
         return ret;
 }
 
+#ifdef SGX_QPL_LOGGING
+void qpl_logger(sgx_ql_log_level_t level, const char *message)
+{
+    const string pre_qcnl = "[QCNL]";
+    const string pre_qpl = "[QPL]";
+    string msg(message);
+    if (level == SGX_QL_LOG_INFO)
+    {
+        if (msg.find(pre_qcnl) == 0)
+            msg.insert(pre_qcnl.length(), " Info: ");
+        else if (msg.find(pre_qpl) == 0)
+            msg.insert(pre_qcnl.length(), "Info: ");
+        printf("%s", msg.c_str());
+    }
+    else if (level == SGX_QL_LOG_ERROR)
+    {
+        if (msg.find(pre_qcnl) == 0)
+            msg.insert(pre_qcnl.length(), " Error: ");
+        else if (msg.find(pre_qpl) == 0)
+            msg.insert(pre_qcnl.length(), "Error: ");
+        printf("%s", msg.c_str());
+    }
+}
+#endif
 
 vector<uint8_t> readBinaryContent(const string& filePath)
 {
     ifstream file(filePath, ios::binary);
     if (!file.is_open())
     {
-        printf("Error: Unable to open file %s\n", filePath.c_str());
+        log("Error: Unable to open file %s", filePath.c_str());
         return {};
     }
 
@@ -125,13 +166,12 @@ vector<uint8_t> readBinaryContent(const string& filePath)
     return retVal;
 }
 
-void usage()
-{
-    printf("\nOption:\n");
-    printf("\tTargetInfo <path/to/target_info>\"\n");
-    printf("\t\tUse target_info in the file instead of generating it by `sgx_qe_get_target_info` fucntion.\n\n");
+void usage() {
+    printf("Usage: app [options]\n");
+    printf("Options:\n");
+    printf("  --target-info <path/to/target_info>    Use target_info in the file instead of generating it by `sgx_qe_get_target_info` fucntion.\n");
+    printf("  --clear-cache TYPE    Clear QPL's cache of TYPE (cert|collateral|all)\n");
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -141,7 +181,7 @@ int main(int argc, char* argv[])
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
     uint8_t* p_quote_buffer = NULL;
-    sgx_target_info_t qe_target_info;
+    sgx_target_info_t qe_target_info = { 0 };
     sgx_report_t app_report;
     sgx_quote3_t *p_quote;
     sgx_ql_auth_data_t *p_auth_data;
@@ -149,17 +189,24 @@ int main(int argc, char* argv[])
     sgx_ql_certification_data_t *p_cert_data;
     FILE *fptr = NULL;
     bool is_out_of_proc = false;
-
-    //Just for sample use, better to change solid command line args solution in production env
-    if (argc != 1 && argc != 3) {
-        usage();
-        return 0;
-    }
+    int option_index = 0;
+    int c;
+    bool target_info_provided = false;
+    string qpl_library_path;
 
     char *out_of_proc = getenv(SGX_AESM_ADDR);
     if(out_of_proc)
         is_out_of_proc = true;
 
+    struct option long_options[] = {
+        {"target-info", required_argument, 0, 't'},
+        {"clear-cache", required_argument, 0, 'c'},
+        {0, 0, 0, 0}
+    };
+
+#ifdef SGX_QPL_LOGGING
+    sgx_ql_set_logging_callback(qpl_logger, SGX_QPL_LOGGING);
+#endif
 
 #if !defined(_MSC_VER)
     // There 2 modes on Linux: one is in-proc mode, the QE3 and PCE are loaded within the user's process.
@@ -170,15 +217,14 @@ int main(int argc, char* argv[])
     if(!is_out_of_proc)
     {
         // Following functions are valid in Linux in-proc mode only.
-        printf("sgx_qe_set_enclave_load_policy is valid in in-proc mode only and it is optional: the default enclave load policy is persistent: \n");
-        printf("set the enclave load policy as persistent:");
+        log("Info: sgx_qe_set_enclave_load_policy is valid in in-proc mode only and it is optional: the default enclave load policy is persistent");
+        log("Info: set the enclave load policy as persistent");
         qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
         if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in set enclave load policy: 0x%04x\n", qe3_ret);
+            log("Error: set enclave load policy error: 0x%04x", qe3_ret);
             ret = -1;
             goto CLEANUP;
         }
-        printf("succeed!\n");
 
         // Try to load PCE and QE3 from Ubuntu-like OS system path
         if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1") ||
@@ -189,58 +235,127 @@ int main(int argc, char* argv[])
             if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so.1") ||
                 SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so.1") ||
                 SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib64/libsgx_id_enclave.signed.so.1")) {
-                printf("Error in set PCE/QE3/IDE directory.\n");
+                log("Error: set PCE/QE3/IDE directory error.");
                 ret = -1;
                 goto CLEANUP;
             }
         }
 
-        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1");
+
+        qpl_library_path = "/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1";
+        qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, qpl_library_path.c_str());
         if (SGX_QL_SUCCESS != qe3_ret) {
-            qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
+            qpl_library_path = "/usr/lib64/libdcap_quoteprov.so.1";
+            qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, qpl_library_path.c_str());
             if(SGX_QL_SUCCESS != qe3_ret) {
+                qpl_library_path = "";
                 // Ignore the error, because user may want to get cert type=3 quote
-                printf("Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
+                log("Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.");
             }
         }
     }
+
 #endif
 
-    printf("\nStep1: Call sgx_qe_get_target_info:");
-    qe3_ret = sgx_qe_get_target_info(&qe_target_info);
-    if (SGX_QL_SUCCESS != qe3_ret) {
-        printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
-        ret = -1;
-        goto CLEANUP;
-    }
-    printf("succeed!");
+    while ((c = getopt_long(argc, argv, "t:c:", long_options, &option_index)) != -1) {
+        switch (c) {
+            case 't':
+            {
+                printf("\nRead target_info:");
+                std::vector<uint8_t> target_info = readBinaryContent(optarg);
+                if (target_info.empty()) {
+                    usage();
+                    ret = -1;
+                    goto CLEANUP;
+                }
+                printf(" path: %s:", optarg);
+                if (sizeof(qe_target_info) != target_info.size()) {
+                    printf("Error: Invalid target info file.");
+                    ret = -1;
+                    goto CLEANUP;
+                }
+                memcpy(&qe_target_info, target_info.data(), sizeof(qe_target_info));
+                target_info_provided = true;
+                break;
+            }
+            case 'c':
+            {
+                uint32_t clear_cache_type = 0;
+                if (strcasecmp(optarg, "cert") == 0) {
+                    clear_cache_type = SGX_QPL_CACHE_CERTIFICATE;
+                }
+                else if (strcasecmp(optarg, "collateral") == 0) {
+                    clear_cache_type = SGX_QPL_CACHE_QV_COLLATERAL;
+                }
+                else if (strcasecmp(optarg, "all") == 0) {
+                    clear_cache_type = SGX_QPL_CACHE_CERTIFICATE | SGX_QPL_CACHE_QV_COLLATERAL;
+                }
+                else {
+                    printf("Error: Unrecognized value for --clear-cache.\n");
+                    ret = -1;
+                    goto CLEANUP;
+                }
 
-    if (argv[1] && !strcmp(argv[1], "TargetInfo")) {
-        printf("\nRead target_info:");
-        vector<uint8_t> target_info = readBinaryContent(argv[2]);
-        if (target_info.empty()) {
-            usage();
+#if !defined(_MSC_VER)
+                if (!qpl_library_path.empty()) {
+                    void* handle = dlopen(qpl_library_path.c_str(), RTLD_LAZY);
+                    if (!handle) {
+                        printf("Failed to load shared library %s: %s\n", qpl_library_path.c_str(), dlerror());
+                        ret = -1;
+                        goto CLEANUP;
+                    }
+                    // Get the function pointer
+                    sgx_qpl_clear_cache_func_t sgx_qpl_clear_cache_func = reinterpret_cast<sgx_qpl_clear_cache_func_t>(
+                        dlsym(handle, "sgx_qpl_clear_cache")
+                    );
+                    if (sgx_qpl_clear_cache_func) {
+                        sgx_qpl_clear_cache_func(clear_cache_type);
+                    }
+                    dlclose(handle);
+                }
+#else
+                HMODULE hLib = LoadLibrary(TEXT("dcap_quoteprov.dll"));
+                if (hLib == NULL) {
+                    printf("Error loading dcap_quoteprov.dll: %lu\n", GetLastError());
+                    return 1;
+                }
+                quote3_error_t(*sgx_qpl_clear_cache)(uint32_t cache_type) = NULL;
+                sgx_qpl_clear_cache = (quote3_error_t(*)(uint32_t))GetProcAddress(hLib, "sgx_qpl_clear_cache");
+                if (sgx_qpl_clear_cache == NULL) {
+                    printf("Error finding sgx_qpl_clear_cache function: %lu\n", GetLastError());
+                    FreeLibrary(hLib);
+                    return 1;
+                }
+                quote3_error_t result = sgx_qpl_clear_cache(clear_cache_type);
+                printf("sgx_qpl_clear_cache result: %u\n", result);
+                FreeLibrary(hLib);
+#endif
+                break;
+            }
+            default:
+                usage();
+                return 0;
+        }
+    }
+
+    if (!target_info_provided) {
+        log("Step1: Call sgx_qe_get_target_info:");
+        qe3_ret = sgx_qe_get_target_info(&qe_target_info);
+        if (SGX_QL_SUCCESS != qe3_ret) {
+            printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
             ret = -1;
             goto CLEANUP;
         }
-        printf(" path: %s:", argv[2]);
-        if (sizeof(qe_target_info) != target_info.size()) {
-            printf("Error: Invalid target info file.");
-            ret = -1;
-            goto CLEANUP;
-        }
-        memcpy(&qe_target_info, target_info.data(), sizeof(qe_target_info));
+        log("succeed!");
     }
-    printf("succeed!");
 
-    printf("\nStep2: Call create_app_report:");
+    log("Step2: Call create_app_report");
     if(true != create_app_enclave_report(qe_target_info, &app_report)) {
-        printf("\nCall to create_app_report() failed\n");
+        log("Info: Call to create_app_report() failed");
         ret = -1;
         goto CLEANUP;
     }
 
-    printf("succeed!");
 
 #if _WIN32
     fopen_s(&fptr, "report.dat", "wb");
@@ -252,41 +367,39 @@ int main(int argc, char* argv[])
         fclose(fptr);
     }
 
-    printf("\nStep3: Call sgx_qe_get_quote_size:");
+    log("Step3: Call sgx_qe_get_quote_size");
     qe3_ret = sgx_qe_get_quote_size(&quote_size);
     if (SGX_QL_SUCCESS != qe3_ret) {
-        printf("Error in sgx_qe_get_quote_size. 0x%04x\n", qe3_ret);
+        log("Error: sgx_qe_get_quote_size error 0x%04x", qe3_ret);
         ret = -1;
         goto CLEANUP;
     }
 
-    printf("succeed!");
     p_quote_buffer = (uint8_t*)malloc(quote_size);
     if (NULL == p_quote_buffer) {
-        printf("Couldn't allocate quote_buffer\n");
+        log("Info: Couldn't allocate quote_buffer");
         ret = -1;
         goto CLEANUP;
     }
     memset(p_quote_buffer, 0, quote_size);
 
     // Get the Quote
-    printf("\nStep4: Call sgx_qe_get_quote:");
+    log("Step4: Call sgx_qe_get_quote");
     qe3_ret = sgx_qe_get_quote(&app_report,
         quote_size,
         p_quote_buffer);
     if (SGX_QL_SUCCESS != qe3_ret) {
-        printf( "Error in sgx_qe_get_quote. 0x%04x\n", qe3_ret);
+        log( "Error: sgx_qe_get_quote got error 0x%04x", qe3_ret);
         ret = -1;
         goto CLEANUP;
     }
-    printf("succeed!");
 
     p_quote = (sgx_quote3_t*)p_quote_buffer;
     p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
     p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
     p_cert_data = (sgx_ql_certification_data_t *)((uint8_t *)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
 
-    printf("cert_key_type = 0x%x\n", p_cert_data->cert_key_type);
+    log("cert_key_type = 0x%x", p_cert_data->cert_key_type);
 
 #if _WIN32
     fopen_s(&fptr, "quote.dat", "wb");
@@ -301,15 +414,14 @@ int main(int argc, char* argv[])
 
     if( !is_out_of_proc )
     {
-        printf("sgx_qe_cleanup_by_policy is valid in in-proc mode only.\n");
-        printf("\n Clean up the enclave load policy:");
+        log("Info: sgx_qe_cleanup_by_policy is valid in in-proc mode only.");
+        log("Info: Clean up the enclave load policy");
         qe3_ret = sgx_qe_cleanup_by_policy();
         if(SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in cleanup enclave load policy: 0x%04x\n", qe3_ret);
+            log("Error: cleanup enclave load policy with error 0x%04x", qe3_ret);
             ret = -1;
             goto CLEANUP;
         }
-        printf("succeed!\n");
     }
 
 CLEANUP:

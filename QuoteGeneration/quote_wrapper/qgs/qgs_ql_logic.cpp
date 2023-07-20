@@ -43,8 +43,8 @@
 
 typedef quote3_error_t (*get_collateral_func)(const uint8_t *fmspc,
                                               uint16_t fmspc_size, const char *pck_ca,
-                                              tdx_ql_qve_collateral_t **pp_quote_collateral);
-typedef quote3_error_t (*free_collateral_func)(tdx_ql_qve_collateral_t *p_quote_collateral);
+                                              tdx_ql_qv_collateral_t **pp_quote_collateral);
+typedef quote3_error_t (*free_collateral_func)(tdx_ql_qv_collateral_t *p_quote_collateral);
 extern "C" tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context, void **pp_qpl_handle);
 
 void cleanup(tee_att_config_t *p_ctx) {
@@ -161,7 +161,7 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
             uint32_t fsmpc_size;
             const uint8_t *p_pckca;
             uint32_t pckca_size;
-            tdx_ql_qve_collateral_t *p_collateral = NULL;
+            tdx_ql_qv_collateral_t *p_collateral = NULL;
             free_collateral_func free_func = NULL;
 
             qgs_msg_error_ret = qgs_msg_inflate_get_collateral_req(p_req,
@@ -173,9 +173,6 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 QGS_LOG_ERROR("qgs_msg_inflate_get_collateral_req return error\n");
             } else {
                 do {
-                    extern tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context,
-                                                                void **pp_qpl_handle);
-
                     char *error1 = NULL;
                     char *error2 = NULL;
                     void *p_handle = NULL;
@@ -223,6 +220,40 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 free_func(p_collateral);
             } else {
                 qgs_msg_error_ret = qgs_msg_gen_error_resp(resp_error_code, GET_COLLATERAL_RESP, &p_resp, &resp_size);
+            }
+            if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
+                QGS_LOG_ERROR("call qgs_msg_gen function failed\n");
+                qgs_msg_free(p_resp);
+                return {};
+            }
+            break;
+        }
+        case GET_PLATFORM_INFO_REQ: {
+            tee_platform_info_t platform_info;
+            qgs_msg_error_ret = qgs_msg_inflate_get_platform_info_req(p_req, req_size);
+            if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
+                // TODO: need to define the error code list for R3AAL
+                resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
+                QGS_LOG_ERROR("qgs_msg_inflate_get_platform_info_req return error\n");
+            } else {
+                QGS_LOG_INFO("call tee_att_init_quote\n");
+                tee_att_ret = tee_att_get_platform_info(ptr.get(), &platform_info);
+                if (TEE_ATT_SUCCESS != tee_att_ret) {
+                    resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
+                    QGS_LOG_ERROR("tee_att_get_platform_info return 0x%x\n", tee_att_ret);
+                } else {
+                    resp_error_code = QGS_MSG_SUCCESS;
+                    QGS_LOG_INFO("tee_att_get_platform_info return Success\n");
+                }
+            }
+            if (resp_error_code == QGS_MSG_SUCCESS) {
+                qgs_msg_error_ret = qgs_msg_gen_get_platform_info_resp(platform_info.tdqe_isv_svn,
+                                                                       platform_info.pce_isv_svn,
+                                                                       (uint8_t *)&(platform_info.platform_id), sizeof(platform_info.platform_id),
+                                                                       (uint8_t *)&(platform_info.cpu_svn), sizeof(platform_info.cpu_svn),
+                                                                       &p_resp, &resp_size);
+            } else {
+                qgs_msg_error_ret = qgs_msg_gen_error_resp(resp_error_code, GET_PLATFORM_INFO_RESP, &p_resp, &resp_size);
             }
             if (QGS_MSG_SUCCESS != qgs_msg_error_ret) {
                 QGS_LOG_ERROR("call qgs_msg_gen function failed\n");

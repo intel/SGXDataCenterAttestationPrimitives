@@ -39,9 +39,9 @@ default:
 
 install: $(PACKAGES)	
 	cd $(shell readlink -m $(DESTDIR)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME)) && \
-        ln -fs $(shell readlink -m $(USR_LIB_PATH)/libsgx_id_enclave.signed.so.1) && \
+        ln -fs $(USR_LIB_PATH)/libsgx_id_enclave.signed.so.1 && \
         cd $(shell readlink -m $(DESTDIR)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_PATH)/$(PCK_ID_RETRIEVAL_TOOL_PACKAGE_NAME)) && \
-        ln -fs $(shell readlink -m $(USR_LIB_PATH)/libsgx_pce.signed.so.1) 
+        ln -fs $(USR_LIB_PATH)/libsgx_pce.signed.so.1
 
 
 $(PACKAGES):

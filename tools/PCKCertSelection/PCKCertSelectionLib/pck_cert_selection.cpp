@@ -53,7 +53,11 @@
 /*
  * Library API function documented in header.
  */
+#ifdef PCK_CERT_SELECTION_WITH_COMPONENT
+pck_cert_selection_res_t pck_cert_select_with_component (
+#else
 pck_cert_selection_res_t pck_cert_select (
+#endif
 	const cpu_svn_t* platform_svn,
 	uint16_t pce_isvsvn,
 	uint16_t pce_id,
@@ -70,7 +74,7 @@ pck_cert_selection_res_t pck_cert_select (
 	PCKSorter pckSorter ( *platform_svn, pce_isvsvn, pce_id, tcb_info, pem_certs, ncerts );
 	return pckSorter.select_best_pck ( best_cert_index );
 }
-
+#ifndef PCK_CERT_SELECTION_WITH_COMPONENT
 pck_cert_selection_res_t platform_sgx_hw_config(
 	const cpu_svn_t * platform_svn, 
 	const char * tcb_info, 
@@ -84,4 +88,4 @@ pck_cert_selection_res_t platform_sgx_hw_config(
 	ConfigSelect confSelect( *platform_svn, tcb_info);
 	return confSelect.get_configure_id(configuration_id);
 }
-
+#endif

@@ -187,7 +187,7 @@ quote3_error_t tdx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size);
  * @param p_quote_verification_result[OUT] - Address of the outputted quote verification result.
  * @param p_qve_report_info[IN/OUT] - This parameter can be used in 2 ways.
  *        If p_qve_report_info is NOT NULL, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.
- *        if p_qve_report_info is NULL, the API will use QVL library to perform quote verification, not that the results can not be cryptographically authenticated in this mode.
+ *        if p_qve_report_info is NULL, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
  * @param supplemental_data_size[IN] - Size of the buffer pointed to by p_quote (in bytes).
  * @param p_supplemental_data[OUT] - The parameter is optional.  If it is NULL, supplemental_data_size must be 0.
  *
@@ -203,7 +203,7 @@ quote3_error_t tdx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size);
 quote3_error_t tdx_qv_verify_quote(
     const uint8_t *p_quote,
     uint32_t quote_size,
-    const tdx_ql_qve_collateral_t *p_quote_collateral,
+    const tdx_ql_qv_collateral_t *p_quote_collateral,
     const time_t expiration_check_date,
     uint32_t *p_collateral_expiration_status,
     sgx_ql_qv_result_t *p_quote_verification_result,

@@ -1,0 +1,5 @@
+LIBRARY	"PCKCertSelectionLib"
+
+EXPORTS
+    pck_cert_select             @1
+    platform_sgx_hw_config      @2

@@ -58,7 +58,6 @@ JNI_WRAPPER_VERSION = 1
 jni_dcap_quoteverify_lib := libjni_dcap_quoteverify.so
 
 
-QvL_BUILD_PATH := ../../QuoteVerification/dcap_quoteverify/linux
 DISTDIR := src/main/c/lib
 JNI_C_SRCS := src/main/c/jni/sgx_dcap_quoteverify_wrap.c
 JNI_C_SRCS += src/main/c/jni/jni_native_lib_init.c

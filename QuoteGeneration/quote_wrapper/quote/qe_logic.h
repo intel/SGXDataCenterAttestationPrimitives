@@ -60,5 +60,7 @@ typedef quote3_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
 
 typedef quote3_error_t (*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t logger);
 
+typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
+
 #endif
 

@@ -62,18 +62,20 @@
 #define MIN_CERT_DATA_SIZE (500)  // Chosen to be large enough to contain the native cert data types.
 
 
-typedef tee_att_error_t (*sgx_get_quote_config_func_t)(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
+typedef quote3_error_t (*sgx_get_quote_config_func_t)(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
                                                       sgx_ql_config_t **pp_quote_config);
 
-typedef tee_att_error_t (*sgx_free_quote_config_func_t)(sgx_ql_config_t *p_quote_config);
+typedef quote3_error_t (*sgx_free_quote_config_func_t)(sgx_ql_config_t *p_quote_config);
 
-typedef tee_att_error_t (*sgx_write_persistent_data_func_t)(const uint8_t *p_buf,
+typedef quote3_error_t (*sgx_write_persistent_data_func_t)(const uint8_t *p_buf,
                                                            uint32_t buf_size,
                                                            const char *p_label);
 
-typedef tee_att_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
+typedef quote3_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
                                                           uint32_t *p_buf_size,
                                                           const char *p_label);
+typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
+
 #ifndef _MSC_VER
 inline errno_t memcpy_s(void *dest, size_t numberOfElements, const void *src, size_t count)
 {
@@ -169,6 +171,15 @@ tee_att_config_t::get_qpl_handle()
         if (NULL == m_qpl_handle) {
             SE_PROD_LOG("Cannot open Quote Provider Library %s\n", TEE_ATT_QUOTE_CONFIG_LIB_FILE_NAME);
         }
+        else {
+            sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(m_qpl_handle, "sgx_qpl_global_init");
+            if (dlerror() == NULL && p_sgx_qpl_global_init) {
+                if (p_sgx_qpl_global_init() != SGX_QL_SUCCESS) {
+                    dlclose(m_qpl_handle);
+                    m_qpl_handle = NULL;
+                }
+            }
+        }
     }
     return m_qpl_handle;
 }
@@ -177,6 +188,18 @@ tee_att_config_t::get_qpl_handle()
     if (m_qpl_handle == NULL) {
         SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
         return NULL;
+    }
+    else {
+        sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)GetProcAddress(m_qpl_handle, "sgx_qpl_global_init");
+        if (NULL != p_sgx_qpl_global_init) {
+            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qpl_global_init API.\n");
+            quote3_error_t ql_ret = p_sgx_qpl_global_init();
+            if (ql_ret != SGX_QL_SUCCESS) {
+                SE_PROD_LOG("Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
+                CloseHandle(m_qpl_handle);
+                m_qpl_handle = NULL;
+            }
+        }
     }
     return m_qpl_handle;
 }
@@ -233,7 +256,7 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
 #ifndef _MSC_VER
     if (!handle) {
 
-        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't load the platform library. %s\n", dlerror());
         return ret_val;
     }
     else {
@@ -269,9 +292,10 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
 #endif
         SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
         SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
-        ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
-        if (TEE_ATT_SUCCESS != ret_val) {
-            SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+        quote3_error_t ql_ret = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
+        if (SGX_QL_SUCCESS != ql_ret) {
+            SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ql_ret);
+            ret_val = (tee_att_error_t)ql_ret;  // tee_att_error_t should have the same error codes as quote3_error_t
             goto CLEANUP;
         }
         if (NULL == p_pck_cert_config) {
@@ -317,7 +341,7 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
             // Return the number of bytes copied.
             *p_cert_data_size = p_pck_cert_config->cert_data_size;
         }
-
+        ret_val = TEE_ATT_SUCCESS;
     }
 CLEANUP:
     if (NULL != p_sgx_free_quote_config) {
@@ -763,9 +787,9 @@ tee_att_error_t tee_att_config_t::write_persistent_data(const uint8_t *p_buf,
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_write_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
-            ret_val = p_sgx_qe_write_persistent_data(p_buf,
-                                                        buf_size,
-                                                        p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_write_persistent_data(p_buf,
+                                                                      buf_size,
+                                                                      p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -780,9 +804,9 @@ tee_att_error_t tee_att_config_t::write_persistent_data(const uint8_t *p_buf,
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_write_persistent_data");
         if (NULL != p_sgx_qe_write_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
-            ret_val = p_sgx_qe_write_persistent_data(p_buf,
-                buf_size,
-                p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_write_persistent_data(p_buf,
+                                                                      buf_size,
+                                                                      p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -840,9 +864,9 @@ tee_att_error_t tee_att_config_t::read_persistent_data(uint8_t *p_buf,
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_read_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qe_read_persistent_data API.\n");
-            ret_val = p_sgx_qe_read_persistent_data(p_buf,
-                                                    p_buf_size,
-                                                    p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_read_persistent_data(p_buf,
+                                                                     p_buf_size,
+                                                                     p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -858,11 +882,12 @@ tee_att_error_t tee_att_config_t::read_persistent_data(uint8_t *p_buf,
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_read_persistent_data");
         if (NULL != p_sgx_qe_read_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_read_persistent_data API.\n");
-            ret_val = p_sgx_qe_read_persistent_data(p_buf,
+            quote3_error_t ql_ret = p_sgx_qe_read_persistent_data(p_buf,
                                                     p_buf_size,
                                                     p_label);
-            if (TEE_ATT_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+            if (SGX_QL_SUCCESS != ql_ret) {
+                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ql_ret);
+                ret_val = (tee_att_error_t)ql_ret;  // tee_att_error_t should have the same error codes as quote3_error_t
             }
         }
         else {
@@ -1154,6 +1179,20 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         }
         SE_TRACE(SE_TRACE_DEBUG, "Successfully verified ECDSA Blob.\n");
         p_qe_target_info->mr_enclave = tdqe_report_body.mr_enclave;
+
+        if (NULL == m_tdqe_report_body) {
+            m_tdqe_report_body = (sgx_report_body_t*)malloc(sizeof(sgx_report_body_t));
+            if (!m_tdqe_report_body) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = TEE_ATT_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+            if (0 != memcpy_s(m_tdqe_report_body, sizeof(sgx_report_body_t), &tdqe_report_body, sizeof(tdqe_report_body))) {
+                refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
+                goto CLEANUP;
+            }
+        }
+
         if (resealed) {
             SE_TRACE(SE_TRACE_DEBUG, "ECDSA Blob was resealed. Store it disk.\n");
             refqt_ret = write_persistent_data((uint8_t *)m_ecdsa_blob,
@@ -1403,10 +1442,23 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
             goto CLEANUP;
         }
 
-        if(0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
-                    &tdqe_report.body.mr_enclave, sizeof(tdqe_report.body.mr_enclave))) {
+        if (0 != memcpy_s(&p_qe_target_info->mr_enclave, sizeof(p_qe_target_info->mr_enclave),
+                &tdqe_report.body.mr_enclave, sizeof(tdqe_report.body.mr_enclave))) {
             refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
             goto CLEANUP;
+        }
+
+        if (NULL == m_tdqe_report_body) {
+            m_tdqe_report_body = (sgx_report_body_t*)malloc(sizeof(sgx_report_body_t));
+            if (!m_tdqe_report_body) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                refqt_ret = TEE_ATT_ERROR_OUT_OF_MEMORY;
+                goto CLEANUP;
+            }
+            if (0 != memcpy_s(m_tdqe_report_body, sizeof(sgx_report_body_t), &tdqe_report.body, sizeof(tdqe_report.body))) {
+                refqt_ret = TEE_ATT_ERROR_UNEXPECTED;
+                goto CLEANUP;
+            }
         }
 
         if (NULL == m_qe_id)
@@ -1547,7 +1599,6 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
     uint32_t cert_data_size;
     sgx_sealed_data_t *p_sealed_ecdsa;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
-    sgx_report_body_t tdqe_report_body;
     sgx_psvn_t pce_cert_psvn;
     uint8_t resealed = 0;
     sgx_ql_pck_cert_id_t pck_cert_id;
@@ -1605,14 +1656,13 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
         refqt_ret = TEE_ATT_ATT_KEY_NOT_INITIALIZED;
         goto CLEANUP;
     }
-    memset(&tdqe_report_body, 0, sizeof(tdqe_report_body));
     // If exists, verify blob.
     sgx_status = verify_blob(m_eid,
                              (uint32_t*)&tdqe_error,
                              (uint8_t*)m_ecdsa_blob,
                              sizeof(m_ecdsa_blob),
                              &resealed,
-                             &tdqe_report_body,
+                             NULL,
                              0,
                              NULL);
     if (SGX_SUCCESS != sgx_status) {
@@ -1766,7 +1816,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     sgx_ql_pck_cert_id_t pck_cert_id;
     sgx_sealed_data_t *p_sealed_ecdsa;
     ref_plaintext_ecdsa_data_sdk_t *p_seal_data_plain_text;
-    sgx_report_body_t tdqe_report_body;
     sgx_ql_certification_data_t *p_certification_data = NULL;
     sgx_psvn_t pce_cert_psvn;
     int blob_mutex_rc = 0;
@@ -1812,7 +1861,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
         refqt_ret = TEE_ATT_ATT_KEY_NOT_INITIALIZED;
         goto CLEANUP;
     }
-    memset(&tdqe_report_body, 0, sizeof(tdqe_report_body));
     // If exists, verify blob.
     SE_TRACE(SE_TRACE_DEBUG, "Verify blob\n");
     sgx_status = verify_blob(m_eid,
@@ -1820,7 +1868,7 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
                              (uint8_t*)m_ecdsa_blob,
                              sizeof(m_ecdsa_blob),
                              &resealed,
-                             &tdqe_report_body,
+                             NULL,
                              sizeof(blob_ecdsa_id),
                              (uint8_t*)&blob_ecdsa_id);
     if (SGX_SUCCESS != sgx_status) {
@@ -1982,4 +2030,73 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     }
 
     return(refqt_ret);
+}
+
+
+tee_att_error_t tee_att_config_t::get_platform_info(sgx_key_128bit_t* p_platform_id,
+    sgx_cpu_svn_t* p_cpu_svn,
+    sgx_isv_svn_t* p_tdqe_isv_svn,
+    sgx_isv_svn_t* p_pce_isv_svn)
+{
+    tee_att_error_t refqt_ret = TEE_ATT_SUCCESS;
+
+    if ((p_cpu_svn || p_tdqe_isv_svn) && !m_tdqe_report_body) {
+        sgx_target_info_t qe_target_info;
+        ref_sha256_hash_t pub_key_id;
+        refqt_ret = ecdsa_init_quote(PPID_RSA3072_ENCRYPTED,
+            &qe_target_info,
+            false,
+            &pub_key_id);
+        //No need to complete whole flow.
+        if (TEE_ATT_SUCCESS != refqt_ret && !m_tdqe_report_body) {
+            return refqt_ret;
+        }
+    }
+
+    if (p_platform_id) {
+        if (NULL == m_qe_id) {
+            m_qe_id = (sgx_key_128bit_t*)malloc(sizeof(sgx_key_128bit_t));
+            if (!m_qe_id) {
+                SE_TRACE(SE_TRACE_ERROR, "Fail to allocate memory.\n");
+                return TEE_ATT_ERROR_OUT_OF_MEMORY;
+            }
+
+            refqt_ret = load_id_enclave_get_id(m_qe_id);
+            if (TEE_ATT_SUCCESS != refqt_ret) {
+                return refqt_ret;
+            }
+        }
+        if (0 != memcpy_s(p_platform_id, sizeof(*p_platform_id), m_qe_id, sizeof(*m_qe_id))) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+    }
+
+    if (p_pce_isv_svn) {
+        if (0xFFFF == m_raw_pce_isvsvn) {
+            sgx_target_info_t pce_target_info;
+            sgx_pce_error_t pce_error = sgx_pce_get_target(&pce_target_info, p_pce_isv_svn);
+            if (SGX_PCE_SUCCESS != pce_error) {
+                SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_pce_get_target [%s], pce_error:%04x.\n", __FUNCTION__, pce_error);
+                return translate_pce_errors(pce_error);
+            }
+        }
+        else {
+            *p_pce_isv_svn = m_raw_pce_isvsvn;
+        }
+    }
+
+    if (p_cpu_svn) {
+        if (!m_tdqe_report_body ||
+            0 != memcpy_s(p_cpu_svn, sizeof(*p_cpu_svn),
+                &m_tdqe_report_body->cpu_svn, sizeof(m_tdqe_report_body->cpu_svn))) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+    }
+    if (p_tdqe_isv_svn) {
+        if (!m_tdqe_report_body) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
+        *p_tdqe_isv_svn = m_tdqe_report_body->isv_svn;
+    }
+    return TEE_ATT_SUCCESS;
 }

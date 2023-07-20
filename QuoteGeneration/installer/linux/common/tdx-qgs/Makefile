@@ -39,7 +39,7 @@ QGSD_CONF_DEL=$(if $(wildcard /run/systemd/system/.*),qgsd.conf,$(if $(wildcard 
 QGSD_CONF_PATH=$(if $(wildcard /run/systemd/system/.*),$(if $(wildcard /lib/systemd/system/.*),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.*),/etc/init/))
 
 ifeq ($(QGSD_CONF_NAME),)
-ifneq ($(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup),)
+ifeq ($(BUILD_PLATFORM),docker)
 QGSD_CONF_NAME=qgsd.service
 QGSD_CONF_DEL=qgsd.conf
 QGSD_CONF_PATH=/lib/systemd/system

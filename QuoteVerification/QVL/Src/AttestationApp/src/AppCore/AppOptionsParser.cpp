@@ -116,7 +116,7 @@ std::unique_ptr<AppOptions> AppOptionsParser::parse(int argc, char **argv, std::
 
     try
     {
-        options->expirationDate = std::stol(expirationDate->sval[0]);
+        options->expirationDate = std::stoll(expirationDate->sval[0]);
     }
     catch(std::exception& ex)
     {

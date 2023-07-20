@@ -29,16 +29,16 @@
  *
  */
 
- 'use strict';
+'use strict';
 
- const proxyquire = require('proxyquire').noCallThru().noPreserveCache();
- const assert = require('assert');
- const { X509Certificate } = require('crypto');
+const proxyquire = require('proxyquire').noCallThru().noPreserveCache();
+const assert = require('assert');
+const { X509Certificate } = require('crypto');
 
- class TestContext {
-  constructor() {
-    this.rootCaPublicKey = '3059301306072a8648ce3d020106082a8648ce3d030107034200040ba9c4c0c0c86193a3fe23d6b02cda10a8bbd4e88e48b4458561a36e705525f567918e2edc88e40d860bd0cc4ee26aacc988e505a953558c453f6b0904ae7394';
-    this.rootCaPem = `-----BEGIN CERTIFICATE-----
+class TestContext {
+    constructor() {
+        this.rootCaPublicKey = '3059301306072a8648ce3d020106082a8648ce3d030107034200040ba9c4c0c0c86193a3fe23d6b02cda10a8bbd4e88e48b4458561a36e705525f567918e2edc88e40d860bd0cc4ee26aacc988e505a953558c453f6b0904ae7394';
+        this.rootCaPem = `-----BEGIN CERTIFICATE-----
 MIICjjCCAjSgAwIBAgIUImUM1lqdNInzg7SVUr9QGzknBqwwCgYIKoZIzj0EAwIw
 aDEaMBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENv
 cnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJ
@@ -54,7 +54,7 @@ Ur9QGzknBqwwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwCgYI
 KoZIzj0EAwIDSAAwRQIgQQs/08rycdPauCFk8UPQXCMAlsloBe7NwaQGTcdpa0EC
 IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
 -----END CERTIFICATE-----`;
-    this.intermediateCaPem = `-----BEGIN CERTIFICATE-----
+        this.intermediateCaPem = `-----BEGIN CERTIFICATE-----
 MIIClzCCAj6gAwIBAgIVANDoqtp11/kuSReYPHsUZdDV8llNMAoGCCqGSM49BAMC
 MGgxGjAYBgNVBAMMEUludGVsIFNHWCBSb290IENBMRowGAYDVQQKDBFJbnRlbCBD
 b3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMQsw
@@ -70,7 +70,7 @@ qtp11/kuSReYPHsUZdDV8llNMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAG
 AQH/AgEAMAoGCCqGSM49BAMCA0cAMEQCIC/9j+84T+HztVO/sOQBWJbSd+/2uexK
 4+aA0jcFBLcpAiA3dhMrF5cD52t6FqMvAIpj8XdGmy2beeljLJK+pzpcRA==
 -----END CERTIFICATE-----`;
-    this.pckPem = `-----BEGIN CERTIFICATE-----
+        this.pckPem = `-----BEGIN CERTIFICATE-----
 MIIEgDCCBCagAwIBAgIUVvUthlAB2c3lo6k5OS9bYNRQvhIwCgYIKoZIzj0EAwIwcTEjMCEGA1UE
 AwwaSW50ZWwgU0dYIFBDSyBQcm9jZXNzb3IgQ0ExGjAYBgNVBAoMEUludGVsIENvcnBvcmF0aW9u
 MRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJBgNVBAYTAlVTMB4XDTE5MTAx
@@ -93,7 +93,7 @@ AwQCAAAwFAYKKoZIhvhNAQ0BBAQGAJBuoQAAMA8GCiqGSIb4TQENAQUKAQAwCgYIKoZIzj0EAwID
 SAAwRQIgf8Bbj/9xVbejhqnthr1cHcX5fF5MStS5tCgZmwCL98ICIQCTX+Li5drO74gsdXbjrawh
 uZ0WsNREI7WIEPEd9fp/Kg==
 -----END CERTIFICATE-----`;
-    this.anotherCert = `-----BEGIN CERTIFICATE-----
+        this.anotherCert = `-----BEGIN CERTIFICATE-----
 MIIDnDCCAoSgAwIBAgIJAMmlcQsaw/9fMA0GCSqGSIb3DQEBCwUAMGMxCzAJBgNV
 BAYTAlVTMQswCQYDVQQIDAJDQTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExFDASBgNV
 BAoMC1NHWCBOb25wcm9kMRswGQYDVQQDDBJzZ3gtbm9ucHJvZC1zZXJ2ZXIwHhcN
@@ -115,7 +115,7 @@ jPMIv0C05DmEhlc1RMDan8DdhdxO9LipZwdKEkM8PhBKy0iHcLhq6NSKWZLcLDQX
 JyDpy2i+mxBomCMr4Q1gk6VWBSAz0stYwwg/g06jPiahFXYr2hkHerlNudrk8Wo+
 gVhdEh0IOF2UJJVNYn9+2A==
 -----END CERTIFICATE-----`;
-      this.badEndLinePem = `-----BEGIN CERTIFICATE-----
+        this.badEndLinePem = `-----BEGIN CERTIFICATE-----
 MIICjjCCAjSgAwIBAgIUImUM1lqdNInzg7SVUr9QGzknBqwwCgYIKoZIzj0EAwIw
 aDEaMBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENv
 cnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJ
@@ -131,7 +131,7 @@ Ur9QGzknBqwwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwCgYI
 KoZIzj0EAwIDSAAwRQIgQQs/08rycdPauCFk8UPQXCMAlsloBe7NwaQGTcdpa0EC
 IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
      -----END CERTIFICATE-----`;
-      this.tcbInfoSigningCertPem = `-----BEGIN CERTIFICATE-----
+        this.tcbInfoSigningCertPem = `-----BEGIN CERTIFICATE-----
 MIICiDCCAi6gAwIBAgIUOGmGYZPE2lFghsw8+siUsai+2yEwCgYIKoZIzj0EAwIw
 aDEaMBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENv
 cnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExCzAJ
@@ -147,74 +147,74 @@ ZWwuY29tL0ludGVsU0dYUm9vdENBLmNybDAdBgNVHQ4EFgQUOGmGYZPE2lFghsw8
 AwIDSAAwRQIhANeHlhzC5Lp4EnRSQUQfS2hFbG5P6OM0IsVjRvIIWs78AiA7hXqH
 qwb1ASfXtioQB5XXC2O46KRaGiwpvz/oAOD/rg==
 -----END CERTIFICATE-----`;
-    this.pck = new X509Certificate(this.pckPem);
-    this.intermediateCa = new X509Certificate(this.intermediateCaPem);
-    this.rootCa = new X509Certificate(this.rootCaPem);
-    this.tcbInfoSigningCert = new X509Certificate(this.tcbInfoSigningCertPem);
+        this.pck = new X509Certificate(this.pckPem);
+        this.intermediateCa = new X509Certificate(this.intermediateCaPem);
+        this.rootCa = new X509Certificate(this.rootCaPem);
+        this.tcbInfoSigningCert = new X509Certificate(this.tcbInfoSigningCertPem);
 
-  }
+    }
 
-  async getTarget() {
-      return proxyquire('../../src/handlers/certificateChainParser', {});
-  }
+    async getTarget() {
+        return proxyquire('../../src/handlers/certificateChainParser', {});
+    }
 }
 
 describe('certificate chain parser tests', () => {
 
-  it('less than 3 certs provided', async() => {
+    it('less than 3 certs provided', async() => {
     // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    
-    const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem);
-    // THEN
-    await assert.rejects(resultPromise, /Certification data is not a chain of 3 certificates in PEM format/);
-  });
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
 
-  it('more than 3 certs provided', async() => {
-    // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    
-    const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem + c.pckPem + c.pckPem);
-    // THEN
-    await assert.rejects(resultPromise, /Certification data is not a chain of 3 certificates in PEM format/);
-  });
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem);
+        // THEN
+        await assert.rejects(resultPromise, /Certification data is not a chain of 3 certificates in PEM format/);
+    });
 
-  it('no provided root ca in chain', async() => {
+    it('more than 3 certs provided', async() => {
     // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    
-    const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.intermediateCaPem + c.anotherCert);
-    // THEN
-    await assert.rejects(resultPromise, /No trusted root CA in provided chain/);
-  });
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
 
-  it('no cert signed by root ca in chain', async() => {
-    // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    
-    const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.anotherCert + c.rootCaPem);
-    // THEN
-    await assert.rejects(resultPromise, /No intermediate CA issued by trusted root CA found in provided chain/);
-  });
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem + c.pckPem + c.pckPem);
+        // THEN
+        await assert.rejects(resultPromise, /Certification data is not a chain of 3 certificates in PEM format/);
+    });
 
-  it('no cert signed by intermediate ca in chain', async() => {
+    it('no provided root ca in chain', async() => {
     // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    
-    const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.anotherCert + c.intermediateCaPem + c.rootCaPem);
-    // THEN
-    await assert.rejects(resultPromise, /No PCK cert issued by intermediate CA found in provided chain/);
-  });
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.intermediateCaPem + c.anotherCert);
+        // THEN
+        await assert.rejects(resultPromise, /No trusted root CA in provided chain/);
+    });
+
+    it('no cert signed by root ca in chain', async() => {
+    // GIVEN
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.anotherCert + c.rootCaPem);
+        // THEN
+        await assert.rejects(resultPromise, /No intermediate CA issued by trusted root CA found in provided chain/);
+    });
+
+    it('no cert signed by intermediate ca in chain', async() => {
+    // GIVEN
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.anotherCert + c.intermediateCaPem + c.rootCaPem);
+        // THEN
+        await assert.rejects(resultPromise, /No PCK cert issued by intermediate CA found in provided chain/);
+    });
 
     it('2 self signed', async() => {
         // GIVEN
@@ -228,87 +228,87 @@ describe('certificate chain parser tests', () => {
     });
 
     it('parse certificates - order from top to bottom', async() => {
-      // GIVEN
-      const c = new TestContext();
-      // WHEN
-      const target = await c.getTarget();
-      const {
-          // X509 Certificates
-          rootCa,
-          intermediateCa,
-          pckCert,
-          // PEM Certificates
-          rootCaPem,
-          intermediateCaPem,
-          pckCertPem
-      } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.intermediateCaPem + c.rootCaPem);
-      // THEN
-      assert.strictEqual(rootCaPem, c.rootCaPem);
-      assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
-      assert.strictEqual(pckCertPem, c.pckPem);
-      assert.deepEqual(rootCa, c.rootCa);
-      assert.deepEqual(intermediateCa, c.intermediateCa);
-      assert.deepEqual(pckCert, c.pck);
-  });
+        // GIVEN
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+        const {
+            // X509 Certificates
+            rootCa,
+            intermediateCa,
+            pckCert,
+            // PEM Certificates
+            rootCaPem,
+            intermediateCaPem,
+            pckCertPem
+        } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.intermediateCaPem + c.rootCaPem);
+        // THEN
+        assert.strictEqual(rootCaPem, c.rootCaPem);
+        assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
+        assert.strictEqual(pckCertPem, c.pckPem);
+        assert.deepEqual(rootCa, c.rootCa);
+        assert.deepEqual(intermediateCa, c.intermediateCa);
+        assert.deepEqual(pckCert, c.pck);
+    });
 
-  it('parse certificates - order from bottom to top', async() => {
+    it('parse certificates - order from bottom to top', async() => {
     // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    const {
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+        const {
         // X509 Certificates
-        rootCa,
-        intermediateCa,
-        pckCert,
-        // PEM Certificates
-        rootCaPem,
-        intermediateCaPem,
-        pckCertPem
-    } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem + c.pckPem);
-    // THEN
-    assert.strictEqual(rootCaPem, c.rootCaPem);
-    assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
-    assert.strictEqual(pckCertPem, c.pckPem);
-    assert.deepEqual(rootCa, c.rootCa);
-    assert.deepEqual(intermediateCa, c.intermediateCa);
-    assert.deepEqual(pckCert, c.pck);
-  });
+            rootCa,
+            intermediateCa,
+            pckCert,
+            // PEM Certificates
+            rootCaPem,
+            intermediateCaPem,
+            pckCertPem
+        } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.intermediateCaPem + c.pckPem);
+        // THEN
+        assert.strictEqual(rootCaPem, c.rootCaPem);
+        assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
+        assert.strictEqual(pckCertPem, c.pckPem);
+        assert.deepEqual(rootCa, c.rootCa);
+        assert.deepEqual(intermediateCa, c.intermediateCa);
+        assert.deepEqual(pckCert, c.pck);
+    });
 
-  it('parse certificates - support illogical but possibly used order', async() => {
+    it('parse certificates - support illogical but possibly used order', async() => {
     // GIVEN
-    const c = new TestContext();
-    // WHEN
-    const target = await c.getTarget();
-    const {
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+        const {
         // X509 Certificates
-        rootCa,
-        intermediateCa,
-        pckCert,
-        // PEM Certificates
-        rootCaPem,
-        intermediateCaPem,
-        pckCertPem
-    } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.rootCaPem + c.intermediateCaPem);
-    // THEN
-    assert.strictEqual(rootCaPem, c.rootCaPem);
-    assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
-    assert.strictEqual(pckCertPem, c.pckPem);
-    assert.deepEqual(rootCa, c.rootCa);
-    assert.deepEqual(intermediateCa, c.intermediateCa);
-    assert.deepEqual(pckCert, c.pck);
-  });
+            rootCa,
+            intermediateCa,
+            pckCert,
+            // PEM Certificates
+            rootCaPem,
+            intermediateCaPem,
+            pckCertPem
+        } = await target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.pckPem + c.rootCaPem + c.intermediateCaPem);
+        // THEN
+        assert.strictEqual(rootCaPem, c.rootCaPem);
+        assert.strictEqual(intermediateCaPem, c.intermediateCaPem);
+        assert.strictEqual(pckCertPem, c.pckPem);
+        assert.deepEqual(rootCa, c.rootCa);
+        assert.deepEqual(intermediateCa, c.intermediateCa);
+        assert.deepEqual(pckCert, c.pck);
+    });
 
-  it('cannot parse certificates - bad end line', async() => {
-      // GIVEN
-      const c = new TestContext();
-      // WHEN
-      const target = await c.getTarget();
-      // THEN
-      const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.badEndLinePem + c.intermediateCaPem);
-      // THEN
-      await assert.rejects(resultPromise, /bad end line/);
-  });
+    it('cannot parse certificates - bad end line', async() => {
+        // GIVEN
+        const c = new TestContext();
+        // WHEN
+        const target = await c.getTarget();
+        // THEN
+        const resultPromise = target.parseCertificateChainWithSpecificRoot(c.rootCaPublicKey, c.rootCaPem + c.badEndLinePem + c.intermediateCaPem);
+        // THEN
+        await assert.rejects(resultPromise, /bad end line/);
+    });
 
     it('root with public key not found', async() => {
         // GIVEN
@@ -316,9 +316,9 @@ describe('certificate chain parser tests', () => {
         // WHEN
         const target = await c.getTarget();
 
-        const resultPromise = target.parseCertificateChainWithSpecificRoot('0a0a0a0a', c.rootCaPem +  c.intermediateCaPem + c.pckPem);
+        const resultPromise = target.parseCertificateChainWithSpecificRoot('0a0a0a0a', c.rootCaPem + c.intermediateCaPem + c.pckPem);
         // THEN
-        await assert.rejects(resultPromise, /No trusted root CA in provided chain. Expected public key: 0a0a0a0a/);
+        await assert.rejects(resultPromise, /Parsing root public key failed/);
     });
 
 });
@@ -371,9 +371,9 @@ describe('TCB Info Signing chain parser tests', () => {
         // WHEN
         const target = await c.getTarget();
 
-        const resultPromise = target.parseTcbInfoSigningChainWithSpecificRoot('0a0a0a0a', c.rootCaPem +  c.tcbInfoSigningCertPem);
+        const resultPromise = target.parseTcbInfoSigningChainWithSpecificRoot('0a0a0a0a', c.rootCaPem + c.tcbInfoSigningCertPem);
         // THEN
-        await assert.rejects(resultPromise, /No trusted root CA in provided chain. Expected public key: 0a0a0a0a/);
+        await assert.rejects(resultPromise, /Parsing root public key failed/);
     });
 
     it('less than 2 certs provided', async() => {

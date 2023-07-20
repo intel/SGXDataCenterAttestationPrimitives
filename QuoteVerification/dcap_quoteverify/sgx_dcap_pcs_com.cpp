@@ -55,6 +55,8 @@ sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
 tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
 tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
+
+sgx_qpl_global_init_func_t p_sgx_qpl_global_init = NULL;
 #endif
 
 /**

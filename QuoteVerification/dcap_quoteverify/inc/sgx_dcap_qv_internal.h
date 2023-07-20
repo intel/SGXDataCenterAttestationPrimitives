@@ -49,10 +49,17 @@ extern "C" {
 #define TDX_QUOTE_TYPE 0x81
 
 typedef enum {
-	    SGX_EVIDENCE = 0,
-	    TDX_EVIDENCE,
-        UNKNOWN_QUOTE_TYPE
+    SGX_EVIDENCE = 0,
+    TDX_EVIDENCE,
+    UNKNOWN_QUOTE_TYPE
 } tee_evidence_type_t;
+
+typedef enum {
+    CLASS_SGX_QVL = 0,
+    CLASS_SGX_QVE,
+    CLASS_TDX_QVL,
+    CLASS_TDX_QVE
+} tee_class_type_t;
 
 //SGX&TDX untrusted quote verification related APIs
 //

@@ -67,8 +67,31 @@ const trustedRootPublicKey = decodeURIComponent(config.target.trustedRootPublicK
  * @returns
  */
 async function verifyAttestationEvidence(ctx) {
+    /*
+        #swagger.start
+        #swagger.path = '/attestation/sgx/dcap/v1/report'
+        #swagger.method = 'post'
+        #swagger.description = 'Verification of Attestation Evidence'
+        #swagger.produces = ["application/json"]
+        #swagger.consumes = ["application/json"]
+        #swagger.parameters['payload'] = {
+            in: 'body',
+            description: 'Attestation Evidence Payload',
+            schema: {
+                $ref: '#/definitions/AttestationEvidencePayload'
+            }            
+        }
+        #swagger.responses[400] = {
+            description: 'Invalid Attestation Evidence Payload',
+            headers: {
+                'Request-ID': {
+                    description: 'Request ID',
+                    type: 'string'
+                }
+            }
+        }
+    */
     const nonce = ctx.request.body.nonce;   // optional
-
     if (_.isString(nonce) && nonce.length > 32) {
         ctx.log.error('Provided nonce is longer than 32 characters: ', nonce);
         ctx.status = 400;
@@ -193,11 +216,36 @@ async function verifyAttestationEvidence(ctx) {
 
         await signReport(report, ctx);
 
+        /*
+            #swagger.responses[200] = {
+                schema: {
+                    '$ref': '#/definitions/AttestationVerificationReport'
+                },
+                description: 'Attestation Verification Report',
+                headers: {
+                    'Request-ID': {
+                        description: 'Request ID',
+                        type: 'string'
+                    }
+                }
+            }
+         */
         ctx.status = 200;
         ctx.body = report;
     }
     catch (error) {
-        ctx.log.error(error);
+        /*
+            #swagger.responses[500] = {
+                description: 'Internal error occured',
+                headers: {
+                    'Request-ID': {
+                        description: 'Request ID',
+                        type: 'string'
+                    }
+                }
+            }
+         */
+        ctx.log.error(error);        
         ctx.status = error.status || 500;
     }
 }
@@ -460,6 +508,24 @@ function readQeIdentityFromResponse(response) {
  * @param {*} ctx - koa context
  */
 async function signReport(report, ctx) {
+    /*
+        #swagger.responses[200] = {
+            headers: {
+                'Request-ID': {
+                    description: 'Request ID',
+                    type: 'string'
+                },
+                'X-IASReport-Signing-Certificate': {
+                    description: 'URL encoded Attestation Report Signing Certificate chain in PEM format (all certificates in the chain, appended to each other)',
+                    type: 'string'
+                },
+                'X-IASReport-Signature': {
+                    description: 'Base 64-encoded Report Signature',
+                    type: 'string'
+                }
+            }
+        }
+     */
     ctx.set('X-IASReport-Signing-Certificate', attestationReportSigningChain);
     const signResponse = await vcs.signVerificationReport(report, ctx.reqId, ctx.log);
     if (signResponse.status !== STATUSES.STATUS_OK.httpCode) {
@@ -725,6 +791,8 @@ function getHighestSvn(tcbInfo, svnSelector) {
         .reduce((highest, curr) => (curr.every((svn, i) => svn.svn >= highest[i].svn) ? curr : highest));
 
 }
+
+// #swagger.end
 
 module.exports = {
     verifyAttestationEvidence

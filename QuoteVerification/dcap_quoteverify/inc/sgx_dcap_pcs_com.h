@@ -56,6 +56,8 @@ extern "C" {
 #define TDX_QL_API_GET_QUOTE_VERIFICATION_COLLATERAL "tdx_ql_get_quote_verification_collateral"
 #define TDX_QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL "tdx_ql_free_quote_verification_collateral"
 
+#define QL_API_QPL_GLOBAL_INIT "sgx_qpl_global_init"
+
 typedef quote3_error_t(*sgx_get_quote_verification_collateral_func_t)(const char *fmspc,
         uint16_t fmspc_size,
         const char *pck_ca,
@@ -81,6 +83,7 @@ typedef quote3_error_t(*tdx_get_quote_verification_collateral_func_t)(const char
 
 typedef quote3_error_t(*tdx_free_quote_verification_collateral_func_t)(struct _sgx_ql_qve_collateral_t *p_quote_collateral);
 
+typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
 
 bool sgx_dcap_load_qpl();
 

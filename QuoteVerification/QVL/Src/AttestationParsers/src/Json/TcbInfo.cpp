@@ -291,7 +291,6 @@ TcbInfo::TcbInfo(const std::string& jsonString)
         std::tie(std::ignore, inserted) = _tcbLevels.emplace(TcbLevel(tcbs[tcbLevelIndex], static_cast<uint32_t>(_version), _id));
         if (!inserted)
         {
-
             LOG_AND_THROW(InvalidExtensionException, "Detected duplicated TCB levels");
         }
     }

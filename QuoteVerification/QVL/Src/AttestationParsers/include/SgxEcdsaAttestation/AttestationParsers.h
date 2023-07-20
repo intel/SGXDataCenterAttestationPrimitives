@@ -425,7 +425,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
         private:
             std::string _id;
             TcbInfo::Version _version = TcbInfo::Version::V2;
-            std::vector<uint8_t> _cpuSvnComponents;
+            std::vector<uint8_t> _cpuSvnComponents; // backward compatibility
             std::vector<TcbComponent> _sgxTcbComponents;
             std::vector<TcbComponent> _tdxTcbComponents;
             uint32_t _pceSvn;

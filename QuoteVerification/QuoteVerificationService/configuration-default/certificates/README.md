@@ -37,7 +37,7 @@ rm csr.pem
 
 Make sure SSS(VCS) certificate is trusted for QVS:
 ```
-cp ../../samples/simple-signing-service/cert.pem ./internal-ca/
+cp ../../samples/simple-signing-service/cert.pem ./internal_ca/
 ```
 Make sure QVS certificate is trusted for SSS:
 ```
