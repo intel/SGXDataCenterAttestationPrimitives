@@ -84,6 +84,8 @@ if !errorlevel! NEQ 0  (
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
+	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\x509_vfy.c crypto\x509\.`n\" + $content[148]; Set-Content build_package.cmd $content"
+	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\pcy_*.* crypto\x509v3\.`n\" + $content[148]; Set-Content build_package.cmd $content"
 	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 

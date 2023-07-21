@@ -85,15 +85,10 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t& out_buffer_size
 //  UEFI_OPERATION_UNEXPECTED_ERROR: error happens.
 uefi_status_t set_registration_status();
 
-// generate ecdsa quote
 // return value:
-//  0: successfully generate the ecdsa quote
+//  0: successfully collect data
 // -1: error happens.
-#ifdef _MSC_VER
-int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size);
-#else
 int collect_data(uint8_t **p_data_buffer);
-#endif
 
 bool is_valid_proxy_type(std::string& proxy_type);
 

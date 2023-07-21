@@ -41,7 +41,9 @@
 #include "pccs_response_object.h"
 #include "qcnl_config.h"
 #include "sgx_default_qcnl_wrapper.h"
+#include "local_cache.h"
 #include <string>
+#include <vector>
 
 #ifdef _MSC_VER
 #include <time.h>
@@ -77,15 +79,21 @@ private:
 protected:
     string base_url_;
 
+    bool parse_certificates_json(const string &certificates_json_str, vector<string> &pck_certs, vector<string> &tcbms);
+
 public:
+    CacheProvider();
     CacheProvider(const string &base_url);
     ~CacheProvider();
 
     sgx_qcnl_error_t get_certification(const string &query_string,
                                        PccsResponseObject *pccs_resp_obj);
-    sgx_qcnl_error_t set_certification(uint32_t default_expiry_seconds,
+    sgx_qcnl_error_t set_certification(sgx_qpl_cache_type_t cache_type,
+                                       uint32_t default_expiry_seconds,
                                        const string &query_string,
                                        PccsResponseObject *pccs_resp_obj);
+    sgx_qcnl_error_t get_local_certification(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
+                                             sgx_ql_config_t **pp_quote_config);
 };
 
 #endif // CERTIFICATIONPROVIDER_H_

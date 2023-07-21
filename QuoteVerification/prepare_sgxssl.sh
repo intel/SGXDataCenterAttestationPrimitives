@@ -77,6 +77,8 @@ if [ "$1" = "nobuild" ]; then
 fi
 
 pushd $sgxssl_dir/Linux/
+sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/pcy_*.* crypto/x509v3/.' build_openssl.sh
+sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/x509_vfy.c crypto/x509/.' build_openssl.sh
 make clean sgxssl_no_mitigation 
 popd
 

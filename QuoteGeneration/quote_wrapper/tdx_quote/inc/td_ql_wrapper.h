@@ -130,7 +130,18 @@ typedef enum _tee_att_error_t {
     TEE_ATT_COLLATERAL_VERSION_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0053),  ///< SGX quote verification collateral version not supported by QVL/QvE
     TEE_ATT_TDX_MODULE_MISMATCH = TEE_ATT_MK_ERROR(0x0060),            ///< TDX SEAM module identity is NOT match to Intel signed TDX SEAM module
 
-    TEE_ATT_ERROR_MAX = TEE_ATT_MK_ERROR(0x00FF),                      ///< Indicate max error to allow better translation.
+    TEE_ATT_QEIDENTITY_NOT_FOUND = TEE_ATT_MK_ERROR(0x0061),            ///< QE identity was not found
+    TEE_ATT_TCBINFO_NOT_FOUND = TEE_ATT_MK_ERROR(0x0062),               ///< TCB Info was not found
+    TEE_ATT_INTERNAL_SERVER_ERROR = TEE_ATT_MK_ERROR(0x0063),           ///< Internal server error
+
+    TEE_ATT_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0064),       ///< The supplemental data version is not supported
+
+    TEE_ATT_ROOT_CA_UNTRUSTED = TEE_ATT_MK_ERROR(0x0065),               ///< The certificate used to establish SSL session is untrusted
+    TEE_ATT_TCB_NOT_SUPPORTED = TEE_ATT_MK_ERROR(0x0066),               ///< Current TCB level cannot be found in platform/enclave TCB info 
+
+    TEE_ATT_CONFIG_INVALID_JSON = TEE_ATT_MK_ERROR(0x0067),             ///< The QPL's config file is in JSON format but has a format error
+
+    TEE_ATT_ERROR_MAX = TEE_ATT_MK_ERROR(0x00FF),                       ///< Indicate max error to allow better translation.
 
 } tee_att_error_t;
 

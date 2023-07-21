@@ -39,8 +39,42 @@ const verifyAttestationEvidenceRouter = require('./v1/verifyAttestationEvidence'
 
 /* Place to compose service API below */
 const apiRouter = new Router();
+
+/*
+    #swagger.start
+    #swagger.path = '/health'
+    #swagger.method = 'get'
+    #swagger.description = 'Checks communication with dependent services'
+    #swagger.produces = ["application/json"]
+    #swagger.responses[200] = {
+        schema: {
+            '$ref': '#/definitions/PositiveHealthReport'
+        },
+        description: 'Health report',
+        headers: {
+            'Request-ID': {
+                description: 'Request ID',
+                type: 'string'
+            }
+        }
+    }
+    #swagger.responses[503] = {
+        schema: {
+            '$ref': '#/definitions/NegativeHealthReport'
+        },
+        description: 'Health report',
+        headers: {
+            'Request-ID': {
+                description: 'Request ID',
+                type: 'string'
+            }
+        }
+    }
+    #swagger.end
+*/
 apiRouter.use('/health', healthRouter.routes(), healthRouter.allowedMethods());
 
 apiRouter.use('/attestation/sgx/dcap/v1/report', verifyAttestationEvidenceRouter.routes(), verifyAttestationEvidenceRouter.allowedMethods());
+
 
 module.exports = apiRouter;

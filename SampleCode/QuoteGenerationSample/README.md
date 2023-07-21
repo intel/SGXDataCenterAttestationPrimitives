@@ -57,6 +57,8 @@ Or Debug build:
 ```
 $ make SGX_DEBUG=1
 ```
+SGX_QPL_LOGGING will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
+
 Run application in "in-proc" mode:
 ```
 $ ./app

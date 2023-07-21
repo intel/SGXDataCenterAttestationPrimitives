@@ -14,6 +14,25 @@ For more details about Intel® Software Guard Extensions (Intel® SGX) Data Cent
 
 API and structure Definitions
 ===============
+
+/**
+sgx_qpl_global_init() must be called before any other QPL's API is called.
+
+Return Values:
+    SGX_QL_SUCCESS: 
+        The QPL library was initialized successfully.
+    SGX_QL_CONFIG_INVALID_JSON:
+        The QPL's config file is in JSON format but has a format error.
+*/
+quote3_error_t sgx_qpl_global_init();
+
+/**
+Return Values:
+    SGX_QL_SUCCESS: 
+        The QPL library was cleaned up successfully.
+*/
+quote3_error_t sgx_qpl_global_cleanup();
+
 /**
 Parameters:
     p_pck_cert_id [In]
@@ -90,7 +109,7 @@ Return Values:
         The platform does not have the quote verification collateral data available.
 */
 quote3_error_t tdx_ql_get_quote_verification_collateral( const uint8_t *fmspc, uint16_t fmspc_size, const char *pck_ca,
-                        tdx_ql_qve_collateral_t **pp_quote_collateral);                          
+                        tdx_ql_qv_collateral_t **pp_quote_collateral);
 
 /**
 Parameters
@@ -125,6 +144,37 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
                                                                     sgx_ql_qve_collateral_t **pp_quote_collateral);
 
 /**
+Parameters
+    fmspc [In]
+        Base 16-encoded representation of FMSPC.
+    fmspc_size [In]
+        Length of fmspc.
+    pck_ca [In]
+        Null terminated string identifier of the PCK Cert CA that issued the PCK Certificates.
+    custom_param [In]
+        Custom parameter that will be appended to request URL in Base64 format ( ...&customParameter=Base64(custom_param) )
+    custom_param_length [In]
+        Length of custom_param.
+    pp_quote_collateral [Out]
+        Pointer to a pointer to the PCK quote collateral data needed for quote verifcation. 
+
+Return Values:
+    SGX_QL_SUCCESS: 
+        The platform has the certification data available and has returned it in the p_quote_config buffer.
+    SGX_QL_INVALID_PARRAMETER: 
+        The parameters are incorrect.
+    SGX_QL_OUT_OF_MEMORY: 
+        Out of memory error.
+    SGX_QL_NO_QUOTE_COLLATERAL_DATA:
+        The platform does not have the quote verification collateral data available.
+*/
+quote3_error_t tdx_ql_get_quote_verification_collateral_with_params(const uint8_t *fmspc,
+                                                                    const uint16_t fmspc_size,
+                                                                    const char *pck_ca,
+                                                                    const void* custom_param,
+                                                                    const uint16_t custom_param_length,
+                                                                    tdx_ql_qv_collateral_t **pp_quote_collateral);
+/**
 Parameters:
     p_quote_collateral [In]
         Pointer to the PCK certification that the sgx_ql_get_quote_verification_collateral() API returns.
@@ -142,7 +192,7 @@ Return Values:
     SGX_QL_SUCCESS: 
         The buffer was freed successfully.
 */
-quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qve_collateral_t *p_quote_collateral);
+quote3_error_t tdx_ql_free_quote_verification_collateral(tdx_ql_qv_collateral_t *p_quote_collateral);
 
 /**
 Parameters:
@@ -184,8 +234,18 @@ Return Values:
     SGX_QL_SUCCESS:
         The buffer was freed successfully.
 */
-void sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
+quote3_error_t sgx_ql_free_qve_identity(char *p_qve_identity, char *p_qve_identity_issuer_chain);
 
+/**
+Parameters:
+    cache_type[In]
+        Specify the types of cache that you want to clear. It can be a specific 'sgx_qpl_cache_type_t' value,
+        or you can select a combination of individual values using the bitwise OR operator '|'. 
+Return Values:
+    SGX_QL_SUCCESS:
+        The specified cache files was cleared successfully.
+*/
+quote3_error_t sgx_qpl_clear_cache(uint32_t cache_type);
 
 /** Used to describe the PCK Cert for a platform */
 typedef struct _sgx_ql_pck_cert_id_t
@@ -236,4 +296,4 @@ typedef struct _sgx_ql_qve_collateral_t
     uint32_t qe_identity_size;
 }sgx_ql_qve_collateral_t;
 
-typedef sgx_ql_qve_collateral_t tdx_ql_qve_collateral_t;
+typedef sgx_ql_qve_collateral_t tdx_ql_qv_collateral_t;

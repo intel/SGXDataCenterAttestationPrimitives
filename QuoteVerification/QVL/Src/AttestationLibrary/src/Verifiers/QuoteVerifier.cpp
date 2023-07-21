@@ -155,7 +155,7 @@ Status checkTcbLevel(const dcap::parser::json::TcbInfo& tcbInfoJson, const dcap:
                  pckTcb.getPceSvn(),
                  bytesToHexString(std::vector<uint8_t>(begin(quote.getTdReport().teeTcbSvn), end(quote.getTdReport().teeTcbSvn))));
     }
-    else
+    else // deprecated
     {
         LOG_INFO("Selected TCB Level - sgx: {}, pceSvn: {}, status: {},\n"
                  "PCK TCB - cpuSvn: {}, pceSvn: {}",
@@ -304,7 +304,7 @@ Status QuoteVerifier::verify(const Quote& quote,
             return STATUS_TCB_INFO_MISMATCH;
         }
     }
-    else
+    else // deprecated
     {
         if(quote.getHeader().teeType == dcap::constants::TEE_TYPE_TDX)
         {

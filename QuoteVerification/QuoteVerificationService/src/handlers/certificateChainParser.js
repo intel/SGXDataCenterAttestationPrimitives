@@ -31,7 +31,7 @@
 
  'use strict';
 
- const { X509Certificate } = require('crypto');
+ const { X509Certificate, createPublicKey } = require('crypto');
  
 /**
  * Splits chain of certificates in PEM format
@@ -49,7 +49,7 @@
 /**
  *
  * @param {string[]} chain
- * @returns {Promise<Awaited<X509Certificate>[]>}
+ * @returns {Promise<X509Certificate[]>}
  */
 async function parseChain(chain) {
      return Promise.all(chain.map(async(pem) => new X509Certificate(pem)));
@@ -62,7 +62,22 @@ async function parseChain(chain) {
  * @returns {number}
  */
 function findRoot(parsedChain, rootPublicKey) {
+    const rootPublicKeyBase64 = Buffer.from(rootPublicKey, 'hex').toString('base64');
+    let rootPublicKeyParsed;
+    try {
+        rootPublicKeyParsed = createPublicKey('-----BEGIN PUBLIC KEY-----\n' + rootPublicKeyBase64 + '\n-----END PUBLIC KEY-----');
+    }
+    catch (e) {
+        throw new Error('Parsing root public key failed');
+    }
+    
     const rootCaIndex = parsedChain.findIndex(cert => {
+        //due to Node bug, reading public key might cause application crash
+        //make sure cert has been signed using root private key as a workaround
+        //(note that both root and intermediate certs are signed by root private key, so we still need to verify public key after)
+        if (!cert.verify(rootPublicKeyParsed)) {
+            return false;
+        }
         const pubKey = cert.publicKey.export({ type: 'spki', format: 'der' }).toString('hex');
         return pubKey === rootPublicKey;
     });

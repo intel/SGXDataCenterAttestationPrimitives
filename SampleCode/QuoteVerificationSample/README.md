@@ -46,15 +46,17 @@ Prepare Enclave test key(two options):
 ```
 $ make SGX_DEBUG=1
 ```
+SGX_QPL_LOGGING will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
 ## Run QuoteVerificationSample to verify a given SGX or TDX quote
 ```
 $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
-## Build and run QuoteVerificationSample inside TD VM
+## Build and run QuoteVerificationSample with QVL only
 ```
-$ make TD_ENV=1 SGX_DEBUG=1
+$ make QVL_ONLY=1 SGX_DEBUG=1
 $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
+SGX_QPL_LOGGING will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
 
 **Note**: Our libdcap_quoteprov.so is not built with Intel(R) Control Flow Enforcement Technology(CET) feature. If the sample is built with CET feature(it can be enabled by the compiler's default setting) and it is running on a CET enabled platform, you may encounter such an error message(or something similar): "Couldn't find the platform library. rebuild shared object with SHSTK support enabled". It means the system glibc enforces that a CET-enabled application can't load a non-CET shared library. You need to rebuild the sample by adding `-fcf-protection=none` option explicitly to disable CET.
 

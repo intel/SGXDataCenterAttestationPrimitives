@@ -82,8 +82,8 @@ export function pck_cert_select(
   my_cpu_svn.bytes = new ByteArray();
   for (let i = 0; i < buf.length; i++) my_cpu_svn.bytes[i] = buf[i];
 
-  let my_pce_svn = Buffer.from(pce_svn, 'hex').readInt16LE();
-  let my_pce_id = Buffer.from(pce_id, 'hex').readInt16LE();
+  let my_pce_svn = Buffer.from(pce_svn, 'hex').readUInt16LE();
+  let my_pce_id = Buffer.from(pce_id, 'hex').readUInt16LE();
   let best_index_ptr = refNAPI.alloc('int');
   let ret = pcklib.pck_cert_select(
     my_cpu_svn.ref(),

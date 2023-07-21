@@ -44,6 +44,7 @@ CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
                          -I../../common/inc/internal            \
                          -I../../pce_wrapper/inc                \
                          -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson	\
+                         -I../../../tools/PCKCertSelection/include \
                          -I$(PREBUILD_OPENSSL_PATH)/inc
 
 CNL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(CNL_Lib_Include_Paths)
@@ -58,7 +59,7 @@ CNL_Lib_Cpp_Flags+= -DSELF_SIGNED_CERT
 endif
 
 CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
-		-lpthread -ldl -lcurl
+		-lpthread -ldl -lcurl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
  
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE
@@ -67,10 +68,12 @@ endif
 
 CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
+PCK_Selection_Cpp_Objects := $(wildcard ../../../tools/PCKCertSelection/static_out/*.o)
 
 CNL_Lib_Name := libsgx_default_qcnl_wrapper
 CNL_Lib_Name_Dynamic :=  $(CNL_Lib_Name).so
 CNL_Lib_Name_Static := $(CNL_Lib_Name).a
+PCK_Selection_Lib_Static := PCKCertSelection
 
 
 .PHONY: all run
@@ -95,12 +98,14 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 	@$(CXX) $(CNL_Lib_Cpp_Flags) -MMD -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects)
+$(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Lib_Static)
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
 
-$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects)
-	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects)
+$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Lib_Static)
+	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Cpp_Objects)
 
+$(PCK_Selection_Lib_Static):
+	make -C ../../../tools/PCKCertSelection/PCKCertSelectionLib -f Makefile.static_lib
 force_look:
 	true
 
@@ -111,5 +116,6 @@ $(BUILD_DIR):
 
 clean:
 	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Static)
+	make -C ../../../tools/PCKCertSelection/PCKCertSelectionLib -f Makefile.static_lib clean
 
 

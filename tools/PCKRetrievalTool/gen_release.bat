@@ -30,8 +30,10 @@
 @echo off 
 
 set svn_ver=%1%
-set rel_dir_name=PCKIDRetrievalTool_v1.7.100.0
-set TOOLSFOLDER=.\Tools\
+set rel_dir_name=PCKIDRetrievalTool_v1.16.100.0
+set TOOLSFOLDER=.\..\..\..\..\installer_tools\Tools\standalone_build_se\sign
+set SIGNTOOL="%TOOLSFOLDER%\SignFile.exe"
+set SIGNCERT=%TOOLSFOLDER%\Certificates\intel-ca.crt
 set flag=0
 
 echo "Please copy sgx_urts.dll, sgx_launch.dll and sgx_enclave_common.dll to current directory!"
@@ -42,16 +44,12 @@ rd %rel_dir_name%
 mkdir %rel_dir_name%
 echo:
 echo ========= copy the binary Files  ===============
-CALL :COPY_FILE x64\release\pck_id_retrieval_tool_enclave.signed.dll %rel_dir_name%
-CALL :COPY_FILE x64\release\dcap_quoteprov.dll %rel_dir_name%
 CALL :COPY_FILE x64\release\PCKIDRetrievalTool.exe %rel_dir_name%
-CALL :COPY_FILE sgx_urts.dll %rel_dir_name%
-CALL :COPY_FILE sgx_launch.dll %rel_dir_name%
-CALL :COPY_FILE sgx_enclave_common.dll %rel_dir_name%
+CALL :COPY_FILE ..\..\..\..\PSW_installer\InstallBinaries\x64\onecore\sgx_urts.dll %rel_dir_name%
+CALL :COPY_FILE ..\..\..\..\PSW_installer\InstallBinaries\x64\onecore\sgx_launch.dll %rel_dir_name%
+CALL :COPY_FILE ..\..\..\..\PSW_installer\InstallBinaries\x64\onecore\sgx_enclave_common.dll %rel_dir_name%
 CALL :COPY_FILE ..\SGXPlatformRegistration\x64\release\mp_uefi.dll %rel_dir_name%
-CALL :COPY_FILE ..\..\x64\release\sgx_dcap_ql.dll %rel_dir_name%
 CALL :COPY_FILE ..\..\QuoteGeneration\psw\ae\data\prebuilt\win\pce.signed.dll %rel_dir_name%
-CALL :COPY_FILE ..\..\QuoteGeneration\psw\ae\data\prebuilt\win\qe3.signed.dll %rel_dir_name%
 CALL :COPY_FILE ..\..\QuoteGeneration\psw\ae\data\prebuilt\win\id_enclave.signed.dll %rel_dir_name%
 CALL :COPY_FILE network_setting.conf %rel_dir_name%
 CALL :COPY_FILE README_standalone.txt %rel_dir_name%\README.txt
@@ -61,14 +59,11 @@ CALL :COPY_FILE License.txt %rel_dir_name%
 
 echo:
 echo ========= Signing the binary Files  ===============
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\pck_id_retrieval_tool_enclave.signed.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\dcap_quoteprov.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\PCKIDRetrievalTool.exe
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\sgx_urts.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\sgx_launch.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\sgx_enclave_common.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\mp_uefi.dll
-call "%TOOLSFOLDER%\Sign.bat" %rel_dir_name%\sgx_dcap_ql.dll
+%SIGNTOOL% -cafile %SIGNCERT% -ha SHA256 %rel_dir_name%\PCKIDRetrievalTool.exe
+%SIGNTOOL% -cafile %SIGNCERT% -ha SHA256 %rel_dir_name%\sgx_urts.dll
+%SIGNTOOL% -cafile %SIGNCERT% -ha SHA256 %rel_dir_name%\sgx_launch.dll
+%SIGNTOOL% -cafile %SIGNCERT% -ha SHA256 %rel_dir_name%\sgx_enclave_common.dll
+%SIGNTOOL% -cafile %SIGNCERT% -ha SHA256 %rel_dir_name%\mp_uefi.dll
 
 
 

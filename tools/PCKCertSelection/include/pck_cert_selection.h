@@ -181,6 +181,46 @@ EXPORT_API pck_cert_selection_res_t platform_sgx_hw_config(
 	const cpu_svn_t* platform_svn,
 	const char* tcb_info,
 	uint32_t* configuration_id);
+
+/**
+ * Compare  TCB (CPUSVN and PCESVN) with input PCKs TCB.
+ * Find 'best' PCK - the PCK with highest TCB which is lower than raw TCB.
+ * 
+ * @note Input PCKs and TCBInfo structures are validated but it's signature and validity (Not Before - Not After) are not verified.
+ *		 It is client responsibility to verify the input.
+ *
+ * @param [in]  platform_svn	- const cpu_svn_t*, Raw platform CPUSVN, can't be NULL.
+ * @param [in]  pce_isvsvn		- uint16_t, platform PCE ISV SVN.
+ * @param [in]  pce_id			- uint16_t, Raw platform PCE ID.
+ * @param [in]  tcb_info		- const char*, Platform TCBInfo structure in JSON format, can't be NULL.
+ * @param [in]  pem_certs[]		- const char*, Array of NULL terminated Intel SGX PCK certificates in PEM format, can't be NULL, array members can't be NULL.
+ * @param [in]  ncerts			- uint32_t, Size of pem_certs array, can't be 0.
+ * @param [out] best_cert_index - uint32_t*, Index of best PCK in pem_certs array, can't be NULL, valid only if function returns PCK_CERT_SELECT_SUCCESS.
+ *
+ * @return @ref pck_cert_selection_res_t
+ *	- @ref PCK_CERT_SELECT_SUCCESS - found matching PCK, the PCK index is returned in best_cert_index.
+ *	- @ref PCK_CERT_SELECT_PCK_NOT_FOUND - raw TCB is lower than all input PCKs.
+ * Error occurred:
+ *	- @ref PCK_CERT_SELECT_INVALID_ARG
+ *	- @ref PCK_CERT_SELECT_INVALID_CERT
+ *	- @ref PCK_CERT_SELECT_INVALID_CERT_CPUSVN
+ *	- @ref PCK_CERT_SELECT_INVALID_CERT_VERSION
+ *	- @ref PCK_CERT_SELECT_UNEXPECTED
+ *	- @ref PCK_CERT_SELECT_INVALID_PCK_PCEID
+ *	- @ref PCK_CERT_SELECT_INVALID_PPID
+ *	- @ref PCK_CERT_SELECT_INVALID_FMSPC
+ *	- @ref PCK_CERT_SELECT_INVALID_TCB
+ *	- @ref PCK_CERT_SELECT_INVALID_TCB_PCEID
+ *	- @ref PCK_CERT_SELECT_UNSUPPORTED_TCB_TYPE
+ */
+pck_cert_selection_res_t pck_cert_select_with_component (
+	const cpu_svn_t* platform_svn,
+	uint16_t pce_isvsvn, 
+	uint16_t pce_id, 
+	const char* tcb_info, 
+	const char* pem_certs[], 
+	uint32_t ncerts, 
+	uint32_t* best_cert_index );
 #ifdef __cplusplus
 }
 #endif

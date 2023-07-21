@@ -43,8 +43,8 @@
 
 typedef quote3_error_t (*get_collateral_func)(const uint8_t *fmspc,
                                               uint16_t fmspc_size, const char *pck_ca,
-                                              tdx_ql_qve_collateral_t **pp_quote_collateral);
-typedef quote3_error_t (*free_collateral_func)(tdx_ql_qve_collateral_t *p_quote_collateral);
+                                              tdx_ql_qv_collateral_t **pp_quote_collateral);
+typedef quote3_error_t (*free_collateral_func)(tdx_ql_qv_collateral_t *p_quote_collateral);
 extern "C" tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context, void **pp_qpl_handle);
 
 void cleanup(tee_att_config_t *p_ctx) {
@@ -77,6 +77,18 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 QGS_LOG_INFO("create context in thread[%s]\n",
                             oss.str().c_str());
                 ptr.reset(p_ctx);
+                sgx_target_info_t qe_target_info;
+                uint8_t hash[32] = {0};
+                size_t hash_size = sizeof(hash);
+                  tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
+                                                 &hash_size,
+                                                 hash);
+                if (TEE_ATT_SUCCESS != tee_att_ret) {
+                    QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                    return {};
+                } else {
+                    QGS_LOG_INFO("tee_att_init_quote return success\n");
+                }
             } else {
                 QGS_LOG_ERROR("Cannot create context\n");
                 return {};
@@ -108,24 +120,29 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
                 QGS_LOG_ERROR("qgs_msg_inflate_get_quote_req return error\n");
             } else {
-
                 int retry = 1;
 
                 do {
-                    sgx_target_info_t qe_target_info;
-                    uint8_t hash[32] = {0};
-                    size_t hash_size = sizeof(hash);
-                    QGS_LOG_INFO("call tee_att_init_quote\n");
-                    tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
-                                                    &hash_size,
-                                                    hash);
-                    if (TEE_ATT_SUCCESS != tee_att_ret) {
-                        resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
-                        QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
-                    } else if (TEE_ATT_SUCCESS != (tee_att_ret = tee_att_get_quote_size(ptr.get(), &size))) {
+                    if (retry == 0) {
+                        sgx_target_info_t qe_target_info;
+                        uint8_t hash[32] = {0};
+                        size_t hash_size = sizeof(hash);
+                        QGS_LOG_INFO("call tee_att_init_quote\n");
+                        tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, true,
+                                                        &hash_size,
+                                                        hash);
+                        if (TEE_ATT_SUCCESS != tee_att_ret) {
+                            resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
+                            QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                        } else {
+                            QGS_LOG_INFO("tee_att_init_quote return Success\n");
+                        }
+                    }
+                    if (TEE_ATT_SUCCESS != (tee_att_ret = tee_att_get_quote_size(ptr.get(), &size))) {
                         resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
                         QGS_LOG_ERROR("tee_att_get_quote_size return 0x%x\n", tee_att_ret);
                     } else {
+                        QGS_LOG_INFO("tee_att_get_quote_size return Success\n");
                         quote_buf.resize(size);
                         tee_att_ret = tee_att_get_quote(ptr.get(),
                                                         p_report,
@@ -141,7 +158,7 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                             QGS_LOG_INFO("tee_att_get_quote return Success\n");
                         }
                     }
-                    // Only retry once when the return code is TEE_ATT_ATT_KEY_NOT_INITIALIZED
+                // Only retry once when the return code is TEE_ATT_ATT_KEY_NOT_INITIALIZED
                 } while (TEE_ATT_ATT_KEY_NOT_INITIALIZED == tee_att_ret && retry--);
             }
             if (resp_error_code == QGS_MSG_SUCCESS) {
@@ -161,7 +178,7 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
             uint32_t fsmpc_size;
             const uint8_t *p_pckca;
             uint32_t pckca_size;
-            tdx_ql_qve_collateral_t *p_collateral = NULL;
+            tdx_ql_qv_collateral_t *p_collateral = NULL;
             free_collateral_func free_func = NULL;
 
             qgs_msg_error_ret = qgs_msg_inflate_get_collateral_req(p_req,

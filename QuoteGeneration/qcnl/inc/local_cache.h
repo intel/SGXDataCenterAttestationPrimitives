@@ -46,14 +46,17 @@
 #include <time.h>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 #ifdef _MSC_VER
+#include <io.h>
+#include <windows.h>
 #else
+#include <dirent.h>
 #include <sys/stat.h>
 #endif
 
 using namespace std;
-
 static std::mutex mutex_cache_lock;
 
 template <typename Key, typename Value>
@@ -103,10 +106,15 @@ public:
     }
 };
 
+#pragma pack(push, 1)
+
 struct CacheItemHeader {
+    uint16_t version;
+    sgx_qpl_cache_type_t cache_type;
     time_t expiry;
 };
 
+#pragma pack(pop)
 // (key, value) pair, where
 //    Cache Key = sha256(URL)
 //    Cache value = CacheItemHeader || HTTP RESPONSE(HEADER SIZE || HEADER || BODY SIZE || BODY)
@@ -143,7 +151,10 @@ public:
                 wstring wskey(key.begin(), key.end());
                 const auto file_name = cache_dir_ + L"\\" + wskey;
 #else
-                const auto file_name = cache_dir_ + "/" + key;
+                string lowercase = key;
+                std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
+                               [](unsigned char c) { return std::tolower(c); });
+                const auto file_name = cache_dir_ + "/" + lowercase;
 #endif
                 ifstream ifs(file_name, std::ios::in | std::ios::binary);
                 if (ifs.is_open()) {
@@ -176,7 +187,10 @@ public:
             wstring wskey(key.begin(), key.end());
             const auto file_name = cache_dir_ + L"\\" + wskey;
 #else
-            const auto file_name = cache_dir_ + "/" + key;
+            string lowercase = key;
+            std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+            const auto file_name = cache_dir_ + "/" + lowercase;
 #endif
             ofstream ofs(file_name, ios::out | ios::binary);
             if (!ofs.is_open()) {
@@ -203,10 +217,77 @@ public:
             const auto file_name = cache_dir_ + L"\\" + wskey;
             ::DeleteFile(file_name.c_str());
 #else
-            const auto file_name = cache_dir_ + "/" + key;
+            string lowercase = key;
+            std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+            const auto file_name = cache_dir_ + "/" + lowercase;
             std::remove(file_name.c_str());
 #endif
         }
+    }
+
+#ifdef _WIN32
+    void process_file(const std::wstring &entry_path, int cache_type) {
+#else
+    void process_file(const std::string & entry_path, int cache_type) {
+#endif
+        std::ifstream ifs(entry_path, std::ios::in | std::ios::binary);
+        if (ifs.is_open()) {
+            CacheItemHeader cache_header;
+            ifs.read(reinterpret_cast<char *>(&cache_header), sizeof(cache_header));
+            if (ifs && cache_header.cache_type & cache_type) {
+                ifs.close();
+#ifdef _WIN32
+                ::DeleteFile(entry_path.c_str());
+#else
+                std::remove(entry_path.c_str());
+#endif
+            } else {
+                ifs.close();
+            }
+        }
+    }
+
+    void clear_cache(uint32_t cache_type) {
+        // Lock the cache mutex
+        std::lock_guard<std::mutex> lock(mutex_cache_lock);
+
+        if (cache_dir_.empty())
+            return;
+
+#ifdef _WIN32
+        std::wstring search_path = cache_dir_ + L"\\*.*";
+        WIN32_FIND_DATA fd;
+        HANDLE hFind = FindFirstFile(search_path.c_str(), &fd);
+
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    std::wstring entry_path = cache_dir_ + L"\\" + fd.cFileName;
+                    process_file(entry_path, cache_type);
+                }
+            } while (FindNextFile(hFind, &fd));
+            FindClose(hFind);
+        } else {
+            qcnl_log(SGX_QL_LOG_ERROR, "Could not open directory: %s \n", cache_dir_.c_str());
+        }
+#else
+        DIR *dir;
+        struct dirent *ent;
+        struct stat file_stat;
+
+        if ((dir = opendir(cache_dir_.c_str())) != nullptr) {
+            while ((ent = readdir(dir)) != nullptr) {
+                std::string entry_path = cache_dir_ + "/" + ent->d_name;
+                if (stat(entry_path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
+                    process_file(entry_path, cache_type);
+                }
+            }
+            closedir(dir);
+        } else {
+            qcnl_log(SGX_QL_LOG_ERROR, "Could not open directory: %s \n", cache_dir_.c_str());
+        }
+#endif
     }
 
 protected:
@@ -235,7 +316,7 @@ protected:
         if (wenv_azdcap_cache != L"" && wenv_azdcap_cache[0] != 0) {
             dirname = wenv_azdcap_cache;
         } else if (wenv_home != L"" && wenv_home[0] != 0) {
-            dirname = wenv_home.append(L"..\\..\\LocalLow");
+            dirname = wenv_home.append(L"\\..\\LocalLow");
         }
 
         dirname += application_name;

@@ -41,6 +41,12 @@ using namespace intel::sgx::dcap::parser::json;
 #include <algorithm>
 using namespace std;
 
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
+
 
 /*
  * Public constructor documented in header.
@@ -118,7 +124,7 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 		return ret;
 
 	// PCEID in JSON is big BE, convert to LE and compare with input PCEID
-	int16_t tcbPCEID = (this->tcbInfo.getPceId ()[0] << 8) + this->tcbInfo.getPceId ()[1];
+	int16_t tcbPCEID = static_cast<int16_t>((this->tcbInfo.getPceId ()[0] << 8) + this->tcbInfo.getPceId ()[1]);
 	if ( tcbPCEID != this->pceID )
 	{
 		return PCK_CERT_SELECT_INVALID_TCB_PCEID;
@@ -155,7 +161,7 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 		{
 			return clean_pcks_return ( PCK_CERT_SELECT_INVALID_CERT_VERSION );
 		}
-
+#ifndef PCK_CERT_SELECTION_WITH_COMPONENT
 		// 4. verify CPUSVN match TCB Components
 		// in depth verification, valid PCK are expected to have match
 		// decompose CPUSVN based on algorithm (TCBType) and compare to TCB Components
@@ -165,7 +171,7 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 		{
 			return clean_pcks_return ( PCK_CERT_SELECT_INVALID_CERT_CPUSVN );
 		}
-
+#endif
 		// the reason PCEID, PPID and FMSPC are extracted here and not in PckCertificate parsing
 		// is that these fields are only used here for PCK validation, and not used after that for sort
 
@@ -174,7 +180,7 @@ pck_cert_selection_res_t PCKSorter::parse_input_tcb_and_pcks ( void )
 
 		// check PCE ID value
 		vector<uint8_t> pceid = pckCert->getPceId ();
-		int16_t pckPCEID = ( pceid[0] << 8 ) + pceid[1];
+		int16_t pckPCEID = static_cast<int16_t>(( pceid[0] << 8 ) + pceid[1]);
 		if ( this->pceID != pckPCEID )
 		{
 			return clean_pcks_return ( PCK_CERT_SELECT_INVALID_PCK_PCEID );
@@ -227,7 +233,7 @@ bool PCKSorter::equal_bytes ( const vector < uint8_t >& left, const vector < uin
 	{
 		return false;
 	}
-	for ( int i = 0; i < left.size (); i++ )
+	for ( unsigned int i = 0; i < left.size (); i++ )
 	{
 		if ( left[i] != right[i] )
 		{
@@ -312,7 +318,7 @@ void PCKSorter::sort_to_buckets ( void )
 	// iterate all PCKs
 	for ( uint32_t pck_index = 0; pck_index < this->pcks.size (); pck_index++ )
 	{
-		bool found = false;
+		bool UNUSED found = false;
 
 		// default bucket is the last (all TCB Levels are higher than current PCK)
 		size_t bucket_index = this->buckets.size () - 1;
@@ -379,18 +385,23 @@ void PCKSorter::sort_to_buckets ( void )
 pck_cert_selection_res_t PCKSorter::find_best_pck ( uint32_t* best_cert_index )
 {
 	// read raw CPUSVN into vector and decompose to TCB Components
+	#ifndef PCK_CERT_SELECTION_WITH_COMPONENT
 	const vector<uint8_t> rawCPUSVN ( this->platformSvn.bytes, this->platformSvn.bytes + CPUSVN_SIZE );
-	
+	#else
+	const vector<uint8_t> components ( this->platformSvn.bytes, this->platformSvn.bytes + CPUSVN_SIZE );
+	#endif
 	// only tcbInfo::V2,tcbInfo::v3 supported. TcbType field not present, default to 0
-	int tcbType = 0;
+	int UNUSED tcbType = 0;
 	if ( this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V2 ) &&
 	  this->tcbInfo.getVersion () != static_cast<unsigned int>( TcbInfo::Version::V3 ) )
 	{
 		return PCK_CERT_SELECT_INVALID_TCB;
 	}
 	tcbType = this->tcbInfo.getTcbType ();
+	#ifndef PCK_CERT_SELECTION_WITH_COMPONENT
 	vector < uint8_t > components;
 	this->tcbmgr.decompose_cpusvn_components(rawCPUSVN, components);
+	#endif
 	
 	// iterate through ordered buckets, find first PCK with TCB lower than raw TCB
 	for ( size_t bucket_index = 0; bucket_index < this->buckets.size(); bucket_index++ )

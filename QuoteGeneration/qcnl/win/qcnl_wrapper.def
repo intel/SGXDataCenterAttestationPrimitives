@@ -17,3 +17,6 @@ EXPORTS
     sgx_qcnl_set_logging_callback     @14
     tdx_qcnl_get_tcbinfo              @15
     tdx_qcnl_free_tcbinfo             @16
+    sgx_qcnl_clear_cache              @17
+    sgx_qcnl_global_init              @18
+    sgx_qcnl_global_cleanup           @19

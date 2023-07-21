@@ -39,20 +39,20 @@
 #ifdef _MSC_VER
 #include <Windows.h>
 #include <tchar.h>
-#include "sgx_dcap_ql_wrapper.h"
-#include "Enclave_u.h"
 #else
 #include <dlfcn.h>
 #include <unistd.h>
+#endif
 #include "id_enclave_u.h"
 #include "pce_u.h"
-#endif
 #include "sgx_urts.h"     
 #include "utility.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
 #endif
+// Use secure HTTPS certificate or not
+extern bool g_use_secure_cert ;
 
 
 #ifdef DEBUG
@@ -64,10 +64,9 @@
 #endif
 
 #ifdef  _MSC_VER                
-#define TOOL_ENCLAVE_NAME _T("pck_id_retrieval_tool_enclave.signed.dll")
+#define PCE_ENCLAVE_NAME  _T("pce.signed.dll")
+#define ID_ENCLAVE_NAME   _T("id_enclave.signed.dll")
 #define SGX_URTS_LIBRARY _T("sgx_urts.dll")
-#define SGX_DCAP_QUOTE_GENERATION_LIBRARY _T("sgx_dcap_ql.dll")
-#define SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME _T("dcap_quoteprov.dll")
 #define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY _T("mp_uefi.dll")
 #define FINDFUNCTIONSYM   GetProcAddress
 #define CLOSELIBRARYHANDLE  FreeLibrary
@@ -111,10 +110,6 @@ typedef sgx_status_t (SGXAPI* sgx_get_target_info_func_t)(const sgx_enclave_id_t
 #ifdef _MSC_VER
 #pragma warning(disable: 4201)    // used to eliminate `unused variable' warning
 #define UNUSED(val) (void)(val)
-
-typedef quote3_error_t (*sgx_qe_get_target_info_func_t)(sgx_target_info_t* p_qe_target_info);
-typedef quote3_error_t (*sgx_qe_get_quote_size_func_t)(uint32_t* p_quote_size);
-typedef quote3_error_t (*sgx_qe_get_quote_func_t)(const sgx_report_t* p_app_report,uint32_t quote_size, uint8_t* p_quote);
 
 #endif 
 #include "MPUefi.h"
@@ -290,50 +285,6 @@ void unload_enclave(sgx_enclave_id_t* p_eid)
     p_sgx_destroy_enclave(*p_eid);
 }
 
-
-#if defined(_MSC_VER)
-bool create_app_enclave_report(sgx_target_info_t& qe_target_info, sgx_report_t *app_report)
-{
-    bool ret = true;
-    uint32_t retval = 0;
-    sgx_status_t sgx_status = SGX_SUCCESS;
-    sgx_enclave_id_t eid = 0;
-
-    // try to sgx_urts library to create enclave.
-    sgx_urts_handle = LoadLibrary(SGX_URTS_LIBRARY);
-    if (sgx_urts_handle == NULL) {
-        printf("ERROR: didn't find the sgx_urts.dll library, please make sure you have installed PSW installer package. \n");
-        return false;
-    }
-
-    ret = load_enclave(TOOL_ENCLAVE_NAME, &eid);
-    if (ret == false) {
-        goto CLEANUP;
-    }
-
-    // Get the app enclave report targeting the QE3
-    sgx_status = enclave_create_report(eid,
-        &retval,
-        &qe_target_info,
-        app_report);
-    if ((SGX_SUCCESS != sgx_status) || (0 != retval)) {
-        printf("\nCall to get_app_enclave_report() failed\n");
-        ret = false;
-        goto CLEANUP;
-    }
-
-CLEANUP:
-    if (eid != 0) {
-        unload_enclave(&eid);
-    }
-
-    if(sgx_urts_handle) {
-        CLOSELIBRARYHANDLE(sgx_urts_handle);
-    }
-    return ret;
-}
-
-#endif
 
 // for multi-package platform, get the platform manifet
 // return value:
@@ -511,98 +462,6 @@ uefi_status_t set_registration_status()
 
 
 
-// generate ecdsa quote
-// return value:
-//  0: successfully generate the ecdsa quote
-// -1: error happens.
-
-#ifdef _MSC_VER
-int generate_quote(uint8_t **quote_buffer, uint32_t& quote_size)
-{
-    int ret = -1;
-    quote3_error_t qe3_ret = SGX_QL_SUCCESS;
-    sgx_target_info_t qe_target_info;
-    sgx_report_t app_report;
-
-    // try to load quote provide library.
-    HINSTANCE quote_provider_library_handle = LoadLibrary(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
-    if (quote_provider_library_handle != NULL) {
-        PRINT_MESSAGE("Found the Quote provider library. \n");
-    }
-    else {
-        printf("Warning: didn't find the quote provider library. \n");
-    }  
-    
-    // try to sgx dcap quote generation library to generate quote.
-    HINSTANCE sgx_dcap_ql_handle = LoadLibrary(SGX_DCAP_QUOTE_GENERATION_LIBRARY);
-    if (sgx_dcap_ql_handle == NULL) {
-        printf("ERROR: didn't find the sgx_dcap_ql.dll library, please make sure you have installed DCAP INF installer package. \n");
-        CLOSELIBRARYHANDLE(quote_provider_library_handle);
-        return ret;
-    }
-    
-    sgx_qe_get_target_info_func_t p_sgx_qe_get_target_info = (sgx_qe_get_target_info_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_target_info");
-    sgx_qe_get_quote_size_func_t p_sgx_qe_get_quote_size = (sgx_qe_get_quote_size_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote_size");
-    sgx_qe_get_quote_func_t p_sgx_qe_get_quote = (sgx_qe_get_quote_func_t)FINDFUNCTIONSYM(sgx_dcap_ql_handle, "sgx_qe_get_quote");
-    if (p_sgx_qe_get_target_info == NULL || p_sgx_qe_get_quote_size == NULL || p_sgx_qe_get_quote == NULL) {
-        printf("ERROR: Can't find the quote generation functions in sgx dcap quote generation shared library.\n");
-        if (quote_provider_library_handle != NULL) {
-            CLOSELIBRARYHANDLE(quote_provider_library_handle);
-        }
-        if (sgx_dcap_ql_handle != NULL) {
-            CLOSELIBRARYHANDLE(sgx_dcap_ql_handle);
-        }
-        return ret;
-    }
-    do {
-        PRINT_MESSAGE("\nStep1: Call sgx_qe_get_target_info:");
-        qe3_ret = p_sgx_qe_get_target_info(&qe_target_info);
-        if (SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in sgx_qe_get_target_info. 0x%04x\n", qe3_ret);
-            break;
-        }
-
-        PRINT_MESSAGE("succeed! \nStep2: Call create_app_report:");
-        if (true != create_app_enclave_report(qe_target_info, &app_report)) {
-            printf("\nCall to create_app_report() failed\n");
-            break;
-        }
-
-        PRINT_MESSAGE("succeed! \nStep3: Call sgx_qe_get_quote_size:");
-        qe3_ret = p_sgx_qe_get_quote_size(&quote_size);
-        if (SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in sgx_qe_get_quote_size. 0x%04x\n", qe3_ret);
-            break;
-        }
-
-        PRINT_MESSAGE("succeed!");
-        *quote_buffer = (uint8_t*)malloc(quote_size);
-        if (NULL == *quote_buffer) {
-            printf("Couldn't allocate quote_buffer\n");
-            break;
-        }
-        memset(*quote_buffer, 0, quote_size);
-
-        // Get the Quote
-        PRINT_MESSAGE("\nStep4: Call sgx_qe_get_quote:");
-        qe3_ret = p_sgx_qe_get_quote(&app_report, quote_size, *quote_buffer);
-        if (SGX_QL_SUCCESS != qe3_ret) {
-            printf("Error in sgx_qe_get_quote. 0x%04x\n", qe3_ret);
-            break;
-        }
-        PRINT_MESSAGE("succeed!\n");
-        ret = 0;
-    } while (0);
-
-    if (quote_provider_library_handle != NULL) {
-        CLOSELIBRARYHANDLE(quote_provider_library_handle);
-    }
-    if (sgx_dcap_ql_handle != NULL) {
-        CLOSELIBRARYHANDLE(sgx_dcap_ql_handle);
-    }
-    return ret;
-}
-#else
 int collect_data(uint8_t **pp_data_buffer)
 {
     sgx_status_t sgx_status = SGX_SUCCESS;
@@ -767,7 +626,6 @@ CLEANUP:
     return ret;
 
 }
-#endif
 
 bool is_valid_proxy_type(std::string& proxy_type) {
     if (proxy_type.compare("DEFAULT") == 0 ||
@@ -782,9 +640,12 @@ bool is_valid_proxy_type(std::string& proxy_type) {
 }
 
 bool is_valid_use_secure_cert(std::string& use_secure_cert) {
-    if (use_secure_cert.compare("TRUE") == 0 ||
-        use_secure_cert.compare("FALSE") == 0 ) {
+    if (use_secure_cert.compare("TRUE") == 0 ) {
         return true;
+    }
+    else if(use_secure_cert.compare("FALSE") == 0) {
+        g_use_secure_cert = false;
+	return true;
     }
     else {
         return false;

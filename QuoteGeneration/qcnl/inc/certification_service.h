@@ -90,6 +90,10 @@ public:
     CertificationService(const char *custom_param);
     ~CertificationService();
 
+    static sgx_qcnl_error_t setup_quote_config(const string &tcbm,
+                                               const string &pck_cert,
+                                               const string &certchain,
+                                               sgx_ql_config_t **pp_quote_config);
     sgx_qcnl_error_t get_pck_cert_chain(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
                                         sgx_ql_config_t **pp_quote_config);
     sgx_qcnl_error_t get_pck_crl_chain(const char *ca,

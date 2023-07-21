@@ -76,7 +76,7 @@ qve_wrapper:
 
 
 .PHONY: deb_sgx_dcap_ql_pkg
-deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic qve_wrapper
+deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic
 	./installer/linux/deb/libsgx-dcap-ql/build.sh
 
 .PHONY: deb_sgx_dcap_quote_verify_pkg

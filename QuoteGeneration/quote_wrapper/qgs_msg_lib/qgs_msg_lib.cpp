@@ -800,15 +800,6 @@ ret_point:
     return ret;
 }
 
-/**
- * @brief Get the message type from the serialized message buffer.
- *
- * @param p_serialized_msg Pointer to the serialized message buffer.
- * @param size Size of the serialized message buffer.
- * @param p_type Pointer to a uint32_t variable to store the message type.
- *
- * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
- */
 uint32_t qgs_msg_get_type(const uint8_t *p_serialized_msg, uint32_t size, uint32_t *p_type) {
     qgs_msg_error_t ret = QGS_MSG_SUCCESS;
     const qgs_msg_header_t *p_header = (const qgs_msg_header_t *)p_serialized_msg;
@@ -832,21 +823,6 @@ ret_point:
     return ret;
 }
 
-/**
- * @brief Generates a GET_PLATFORM_INFO request message
- *
- * This function generates a GET_PLATFORM_INFO request message and returns it
- * as a byte array.
- *
- * @param pp_req A pointer to a pointer to the generated request message byte
- *               array. The caller is responsible for freeing this memory after
- *               use.
- * @param p_req_size A pointer to the size of the generated request message in
- *                   bytes. Upon successful execution, the function updates this
- *                   value to reflect the size of the generated message.
- *
- * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
- */
 qgs_msg_error_t qgs_msg_gen_get_platform_info_req(
     uint8_t **pp_req, uint32_t *p_req_size)
 {
@@ -878,14 +854,6 @@ ret_point:
     return ret;
 }
 
-/**
- * @brief Inflate a serialized GET_PLATFORM_INFO_REQ message and validate it.
- *
- * @param p_serialized_req A pointer to the serialized GET_PLATFORM_INFO_REQ
- *                         message.
- * @param size The size of the serialized message in bytes.
- * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
- */
 qgs_msg_error_t qgs_msg_inflate_get_platform_info_req(
     const uint8_t *p_serialized_req, uint32_t size)
 {
@@ -929,22 +897,6 @@ ret_point:
     return ret;
 }
 
-/**
- * @brief Generates a response message with the given information about the platform.
- *
- * @param tdqe_isvsvn ISVSVN of the TDQE enclave in the platform.
- * @param pce_isvsvn ISVSVN of the PCE enclave in the platform.
- * @param p_platform_id Pointer to an array of bytes that contains the platform
- *                      identification.
- * @param platform_id_size The size in bytes of the platform identification.
- * @param p_cpusvn Pointer to an array of bytes that contains the CPUSVN.
- * @param cpusvn_size The size in bytes of the CPUSVN.
- * @param pp_resp Pointer to a pointer to the response message buffer.
-                  The caller is responsible for freeing this memory after use.
- * @param p_resp_size Pointer to the size of the response message buffer.
- *
- * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
- */
 qgs_msg_error_t qgs_msg_gen_get_platform_info_resp(
     uint16_t tdqe_isvsvn, uint16_t pce_isvsvn,
     const uint8_t *p_platform_id, uint32_t platform_id_size,
@@ -1012,19 +964,6 @@ ret_point:
     return ret;
 }
 
-/**
- * @brief Extracts platform information from a serialized response message.
- *
- * @param p_serialized_resp Pointer to the serialized response message.
- * @param size The size of the serialized response message.
- * @param p_tdqe_isvsvn Pointer to the TDQE ISVSVN.
- * @param p_pce_isvsvn Pointer to the PCE ISVSVN.
- * @param pp_platform_id Pointer to a pointer to the platform ID.
- * @param p_platform_id_size Pointer to the size of the platform ID.
- * @param pp_cpusvn Pointer to a pointer to the CPUSVN.
- * @param p_cpusvn_size Pointer to the size of the CPUSVN.
- * @return qgs_msg_error_t The error code, QGS_MSG_SUCCESS on success.
- */
 qgs_msg_error_t qgs_msg_inflate_get_platform_info_resp(
     const uint8_t *p_serialized_resp, uint32_t size,
     uint16_t *p_tdqe_isvsvn, uint16_t *p_pce_isvsvn,

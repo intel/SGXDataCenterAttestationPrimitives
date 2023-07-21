@@ -40,6 +40,7 @@ const responseUtils = require('../util/responseUtils');
 const httpStatusCodes = require('./httpStatusCodes');
 const detailedErrorString = require('./detailedErrorString');
 const { HttpError, HttpNoRetryError, RuntimeError } = require('./restClientErrors');
+const { AxiosError } = require('axios');
 
 class RequestHandler {
 
@@ -62,18 +63,6 @@ class RequestHandler {
 
         return explicitHeaders;
     }
-
-    async prepareRequestOptions(method, requestUrl, headers) {
-        const options = _.clone(this.config.options);
-        options.protocol = requestUrl.protocol;
-        options.method = method;
-        options.host = this.config.host;
-        options.port = this.config.port;
-        options.path = requestUrl.path;
-        options.headers = this.removeHeaderContentLength(headers);
-        return options;
-    }
-
     /* Response status */
 
     isSuccessStatusCode(statusCode) {
@@ -101,51 +90,56 @@ class RequestHandler {
     }
 
     async sendRequest(logger, method, path, body, headers, queryParams, isResponseBinary = false) {
-        const requestUrl = url.parse(url.format({
+        const requestUrl = url.format({
             protocol: this.config.protocol,
             hostname: this.config.host,
             port:     this.config.port,
             pathname: path,
             query:    queryParams
-        }));
-        const self = this;
-        const options = await this.prepareRequestOptions(method, requestUrl, headers);
-        logger.info(`Sending request to: ${requestUrl.href}`);
+        });
+        const options = await {
+            ...this.config.options,
+            method,
+            headers: this.removeHeaderContentLength(headers),
+            url:     requestUrl
+        };
+        logger.info(`Sending request to: ${requestUrl}`);
 
-        return nodeRequest(options, body, isResponseBinary)
-            .then(async res => {
+        try {
+            const res = await nodeRequest(options, body, isResponseBinary);
+            if (responseUtils.statusCodeNotExists(res)) {
+                throw new RuntimeError('Empty status code received');
+            }
 
-                if (responseUtils.statusCodeNotExists(res)) {
-                    throw new RuntimeError('Empty status code received');
-                }
+            if (!this.isSuccessStatusCode(res.statusCode)) {
+                throw new HttpError(`Response status unrecognized ${res.statusCode}`, res.statusCode, res.body, res.headers);
+            }
+            const result = {
+                status:  responseUtils.getStatusCodeSafely(res),
+                body:    res.body,
+                headers: res.headers
+            };
 
-                if (!self.isSuccessStatusCode(res.statusCode)) {
-                    throw new HttpError(`Response status unrecognized ${res.statusCode}`, res.statusCode, res.body, res.headers);
-                }
-                const result = {
-                    status:  responseUtils.getStatusCodeSafely(res),
-                    body:    res.body,
-                    headers: res.headers
-                };
+            if (result.headers !== undefined && 'request-id' in result.headers && logger.context.reqId !== `[reqId=${result.headers['request-id']}]`) {
+                logger.info(`Related request ID: ${result.headers['request-id']}`);
+            }
+            /* istanbul ignore else */
+            if (logger.isTraceEnabled()) {
+                logger.trace('Returned response:', result.status, JSON.stringify(result.body));
+            }
 
-                if (result.headers !== undefined && 'request-id' in result.headers && logger.context.reqId !== `[reqId=${result.headers['request-id']}]`) {
-                    logger.info(`Related request ID: ${result.headers['request-id']}`);
-                }
-                /* istanbul ignore else */
-                if (logger.isTraceEnabled()) {
-                    logger.trace('Returned response:', result.status, JSON.stringify(result.body));
-                }
+            return result;
+        }
+        catch (e) {
+            const error = (e instanceof AxiosError) ? new RuntimeError(e.message, { code: e.code, stack: e.stack }) : e;
 
-                return result;
-            })
-            .catch(async error => {
-                logger.error(`Error while trying to ${method} ${requestUrl.href}: ${detailedErrorString(error)}`);
-                if (error instanceof HttpError || error instanceof HttpNoRetryError) {
-                    throw error;
-                }
+            logger.error(`Error while trying to ${method} ${requestUrl}: ${detailedErrorString(error)}`);
+            if (error instanceof HttpError || error instanceof HttpNoRetryError || error instanceof RuntimeError) {
+                throw error;
+            }
 
-                throw new RuntimeError(error.message, { code: error.code, stack: error.stack });
-            });
+            throw new RuntimeError(error.message, { code: error.code, stack: error.stack });
+        }
     }
 
     async sendRequestWithRetries(logger, method, path, jsonBody, headers, queryParams, isResponseBinary = false) {

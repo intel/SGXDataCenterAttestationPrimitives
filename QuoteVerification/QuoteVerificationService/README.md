@@ -168,3 +168,32 @@ curl --cacert ./configuration-default/certificates/qvs-cert.pem https://localhos
 |  QVS_ATTESTATION_REPORT_SIGNING_CA_CERTIFICATE |   | URL encoded CA certificate (in PEM format) of QVS_ATTESTATION_REPORT_SIGNING_CERTIFICATE. As part of chain it will be returned in `X-IASReport-Signing-Certificate` header to enable verifying report. |
 |  QVS_ATTESTATION_REPORT_SIGNING_CERTIFICATE |   |  URL encoded certificate (in PEM format) that Verification Crypto Service uses to sign reports. Also returned as part of chain in `X-IASReport-Signing-Certificate` header. |
 |  QVS_TRUSTED_ROOT_PUBLIC_KEY | 3059301306072a8648ce3d020106082a8648ce3d030107034200040ba9c4c0c0c86193a3fe23d6b02cda10a8bbd4e88e48b4458561a36e705525f567918e2edc88e40d860bd0cc4ee26aacc988e505a953558c453f6b0904ae7394  | Public key of CA certificate that is root for PCK certificate chain  |
+
+## API Documentation
+
+Services API is documented in:
+
+ * [swagger.json](swagger.json) for Quote Verification Service
+ * [samples/simple-signing-service/swagger.json](samples/simple-signing-service/swagger.json) for Simple Signing Service.
+
+You can paste it on [https://editor.swagger.io/](https://editor.swagger.io/) site for visualization.
+
+
+### Attestation Verification Report structure
+
+| Field | Type | Optionality | Description |
+|---|---|---|---|
+| id | String | Mandatory | Unique identifier |
+| timestamp | String | Mandatory | Date and UTC time the report was created, compliant to ISO 8601 standard. |
+| version | Number | Mandatory | Integer that denotes version of the report. |
+| isvQuoteStatus | String | Mandatory | One of the following values: <br><ul><li>OK – ECDSA signature of the ISV enclave QUOTE was verified correctly and platform TCB status is up to date.</li><li>SIGNATURE_INVALID – ECDSA signature of the ISV enclave QUOTE was invalid.</li><li>REVOKED – PCK key has been directly revoked or TCB Status in TCB Info.</li><li>TCB_OUT_OF_DATE – TCB level of SGX platform is outdated but the platform has not been compromised and thus it is not revoked. It is up to the Service Provider to decide whether or not to continue providing services (perhaps with degraded service level) to SGX platforms with lower TCB level (e.g. for users experience reason).</li><li>TCB_OUT_OF_DATE_AND_CONFIGURATION_NEEDED (from TCB Status in TCB Info) </li><li>CONFIGURATION_NEEDED – the EPID signature of the ISV enclave QUOTE has been verified correctly but additional configuration of SGX platform may be needed. The platform has not been identified as compromised and thus it is not revoked. It is up to the Service Provider to decide whether or not to trust the content of the QUOTE.</li><li>SW_HARDENING_NEEDED – the EPID signature of the ISV enclave QUOTE has been verified correctly but additional SW Hardening of SGX Enclaves running on the platform may be needed. The platform has not been identified as compromised and thus it is not revoked. It is up to the Service Provider to decide whether or not to trust the content of the QUOTE.</li><li>CONFIGURATION_AND_SW_HARDENING_NEEDED – the EPID signature of the ISV enclave QUOTE has been verified correctly but additional configuration and SW Hardening of SGX Enclaves running on the platform may be needed. The platform has not been identified as compromised and thus it is not revoked. It is up to the Service Provider to decide whether or not to trust the content of the QUOTE.</li></ul> |
+| isvQuoteBody | String | Mandatory | Base 64-encoded BODY of QUOTE structure (i.e. QUOTE structure without signature related fields: SIG_LEN and SIG) as received in Attestation Evidence Payload. ECDSA Quote Header + Body (Enclave report or TD report) |
+| nonce | String | Optional | Nonce value from Attestation Evidence Payload. It will only be present if nonce field is provided in Attestation Evidence Payload. |
+| advisoryURL | String | Optional | Intel advisory page that provides additional information on SGX-related security issues that affect attested platform. This field will only be present if isvEnclaveQuoteStatus is equal to one of <ul><li>OK</li><li>GROUP_OUT_OF_DATE</li><li>CONFIGURATION_NEEDED</li><li>SW_HARDENING_NEEDED</li><li>CONFIGURATION_AND_SW_HARDENING_NEEDED</li></ul> |
+| advisoryIDs | Array of strings | Optional | Array of Advisory IDs (e.g. ["INTEL-SA-00075","INTEL-SA-00076"]) that can be searched under URL included in advisoryURL). Advisory IDs represent articles providing insight into SGX-related security issues that affect attested platform. This field will only be present if isvEnclaveQuoteStatus is equal to one of <ul><li>OK</li><li>GROUP_OUT_OF_DATE</li><li>CONFIGURATION_NEEDED</li><li>SW_HARDENING_NEEDED</li><li>CONFIGURATION_AND_SW_HARDENING_NEEDED</li></ul> |
+| tcbEvaluationDataNumber | Number | Mandatory | It can be used to make sure that current attestations are done with updated TCB   Infos. |
+| tcbDate | String | Mandatory | Date and UTC time of TCB date from TCB Info, compliant to ISO 8601 standard. |
+| tcbComponentsOutOfDate | Array of objects | Optional | List of components that are considered out of date. |
+| teeType | String | Mandatory | One of the following values: <ul><li>SGX</li><li>TDX</li></ul> |
+| attestationType | String | Mandatory | One of the following values: <ul><li>ECDSA</li></ul> |
+| configuration | Array of strings | Optional | Possible values in the array: <ul><li>Dynamic platform</li><li>Cached keys</li><li>SMT enabled</li></ul> |

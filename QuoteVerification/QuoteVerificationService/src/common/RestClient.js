@@ -45,7 +45,7 @@ const readFileSafely = require('../common/readFileSafely');
 
 class RestClient {
 
-    constructor(type, host, port, retryCount, retryDelay, factor, certFile, keyFile, caCertDirectories, proxy, servername) {
+    constructor(type, host, port, retryCount, retryDelay, factor, certFile, keyFile, caCertDirectories, proxy, servername, keepAlive = true) {
         this.cfg = {
             address:  'None', // Placeholder, will be populated with first request
             protocol: (type === tlsType.None) ? 'http' : 'https',
@@ -57,43 +57,46 @@ class RestClient {
             proxy,
             servername
         };
-        this.prepareOptions(type, certFile, keyFile, caCertDirectories);
+        this.prepareOptions(type, certFile, keyFile, caCertDirectories, keepAlive);
         this.initializeRequestHandler();
     }
 
-    prepareOptions(type, certFile, keyFile, caCertDirectories) {
+    prepareOptions(type, certFile, keyFile, caCertDirectories, keepAlive) {
         const ca = getCACertificatesSync(caCertDirectories).map(file => readFileSafely(file, 'utf8'));
 
-        this.agentOptions = {
-            keepAlive:  true,
-            timeout:    config.service.restClientTimeout,
+        const agentOptions = {
+            keepAlive,
             scheduling: 'lifo',
         };
-
-        const proxy = this.cfg.proxy;
-        let agent;
-        if (proxy) {
-            agent = new HttpsProxyAgent(proxy);
-        }
-        else {
-            agent = (type === tlsType.None) ? new http.Agent(this.agentOptions) : new https.Agent(this.agentOptions);
-        }
-
-        const options = {
+        const httpsAgentOptions = {
+            ...agentOptions,
             ca,
+            rejectUnauthorized: type === tlsType.MTLS,
+            requestCert:        type === tlsType.MTLS,
             maxVersion:         tlsType.MAX_SECURE_PROTOCOL,
             minVersion:         tlsType.MIN_SECURE_PROTOCOL,
             ciphers:            tlsType.CIPHERS,
-            requestCert:        type === tlsType.MTLS,
-            rejectUnauthorized: type === tlsType.MTLS,
             strictSSL:          true,
-            agent
         };
-
         if (type === tlsType.MTLS) {
-            options.cert = readFileSafely(certFile, 'utf8');
-            options.key = readFileSafely(keyFile, 'utf8');
-            options.servername = this.cfg.servername;
+            httpsAgentOptions.cert = readFileSafely(certFile, 'utf8');
+            httpsAgentOptions.key = readFileSafely(keyFile, 'utf8');
+            httpsAgentOptions.servername = this.cfg.servername;
+        }
+
+        const proxy = this.cfg.proxy;
+
+        const options = {
+            timeout: config.service.restClientTimeout
+        };
+        if (proxy) {
+            options.httpsAgent = new HttpsProxyAgent(proxy);
+        }
+        else if (type === tlsType.None) {
+            options.httpAgent = new http.Agent(agentOptions);
+        }
+        else {
+            options.httpsAgent =  new https.Agent(httpsAgentOptions);
         }
 
         this.cfg.options = options;

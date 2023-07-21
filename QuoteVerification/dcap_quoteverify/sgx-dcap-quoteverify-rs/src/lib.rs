@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-//! Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) SGX DCAP)
+//! Intel®️ Software Guard Extensions Data Center Attestation Primitives (Intel®️ SGX DCAP)\
 //! Rust wrapper for Quote Verification Library
 //! ================================================
 //!
@@ -40,7 +40,7 @@ pub use qvl_sys::quote3_error_t;
 pub use qvl_sys::sgx_ql_request_policy_t;
 pub use qvl_sys::sgx_ql_qv_supplemental_t;
 pub use qvl_sys::sgx_ql_qve_collateral_t;
-pub use qvl_sys::tdx_ql_qve_collateral_t;
+pub use qvl_sys::tdx_ql_qv_collateral_t;
 pub use qvl_sys::sgx_ql_qv_result_t;
 pub use qvl_sys::sgx_ql_qe_report_info_t;
 pub use qvl_sys::sgx_qv_path_type_t;
@@ -242,7 +242,7 @@ pub fn tdx_qv_get_quote_supplemental_data_size() -> Result<u32, quote3_error_t> 
 ///
 pub fn tdx_qv_verify_quote(
     quote: &[u8],
-    quote_collateral: Option<&tdx_ql_qve_collateral_t>,
+    quote_collateral: Option<&tdx_ql_qv_collateral_t>,
     expiration_check_date: i64,
     qve_report_info: Option<&mut sgx_ql_qe_report_info_t>,
     supplemental_data_size: u32,

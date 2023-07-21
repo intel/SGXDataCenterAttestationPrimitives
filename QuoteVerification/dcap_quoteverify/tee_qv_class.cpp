@@ -312,7 +312,7 @@ quote3_error_t tdx_qv_trusted::tee_verify_evidence(
         &qv_ret,
         p_quote,
         quote_size,
-        (const tdx_ql_qve_collateral_t*) p_quote_collateral,
+        (const tdx_ql_qv_collateral_t*) p_quote_collateral,
         expiration_check_date,
         p_collateral_expiration_status,
         (sgx_ql_qv_result_t *)p_quote_verification_result,

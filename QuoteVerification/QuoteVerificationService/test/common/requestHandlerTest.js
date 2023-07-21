@@ -68,14 +68,8 @@ class TestCaseSetup {
         };
 
         const options = {
-            ca:                 [],
-            secureProtocol:     'TLSv1_2_method',
-            ciphers:            'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256',
-            requestCert:        true,
-            rejectUnauthorized: true,
-            agent:              false,
-            strictSSL:          false,
-            checkForDnsChanges: () => {}
+            timeout:    5000,
+            httpsAgent: {},
         };
 
         this.config = {
@@ -125,13 +119,10 @@ class TestCaseSetup {
 
     get expectedOptions() {
         const options = _.clone(this.config.options);
-        options.protocol = this.default.protocol + ':';
         options.method = this.default.method;
         options.headers = this.default.headersSent;
         delete options.headers['content-length'];
-        options.host = this.config.host;
-        options.port = this.config.port;
-        options.path = this.default.path + '?q=value';
+        options.url = `${this.default.protocol}://${this.config.host}:${this.config.port}${this.default.path}?q=value`;
         return options;
     }
 }

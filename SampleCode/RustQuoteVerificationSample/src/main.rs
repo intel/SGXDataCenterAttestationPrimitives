@@ -394,16 +394,13 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         println!("\tInfo: Supplemental data Major Version: {}", version_s.major_version);
         println!("\tInfo: Supplemental data Minor Version: {}", version_s.minor_version);
 
-        // print SA list if it is a valid UTF-8 string
-
-        let sa_list = unsafe {
-            std::slice::from_raw_parts(
-                supp_data.sa_list.as_ptr() as *const u8,
-                mem::size_of_val(&supp_data.sa_list),
-            )
-        };
-        if let Ok(s) = std::str::from_utf8(sa_list) {
-            println!("\tInfo: Advisory ID: {}", s);
+        // print SA list if exist, SA list is supported from version 3.1
+        //
+        if unsafe { supp_data.__bindgen_anon_1.version } > 3 {
+            let sa_list = unsafe { std::ffi::CStr::from_ptr(supp_data.sa_list.as_ptr()) };
+            if sa_list.to_bytes().len() > 0 {
+                println!("\tInfo: Advisory ID: {}", sa_list.to_str().unwrap());
+            }
         }
     }
 }

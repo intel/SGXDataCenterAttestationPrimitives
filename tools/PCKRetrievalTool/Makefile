@@ -109,7 +109,7 @@ App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,-z,relro,-z,now,-z,noexecstack
 App_Link_Flags +=  -lcurl -ldl -lpthread
 ifeq ($(STANDALONE), 1)
-	App_Link_Flags += -Wl,-rpath=.
+	App_Link_Flags += -Wl,-rpath,$ORIGIN
 endif
 
 

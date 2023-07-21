@@ -55,7 +55,8 @@ using namespace std;
 #define MAX_HEADER_SIZE 1024
 #define LOCAL_NETWORK_SETTING "./network_setting.conf"
 
-static bool g_use_secure_cert = true;
+extern bool g_use_secure_cert;
+
 typedef enum _ProxyType
 {
     PROXY_TYPE_DEFAULT_PROXY   = 0,
@@ -131,9 +132,6 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                         g_use_secure_cert = false;
                     }
                 }
-                else if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-                    g_use_secure_cert = false;
-                }
             }
             else if (name.compare("PROXY_TYPE") == 0) {
                 if (proxy_type_string.empty() == true) {
@@ -183,9 +181,6 @@ static bool process_configuration_setting(const char *config_file_name, string& 
     }
     else {
 	config_file_exist = false;
-        if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-            g_use_secure_cert = false;
-        }
 
         if (proxy_type_string.compare("DIRECT") == 0 || proxy_type_string.compare("direct") == 0) {
             proxy_type = PROXY_TYPE_DIRECT_ACCESS;

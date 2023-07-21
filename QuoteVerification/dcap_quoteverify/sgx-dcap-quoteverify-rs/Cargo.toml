@@ -1,12 +1,13 @@
 [package]
 name = "intel-tee-quote-verification-rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "BSD-3-Clause"
 description = "Intel(R) TEE Quote Verification Rust Library"
+readme = "README.md"
 homepage = "https://github.com/intel/SGXDataCenterAttestationPrimitives"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-intel-tee-quote-verification-sys = "0.2.0"
+intel-tee-quote-verification-sys = "0.2.1"

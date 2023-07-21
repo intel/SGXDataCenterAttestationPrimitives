@@ -1,21 +1,23 @@
 {
     "name": "quoteverificationservice",
     "scripts": {
-        "install": "cmake-js build -d qvl/ -O qvl/cmake-build-release"
+        "install": "cmake-js build -d qvl/ -O qvl/cmake-build-release",
+        "swagger": "node swagger.js"
     },
     "version": "1.0.0",
     "license": "SEE LICENSE IN RESPECTIVE FILES",
     "main": "bootstrap.js",
     "dependencies": {
+        "axios": "^1.2.4",
         "bluebird": "^3.7.2",
         "fast-url-parser": "^1.1.3",
         "https-proxy-agent": "^5.0.1",
         "js-yaml": "^4.1.0",
-        "koa": "^2.13.4",
+        "koa": "^2.14.1",
         "koa-bodyparser": "^4.3.0",
         "koa-router": "^12.0.0",
         "lodash": "^4.17.21",
-        "log4js": "^6.7.0",
+        "log4js": "^6.7.1",
         "moment": "^2.29.4",
         "node-addon-api": "^5.0.0",
         "node-cache": "^5.1.2",

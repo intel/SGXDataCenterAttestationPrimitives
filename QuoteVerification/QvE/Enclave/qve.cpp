@@ -809,8 +809,11 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
         if (*p_earliest_issue_date == 0 || *p_earliest_expiration_date == 0 ||
             *p_latest_issue_date == 0 || *p_latest_expiration_date == 0) {
             ret = SGX_QL_ERROR_UNEXPECTED;
+            break;
         }
+
         ret = SGX_QL_SUCCESS;
+
     } while (0);
 
     return ret;
@@ -988,7 +991,19 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
                     const char terminator = '\0';
                     char *p_sa = supplemental_data->sa_list;
 
+                    // SA quantity should not larger than MAX_SA_NUMBER_PER_TCB for each TCB
+                    if (sa_list.size() > MAX_SA_NUMBER_PER_TCB) {
+                        ret = SGX_QL_ERROR_UNEXPECTED;
+                        break;
+                    }
+
                     for (std::string sa : sa_list) {
+                        // each SA length should not larger than 20
+                        if (sa.size() > MAX_SA_SIZE) {
+                            ret = SGX_QL_ERROR_UNEXPECTED;
+                            break;
+                        }
+
                         sa_size += (uint32_t)sa.length() + 1;
 
                         // sanity check

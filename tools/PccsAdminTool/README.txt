@@ -67,3 +67,16 @@ optional arguments:
                                 If this argument is not provided, then it will require PCCS to refresh quote verification collateral.
                                 all - Refresh all cached certificates.
                                 FMSPC1,FMSPC2,... - Refresh certificates of specified fmspc values.
+
+6. Generate local PCK certificate cache files for specific platforms
+  ./pccsadmin.py cache [-h] [-u URL] [-i INPUT_FILE] [-o OUTPUT_DIR] [-e EXPIRE_HOURS]
+
+  optional arguments:
+          -h, --help            show this help message and exit
+          -i INPUT_FILE, --input_file INPUT_FILE
+                                The input file name for platform list; default: platform_list.json
+          -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+                                The output directory for cache files; default: ./cache/
+          -u URL, --url URL     The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/
+          -e EXPIRE_HOURS, --expire EXPIRE_HOURS
+                                How many hours the cache files will be valid for. Default is 2160 hours (90 days) and maximum is 8760.

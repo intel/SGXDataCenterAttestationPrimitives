@@ -7,6 +7,8 @@ import os
 import csv
 import json
 import re
+import struct
+import time
 from lib.intelsgx.pckcert import SgxPckCertificateExtensions
 from lib.intelsgx.pcs import PCS
 from lib.intelsgx.credential import Credentials
@@ -59,6 +61,15 @@ def main():
     parser_refresh.add_argument("-f", "--fmspc", help="Only refresh certificates for specified FMSPCs. Format: [FMSPC1, FMSPC2, ..., FMSPCn]")
     parser_refresh.set_defaults(func=pccs_refresh)
 
+    #  subparser for cache
+    parser_cache = subparsers.add_parser('cache')
+    # add optional arguments for cache
+    parser_cache.add_argument("-u", "--url", help="The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/")
+    parser_cache.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.csv")
+    parser_cache.add_argument("-o", "--output_dir", help="The destination directory for storing the generated cache files")
+    parser_cache.add_argument("-e", "--expire", type=check_expire_hours, help="How many hours the cache files will be valid for. Default is 2160 hours (90 days).")
+    parser_cache.set_defaults(func=pcs_cache)
+
     args = parser.parse_args()
     if len(args.__dict__) <= 1:
         # No arguments or subcommands were given.
@@ -66,6 +77,17 @@ def main():
         parser.exit()
 
     args.func(args)
+
+def check_expire_hours(value):
+    try:
+        int_value = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} is not a valid integer")
+
+    if 0 <= int_value <= 8760:
+        return int_value
+    else:
+        raise argparse.ArgumentTypeError(f"{value} is not in the range [0, 8760]")
 
 def is_file_writable(filename):
     fullpath = os.path.join(os.getcwd(), filename)
@@ -224,7 +246,7 @@ def pcs_fetch(args):
             platform_manifest = platform_dict[platform_id]["platform_manifest"]
             pce_id = platform_id[1]
 
-            # get pckcerts from Intel PCS, return value is [certs, chain]
+            # get pckcerts from Intel PCS, return value is [certs, certs_not_available, chain, fmspc]
             pckcerts = pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
             if pckcerts == None:
                 print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
@@ -425,5 +447,83 @@ def pccs_refresh(args):
             print("\tMessage : " , r.text)
     except Exception as e:
         print(e)
+
+def decompose_cpusvn_components(cpusvn: str, tcb_type: int) -> str:
+    if tcb_type == 0:
+        return cpusvn
+    else:
+        raise ValueError("Unsupported TCB type.")
+    
+def pcs_cache(args):
+    try :
+        url = 'https://api.trustedservices.intel.com/sgx/certification/v4/'
+        ApiVersion = 4
+
+        if args.url:
+            url = args.url
+        ApiVersion = get_api_version_from_url(url)
+        input_file = "platform_list.json"
+        output_dir = "./cache/"
+        expire_hours = 2160
+        if args.input_file:
+            input_file = args.input_file
+        if args.output_dir:
+            output_dir = args.output_dir
+        if args.expire:
+            expire_hours = int(args.expire)
+
+        # Get PCS ApiKey from keyring
+        credential = Credentials()
+        apikey = credential.get_pcs_api_key()
+
+        # Initialize PCS object
+        pcsclient = PCS(url,ApiVersion,apikey)
+
+        input_fullpath = os.path.join(os.getcwd(), input_file)
+        with open(input_fullpath) as ifile:
+            plaformlist = json.load(ifile)
+
+        # Check if output directory exists. Create it if it doesn't.
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        for platform in plaformlist:
+            # get pckcerts from Intel PCS, return value is [certs, certs_not_available, chain, fmspc]
+            pckcerts = pcsclient.get_pck_certs(platform["enc_ppid"], platform["pce_id"], platform["platform_manifest"], 'ascii')
+            if pckcerts == None:
+                print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(platform["enc_ppid"], platform["pce_id"]))
+                return
+            fmspc = pckcerts[3]
+            sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', 'ascii')
+
+            #decompose tcb component
+            tcbcomponent = decompose_cpusvn_components(platform["cpu_svn"], json.loads(sgx_tcbinfo[0])["tcbInfo"]["tcbType"])
+
+            # Write to cache file
+            SGX_QPL_CACHE_MULTICERTS = 1 << 2
+            cache_item_header = struct.pack('<HIQ', 1, SGX_QPL_CACHE_MULTICERTS, int(time.time() + expire_hours * 60 * 60))
+
+            output_file = os.path.join(output_dir, (platform["qe_id"] + "_" + platform["pce_id"]).lower())
+            with open(output_file, "wb") as ofile:
+                # Write cache header
+                ofile.write(cache_item_header)
+                # Write TCB component
+                ofile.write(len(tcbcomponent).to_bytes(4, byteorder='little'))
+                ofile.write(tcbcomponent.encode("utf-8"))
+                # Write TCB info
+                ofile.write(struct.pack("I", len(sgx_tcbinfo[0])))
+                ofile.write(sgx_tcbinfo[0].encode("utf-8"))
+                # Write Certchain
+                ofile.write(struct.pack("I", len(pckcerts[2])))
+                ofile.write(pckcerts[2].encode("utf-8"))
+                # Write PCK certificates
+                certs_string = json.dumps(pckcerts[0])
+                ofile.write(struct.pack("I", len(certs_string)))
+                ofile.write(certs_string.encode("utf-8"))
+                print(output_file, " saved successfully.")
+
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
 
 main()

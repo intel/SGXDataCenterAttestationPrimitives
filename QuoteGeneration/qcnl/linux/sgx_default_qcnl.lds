@@ -16,6 +16,9 @@ global:
     sgx_qcnl_free_root_ca_crl;
     sgx_qcnl_get_api_version;
     sgx_qcnl_set_logging_callback;
+    sgx_qcnl_clear_cache;
+    sgx_qcnl_global_init;
+    sgx_qcnl_global_cleanup;
 
 local:
     *;

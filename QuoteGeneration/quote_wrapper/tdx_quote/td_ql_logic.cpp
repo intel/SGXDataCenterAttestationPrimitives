@@ -62,18 +62,20 @@
 #define MIN_CERT_DATA_SIZE (500)  // Chosen to be large enough to contain the native cert data types.
 
 
-typedef tee_att_error_t (*sgx_get_quote_config_func_t)(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
+typedef quote3_error_t (*sgx_get_quote_config_func_t)(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
                                                       sgx_ql_config_t **pp_quote_config);
 
-typedef tee_att_error_t (*sgx_free_quote_config_func_t)(sgx_ql_config_t *p_quote_config);
+typedef quote3_error_t (*sgx_free_quote_config_func_t)(sgx_ql_config_t *p_quote_config);
 
-typedef tee_att_error_t (*sgx_write_persistent_data_func_t)(const uint8_t *p_buf,
+typedef quote3_error_t (*sgx_write_persistent_data_func_t)(const uint8_t *p_buf,
                                                            uint32_t buf_size,
                                                            const char *p_label);
 
-typedef tee_att_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
+typedef quote3_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
                                                           uint32_t *p_buf_size,
                                                           const char *p_label);
+typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
+
 #ifndef _MSC_VER
 inline errno_t memcpy_s(void *dest, size_t numberOfElements, const void *src, size_t count)
 {
@@ -169,6 +171,15 @@ tee_att_config_t::get_qpl_handle()
         if (NULL == m_qpl_handle) {
             SE_PROD_LOG("Cannot open Quote Provider Library %s\n", TEE_ATT_QUOTE_CONFIG_LIB_FILE_NAME);
         }
+        else {
+            sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(m_qpl_handle, "sgx_qpl_global_init");
+            if (dlerror() == NULL && p_sgx_qpl_global_init) {
+                if (p_sgx_qpl_global_init() != SGX_QL_SUCCESS) {
+                    dlclose(m_qpl_handle);
+                    m_qpl_handle = NULL;
+                }
+            }
+        }
     }
     return m_qpl_handle;
 }
@@ -177,6 +188,18 @@ tee_att_config_t::get_qpl_handle()
     if (m_qpl_handle == NULL) {
         SE_PROD_LOG("Couldn't find the platform library. %d\n", GetLastError());
         return NULL;
+    }
+    else {
+        sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)GetProcAddress(m_qpl_handle, "sgx_qpl_global_init");
+        if (NULL != p_sgx_qpl_global_init) {
+            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qpl_global_init API.\n");
+            quote3_error_t ql_ret = p_sgx_qpl_global_init();
+            if (ql_ret != SGX_QL_SUCCESS) {
+                SE_PROD_LOG("Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
+                CloseHandle(m_qpl_handle);
+                m_qpl_handle = NULL;
+            }
+        }
     }
     return m_qpl_handle;
 }
@@ -233,7 +256,7 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
 #ifndef _MSC_VER
     if (!handle) {
 
-        SE_PROD_LOG("Couldn't find the platform library. %s\n", dlerror());
+        SE_PROD_LOG("Couldn't load the platform library. %s\n", dlerror());
         return ret_val;
     }
     else {
@@ -269,9 +292,10 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
 #endif
         SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
         SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
-        ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
-        if (TEE_ATT_SUCCESS != ret_val) {
-            SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
+        quote3_error_t ql_ret = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
+        if (SGX_QL_SUCCESS != ql_ret) {
+            SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ql_ret);
+            ret_val = (tee_att_error_t)ql_ret;  // tee_att_error_t should have the same error codes as quote3_error_t
             goto CLEANUP;
         }
         if (NULL == p_pck_cert_config) {
@@ -317,7 +341,7 @@ tee_att_error_t tee_att_config_t::get_platform_quote_cert_data(sgx_ql_pck_cert_i
             // Return the number of bytes copied.
             *p_cert_data_size = p_pck_cert_config->cert_data_size;
         }
-
+        ret_val = TEE_ATT_SUCCESS;
     }
 CLEANUP:
     if (NULL != p_sgx_free_quote_config) {
@@ -763,9 +787,9 @@ tee_att_error_t tee_att_config_t::write_persistent_data(const uint8_t *p_buf,
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_write_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
-            ret_val = p_sgx_qe_write_persistent_data(p_buf,
-                                                        buf_size,
-                                                        p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_write_persistent_data(p_buf,
+                                                                      buf_size,
+                                                                      p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -780,9 +804,9 @@ tee_att_error_t tee_att_config_t::write_persistent_data(const uint8_t *p_buf,
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_write_persistent_data");
         if (NULL != p_sgx_qe_write_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
-            ret_val = p_sgx_qe_write_persistent_data(p_buf,
-                buf_size,
-                p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_write_persistent_data(p_buf,
+                                                                      buf_size,
+                                                                      p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_write_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -840,9 +864,9 @@ tee_att_error_t tee_att_config_t::read_persistent_data(uint8_t *p_buf,
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_read_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qe_read_persistent_data API.\n");
-            ret_val = p_sgx_qe_read_persistent_data(p_buf,
-                                                    p_buf_size,
-                                                    p_label);
+            ret_val = (tee_att_error_t)p_sgx_qe_read_persistent_data(p_buf,
+                                                                     p_buf_size,
+                                                                     p_label);
             if (TEE_ATT_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
             }
@@ -858,11 +882,12 @@ tee_att_error_t tee_att_config_t::read_persistent_data(uint8_t *p_buf,
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_read_persistent_data");
         if (NULL != p_sgx_qe_read_persistent_data) {
             SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_read_persistent_data API.\n");
-            ret_val = p_sgx_qe_read_persistent_data(p_buf,
+            quote3_error_t ql_ret = p_sgx_qe_read_persistent_data(p_buf,
                                                     p_buf_size,
                                                     p_label);
-            if (TEE_ATT_SUCCESS != ret_val) {
-                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ret_val);
+            if (SGX_QL_SUCCESS != ql_ret) {
+                SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_ql_read_persistent_data API. 0x%04x\n", ql_ret);
+                ret_val = (tee_att_error_t)ql_ret;  // tee_att_error_t should have the same error codes as quote3_error_t
             }
         }
         else {
@@ -1259,8 +1284,8 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         cert_data_size = 0;
         pck_cert_id.p_qe3_id = (uint8_t*)m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*m_qe_id);
-        pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-        pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+        pck_cert_id.p_platform_cpu_svn = &tdqe_report_body.cpu_svn;
+        pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
         pck_cert_id.encrypted_ppid_size = REF_RSA_OAEP_3072_MOD_SIZE;
         pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1460,7 +1485,7 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         pck_cert_id.p_qe3_id = (uint8_t*)m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*m_qe_id);
         pck_cert_id.p_platform_cpu_svn = &tdqe_report.body.cpu_svn;
-        pck_cert_id.p_platform_pce_isv_svn = &m_pce_info.pce_isv_svn;
+        pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
         pck_cert_id.encrypted_ppid_size = REF_RSA_OAEP_3072_MOD_SIZE;
         pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1686,8 +1711,8 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
     cert_data_size = 0;
     pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
     pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
-    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->raw_cpu_svn;
+    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->raw_pce_info.pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
     pck_cert_id.encrypted_ppid_size = 0;
     pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1722,7 +1747,6 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
         //Check to make sure that the TCBm of from the platform library matches the Cert TCB in the ECDSA blob.
-        //We've change to use the TCBm to get the cert data, so below check is redundant. But I think it's OK to leave it here.
         if((0 != memcmp(&p_seal_data_plain_text->cert_cpu_svn, &pce_cert_psvn.cpu_svn, sizeof(p_seal_data_plain_text->cert_cpu_svn))) ||
            (p_seal_data_plain_text->cert_pce_info.pce_isv_svn != pce_cert_psvn.isv_svn)) {
             SE_TRACE(SE_TRACE_ERROR, "TCBm in ECDSA blob doesn't match the value returned by the platform lib. %d and %d\n", p_seal_data_plain_text->cert_pce_info.pce_isv_svn, pce_cert_psvn.isv_svn);
@@ -1891,8 +1915,8 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     cert_data_size = 0;
     pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
     pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
-    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->raw_cpu_svn;
+    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->raw_pce_info.pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
     pck_cert_id.encrypted_ppid_size = 0;
     pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1928,7 +1952,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
             goto CLEANUP;
         }
         // Check to make sure that the TCBm of from the platform library matches the Cert TCB in the ECDSA blob.
-        // We've change to use the TCBm to get the cert data, so below check is redundant. But I think it's OK to leave it here.
         if((0 != memcmp(&p_seal_data_plain_text->cert_cpu_svn, &pce_cert_psvn.cpu_svn, sizeof(p_seal_data_plain_text->cert_cpu_svn))) ||
            (p_seal_data_plain_text->cert_pce_info.pce_isv_svn != pce_cert_psvn.isv_svn)) {
             SE_TRACE(SE_TRACE_ERROR, "TCBm in ECDSA blob doesn't match the value returned by the platform lib. %d and %d\n", p_seal_data_plain_text->cert_pce_info.pce_isv_svn, pce_cert_psvn.isv_svn);

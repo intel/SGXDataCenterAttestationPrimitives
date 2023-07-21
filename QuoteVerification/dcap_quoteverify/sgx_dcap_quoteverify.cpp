@@ -781,7 +781,7 @@ quote3_error_t tdx_qv_get_quote_supplemental_data_size(uint32_t *p_data_size)
 quote3_error_t tdx_qv_verify_quote(
     const uint8_t *p_quote,
     uint32_t quote_size,
-    const tdx_ql_qve_collateral_t *p_quote_collateral,
+    const tdx_ql_qv_collateral_t *p_quote_collateral,
     const time_t expiration_check_date,
     uint32_t *p_collateral_expiration_status,
     sgx_ql_qv_result_t *p_quote_verification_result,
@@ -888,24 +888,24 @@ quote3_error_t tee_qv_get_collateral(
         ret = tdx_dcap_retrieve_verification_collateral((const char *)fmspc_from_quote,
                                                         FMSPC_SIZE,
                                                         (const char *)ca_from_quote,
-                                                        (tdx_ql_qve_collateral_t **)pp_quote_collateral);
+                                                        (tdx_ql_qv_collateral_t **)pp_quote_collateral);
         if (ret == SGX_QL_SUCCESS)
         {
 		 *p_collateral_size =
-                (uint32_t)sizeof(tdx_ql_qve_collateral_t) +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                (uint32_t)sizeof(tdx_ql_qv_collateral_t) +
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->pck_crl_issuer_chain_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->root_ca_crl_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->pck_crl_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->tcb_info_issuer_chain_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->qe_identity_issuer_chain_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->qe_identity_size +
-                ((tdx_ql_qve_collateral_t *)(*pp_quote_collateral))
+                ((tdx_ql_qv_collateral_t *)(*pp_quote_collateral))
                     ->tcb_info_size;
 	    }
     }
@@ -938,7 +938,7 @@ quote3_error_t tee_qv_free_collateral(uint8_t *p_quote_collateral)
     }
     else if (p_collater->tee_type == TDX_QUOTE_TYPE)
     {
-        ret = tdx_dcap_free_verification_collateral((tdx_ql_qve_collateral_t *)p_quote_collateral);
+        ret = tdx_dcap_free_verification_collateral((tdx_ql_qv_collateral_t *)p_quote_collateral);
     }
     else
     {

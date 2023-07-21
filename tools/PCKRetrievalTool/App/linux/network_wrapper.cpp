@@ -73,7 +73,7 @@ typedef enum _network_proxy_type {
 } network_proxy_type;
 
 // Use secure HTTPS certificate or not
-static bool g_use_secure_cert = true;
+extern bool g_use_secure_cert;
 
 /**
 * Method converts byte containing value from 0x00-0x0F into its corresponding ASCII code,
@@ -219,9 +219,6 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                         g_use_secure_cert = false;
                     }
                 }
-                else if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-                    g_use_secure_cert = false;
-                }
             }
             else if (name.compare("PROXY_TYPE") == 0) {
                 if(proxy_type_string.empty() == true) {
@@ -247,17 +244,13 @@ static bool process_configuration_setting(const char *config_file_name, string& 
     else {
         config_file_exist = false;
 
-        if (use_secure_cert_string.compare("FALSE") == 0 || use_secure_cert_string.compare("false") == 0) {
-            g_use_secure_cert = false;
-        }
-
-
         if(server_url_string.empty() == false) {
             url = server_url_string + "/sgx/certification/v4/platforms";
         }
         ret = false;
     }
 
+    //configruaton file exist, however it doesn't provide pccs url
     if(config_file_exist && config_file_provide_pccs_url == false) {
         if(server_url_string.empty() == false) {
             url = server_url_string + "/sgx/certification/v4/platforms";

@@ -148,7 +148,15 @@ set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
 #set(HUNTER_ROOT ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
 #set(HUNTER_BINARY_DIR ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
 #If windows build fails, consider changing HUNTER_ROOT dir to shorter one, by either modifying it's value or commenting out the line below:
-set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
+#set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
+
+if(DEFINED HUNTER_WINDOWS_BUILD_DIR)
+    message("Windows build...")
+	set(HUNTER_ROOT "${HUNTER_WINDOWS_BUILD_DIR}" CACHE STRING "hunter root" FORCE)
+else()
+    message("Linux build... ")
+    set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
+endif()
 
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)

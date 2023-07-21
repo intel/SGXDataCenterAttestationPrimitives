@@ -52,6 +52,76 @@ CertificationService::CertificationService(const char *custom_param) {
 CertificationService::~CertificationService() {
 }
 
+sgx_qcnl_error_t CertificationService::setup_quote_config(const string &tcbm,
+                                                          const string &pck_cert,
+                                                          const string &certchain,
+                                                          sgx_ql_config_t **pp_quote_config) {
+    sgx_qcnl_error_t ret = SGX_QCNL_UNEXPECTED_ERROR;
+
+    do {
+        if (tcbm.size() != (consts::CPUSVN_SIZE + consts::PCESVN_SIZE) * 2 || certchain.empty() || pck_cert.empty()) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Response message error. \n");
+            break;
+        }
+
+        // allocate output buffer
+        *pp_quote_config = (sgx_ql_config_t *)malloc(sizeof(sgx_ql_config_t));
+        if (*pp_quote_config == NULL) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Out of memory. \n");
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+        memset(*pp_quote_config, 0, sizeof(sgx_ql_config_t));
+
+        // set version
+        (*pp_quote_config)->version = SGX_QL_CONFIG_VERSION_1;
+
+        // set tcbm
+        if (!hex_string_to_byte_array(reinterpret_cast<const uint8_t *>(tcbm.data()),
+                                      consts::CPUSVN_SIZE * 2,
+                                      reinterpret_cast<uint8_t *>(&(*pp_quote_config)->cert_cpu_svn),
+                                      sizeof(sgx_cpu_svn_t))) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to parse cpu svn. \n");
+            ret = SGX_QCNL_MSG_ERROR;
+            break;
+        }
+        if (!hex_string_to_byte_array(reinterpret_cast<const uint8_t *>(tcbm.data() + consts::CPUSVN_SIZE * 2),
+                                      consts::PCESVN_SIZE * 2,
+                                      reinterpret_cast<uint8_t *>(&(*pp_quote_config)->cert_pce_isv_svn),
+                                      sizeof(sgx_isv_svn_t))) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to parse pce svn. \n");
+            ret = SGX_QCNL_MSG_ERROR;
+            break;
+        }
+
+        // set certchain (leaf cert || intermediateCA || root CA || '\0')
+        (*pp_quote_config)->cert_data_size = (uint32_t)(certchain.size() + pck_cert.size() + 1);
+        (*pp_quote_config)->p_cert_data = (uint8_t *)malloc((*pp_quote_config)->cert_data_size);
+        if (!(*pp_quote_config)->p_cert_data) {
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Out of memory. \n");
+            ret = SGX_QCNL_OUT_OF_MEMORY;
+            break;
+        }
+        if (memcpy_s((*pp_quote_config)->p_cert_data, (*pp_quote_config)->cert_data_size, pck_cert.data(), pck_cert.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        if (memcpy_s((*pp_quote_config)->p_cert_data + pck_cert.size(), certchain.size(), certchain.data(), certchain.size()) != 0) {
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
+            break;
+        }
+        (*pp_quote_config)->p_cert_data[(*pp_quote_config)->cert_data_size - 1] = 0; // NULL terminator
+
+        ret = SGX_QCNL_SUCCESS;
+    } while (0);
+
+    if (ret != SGX_QCNL_SUCCESS) {
+        sgx_qcnl_free_pck_cert_chain(*pp_quote_config);
+    }
+
+    return ret;
+}
+
 string CertificationService::get_custom_param_string() {
     if (custom_param_.empty())
         return "";
@@ -229,83 +299,20 @@ sgx_qcnl_error_t CertificationService::build_root_ca_crl_options(const char *roo
 
 sgx_qcnl_error_t CertificationService::resp_obj_to_pck_certchain(PccsResponseObject *pccs_resp_obj,
                                                                  sgx_ql_config_t **pp_quote_config) {
-    sgx_qcnl_error_t ret = SGX_QCNL_UNEXPECTED_ERROR;
-
     PckCertResponseObject *pckcert_resp_obj = (PckCertResponseObject *)pccs_resp_obj;
 
-    do {
-        // Get TCBm , Issuer Chain, PCK certificate from response
-        string tcbm = pckcert_resp_obj->get_tcbm();
-        string certchain = pckcert_resp_obj->get_pckcert_issuer_chain();
-        string pck_cert = pckcert_resp_obj->get_pckcert();
-        if (tcbm.size() != (consts::CPUSVN_SIZE + consts::PCESVN_SIZE) * 2 || certchain.empty() || pck_cert.empty()) {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Response message error. \n");
-            ret = SGX_QCNL_MSG_ERROR;
-            break;
-        }
+    // Get TCBm , Issuer Chain, PCK certificate from response
+    string tcbm = pckcert_resp_obj->get_tcbm();
+    string certchain = pckcert_resp_obj->get_pckcert_issuer_chain();
+    string pck_cert = pckcert_resp_obj->get_pckcert();
 
-        certchain = unescape(certchain);
+    certchain = unescape(certchain);
 
-        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] sgx-Tcbm: %s \n", tcbm.c_str());
-        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] pckCert: %s \n", pck_cert.c_str());
-        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] sgx-Pck-Certificate-Issuer-Chain: %s \n", certchain.c_str());
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] sgx-Tcbm: %s \n", tcbm.c_str());
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] pckCert: %s \n", pck_cert.c_str());
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] sgx-Pck-Certificate-Issuer-Chain: %s \n", certchain.c_str());
 
-        // allocate output buffer
-        *pp_quote_config = (sgx_ql_config_t *)malloc(sizeof(sgx_ql_config_t));
-        if (*pp_quote_config == NULL) {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Out of memory. \n");
-            ret = SGX_QCNL_OUT_OF_MEMORY;
-            break;
-        }
-        memset(*pp_quote_config, 0, sizeof(sgx_ql_config_t));
-
-        // set version
-        (*pp_quote_config)->version = SGX_QL_CONFIG_VERSION_1;
-
-        // set tcbm
-        if (!hex_string_to_byte_array(reinterpret_cast<const uint8_t *>(tcbm.data()),
-                                      consts::CPUSVN_SIZE * 2,
-                                      reinterpret_cast<uint8_t *>(&(*pp_quote_config)->cert_cpu_svn),
-                                      sizeof(sgx_cpu_svn_t))) {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to parse cpu svn. \n");
-            ret = SGX_QCNL_MSG_ERROR;
-            break;
-        }
-        if (!hex_string_to_byte_array(reinterpret_cast<const uint8_t *>(tcbm.data() + consts::CPUSVN_SIZE * 2),
-                                      consts::PCESVN_SIZE * 2,
-                                      reinterpret_cast<uint8_t *>(&(*pp_quote_config)->cert_pce_isv_svn),
-                                      sizeof(sgx_isv_svn_t))) {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Failed to parse pce svn. \n");
-            ret = SGX_QCNL_MSG_ERROR;
-            break;
-        }
-
-        // set certchain (leaf cert || intermediateCA || root CA || '\0')
-        (*pp_quote_config)->cert_data_size = (uint32_t)(certchain.size() + pck_cert.size() + 1);
-        (*pp_quote_config)->p_cert_data = (uint8_t *)malloc((*pp_quote_config)->cert_data_size);
-        if (!(*pp_quote_config)->p_cert_data) {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Out of memory. \n");
-            ret = SGX_QCNL_OUT_OF_MEMORY;
-            break;
-        }
-        if (memcpy_s((*pp_quote_config)->p_cert_data, (*pp_quote_config)->cert_data_size, pck_cert.data(), pck_cert.size()) != 0) {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
-            break;
-        }
-        if (memcpy_s((*pp_quote_config)->p_cert_data + pck_cert.size(), certchain.size(), certchain.data(), certchain.size()) != 0) {
-            ret = SGX_QCNL_UNEXPECTED_ERROR;
-            break;
-        }
-        (*pp_quote_config)->p_cert_data[(*pp_quote_config)->cert_data_size - 1] = 0;    // NULL terminator
-
-        ret = SGX_QCNL_SUCCESS;
-    } while (0);
-
-    if (ret != SGX_QCNL_SUCCESS) {
-        sgx_qcnl_free_pck_cert_chain(*pp_quote_config);
-    }
-
-    return ret;
+    return CertificationService::setup_quote_config(tcbm, pck_cert, certchain, pp_quote_config);
 }
 sgx_qcnl_error_t CertificationService::resp_obj_to_pck_crl(PccsResponseObject *pccs_resp_obj,
                                                            uint8_t **pp_crl_chain,
@@ -566,6 +573,11 @@ sgx_qcnl_error_t CertificationService::get_pck_cert_chain(const sgx_ql_pck_cert_
     string query_string;
     PccsResponseObject pccs_resp_obj;
 
+    if (QcnlConfig::Instance()->is_local_cache_only()) {
+        CacheProvider cacheProvider;
+        return cacheProvider.get_local_certification(p_pck_cert_id, pp_quote_config);
+    }
+
     // build query options for getting pck certificate
     if ((ret = build_pckcert_options(p_pck_cert_id, header_map, query_string)) != SGX_QCNL_SUCCESS) {
         return ret;
@@ -599,7 +611,8 @@ sgx_qcnl_error_t CertificationService::get_pck_cert_chain(const sgx_ql_pck_cert_
                  QcnlConfig::Instance()->getServerUrl().c_str());
         if ((ret = resp_obj_to_pck_certchain(&pccs_resp_obj, pp_quote_config)) == SGX_QCNL_SUCCESS) {
             // update cache
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getCacheExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_CERTIFICATE,
+                                                  (uint32_t)(QcnlConfig::Instance()->getCacheExpireHour() * 3600),
                                                   qs_without_ppid, &pccs_resp_obj);
         }
     }
@@ -633,7 +646,8 @@ sgx_qcnl_error_t CertificationService::get_pck_crl_chain(const char *ca,
     if ((ret = remoteProvider.get_certification(header_map, query_string, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         if ((ret = resp_obj_to_pck_crl(&pccs_resp_obj, pp_crl_chain, p_crl_chain_size)) == SGX_QCNL_SUCCESS) {
             // update cache
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_QV_COLLATERAL,
+                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_string, &pccs_resp_obj);
         }
     }
@@ -675,7 +689,8 @@ sgx_qcnl_error_t CertificationService::get_tcbinfo(sgx_prod_type_t prod_type,
     CertificationProvider remoteProvider(base_url);
     if ((ret = remoteProvider.get_certification(header_map, query_string, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         if ((ret = resp_obj_to_tcbinfo(&pccs_resp_obj, pp_tcbinfo, p_tcbinfo_size)) == SGX_QCNL_SUCCESS) {
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_QV_COLLATERAL,
+                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_string, &pccs_resp_obj);
         }
     }
@@ -715,7 +730,8 @@ sgx_qcnl_error_t CertificationService::get_qe_identity(sgx_qe_type_t qe_type,
     CertificationProvider remoteProvider(base_url);
     if ((ret = remoteProvider.get_certification(header_map, query_string, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         if ((ret = resp_obj_to_qe_identity(&pccs_resp_obj, pp_qe_identity, p_qe_identity_size)) == SGX_QCNL_SUCCESS) {
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_QV_COLLATERAL,
+                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_string, &pccs_resp_obj);
         }
     }
@@ -749,7 +765,8 @@ sgx_qcnl_error_t CertificationService::get_qve_identity(char **pp_qve_identity,
     if ((ret = remoteProvider.get_certification(header_map, query_string, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         if ((ret = resp_obj_to_qve_identity(&pccs_resp_obj, pp_qve_identity, p_qve_identity_size,
                                             pp_qve_identity_issuer_chain, p_qve_identity_issuer_chain_size)) == SGX_QCNL_SUCCESS) {
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_QV_COLLATERAL,
+                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_string, &pccs_resp_obj);
         }
     }
@@ -784,7 +801,8 @@ sgx_qcnl_error_t CertificationService::get_root_ca_crl(const char *root_ca_cdp_u
     CertificationProvider remoteProvider(base_url);
     if ((ret = remoteProvider.get_certification(header_map, query_string, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         if ((ret = resp_obj_to_root_ca_crl(&pccs_resp_obj, pp_root_ca_crl, p_root_ca_crl_size)) == SGX_QCNL_SUCCESS) {
-            ret = cacheProvider.set_certification((uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
+            ret = cacheProvider.set_certification(SGX_QPL_CACHE_QV_COLLATERAL,
+                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_string, &pccs_resp_obj);
         }
     }
