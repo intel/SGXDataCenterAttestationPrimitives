@@ -56,7 +56,7 @@ class PCS:
         
         PARAMS = {}
         https = requests.Session()
-        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        https.mount("https://", HTTPAdapter(max_retries=Retry(allowed_methods=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
         r = https.get(url = url, headers=headers, params = PARAMS, verify=True)
 
         return r
@@ -71,7 +71,7 @@ class PCS:
         
         PARAMS = {}
         https = requests.Session()
-        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        https.mount("https://", HTTPAdapter(max_retries=Retry(allowed_methods=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
         r = https.post(url = url, headers=headers, params = PARAMS, data=json.dumps(data), verify=True)
 
         return r
