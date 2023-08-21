@@ -39,7 +39,7 @@
 #include "se_thread.h"
 #include "sgx_ql_lib_common.h"
 #include "sgx_quote.h"
-#include "sgx_quote_4.h"
+#include "sgx_quote_5.h"
 #include "td_ql_wrapper.h"
 #include "quoting_enclave_tdqe.h"
 
@@ -144,7 +144,7 @@ public:
     tee_att_error_t ecdsa_get_quote_size(sgx_ql_cert_key_type_t certification_key_type,
         uint32_t* p_quote_size);
     tee_att_error_t ecdsa_get_quote(const sgx_report2_t* p_app_report,
-        sgx_quote4_t* p_quote,
+        uint8_t* p_quote,
         uint32_t quote_size);
 
     tee_att_error_t get_platform_info(sgx_key_128bit_t* p_platform_id,
@@ -184,5 +184,4 @@ public:
         uint32_t* p_cert_data_size,
         uint8_t* p_cert_data);
 };
-
 #endif

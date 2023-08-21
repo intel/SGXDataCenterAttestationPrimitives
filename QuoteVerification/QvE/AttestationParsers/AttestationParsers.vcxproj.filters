@@ -72,5 +72,14 @@
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleIdentity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleTcb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleTcbLevel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

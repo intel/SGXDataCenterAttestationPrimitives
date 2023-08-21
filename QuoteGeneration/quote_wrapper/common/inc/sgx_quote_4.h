@@ -46,7 +46,7 @@
 
 #pragma pack(push, 1)
 
-#define TD_INFO_RESERVED_BYTES 112
+#define TD_INFO_RESERVED_BYTES_V1 112
 typedef struct _tee_info_t                    /* 512 bytes */
 {
     tee_attributes_t     attributes;          /* (  0) TD's attributes */
@@ -56,7 +56,7 @@ typedef struct _tee_info_t                    /* 512 bytes */
     tee_measurement_t    mr_owner;            /* (112) Software defined ID for the guest TD's owner */
     tee_measurement_t    mr_owner_config;     /* (160) Software defined ID for owner-defined configuration of the guest TD, e.g., specific to the workload rather than the runtime or OS */
     tee_measurement_t    rt_mr[4];            /* (208) Array of 4(TDX1: NUM_RTMRS is 4) runtime extendable measurement registers */
-    uint8_t reserved[TD_INFO_RESERVED_BYTES]; /* (400) Reserved, must be zero */
+    uint8_t reserved[TD_INFO_RESERVED_BYTES_V1]; /* (400) Reserved, must be zero */
 } tee_info_t;
 
 
@@ -66,7 +66,7 @@ typedef struct _tee_tcb_svn_t
     uint8_t  tcb_svn[TEE_TCB_SVN_SIZE];
 } tee_tcb_svn_t;
 
-#define TD_TEE_TCB_INFO_RESERVED_BYTES 111
+#define TD_TEE_TCB_INFO_RESERVED_BYTES_V1 111
 typedef struct _tee_tcb_info_t
 {
     uint8_t           valid[8];                                   /* (  0) Indicates TEE_TCB_INFO fields which are valid
@@ -77,7 +77,7 @@ typedef struct _tee_tcb_info_t
     tee_measurement_t mr_seam;                                    /* ( 24) Measurement of the SEAM module */
     tee_measurement_t mr_seam_signer;                             /* ( 72) Measurement of SEAM module signer. (Not populated for Intel SEAM modules) */
     tee_attributes_t  attributes;                                 /* (120) Additional configuration attributes.(Not populated for Intel SEAM modules) */
-    uint8_t           reserved[TD_TEE_TCB_INFO_RESERVED_BYTES];   /* (128) Reserved, must be zero */
+    uint8_t           reserved[TD_TEE_TCB_INFO_RESERVED_BYTES_V1];/* (128) Reserved, must be zero */
 } tee_tcb_info_t;
 
 /** The SGX_QL_SGX_QL_ALG_ECDSA_P256 specific data structure.  Appears in the signature_data[] of the sgx_quote3_t
@@ -141,12 +141,12 @@ typedef struct _sgx_report2_body_t {
 typedef struct _sgx_quote4_t {
     sgx_quote4_header_t header;               ///< 0:   The quote header.
     sgx_report2_body_t  report_body;          ///< 48:  The REPORT of the TD that is attesting remotely.
-    uint32_t            signature_data_len;   ///< 656: The length of the signature_data.  Varies depending on the type of sign_type.
+    uint32_t            signature_data_len;   ///< 632: The length of the signature_data.  Varies depending on the type of sign_type.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning ( disable:4200 )
 #endif
-    uint8_t             signature_data[];     ///< 660: Contains the variable length containing the quote signature and support data for the signature.
+    uint8_t             signature_data[];     ///< 636: Contains the variable length containing the quote signature and support data for the signature.
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

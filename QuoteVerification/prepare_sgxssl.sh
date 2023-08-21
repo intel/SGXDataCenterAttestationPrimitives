@@ -34,16 +34,16 @@ ARG1=${1:-build}
 top_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 sgxssl_dir=$top_dir/sgxssl
 openssl_out_dir=$sgxssl_dir/openssl_source
-openssl_ver_name=openssl-1.1.1t
+openssl_ver_name=openssl-1.1.1u
 sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-sgxssl_file_name=lin_2.19_1.1.1t
+sgxssl_file_name=lin_2.21_1.1.1u
 build_script=$sgxssl_dir/Linux/build_openssl.sh
 server_url_path=https://www.openssl.org/source/
 full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/1.1.1/$openssl_ver_name.tar.gz
 
-sgxssl_chksum=bff5a9059911846e27447acb402c4690346abf46da8e1c26b66d406e8abb1588
-openssl_chksum=8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b
+sgxssl_chksum=b83c6f98041eb77df209cef91b77b68a8cbd861e5617fe1bf087398042e5ace6
+openssl_chksum=e2f8d84b523eecd06c7be7626830370300fbcc15386bf5142d72758f6963ebc6
 rm -f check_sum_sgxssl.txt check_sum_openssl.txt
 if [ ! -f $build_script ]; then
 	wget $sgxssl_github_archive/$sgxssl_file_name.zip -P $sgxssl_dir/ || exit 1
@@ -59,7 +59,20 @@ if [ ! -f $build_script ]; then
 	rm $sgxssl_dir/$sgxssl_file_name.zip || exit 1
 	rm -rf $sgxssl_dir/intel-sgx-ssl-$sgxssl_file_name || exit 1
 fi
+if [[ "$*" == *_TD_MIGRATION* ]];then
+	if [ -f $build_script ]; then
+		sed -i 's/no-idea/no-idea\ no-threads/' $build_script
+	fi
+	if [ -f $bypass_fun_header ]; then
+		sed -i '/sgxssl_gmtime_r$/a #define\ gmtime\ sgxssl_gmtime' $bypass_fun_header
+		sed -i 's/D),\ 0/D),\ 3/' Makefile    #for test project fail sigle thread
+		sed -i 's/__thread//' $tls_time_source_file
+	fi
 
+	if [ -f $test_makefile ]; then
+		sed -i 's/D),\ 0/D),\ 3/' $test_makefile
+	fi
+fi
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
 	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
 	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
@@ -77,9 +90,12 @@ if [ "$1" = "nobuild" ]; then
 fi
 
 pushd $sgxssl_dir/Linux/
-sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/pcy_*.* crypto/x509v3/.' build_openssl.sh
-sed -i '140a cp ../../../../prebuilt/openssl/OpenSSL_1.1.1u_files/x509_vfy.c crypto/x509/.' build_openssl.sh
+if [[ "$*" == *_TD_MIGRATION* ]];then
+make clean sgxssl_no_mitigation NO_THREADS=1 LINUX_SGX_BUILD=2 _TD_MIGRATION=1
+else
 make clean sgxssl_no_mitigation 
+fi
 popd
+
 
 

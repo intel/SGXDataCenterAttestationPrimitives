@@ -39,18 +39,17 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1t
+set openssl_ver_name=openssl-1.1.1u
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.18_1.1.1t
+set sgxssl_ver_name=win_2.20_1.1.1u
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
 set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=665ADEC6329A8EAE40E9F45AF2EDBF4FB2F2BB5CED172813CF6A237F894AAEED
-set openssl_chksum=8DEE9B24BDB1DCBF0C3D1E9B02FB8F6BF22165E807F45ADEB7C9677536859D3B
-
+set sgxssl_chksum=55eededb3c6569d4210da6f37b9636f8f8c61f0e420c93fa5701e28d25be2449
+set openssl_chksum=e2f8d84b523eecd06c7be7626830370300fbcc15386bf5142d72758f6963ebc6
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -84,8 +83,6 @@ if !errorlevel! NEQ 0  (
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
-	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\x509_vfy.c crypto\x509\.`n\" + $content[148]; Set-Content build_package.cmd $content"
-	call powershell -Command "$content = Get-Content build_package.cmd; $content[148] = \"copy /y ..\..\..\..\prebuilt\openssl\OpenSSL_1.1.1u_files\pcy_*.* crypto\x509v3\.`n\" + $content[148]; Set-Content build_package.cmd $content"
 	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 

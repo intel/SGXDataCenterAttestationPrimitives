@@ -74,6 +74,8 @@ qpl_wrapper: qcnl_wrapper
 qve_wrapper:
 	$(MAKE) -C ../QuoteVerification
 
+td_migration:
+	$(MAKE) -C quote_wrapper/td_migration/linux _TD_MIGRATION=1
 
 .PHONY: deb_sgx_dcap_ql_pkg
 deb_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic
@@ -237,6 +239,8 @@ clean:
 	$(MAKE) -C quote_wrapper/qgs clean
 	$(MAKE) -C quote_wrapper/tdx_quote/linux clean
 	$(MAKE) -C quote_wrapper/tdx_attest/linux clean
+	$(MAKE) -C quote_wrapper/tdx_verify/linux clean
+	$(MAKE) -C quote_wrapper/td_migration/linux clean
 	$(MAKE) -C qcnl/linux clean
 	$(MAKE) -C qpl/linux clean
 	$(MAKE) -C ../QuoteVerification clean

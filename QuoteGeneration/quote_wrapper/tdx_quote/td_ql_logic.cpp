@@ -1729,14 +1729,19 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
 
-        *p_quote_size = sizeof(sgx_quote4_t) +                   // quote body
-                        sizeof(sgx_ecdsa_sig_data_v4_t) +
-                        sizeof(sgx_ql_auth_data_t) +
-                        REF_ECDSDA_AUTHENTICATION_DATA_SIZE +    // Authentication data
-                        sizeof(sgx_ql_certification_data_t) +
-                        sizeof(sgx_ql_certification_data_t) +
+        // Now TDQE will return different quote versions depends on input TD Report version.
+        // quote v4 and quote v5 have different fields and different size. v5 is bigger, so
+        // we will return quote v5(Quote Body.type = 3) size here.
+        *p_quote_size = sizeof(sgx_quote5_t) +                // quote body
+                        sizeof(sgx_report2_body_v1_5_t) +     // copy from TD Report for TDX 1.5
+                        sizeof(uint32_t) +                    // Field for Auth Data size
+                        sizeof(sgx_ecdsa_sig_data_v4_t) +     // signature
+                        sizeof(sgx_ql_certification_data_t) + // cert_key_type == ECDSA_SIG_AUX_DATA
                         sizeof(sgx_qe_report_certification_data_t) +
-                        sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);  // RSA3072_ENC_PPID + PCE CPUSVN + PCE ISVSNV + PCEID
+                        sizeof(sgx_ql_auth_data_t) +
+                        REF_ECDSDA_AUTHENTICATION_DATA_SIZE +              // Authentication data
+                        sizeof(sgx_ql_certification_data_t) +              // cert_key_type == PPID_RSA3072_ENCRYPTED
+                        sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t); // RSA3072_ENC_PPID + PCE CPUSVN + PCE ISVSNV + PCEID
         refqt_ret = TEE_ATT_SUCCESS;
     }
     else {
@@ -1755,14 +1760,16 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
         // Overflow will not occur since the cer_data_size is limited above
-        *p_quote_size = (uint32_t)(sizeof(sgx_quote4_t) +                   // quote body
-                                   sizeof(sgx_ecdsa_sig_data_v4_t) +
-                                   sizeof(sgx_ql_auth_data_t) +
-                                   REF_ECDSDA_AUTHENTICATION_DATA_SIZE +    // Authentication data
-                                   sizeof(sgx_ql_certification_data_t) +
-                                   sizeof(sgx_ql_certification_data_t) +
+        *p_quote_size = (uint32_t)(sizeof(sgx_quote5_t) +                // quote body
+                                   sizeof(sgx_report2_body_v1_5_t) +     // copy from TD Report for TDX 1.5
+                                   sizeof(uint32_t) +                    // Field for Auth Data size
+                                   sizeof(sgx_ecdsa_sig_data_v4_t) +     // signature
+                                   sizeof(sgx_ql_certification_data_t) + // cert_key_type == ECDSA_SIG_AUX_DATA
                                    sizeof(sgx_qe_report_certification_data_t) +
-                                   cert_data_size);                         // certification data size returned by get_platform_quote_cert_data()
+                                   sizeof(sgx_ql_auth_data_t) +
+                                   REF_ECDSDA_AUTHENTICATION_DATA_SIZE + // Authentication data
+                                   sizeof(sgx_ql_certification_data_t) + // cert_key_type == PCK_CERT_CHAIN
+                                   cert_data_size);                      // certification data size returned by get_platform_quote_cert_data()
     }
 
     CLEANUP:
@@ -1801,10 +1808,9 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
 * @return TDQE_ERROR_OUT_OF_MEMORY
 * @return SGX_ERROR_INVALID_PARAMETER
 */
-tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_report,
-                                              sgx_quote4_t *p_quote,
-                                              uint32_t quote_size)
-{
+tee_att_error_t tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_report,
+                                                  uint8_t *p_quote,
+                                                  uint32_t quote_size) {
     tee_att_error_t refqt_ret = TEE_ATT_SUCCESS;
     sgx_status_t sgx_status = SGX_SUCCESS;
     tdqe_error_t tdqe_error = TDQE_ERROR_UNEXPECTED;
@@ -1997,7 +2003,7 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
                            NULL,
                            NULL,
                            NULL,
-                           (uint8_t*)p_quote,
+                           p_quote,
                            quote_size,
                            (uint8_t*)p_certification_data,
                            p_certification_data ? (uint32_t)(sizeof(*p_certification_data) + cert_data_size) : 0);

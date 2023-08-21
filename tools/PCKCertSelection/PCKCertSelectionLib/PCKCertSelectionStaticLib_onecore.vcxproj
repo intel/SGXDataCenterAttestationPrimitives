@@ -289,6 +289,9 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TcbInfo.cpp" />
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TcbLevel.cpp" />
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp" />
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleIdentity.cpp" />
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleTcb.cpp" />
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleTcbLevel.cpp" />
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\OpensslHelpers\OidUtils.cpp" />
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\X509/ProcessorPckCertificate.cpp" />
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\ParserUtils.cpp" />

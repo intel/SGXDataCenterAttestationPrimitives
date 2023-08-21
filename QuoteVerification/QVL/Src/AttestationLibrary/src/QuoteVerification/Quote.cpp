@@ -56,22 +56,82 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
 
     header = localHeader;
 
+    Body localBody{};
     EnclaveReport localEnclaveReport{};
-    TDReport localTdReport{};
-    if (localHeader.teeType == TEE_TYPE_SGX)
+    TDReport10 localTdReport10{};
+    TDReport15 localTdReport15{};
+
+    if (localHeader.version > constants::QUOTE_VERSION_4)
     {
-        if (!copyAndAdvance(localEnclaveReport, from, ENCLAVE_REPORT_BYTE_LEN, rawQuote.end()))
+        if (!copyAndAdvance(localBody, from, BODY_BYTE_SIZE, rawQuote.end()))
         {
-            LOG_ERROR("Can't read SGX enclave report from quote. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
+            LOG_ERROR("Can't read SGX report body from quote. Expected size: {}", BODY_BYTE_SIZE);
             return false;
         }
+
+        switch (localBody.bodyType) {
+            case BODY_SGX_ENCLAVE_REPORT_TYPE: // SGX Enclave Report
+                if (localBody.size != ENCLAVE_REPORT_BYTE_LEN)
+                {
+                    LOG_ERROR("Unexpected SGX enclave report size. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
+                    return false;
+                }
+                if (!copyAndAdvance(localEnclaveReport, from, ENCLAVE_REPORT_BYTE_LEN, rawQuote.end()))
+                {
+                    LOG_ERROR("Can't read SGX enclave report from quote. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
+                    return false;
+                }
+                signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + BODY_BYTE_SIZE + QE_REPORT_BYTE_LEN);
+                break;
+            case BODY_TD_REPORT10_TYPE: // TD Report for TDX 1.0
+                if (localBody.size != TD_REPORT10_BYTE_LEN)
+                {
+                    LOG_ERROR("Unexpected TDX TD Report 1.0 size. Expected size: {}", TD_REPORT10_BYTE_LEN);
+                    return false;
+                }
+                if (!copyAndAdvance(localTdReport10, from, TD_REPORT10_BYTE_LEN, rawQuote.end()))
+                {
+                    LOG_ERROR("Can't read TDX TD Report 1.0 from quote. Expected size: {}", TD_REPORT10_BYTE_LEN);
+                    return false;
+                }
+                signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + BODY_BYTE_SIZE + TD_REPORT10_BYTE_LEN);
+                break;
+            case BODY_TD_REPORT15_TYPE: // TD Report for TDX 1.5
+                if (localBody.size != TD_REPORT15_BYTE_LEN)
+                {
+                    LOG_ERROR("Unexpected TDX TD Report 1.5 size. Expected size: {}", TD_REPORT15_BYTE_LEN);
+                    return false;
+                }
+                if (!copyAndAdvance(localTdReport15, from, TD_REPORT15_BYTE_LEN, rawQuote.end()))
+                {
+                    LOG_ERROR("Can't read TDX TD Report 1.5 from quote. Expected size: {}", TD_REPORT10_BYTE_LEN);
+                    return false;
+                }
+                signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + BODY_BYTE_SIZE + TD_REPORT15_BYTE_LEN);
+                break;
+            default: // Unknown body type
+                return false;
+        }
     }
-    else if (localHeader.teeType == TEE_TYPE_TDX)
+    else
     {
-        if (!copyAndAdvance(localTdReport, from, TD_REPORT_BYTE_LEN, rawQuote.end()))
+        if (localHeader.teeType == TEE_TYPE_SGX)
         {
-            LOG_ERROR("Can't read TDX TD Report from quote. Expected size: {}", TD_REPORT_BYTE_LEN);
-            return false;
+            if (!copyAndAdvance(localEnclaveReport, from, ENCLAVE_REPORT_BYTE_LEN, rawQuote.end()))
+            {
+                LOG_ERROR("Can't read SGX enclave report from quote. Expected size: {}", ENCLAVE_REPORT_BYTE_LEN);
+                return false;
+            }
+            signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + QE_REPORT_BYTE_LEN);
+        }
+        else if (localHeader.teeType == TEE_TYPE_TDX)
+        {
+            if (!copyAndAdvance(localTdReport10, from, TD_REPORT10_BYTE_LEN, rawQuote.end()))
+            {
+                LOG_ERROR("Can't read TDX TD Report 1.0 from quote. Expected size: {}", TD_REPORT10_BYTE_LEN);
+                return false;
+            }
+            signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + TD_REPORT10_BYTE_LEN);
         }
     }
 
@@ -81,9 +141,9 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
         return false;
     }
     const auto remainingDistance = std::distance(from, rawQuote.end());
-    if(localAuthDataSize != remainingDistance)
+    if(localAuthDataSize > remainingDistance)
     {
-        LOG_ERROR("Declared auth data size {} doesn't match remaining quote size {}", localAuthDataSize, remainingDistance);
+        LOG_ERROR("Declared auth data size {} is bigger than remaining buffer size {}", localAuthDataSize, remainingDistance);
         return false;
     }
 
@@ -103,7 +163,7 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
         certificationData = localQuoteV3Auth.certificationData;
         quoteSignature = localQuoteV3Auth.ecdsa256BitSignature.signature;
     }
-    else if (localHeader.version == constants::QUOTE_VERSION_4)
+    else if (localHeader.version > constants::QUOTE_VERSION_3)
     {
         if (!copyAndAdvance(localQuoteV4Auth, from, static_cast<size_t>(localAuthDataSize), rawQuote.end()))
         {
@@ -126,29 +186,13 @@ bool Quote::parse(const std::vector<uint8_t>& rawQuote)
         quoteSignature = localQuoteV4Auth.ecdsa256BitSignature.signature;
     }
 
-    // parsing done, we should be precisely at the end of our buffer
-    // if we're not it means inconsistency in internal structure
-    // and it means invalid format
-    if(from != rawQuote.end())
-    {
-        LOG_ERROR("There is additional, not expected data in quote.");
-        return false;
-    }
-
+    body = localBody;
     enclaveReport = localEnclaveReport;
-    tdReport = localTdReport;
+    tdReport10 = localTdReport10;
+    tdReport15 = localTdReport15;
     authDataSize = localAuthDataSize;
     authDataV3 = localQuoteV3Auth;
     authDataV4 = localQuoteV4Auth;
-
-    if (localHeader.teeType == TEE_TYPE_SGX)
-    {
-        signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + QE_REPORT_BYTE_LEN);
-    }
-    else if (localHeader.teeType == TEE_TYPE_TDX)
-    {
-        signedData = getDataToSignatureVerification(rawQuote, HEADER_BYTE_LEN + TD_REPORT_BYTE_LEN);
-    }
 
     return true;
 }
@@ -195,7 +239,7 @@ bool Quote::validate() const
         }
     }
 
-    if(header.version == QUOTE_VERSION_4)
+    if(header.version == QUOTE_VERSION_4 || header.version == QUOTE_VERSION_5)
     {
         if (authDataV4.certificationData.type != constants::PCK_ID_QE_REPORT_CERTIFICATION_DATA)
         {
@@ -211,6 +255,25 @@ bool Quote::validate() const
         }
     }
 
+    if (header.version == QUOTE_VERSION_5)
+    {
+        if(std::find(ALLOWED_BODY_TYPES.begin(), ALLOWED_BODY_TYPES.end(), body.bodyType) ==
+           ALLOWED_BODY_TYPES.end())
+        {
+            return false;
+        }
+
+        if (header.teeType == TEE_TYPE_SGX && body.bodyType != BODY_SGX_ENCLAVE_REPORT_TYPE)
+        {
+            return false;
+        }
+
+        if (header.teeType != TEE_TYPE_SGX && body.bodyType == BODY_SGX_ENCLAVE_REPORT_TYPE)
+        {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -219,14 +282,24 @@ const Header& Quote::getHeader() const
     return header;
 }
 
+const Body& Quote::getBody() const
+{
+    return body;
+}
+
 const EnclaveReport& Quote::getEnclaveReport() const
 {
     return enclaveReport;
 }
 
-const TDReport& Quote::getTdReport() const
+const TDReport10& Quote::getTdReport10() const
 {
-    return tdReport;
+    return tdReport10;
+}
+
+const TDReport15& Quote::getTdReport15() const
+{
+    return tdReport15;
 }
 
 uint32_t Quote::getAuthDataSize() const
@@ -270,6 +343,62 @@ const CertificationData &Quote::getCertificationData() const {
 
 const std::array<uint8_t, constants::ECDSA_SIGNATURE_BYTE_LEN> &Quote::getQuoteSignature() const {
     return quoteSignature;
+}
+
+const std::array<uint8_t, 16> &Quote::getTeeTcbSvn() const {
+    if (header.version == QUOTE_VERSION_4)
+    {
+        return tdReport10.teeTcbSvn;
+    }
+    else // Quote V5 and higher
+    {
+        if (body.bodyType == dcap::constants::BODY_TD_REPORT10_TYPE)
+        {
+            return tdReport10.teeTcbSvn;
+        }
+        else
+        {
+            return tdReport15.teeTcbSvn;
+        }
+    }
+}
+
+const std::array<uint8_t, 48>& Quote::getMrSignerSeam() const
+{
+    if (header.version == QUOTE_VERSION_4)
+    {
+        return tdReport10.mrSignerSeam;
+    }
+    else // Quote V5 and higher
+    {
+        if (body.bodyType == dcap::constants::BODY_TD_REPORT10_TYPE)
+        {
+            return tdReport10.mrSignerSeam;
+        }
+        else
+        {
+            return tdReport15.mrSignerSeam;
+        }
+    }
+}
+
+const std::array<uint8_t, 8>& Quote::getSeamAttributes() const
+{
+    if (header.version == QUOTE_VERSION_4)
+    {
+        return tdReport10.seamAttributes;
+    }
+    else // Quote V5 and higher
+    {
+        if (body.bodyType == dcap::constants::BODY_TD_REPORT10_TYPE)
+        {
+            return tdReport10.seamAttributes;
+        }
+        else
+        {
+            return tdReport15.seamAttributes;
+        }
+    }
 }
 
 std::vector<uint8_t> Quote::getDataToSignatureVerification(const std::vector<uint8_t>& rawQuote,

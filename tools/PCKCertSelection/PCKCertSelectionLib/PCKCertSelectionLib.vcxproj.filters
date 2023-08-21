@@ -107,6 +107,15 @@
     <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp">
       <Filter>Json</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleTcb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleTcbLevel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QuoteVerification\QVL\Src\AttestationParsers\src\Json\TdxModuleIdentity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pck_sorter.h">

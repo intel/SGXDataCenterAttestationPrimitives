@@ -41,12 +41,15 @@ namespace intel { namespace sgx { namespace dcap {
 extern const std::string validSgxTcb;
 extern const std::string validSgxTcbV3;
 extern const std::string validTdxTcbV3;
+extern const std::string validTdxModuleTcb;
 extern const std::string validUpToDateStatus;
 extern const std::string validOutOfDateStatus;
 extern const std::string validRevokedStatus;
 extern const std::string validConfigurationNeededStatus;
 extern const std::string validTcbLevelV2Template;
 extern const std::string validTcbLevelV3Template;
+extern const std::string validTdxModuleIdentitiesTemplate;
+extern const std::string validTdxModuleTcbLevelTemplate;
 extern const std::string validTcbInfoV2Template;
 extern const std::string validSgxTcbInfoV3Template;
 extern const std::string validTdxTcbInfoV3Template;
@@ -89,6 +92,14 @@ public:
                                           const std::string &tcbDate = R"("tcbDate": "2019-05-23T10:36:02Z")",
                                           const std::string &advisoryIDs = R"("advisoryIDs": ["INTEL-SA-00079","INTEL-SA-00076"])");
 
+    static std::string generateTdxModuleTcbLevel(const std::string &tcbLevelTemplate = validTdxModuleTcbLevelTemplate,
+                                                 const std::string &tcb = validTdxModuleTcb,
+                                                 const std::string &status = R"("tcbStatus": "UpToDate")",
+                                                 const std::string &tcbDate = R"("tcbDate": "2019-05-23T10:36:02Z")",
+                                                 const std::string &advisoryIDs = R"("advisoryIDs": ["INTEL-SA-00079","INTEL-SA-00076"])");
+    static std::string generateTdxModuleIdentities(const std::string &tdxModuleIdentitiesTemplate = validTdxModuleIdentitiesTemplate,
+                                                   const std::string &tcbModuleIdentityLevelsJson = generateTdxModuleTcbLevel());
+
 /**
  * Generates tcbInfo json based on given template and tcb json
  * @param tcbInfoTemplate template which contains two %s which will be replaced with tcbJson and signature
@@ -99,6 +110,11 @@ public:
     static std::string generateTcbInfo(const std::string &tcbInfoTemplate = validTcbInfoV2Template,
                                        const std::string &tcbLevelsJson = generateTcbLevelV2(),
                                        const std::string &signature = validSignatureTemplate);
+
+    static std::string generateTdxTcbInfo(const std::string &tcbInfoTemplate = validTdxTcbInfoV3Template,
+                                          const std::string &tcbLevelsJson = generateTcbLevelV3(),
+                                          const std::string &tdxModuleIdentities = generateTdxModuleIdentities(),
+                                          const std::string &signature = validSignatureTemplate);
 };
 
 }}}
