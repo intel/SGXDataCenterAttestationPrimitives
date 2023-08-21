@@ -41,6 +41,8 @@
 #include "sgx_urts_wrapper.h"
 #include "se_trace.h"
 #include "se_thread.h"
+#include "sgx_pce.h"
+#include "sgx_dcap_qv_internal.h"
 
 #define MAX(x, y) (((x)>(y))?(x):(y))
 #define PATH_SEPARATOR '/'
@@ -436,7 +438,7 @@ __attribute__((constructor)) void _qv_global_constructor()
 */
 __attribute__((destructor)) void _qv_global_destructor()
 {
-    // Try to unload Quote Provider library
+    //Try to unload Quote Provider library
     //
     int rc = 0;
 
@@ -490,6 +492,20 @@ __attribute__((destructor)) void _qv_global_destructor()
         //destroy the mutex before lib is unloaded, even there are some errs here
         se_mutex_destroy(&g_urts_mutex);
         return;
+    }
+
+    //Try to unload QvE only when use legacy PERSISTENT policy
+    //All the threads will share single QvE instance in this mode
+    //
+    extern sgx_ql_request_policy_t g_qve_policy;
+    extern sgx_enclave_id_t g_qve_eid;
+
+    if (g_qve_policy == SGX_QL_PERSISTENT) {
+        if (g_qve_eid != 0) {
+            //ignore the return error
+            unload_qve_once(&g_qve_eid);
+            g_qve_eid = 0;
+        }
     }
 
     if (p_sgx_urts_create_enclave)

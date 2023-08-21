@@ -34,9 +34,13 @@
 #include <string>
 #include <assert.h>
 #include <fstream>
+#ifndef QVL_ONLY
 #include <sgx_uae_launch.h>
 #include "sgx_urts.h"
 #include "Enclave_u.h"
+#else
+#include <cstring>
+#endif
 #include "sgx_ql_quote.h"
 #include "sgx_dcap_quoteverify.h"
 #ifdef SGX_QPL_LOGGING
@@ -54,6 +58,9 @@
 #define DEFAULT_QUOTE "..\\..\\..\\QuoteGenerationSample\\x64\\Debug\\quote.dat"
 
 #define strncpy strncpy_s
+#endif
+#ifndef SGX_CDECL
+#define SGX_CDECL
 #endif
 
 using namespace std;
@@ -103,13 +110,16 @@ vector<uint8_t> readBinaryContent(const string &filePath)
 
 int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 {
-#ifndef TD_ENV
+#ifndef QVL_ONLY
     sgx_status_t sgx_ret = SGX_SUCCESS;
     sgx_ql_qe_report_info_t qve_report_info;
     int updated = 0;
     sgx_launch_token_t token = {0};
     unsigned char rand_nonce[16] = "59jslk201fgjmm;";
     quote3_error_t verify_qveid_ret = SGX_QL_ERROR_UNEXPECTED;
+    sgx_enclave_id_t eid = 0;
+#else
+    (void)use_qve;
 #endif
 
     int ret = 0;
@@ -117,7 +127,6 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
     quote3_error_t dcap_ret = SGX_QL_ERROR_UNEXPECTED;
     uint32_t collateral_expiration_status = 1;
     sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
-    sgx_enclave_id_t eid = 0;
 
     tee_supp_data_descriptor_t supp_data;
 
@@ -127,11 +136,10 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
     supp_ver_t latest_ver;
 
+ #ifndef QVL_ONLY
     // Trusted quote verification
     if (use_qve)
     {
-
-#ifndef TD_ENV
         // set nonce
         //
         memcpy(qve_report_info.nonce.rand, rand_nonce, sizeof(rand_nonce));
@@ -327,11 +335,10 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                 log("Info: Advisory ID: %s", p->sa_list);
             }
         }
-#endif
     }
-
     // Untrusted quote verification
     else
+#endif
     {
         // call DCAP quote verify library to get supplemental latest version and data size
         // version is a combination of major_version and minor version
@@ -394,6 +401,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         else
         {
             log("Error: App: tee_verify_quote failed: 0x%04x", dcap_ret);
+            goto cleanup;
         }
 
         // check verification result
@@ -459,10 +467,12 @@ cleanup:
         free(supp_data.p_data);
     }
 
+#ifndef QVL_ONLY
     if (eid)
     {
         sgx_destroy_enclave(eid);
     }
+#endif
 
     return ret;
 }
@@ -541,24 +551,26 @@ int SGX_CDECL main(int argc, char *argv[])
 
     log("Info: ECDSA quote path: %s", quote_path);
 
-    // We demonstrate two different types of quote verification
-    //    a. Trusted quote verification - quote will be verified by Intel QvE
-    //    b. Untrusted quote verification - quote will be verified by untrusted QVL (Quote Verification Library)
-    //       this mode doesn't rely on SGX/TDX capable system, but the results can not be cryptographically authenticated
-    //
+    // When building with QVL_ONLY = 0 (default), two different types of quote verification are demonstrated
+    //    a. Trusted quote verification - quote is verified with Intel QvE
+    //    b. Untrusted quote verification - quote is verified with Intel QVL (Quote Verification Library)
+    //       This mode does not rely on an SGX/TDX capable system, but the results cannot be cryptographically authenticated
+    // If built with QVL_ONLY = 1, only one type of quote verification will be demonstrated
+    //    a. Untrusted quote verification - quote is verified with Intel QVL (Quote Verification Library)
+    //       This mode does not rely on an SGX/TDX capable system, but the results cannot be cryptographically authenticated
 
-#ifndef TD_ENV
+#ifndef QVL_ONLY
     // Trusted quote verification, ignore error checking
     log("Trusted quote verification:");
     ecdsa_quote_verification(quote, true);
 
-    log("===========================================");
+    printf("\n===========================================\n\n");
     // Unrusted quote verification, ignore error checking
     log("Untrusted quote verification:");
 
 #else
-    // Quote verification inside TD
-    log("Quote verification inside TD, support both SGX and TDX quote:");
+    // Quote verification with QVL
+    log("Quote verification with QVL, support both SGX and TDX quote:");
 #endif
 
     ecdsa_quote_verification(quote, false);

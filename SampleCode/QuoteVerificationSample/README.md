@@ -51,9 +51,9 @@ SGX_QPL_LOGGING will be set to 1 by default, enabling error level logging for fo
 ```
 $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
-## Build and run QuoteVerificationSample inside TD VM
+## Build and run QuoteVerificationSample with QVL only
 ```
-$ make TD_ENV=1 SGX_DEBUG=1
+$ make QVL_ONLY=1 SGX_DEBUG=1
 $ ./app -quote </path/to/quote.dat [default=../QuoteGenerationSample/quote.dat]>
 ```
 SGX_QPL_LOGGING will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.

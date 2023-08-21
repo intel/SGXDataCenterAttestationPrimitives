@@ -101,6 +101,7 @@ typedef struct _tdx_rtmr_event_t {
 extern "C" {
 #endif
 
+#ifndef _TD_MIGRATION
 /**
  * @brief Request a Quote of the calling TD.
  *
@@ -249,6 +250,15 @@ tdx_attest_error_t tdx_att_extend(
 tdx_attest_error_t tdx_att_get_supported_att_key_ids(
     tdx_uuid_t *p_att_key_id_list,
     uint32_t *p_list_size);
+
+#else
+__attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_report (
+               const void *p_tdx_report,
+               uint32_t tdx_report_size,
+               void *p_quote,
+               uint32_t *p_quote_size);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

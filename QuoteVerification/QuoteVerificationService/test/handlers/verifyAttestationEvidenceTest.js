@@ -797,7 +797,7 @@ describe('verify attestation evidence handler tests', () => {
                 tcbLevels:               [
                     {
                         tcb: {
-                            isvsvn: 555
+                            isvsvn: 12978
                         }
                     }
                 ]

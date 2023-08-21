@@ -55,7 +55,7 @@ export const PLATFORM_REG_SCHEMA = {
       pattern: '^[a-fA-F0-9]{768}$',
     },
     platform_manifest: {
-      type: 'string',
+      type: ['string','null'],
     },
   },
   required: ['qe_id', 'pce_id'],
@@ -93,7 +93,7 @@ export const PLATFORM_COLLATERAL_SCHEMA_V3 = {
             pattern: '^[a-fA-F0-9]{768}$|^$',
           },
           platform_manifest: {
-            type: 'string',
+            type: ['string','null'],
           },
         },
         required: ['qe_id', 'pce_id'],
@@ -121,7 +121,7 @@ export const PLATFORM_COLLATERAL_SCHEMA_V3 = {
                 pattern: '^[a-fA-F0-9]{768}$|^$',
               },
               platform_manifest: {
-                type: 'string',
+                type: ['string','null'],
               },
               certs: {
                 type: 'array',
@@ -475,7 +475,7 @@ export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
             pattern: '^[a-fA-F0-9]{768}$|^$',
           },
           platform_manifest: {
-            type: 'string',
+            type: ['string','null'],
           },
         },
         required: ['qe_id', 'pce_id'],
@@ -506,7 +506,7 @@ export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
                 pattern: '^[a-fA-F0-9]{768}$|^$',
               },
               platform_manifest: {
-                type: 'string',
+                type: ['string','null'],
               },
               certs: {
                 type: 'array',

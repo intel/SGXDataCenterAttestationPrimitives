@@ -1284,8 +1284,8 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         cert_data_size = 0;
         pck_cert_id.p_qe3_id = (uint8_t*)m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*m_qe_id);
-        pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-        pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+        pck_cert_id.p_platform_cpu_svn = &tdqe_report_body.cpu_svn;
+        pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
         pck_cert_id.encrypted_ppid_size = REF_RSA_OAEP_3072_MOD_SIZE;
         pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1485,7 +1485,7 @@ tee_att_error_t tee_att_config_t::ecdsa_init_quote(sgx_ql_cert_key_type_t certif
         pck_cert_id.p_qe3_id = (uint8_t*)m_qe_id;
         pck_cert_id.qe3_id_size = sizeof(*m_qe_id);
         pck_cert_id.p_platform_cpu_svn = &tdqe_report.body.cpu_svn;
-        pck_cert_id.p_platform_pce_isv_svn = &m_pce_info.pce_isv_svn;
+        pck_cert_id.p_platform_pce_isv_svn = &pce_isv_svn;
         pck_cert_id.p_encrypted_ppid = encrypted_ppid;
         pck_cert_id.encrypted_ppid_size = REF_RSA_OAEP_3072_MOD_SIZE;
         pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1711,8 +1711,8 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
     cert_data_size = 0;
     pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
     pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
-    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->raw_cpu_svn;
+    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->raw_pce_info.pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
     pck_cert_id.encrypted_ppid_size = 0;
     pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1729,14 +1729,19 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
 
-        *p_quote_size = sizeof(sgx_quote4_t) +                   // quote body
-                        sizeof(sgx_ecdsa_sig_data_v4_t) +
-                        sizeof(sgx_ql_auth_data_t) +
-                        REF_ECDSDA_AUTHENTICATION_DATA_SIZE +    // Authentication data
-                        sizeof(sgx_ql_certification_data_t) +
-                        sizeof(sgx_ql_certification_data_t) +
+        // Now TDQE will return different quote versions depends on input TD Report version.
+        // quote v4 and quote v5 have different fields and different size. v5 is bigger, so
+        // we will return quote v5(Quote Body.type = 3) size here.
+        *p_quote_size = sizeof(sgx_quote5_t) +                // quote body
+                        sizeof(sgx_report2_body_v1_5_t) +     // copy from TD Report for TDX 1.5
+                        sizeof(uint32_t) +                    // Field for Auth Data size
+                        sizeof(sgx_ecdsa_sig_data_v4_t) +     // signature
+                        sizeof(sgx_ql_certification_data_t) + // cert_key_type == ECDSA_SIG_AUX_DATA
                         sizeof(sgx_qe_report_certification_data_t) +
-                        sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t);  // RSA3072_ENC_PPID + PCE CPUSVN + PCE ISVSNV + PCEID
+                        sizeof(sgx_ql_auth_data_t) +
+                        REF_ECDSDA_AUTHENTICATION_DATA_SIZE +              // Authentication data
+                        sizeof(sgx_ql_certification_data_t) +              // cert_key_type == PPID_RSA3072_ENCRYPTED
+                        sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t); // RSA3072_ENC_PPID + PCE CPUSVN + PCE ISVSNV + PCEID
         refqt_ret = TEE_ATT_SUCCESS;
     }
     else {
@@ -1747,7 +1752,6 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
         //Check to make sure that the TCBm of from the platform library matches the Cert TCB in the ECDSA blob.
-        //We've change to use the TCBm to get the cert data, so below check is redundant. But I think it's OK to leave it here.
         if((0 != memcmp(&p_seal_data_plain_text->cert_cpu_svn, &pce_cert_psvn.cpu_svn, sizeof(p_seal_data_plain_text->cert_cpu_svn))) ||
            (p_seal_data_plain_text->cert_pce_info.pce_isv_svn != pce_cert_psvn.isv_svn)) {
             SE_TRACE(SE_TRACE_ERROR, "TCBm in ECDSA blob doesn't match the value returned by the platform lib. %d and %d\n", p_seal_data_plain_text->cert_pce_info.pce_isv_svn, pce_cert_psvn.isv_svn);
@@ -1756,14 +1760,16 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
             goto CLEANUP;
         }
         // Overflow will not occur since the cer_data_size is limited above
-        *p_quote_size = (uint32_t)(sizeof(sgx_quote4_t) +                   // quote body
-                                   sizeof(sgx_ecdsa_sig_data_v4_t) +
-                                   sizeof(sgx_ql_auth_data_t) +
-                                   REF_ECDSDA_AUTHENTICATION_DATA_SIZE +    // Authentication data
-                                   sizeof(sgx_ql_certification_data_t) +
-                                   sizeof(sgx_ql_certification_data_t) +
+        *p_quote_size = (uint32_t)(sizeof(sgx_quote5_t) +                // quote body
+                                   sizeof(sgx_report2_body_v1_5_t) +     // copy from TD Report for TDX 1.5
+                                   sizeof(uint32_t) +                    // Field for Auth Data size
+                                   sizeof(sgx_ecdsa_sig_data_v4_t) +     // signature
+                                   sizeof(sgx_ql_certification_data_t) + // cert_key_type == ECDSA_SIG_AUX_DATA
                                    sizeof(sgx_qe_report_certification_data_t) +
-                                   cert_data_size);                         // certification data size returned by get_platform_quote_cert_data()
+                                   sizeof(sgx_ql_auth_data_t) +
+                                   REF_ECDSDA_AUTHENTICATION_DATA_SIZE + // Authentication data
+                                   sizeof(sgx_ql_certification_data_t) + // cert_key_type == PCK_CERT_CHAIN
+                                   cert_data_size);                      // certification data size returned by get_platform_quote_cert_data()
     }
 
     CLEANUP:
@@ -1802,10 +1808,9 @@ tee_att_error_t tee_att_config_t::ecdsa_get_quote_size(sgx_ql_cert_key_type_t ce
 * @return TDQE_ERROR_OUT_OF_MEMORY
 * @return SGX_ERROR_INVALID_PARAMETER
 */
-tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_report,
-                                              sgx_quote4_t *p_quote,
-                                              uint32_t quote_size)
-{
+tee_att_error_t tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_report,
+                                                  uint8_t *p_quote,
+                                                  uint32_t quote_size) {
     tee_att_error_t refqt_ret = TEE_ATT_SUCCESS;
     sgx_status_t sgx_status = SGX_SUCCESS;
     tdqe_error_t tdqe_error = TDQE_ERROR_UNEXPECTED;
@@ -1916,8 +1921,8 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
     cert_data_size = 0;
     pck_cert_id.p_qe3_id = (uint8_t*)&p_seal_data_plain_text->qe_id;
     pck_cert_id.qe3_id_size = sizeof(p_seal_data_plain_text->qe_id);
-    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->cert_cpu_svn;
-    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->cert_pce_info.pce_isv_svn;
+    pck_cert_id.p_platform_cpu_svn = &p_seal_data_plain_text->raw_cpu_svn;
+    pck_cert_id.p_platform_pce_isv_svn = &p_seal_data_plain_text->raw_pce_info.pce_isv_svn;
     pck_cert_id.p_encrypted_ppid = NULL;
     pck_cert_id.encrypted_ppid_size = 0;
     pck_cert_id.crypto_suite = PCE_ALG_RSA_OAEP_3072;
@@ -1953,7 +1958,6 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
             goto CLEANUP;
         }
         // Check to make sure that the TCBm of from the platform library matches the Cert TCB in the ECDSA blob.
-        // We've change to use the TCBm to get the cert data, so below check is redundant. But I think it's OK to leave it here.
         if((0 != memcmp(&p_seal_data_plain_text->cert_cpu_svn, &pce_cert_psvn.cpu_svn, sizeof(p_seal_data_plain_text->cert_cpu_svn))) ||
            (p_seal_data_plain_text->cert_pce_info.pce_isv_svn != pce_cert_psvn.isv_svn)) {
             SE_TRACE(SE_TRACE_ERROR, "TCBm in ECDSA blob doesn't match the value returned by the platform lib. %d and %d\n", p_seal_data_plain_text->cert_pce_info.pce_isv_svn, pce_cert_psvn.isv_svn);
@@ -1999,7 +2003,7 @@ tee_att_error_t  tee_att_config_t::ecdsa_get_quote(const sgx_report2_t *p_app_re
                            NULL,
                            NULL,
                            NULL,
-                           (uint8_t*)p_quote,
+                           p_quote,
                            quote_size,
                            (uint8_t*)p_certification_data,
                            p_certification_data ? (uint32_t)(sizeof(*p_certification_data) + cert_data_size) : 0);

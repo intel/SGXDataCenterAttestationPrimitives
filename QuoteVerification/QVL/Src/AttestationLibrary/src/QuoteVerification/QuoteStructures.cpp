@@ -21,6 +21,13 @@ bool Header::insert(std::vector<uint8_t>::const_iterator& from, const std::vecto
     return true;
 }
 
+bool Body::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+{
+    if (!copyAndAdvance(bodyType, from, end)) { return false; }
+    if (!copyAndAdvance(size, from, end)) { return false; }
+    return true;
+}
+
 bool EnclaveReport::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
     if (!copyAndAdvance(cpuSvn, from, end)) { return false; }
@@ -84,7 +91,7 @@ std::array<uint8_t,ENCLAVE_REPORT_BYTE_LEN> EnclaveReport::rawBlob() const
     return ret;
 }
 
-bool TDReport::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
+bool TDReport10::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
     if (!copyAndAdvance(teeTcbSvn, from, end)) { return false; }
     if (!copyAndAdvance(mrSeam, from, end)) { return false; }
@@ -104,9 +111,9 @@ bool TDReport::insert(std::vector<uint8_t>::const_iterator& from, const std::vec
     return true;
 }
 
-std::array<uint8_t,TD_REPORT_BYTE_LEN> TDReport::rawBlob() const
+std::array<uint8_t,TD_REPORT10_BYTE_LEN> TDReport10::rawBlob() const
 {
-    std::array<uint8_t, TD_REPORT_BYTE_LEN> ret{};
+    std::array<uint8_t, TD_REPORT10_BYTE_LEN> ret{};
     auto to = ret.begin();
 
     std::copy(teeTcbSvn.begin(), teeTcbSvn.end(), to);
@@ -157,9 +164,30 @@ std::array<uint8_t,TD_REPORT_BYTE_LEN> TDReport::rawBlob() const
     return ret;
 }
 
-uint32_t TDReport::getSeamSvn() const
+bool TDReport15::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)
 {
-    return teeTcbSvn[0];
+    if (!TDReport10::insert(from, end)) return false;
+    if (!copyAndAdvance(teeTcbSvn2, from, end)) { return false; }
+    if (!copyAndAdvance(mrServiceTd, from, end)) { return false; }
+    return true;
+}
+
+std::array<uint8_t,TD_REPORT15_BYTE_LEN> TDReport15::rawBlob() const
+{
+    const auto& ret10 = TDReport10::rawBlob();
+
+    std::array<uint8_t, TD_REPORT15_BYTE_LEN> ret{};
+    std::copy(ret10.begin(), ret10.end(), ret.begin());
+    auto to = ret.begin();
+
+    std::advance(to, TD_REPORT10_BYTE_LEN);
+    std::copy(teeTcbSvn2.begin(), teeTcbSvn2.end(), to);
+    std::advance(to, (unsigned) teeTcbSvn2.size());
+
+    std::copy(mrServiceTd.begin(), mrServiceTd.end(), to);
+    std::advance(to, (unsigned) mrServiceTd.size());
+
+    return ret;
 }
 
 bool Ecdsa256BitSignature::insert(std::vector<uint8_t>::const_iterator& from, const std::vector<uint8_t>::const_iterator& end)

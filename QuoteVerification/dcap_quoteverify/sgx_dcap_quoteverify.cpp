@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <new>
 #include <memory>
+#include <mutex>
 #include "se_trace.h"
 #include "se_thread.h"
 #include "se_memcpy.h"
@@ -57,8 +58,19 @@ sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_oca
 sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall = NULL;
 sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall = NULL;
 
-thread_local std::unique_ptr<tee_qv_base> p_tee_qv = NULL;
-thread_local sgx_ql_request_policy_t qve_policy_per_thread = SGX_QL_EPHEMERAL;
+thread_local std::shared_ptr<tee_qv_base> p_tee_qv = NULL;
+std::shared_ptr<tee_qv_base> global_tee_qv = NULL;
+sgx_enclave_id_t g_qve_eid = 0;
+std::mutex qve_mutex;
+
+// Default policy is SGX_QL_EPHEMERAL, which is same with legacy DCAP QVL behavior
+// Support multi-thread policies are show below, it would not be used by default
+//  * SGX_QL_EPHEMERAL_QVE_MULTI_THREAD
+//  * SGX_QL_PERSISTENT_QVE_MULTI_THREAD
+//
+sgx_ql_request_policy_t g_qve_policy = SGX_QL_EPHEMERAL;
+bool g_policy_flag = false;
+
 thread_local tee_class_type_t current_class_type = CLASS_SGX_QVL;
 
 //redefine uRTS functions to remove sgx_urts library dependency during compilcation
@@ -155,6 +167,23 @@ extern "C" int pthread_wakeup_ocall(unsigned long long waiter)
 }
 #endif
 
+static quote3_error_t sgx_error_to_quote3_error(sgx_status_t err)
+{
+    switch (err)
+    {
+    case SGX_SUCCESS:
+        return SGX_QL_SUCCESS;
+    case SGX_ERROR_OUT_OF_EPC:
+        return SGX_QL_OUT_OF_EPC;
+    case SGX_ERROR_OUT_OF_MEMORY:
+        return SGX_QL_ERROR_OUT_OF_MEMORY;
+    case SGX_ERROR_INVALID_PARAMETER:
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    default:
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+}
+
 std::unique_ptr<tee_qv_base> create_instance(tee_class_type_t type)
 {
     switch(type) {
@@ -223,11 +252,31 @@ static quote3_error_t get_verification_supplemental_data_size_and_version(
 quote3_error_t sgx_qv_set_enclave_load_policy(
     sgx_ql_request_policy_t policy)
 {
-    if (policy > SGX_QL_EPHEMERAL)
+    if (policy > SGX_QL_PERSISTENT_QVE_MULTI_THREAD)
         return SGX_QL_UNSUPPORTED_LOADING_POLICY;
 
-    if (policy == SGX_QL_EPHEMERAL)
-        qve_policy_per_thread = policy;
+    std::lock_guard<std::mutex> lock(qve_mutex);
+
+    if (g_policy_flag == false) {
+        g_qve_policy = policy;
+        g_policy_flag = true;
+    }
+
+    else {
+        //Policy has been set before in current process, we will try to unload QvE if exist
+        //If policy is QL persistent last time, try to unload QvE first
+        SE_TRACE(SE_TRACE_DEBUG, "DEBUG: QvE load policy has been set in current process.\n");
+        if (g_qve_policy == SGX_QL_PERSISTENT) {
+            if (g_qve_eid != 0) {
+                //ignore the return error
+                unload_qve_once(&g_qve_eid);
+                g_qve_eid = 0;
+            }
+        }
+
+        g_qve_policy = policy;
+        g_policy_flag = true;
+    }
 
     return SGX_QL_SUCCESS;
 }
@@ -249,6 +298,153 @@ quote3_error_t tee_get_supplemental_data_version_and_size(
     return get_verification_supplemental_data_size_and_version(p_data_size, p_version);
 }
 
+static quote3_error_t tee_verify_evidence_internal(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    const time_t expiration_check_date,
+    uint32_t *p_collateral_expiration_status,
+    sgx_ql_qv_result_t *p_quote_verification_result,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    uint32_t supplemental_data_size,
+    uint8_t *p_supplemental_data,
+    std::shared_ptr<tee_qv_base> p_qv)
+{
+
+    quote3_error_t qve_ret = SGX_QL_ERROR_UNEXPECTED;
+    sgx_status_t sgx_ret = SGX_SUCCESS;
+    unsigned char fmspc_from_quote[FMSPC_SIZE] = { 0 };
+    unsigned char ca_from_quote[CA_SIZE] = { 0 };
+    struct _sgx_ql_qve_collateral_t* qve_collaterals_from_qp = NULL;
+
+    if (!p_qv)
+        return SGX_QL_ERROR_UNEXPECTED;
+
+    do {
+        //try to load QvE if user wants to use trusted quote verification
+        //
+        if (current_class_type == CLASS_SGX_QVE || current_class_type == CLASS_TDX_QVE) {
+            if (g_qve_policy == SGX_QL_PERSISTENT || g_qve_policy == SGX_QL_EPHEMERAL) {
+
+                if (g_qve_eid == 0)
+                    sgx_ret = load_qve_once(&g_qve_eid);
+
+                p_qv->set_eid(g_qve_eid);
+            }
+
+            //Only legacy mode share single QvE in multi-threads, other modes load QvE per thread
+            //
+            else {
+                sgx_ret = p_qv->load_qve();
+            }
+
+            if (sgx_ret != SGX_SUCCESS) {
+                qve_ret = sgx_error_to_quote3_error(sgx_ret);
+                break;
+            }
+        }
+
+        //validate supplemental data size if using QvE
+        //
+        if (p_supplemental_data && p_qve_report_info) {
+            quote3_error_t tmp_ret = SGX_QL_ERROR_UNEXPECTED;
+            uint32_t tmp_size = 0;
+
+            //supplemental size from QvE
+            tmp_ret = p_qv->tee_get_supplemental_data_size(&tmp_size);
+
+            if (tmp_ret != SGX_QL_SUCCESS) {
+
+                if (p_quote_verification_result) {
+                    *p_quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
+                }
+
+                qve_ret = SGX_QL_ERROR_UNEXPECTED;
+                break;
+            }
+
+            if (tmp_size != supplemental_data_size) {
+                if (p_quote_verification_result) {
+                    *p_quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
+                }
+
+                qve_ret = SGX_QL_ERROR_QVL_QVE_MISMATCH;
+                break;
+            }
+        }
+
+        //in case input collateral is NULL, dynamically load and call QPL to retrieve verification collateral
+        //
+        if (NULL_POINTER(p_quote_collateral)) {
+
+            //extract fmspc and CA from the quote, these values are required inorder to query collateral from QPL
+            //
+            qve_ret = p_qv->tee_get_fmspc_ca_from_quote(p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
+            if (qve_ret == SGX_QL_SUCCESS) {
+                SE_TRACE(SE_TRACE_DEBUG, "Info: get_fmspc_ca_from_quote successfully returned.\n");
+            }
+            else {
+                SE_TRACE(SE_TRACE_DEBUG, "Error: get_fmspc_ca_from_quote failed: 0x%04x\n", qve_ret);
+                break;
+            }
+
+            //retrieve verification collateral using QPL
+            //
+            qve_ret = p_qv->tee_get_verification_endorsement(
+                (const char *)fmspc_from_quote,
+                FMSPC_SIZE,
+                (const char *)ca_from_quote,
+                &qve_collaterals_from_qp);
+            if (qve_ret == SGX_QL_SUCCESS) {
+                SE_TRACE(SE_TRACE_DEBUG, "Info: dcap_retrieve_verification_collateral successfully returned.\n");
+            }
+            else {
+                SE_TRACE(SE_TRACE_DEBUG, "Error: dcap_retrieve_verification_collateral failed: 0x%04x\n", qve_ret);
+                break;
+            }
+            p_quote_collateral = qve_collaterals_from_qp;
+        }
+
+        qve_ret = p_qv->tee_verify_evidence(
+            p_quote, quote_size,
+            p_quote_collateral,
+            expiration_check_date,
+            p_collateral_expiration_status,
+            p_quote_verification_result,
+            p_qve_report_info,
+            supplemental_data_size,
+            p_supplemental_data);
+        if (qve_ret == SGX_QL_SUCCESS) {
+            SE_TRACE(SE_TRACE_DEBUG, "Info: verify_quote successfully returned.\n");
+        }
+        else {
+            SE_TRACE(SE_TRACE_DEBUG, "Error: verify_quote failed: 0x%04x\n", qve_ret);
+            break;
+        }
+
+    } while (0);
+
+    //free verification collateral using QPL
+    //
+    if (qve_collaterals_from_qp) {
+        p_qv->tee_free_verification_endorsement(qve_collaterals_from_qp);
+    }
+
+    //unload QvE if set policy to ephemeral
+    //
+    if (g_qve_policy == SGX_QL_EPHEMERAL ||
+        g_qve_policy == SGX_QL_EPHEMERAL_QVE_MULTI_THREAD) {
+
+        sgx_ret = p_qv->unload_qve();
+        g_qve_eid = 0;
+
+        if (sgx_ret != SGX_SUCCESS) {
+            qve_ret = sgx_error_to_quote3_error(sgx_ret);
+        }
+    }
+
+    return qve_ret;
+}
 
 /**
  * Perform ECDSA quote verification
@@ -283,21 +479,26 @@ quote3_error_t tee_verify_evidence(
     //parse quote header to get tee type, only support SGX and TDX by now
     tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
 
+    std::unique_ptr<tee_qv_base> p_local_qv = NULL;
+
     // check quote type
     uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
 
-    if (*p_type == SGX_QUOTE_TYPE)
+    if (*p_type == SGX_QUOTE_TYPE) {
+        SE_TRACE(SE_TRACE_DEBUG, "Info: Quote type - SGX quote.\n");
         tee_type = SGX_EVIDENCE;
-    else if (*p_type == TDX_QUOTE_TYPE)
+    }
+    else if (*p_type == TDX_QUOTE_TYPE) {
+        SE_TRACE(SE_TRACE_DEBUG, "Info: Quote type - TDX quote.\n");
         tee_type = TDX_EVIDENCE;
-    else
+    }
+    else {
+        SE_TRACE(SE_TRACE_ERROR, "Err: Unsupported quote type.\n");
         //quote type is not supported
         return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
 
     quote3_error_t qve_ret = SGX_QL_ERROR_UNEXPECTED;
-    unsigned char fmspc_from_quote[FMSPC_SIZE] = { 0 };
-    unsigned char ca_from_quote[CA_SIZE] = { 0 };
-    struct _sgx_ql_qve_collateral_t* qve_collaterals_from_qp = NULL;
     tee_class_type_t class_type = CLASS_SGX_QVL;
 
     if (p_qve_report_info) {
@@ -316,133 +517,80 @@ quote3_error_t tee_verify_evidence(
             class_type = CLASS_TDX_QVL;
     }
 
-    //load QvE again if policy is ephemeral last time
-    //
-    if (p_tee_qv && class_type == current_class_type && qve_policy_per_thread == SGX_QL_EPHEMERAL) {
+    if (g_qve_policy == SGX_QL_PERSISTENT || g_qve_policy == SGX_QL_EPHEMERAL) {
 
-        if (class_type == CLASS_SGX_QVE) {
-            sgx_qv_trusted* ptr = dynamic_cast<sgx_qv_trusted*>(p_tee_qv.get());
-            ptr->load_qve();
+        std::lock_guard<std::mutex> lock(qve_mutex);
+
+        if (global_tee_qv || class_type != current_class_type) {
+            //reset the object if the type change in next thread
+            global_tee_qv.reset();
+            global_tee_qv = NULL;
+
+            SE_TRACE(SE_TRACE_DEBUG, "Info: Reset global tee qve instance.\n");
         }
-        else if (class_type == CLASS_TDX_QVE) {
-            tdx_qv_trusted* ptr = dynamic_cast<tdx_qv_trusted*>(p_tee_qv.get());
-            ptr->load_qve();
-        }
-    }
 
-    if (!p_tee_qv || class_type != current_class_type) {
-        //delete current object if any
-        p_tee_qv.reset();
-
-        p_tee_qv = create_instance(class_type);
-        if (p_tee_qv == nullptr) {
-            SE_TRACE(SE_TRACE_ERROR, "Error: cannot create tee qv instance.\n");
-            return SGX_QL_ERROR_UNEXPECTED;
+        if (!global_tee_qv) {
+            global_tee_qv = create_instance(class_type);
+            if (global_tee_qv == nullptr) {
+                SE_TRACE(SE_TRACE_ERROR, "Error: cannot create tee qv instance.\n");
+                goto end;
+            }
         }
 
         current_class_type = class_type;
-    }
 
-    do {
-        //validate supplemental data size if using QvE
-        //
-        if (p_supplemental_data && p_qve_report_info) {
-            quote3_error_t tmp_ret = SGX_QL_ERROR_UNEXPECTED;
-            uint32_t tmp_size = 0;
-
-            //supplemental size from QvE
-            tmp_ret = p_tee_qv->tee_get_supplemental_data_size(&tmp_size);
-
-            if (tmp_ret != SGX_QL_SUCCESS) {
-
-                if (p_quote_verification_result) {
-                    *p_quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
-                }
-
-                qve_ret = SGX_QL_ERROR_UNEXPECTED;
-                break;
-            }
-
-            if (tmp_size != supplemental_data_size) {
-                if (p_quote_verification_result) {
-                    *p_quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
-                }
-
-                qve_ret = SGX_QL_ERROR_QVL_QVE_MISMATCH;
-                break;
-            }
-        }
-
-        //in case input collateral is NULL, dynamically load and call QPL to retrieve verification collateral
-        //
-        if (NULL_POINTER(p_quote_collateral)) {
-
-            //extract fmspc and CA from the quote, these values are required inorder to query collateral from QPL
-            //
-            qve_ret = p_tee_qv->tee_get_fmspc_ca_from_quote(p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
-            if (qve_ret == SGX_QL_SUCCESS) {
-                SE_TRACE(SE_TRACE_DEBUG, "Info: get_fmspc_ca_from_quote successfully returned.\n");
-            }
-            else {
-                SE_TRACE(SE_TRACE_DEBUG, "Error: get_fmspc_ca_from_quote failed: 0x%04x\n", qve_ret);
-                break;
-            }
-
-            //retrieve verification collateral using QPL
-            //
-            qve_ret = p_tee_qv->tee_get_verification_endorsement(
-                (const char *)fmspc_from_quote,
-                FMSPC_SIZE,
-                (const char *)ca_from_quote,
-                &qve_collaterals_from_qp);
-            if (qve_ret == SGX_QL_SUCCESS) {
-                SE_TRACE(SE_TRACE_DEBUG, "Info: dcap_retrieve_verification_collateral successfully returned.\n");
-            }
-            else {
-                SE_TRACE(SE_TRACE_DEBUG, "Error: dcap_retrieve_verification_collateral failed: 0x%04x\n", qve_ret);
-                break;
-            }
-            p_quote_collateral = qve_collaterals_from_qp;
-        }
-
-        qve_ret = p_tee_qv->tee_verify_evidence(
-            p_quote, quote_size,
+        qve_ret = tee_verify_evidence_internal(
+            p_quote,
+            quote_size,
             p_quote_collateral,
             expiration_check_date,
             p_collateral_expiration_status,
             p_quote_verification_result,
             p_qve_report_info,
             supplemental_data_size,
-            p_supplemental_data);
-        if (qve_ret == SGX_QL_SUCCESS) {
-            SE_TRACE(SE_TRACE_DEBUG, "Info: verify_quote successfully returned.\n");
-        }
-        else {
-            SE_TRACE(SE_TRACE_DEBUG, "Error: verify_quote failed: 0x%04x\n", qve_ret);
-            break;
-        }
-    } while (0);
-
-    //free verification collateral using QPL
-    //
-    if (qve_collaterals_from_qp) {
-        p_tee_qv->tee_free_verification_endorsement(qve_collaterals_from_qp);
+            p_supplemental_data,
+            global_tee_qv);
     }
 
-    //unload QvE if set policy to ephemeral
-    //
-    if (qve_policy_per_thread == SGX_QL_EPHEMERAL) {
+    else if (g_qve_policy == SGX_QL_EPHEMERAL_QVE_MULTI_THREAD || g_qve_policy == SGX_QL_PERSISTENT_QVE_MULTI_THREAD) {
 
-        if (class_type == CLASS_SGX_QVE) {
-            sgx_qv_trusted* ptr = dynamic_cast<sgx_qv_trusted*>(p_tee_qv.get());
-            ptr->unload_qve();
+        if (p_tee_qv && class_type != current_class_type) {
+            //reset the object if the type change in next thread
+            //
+            p_tee_qv.reset();
         }
-        else if (class_type == CLASS_TDX_QVE) {
-            tdx_qv_trusted* ptr = dynamic_cast<tdx_qv_trusted*>(p_tee_qv.get());
-            ptr->unload_qve();
+
+        if (!p_tee_qv) {
+            p_tee_qv = create_instance(class_type);
+            if (p_tee_qv == nullptr) {
+                SE_TRACE(SE_TRACE_ERROR, "Error: cannot create tee qv instance.\n");
+                goto end;
+            }
         }
+
+        current_class_type = class_type;
+
+        qve_ret = tee_verify_evidence_internal(
+            p_quote,
+            quote_size,
+            p_quote_collateral,
+            expiration_check_date,
+            p_collateral_expiration_status,
+            p_quote_verification_result,
+            p_qve_report_info,
+            supplemental_data_size,
+            p_supplemental_data,
+            p_tee_qv);
     }
 
+    else {
+        //invalid policy
+        //
+        qve_ret = SGX_QL_UNSUPPORTED_LOADING_POLICY;
+        goto end;
+    }
+
+end:
     return qve_ret;
 }
 

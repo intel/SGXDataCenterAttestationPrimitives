@@ -597,11 +597,15 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4WithoutQeIdentit
     EXPECT_EQ(STATUS_OK, result);
 }
 
-TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successffuly)
+TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successfully)
 {
     // GIVEN
     auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
+
+    tdxTcbLevels[0].tdxTcbComponents[1].svn = 0; // major TDX module version. To skip TDX Module identity matching
+    positiveTdxTcbInfoV3JsonBody = tcbInfoJsonV3Body("TDX", 3, issueDate, nextUpdate, fmspcStr, pceIdStr,
+                                                     1, 1, tdxTcbLevels, true, tdxModule);
 
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     std::copy_n(tdxModule.mrsigner.begin(), tdxModule.mrsigner.size(), quoteV4Generator.getTdReport().mrSignerSeam.begin());
@@ -613,7 +617,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successffuly)
     EnclaveIdentityVectorModel model;
     model.version = 2;
     model.id = "TD_QE";
-    
+
     positiveQEIdentityV2JsonBody = model.toV2JSON();
     model.applyTo(qeReport);
 
@@ -795,11 +799,15 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
     EXPECT_EQ(STATUS_TDX_MODULE_MISMATCH, result);
 }
 
-TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentitySuccessffuly)
+TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentitySuccessfully)
 {
     // GIVEN
     auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
+
+    tdxTcbLevels[0].tdxTcbComponents[1].svn = 0; // major TDX module version. To skip TDX Module identity matching
+    positiveTdxTcbInfoV3JsonBody = tcbInfoJsonV3Body("TDX", 3, issueDate, nextUpdate, fmspcStr, pceIdStr,
+                                                     1, 1, tdxTcbLevels, true, tdxModule);
 
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
     std::copy_n(tdxModule.mrsigner.begin(), tdxModule.mrsigner.size(), quoteV4Generator.getTdReport().mrSignerSeam.begin());

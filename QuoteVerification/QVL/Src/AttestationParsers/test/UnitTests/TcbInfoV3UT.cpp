@@ -97,47 +97,12 @@ TEST_F(TcbInfoV3UT, shouldSuccessfullyParseSgxTcbInfoWhenAllRequiredDataProvided
     try
     {
         tcbInfo.getTdxModule();
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
         EXPECT_EQ(std::string(err.what()), "TdxModule is only valid for TDX TCB Info");
     }
-}
-
-TEST_F(TcbInfoV3UT, shouldSuccessfullyParseTdxTcbInfoWhenAllRequiredDataProvided)
-{
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, validTdxTcbV3));
-
-    const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-
-    EXPECT_EQ(tcbInfo.getId(), parser::json::TcbInfo::TDX_ID);
-    expectCommonDefaultTcbInfo(tcbInfo);
-
-    const auto& tdxModule = tcbInfo.getTdxModule();
-    EXPECT_EQ(tdxModule.getMrSigner(), DEFAULT_TDXMODULE_MRSIGNER);
-    EXPECT_EQ(tdxModule.getAttributes(), DEFAULT_TDXMODULE_ATTRIBUTES);
-    EXPECT_EQ(tdxModule.getAttributesMask(), DEFAULT_TDXMODULE_ATTRIBUTESMASK);
-
-    auto iterator = tcbInfo.getTcbLevels().begin();
-    EXPECT_NE(iterator, tcbInfo.getTcbLevels().end());
-
-    EXPECT_EQ(iterator->getTdxTcbComponents().size(), 16);
-
-    for (uint32_t i=0; i < constants::CPUSVN_BYTE_LEN; i++)
-    {
-        EXPECT_EQ(iterator->getTdxTcbComponent(i).getSvn(), DEFAULT_CPUSVN[i]);
-    }
-    auto component = iterator->getTdxTcbComponent(0);
-    EXPECT_EQ(component.getCategory(), "cat1");
-    EXPECT_EQ(component.getType(), "type1");
-
-    component = iterator->getTdxTcbComponent(5);
-    EXPECT_EQ(component.getCategory(), "cat1");
-    EXPECT_EQ(component.getType(), "type2");
-
-    component = iterator->getTdxTcbComponent(6);
-    EXPECT_EQ(component.getCategory(), "cat2");
-    EXPECT_EQ(component.getType(), "type1");
 }
 
 TEST_F(TcbInfoV3UT, shouldFailWhenGetTdxTcbComponentsOnSgxTcbInfo) {
@@ -149,6 +114,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenGetTdxTcbComponentsOnSgxTcbInfo) {
     try
     {
         iterator->getTdxTcbComponents();
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -158,6 +124,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenGetTdxTcbComponentsOnSgxTcbInfo) {
     try
     {
         iterator->getTdxTcbComponent(0);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -174,6 +141,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenGetTdxTcbComponentsOnTcbInfoV2) {
     try
     {
         iterator->getTdxTcbComponents();
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -183,6 +151,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenGetTdxTcbComponentsOnTcbInfoV2) {
     try
     {
         iterator->getTdxTcbComponent(0);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -274,6 +243,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleMrSignerIsNotHexstring)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -306,6 +276,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleMrSignerHasIncorrectLength)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -338,6 +309,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleAttributesIsNotHexstring)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -370,6 +342,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleAttributesHasIncorrectLength)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -402,6 +375,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleAttributesMaskIsNotHexstring)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -434,6 +408,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleAttributesMaskHasIncorrectLength)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -462,6 +437,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxModuleIsNotObject)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -489,6 +465,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTcbInfoDoesntHaveId)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -553,20 +530,6 @@ TEST_F(TcbInfoV3UT, shouldFailWhenIdIsNotString)
     }
 }
 
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoDoesntHaveTdxTcbComponents)
-{
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, validSgxTcbV3));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level JSON for TDX should have [tdxtcbcomponents] field");
-    }
-}
-
 TEST_F(TcbInfoV3UT, shouldFailWhenSgxTcbInfoDoesntHaveSgxTcbComponents)
 {
     const std::string tcbJsonTemplate = R"json(
@@ -578,155 +541,11 @@ TEST_F(TcbInfoV3UT, shouldFailWhenSgxTcbInfoDoesntHaveSgxTcbComponents)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
         EXPECT_EQ(std::string(err.what()), "TCB level JSON should have [sgxtcbcomponents] field");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoDoesntHaveSgxTcbComponents)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "tdxtcbcomponents": [
-            {"svn": 12, "category": "cat1", "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level JSON should have [sgxtcbcomponents] field");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoHaveWrongNumberOfSgxTcbComponents)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 12, "category": "cat1", "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"}
-        ],
-        "tdxtcbcomponents": [
-            {"svn": 12, "category": "cat1", "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level [sgxtcbcomponents] array should have 16 entries");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoHaveWrongNumberOfTdxTcbComponents)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 12, "category": "cat1", "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "tdxtcbcomponents": [
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level [tdxtcbcomponents] array should have 16 entries");
     }
 }
 
@@ -758,6 +577,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenSgxTcbInfoHaveWrongNumberOfSgxTcbComponents)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -779,6 +599,7 @@ TEST_F(TcbInfoV3UT, shouldFailWhenSgxTcbInfoHaveEmptySgxTcbComponents)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
@@ -817,49 +638,11 @@ TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoHaveEmptySgxTcbComponents)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
         EXPECT_EQ(std::string(err.what()), "TCB level [sgxtcbcomponents] array should have 16 entries");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbInfoHaveEmptyTdxTcbComponents)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 23 },
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "tdxtcbcomponents": [
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validSgxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level [tdxtcbcomponents] array should have 16 entries");
     }
 }
 
@@ -876,192 +659,11 @@ TEST_F(TcbInfoV3UT, shouldFailWhenSgxTcbComponentsIsNotArray)
     try
     {
         const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
+        FAIL() << "Parser should throw";
     }
     catch(const parser::FormatException &err)
     {
         EXPECT_EQ(std::string(err.what()), "TCB level JSON's [sgxtcbcomponents] field should be an array");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTdxTcbComponentsIsNotArray)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 12, "category": "cat1", "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5, "category": "cat2", "type": "type2"},
-            {"svn": 6, "category": "cat1", "type": "type3"},
-            {"svn": 7 }
-        ],
-        "tdxtcbcomponents": "test",
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB level JSON's [tdxtcbcomponents] field should be an array");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTcbComponentCategoryIsNotString)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 12, "category": 5, "type": "type1"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5 },
-            {"svn": 6 },
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB Component JSON's [category] field should be string");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTcbComponentTypeIsNotString)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 12, "category": "test", "type": 4},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5 },
-            {"svn": 6 },
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB Component JSON's [type] field should be string");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTcbComponentSvnIsNotInteger)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": "test", "category": "test", "type": "test"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"svn": 0, "category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5 },
-            {"svn": 6 },
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB Component JSON should has [svn] field and it should be unsigned integer");
-    }
-}
-
-TEST_F(TcbInfoV3UT, shouldFailWhenTcbComponentDoesntHaveSvnField)
-{
-    const std::string tcbJsonTemplate = R"json(
-    "tcb": {
-        "sgxtcbcomponents": [
-            {"svn": 5, "category": "test", "type": "test"},
-            {"svn": 23 },
-            {"svn": 34 },
-            {"svn": 45 },
-            {"svn": 100 },
-            {"category": "cat1", "type": "type2"},
-            {"svn": 1, "category": "cat2", "type": "type1"},
-            {"svn": 156 },
-            {"svn": 208 },
-            {"svn": 255 },
-            {"svn": 2 },
-            {"svn": 3 },
-            {"svn": 4 },
-            {"svn": 5 },
-            {"svn": 6 },
-            {"svn": 7 }
-        ],
-        "pcesvn": 30865
-    })json";
-
-    auto tcbInfoJson = TcbInfoGenerator::generateTcbInfo(validTdxTcbInfoV3Template, TcbInfoGenerator::generateTcbLevelV3(validTcbLevelV3Template, tcbJsonTemplate));
-    try
-    {
-        const auto tcbInfo = parser::json::TcbInfo::parse(tcbInfoJson);
-    }
-    catch(const parser::FormatException &err)
-    {
-        EXPECT_EQ(std::string(err.what()), "TCB Component JSON should has [svn] field and it should be unsigned integer");
     }
 }
 

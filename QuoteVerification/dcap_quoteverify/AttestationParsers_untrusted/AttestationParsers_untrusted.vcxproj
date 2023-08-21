@@ -173,6 +173,9 @@
     <ClCompile Include="..\..\QVL\Src\AttestationCommons\src\Utils\TimeUtils.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TcbComponent.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModule.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleIdentity.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleTcb.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\Json\TdxModuleTcbLevel.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\ParserUtils.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\Configuration.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationParsers\src\X509\PlatformPckCertificate.cpp" />

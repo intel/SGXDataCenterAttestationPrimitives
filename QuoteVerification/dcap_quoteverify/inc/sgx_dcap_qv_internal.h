@@ -40,6 +40,8 @@
 
 #include "sgx_qve_header.h"
 #include "sgx_qve_def.h"
+#include "sgx_error.h"
+#include "sgx_eid.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -84,6 +86,10 @@ quote3_error_t sgx_qvl_get_quote_supplemental_data_version(
 quote3_error_t qvl_get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
      unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
      unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size);
+
+sgx_status_t load_qve_once(sgx_enclave_id_t *p_qve_eid);
+
+sgx_status_t unload_qve_once(sgx_enclave_id_t *p_qve_eid);
 
 #if defined(__cplusplus)
 }

@@ -757,7 +757,7 @@ function matchTcbInfoTcbLevel(tcbInfo, cpusvn, pcesvn, tdxsvn) {
  * @returns {EnclaveTcbLevel}
  */
 function matchEnclaveTcbTcbLevel(qeIdentity, isvsvn) {
-    const matchedTcbLevel = qeIdentity.enclaveIdentity.tcbLevels.find(level => level.tcb.isvsvn === isvsvn);
+    const matchedTcbLevel = qeIdentity.enclaveIdentity.tcbLevels.find(level => level.tcb.isvsvn <= isvsvn);
     return matchedTcbLevel;
 }
 

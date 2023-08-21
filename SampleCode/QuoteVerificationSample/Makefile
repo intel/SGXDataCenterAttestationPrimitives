@@ -35,6 +35,7 @@ SGX_SDK ?= /opt/intel/sgxsdk
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 SGX_QPL_LOGGING ?= 1
+QVL_ONLY ?= 0
 
 
 # Don't support 32bit in this sample
@@ -68,7 +69,11 @@ Urts_Library_Name := sgx_urts
 
 
 App_Cpp_Files := App/App.cpp
+ifeq ($(QVL_ONLY), 1)
+App_Include_Paths := -IApp
+else
 App_Include_Paths := -IApp -I$(SGX_SDK)/include
+endif
 
 App_C_Flags := -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -84,8 +89,8 @@ else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-ifeq ($(TD_ENV), 1)
-        App_C_Flags += -DTD_ENV
+ifeq ($(QVL_ONLY), 1)
+        App_C_Flags += -DQVL_ONLY
 endif
 
 App_Cpp_Flags := $(App_C_Flags)
@@ -166,7 +171,9 @@ endif
 .PHONY: all target run
 all: .config_$(Build_Mode)_$(SGX_ARCH)
 	@$(MAKE) target
-
+ifeq ($(QVL_ONLY), 1)
+target: $(App_Name)
+else
 ifeq ($(Build_Mode), HW_RELEASE)
 target:  $(App_Name) $(Enclave_Name)
 	@echo "The project has been built in release hardware mode."
@@ -184,6 +191,7 @@ else ifeq ($(Build_Mode), HW_PRERELEASE)
 	@echo "The project has been built in pre-release hardware mode."
 else
 	@echo "The project has been built in release mode."
+endif
 endif
 
 endif
@@ -210,11 +218,19 @@ App/Enclave_u.o: App/Enclave_u.c
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
+ifeq ($(QVL_ONLY), 1)
+App/%.o: App/%.cpp
+else
 App/%.o: App/%.cpp  App/Enclave_u.h
+endif
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
+ifeq ($(QVL_ONLY), 1)
+$(App_Name): $(App_Cpp_Objects)
+else
 $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
+endif
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 

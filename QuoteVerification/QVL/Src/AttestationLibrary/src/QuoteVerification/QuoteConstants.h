@@ -44,12 +44,18 @@ const uint32_t TEE_TYPE_SGX = 0x00000000;
 const uint32_t TEE_TYPE_TDX = 0x00000081;
 const uint16_t QUOTE_VERSION_3 = 3;
 const uint16_t QUOTE_VERSION_4 = 4;
+const uint16_t QUOTE_VERSION_5 = 5;
 
 const uint16_t ECDSA_256_WITH_P256_CURVE = 2;
 const uint16_t ECDSA_384_WITH_P384_CURVE = 3;
 constexpr size_t ECDSA_P256_SIGNATURE_BYTE_LEN = 64;
+constexpr size_t BODY_BYTE_SIZE = 6;
+constexpr size_t BODY_SGX_ENCLAVE_REPORT_TYPE = 1;
+constexpr size_t BODY_TD_REPORT10_TYPE = 2;
+constexpr size_t BODY_TD_REPORT15_TYPE = 3;
 constexpr size_t ENCLAVE_REPORT_BYTE_LEN = 384;
-constexpr size_t TD_REPORT_BYTE_LEN = 584;
+constexpr size_t TD_REPORT10_BYTE_LEN = 584;
+constexpr size_t TD_REPORT15_BYTE_LEN = 648;
 
 const uint16_t PCK_ID_PLAIN_PPID = 1;
 const uint16_t PCK_ID_ENCRYPTED_PPID_2048 = 2;
@@ -58,7 +64,8 @@ const uint16_t PCK_ID_PCK_CERTIFICATE = 4;
 const uint16_t PCK_ID_PCK_CERT_CHAIN = 5;
 const uint16_t PCK_ID_QE_REPORT_CERTIFICATION_DATA = 6;
 
-const std::array<uint16_t, 2> ALLOWED_QUOTE_VERSIONS = {{ QUOTE_VERSION_3, QUOTE_VERSION_4 }};
+const std::array<uint16_t, 3> ALLOWED_QUOTE_VERSIONS = {{ QUOTE_VERSION_3, QUOTE_VERSION_4, QUOTE_VERSION_5 }};
+const std::array<uint32_t, 3> ALLOWED_BODY_TYPES = {{ BODY_SGX_ENCLAVE_REPORT_TYPE, BODY_TD_REPORT10_TYPE, BODY_TD_REPORT15_TYPE }};
 const std::array<uint32_t, 2> ALLOWED_TEE_TYPES = {{ TEE_TYPE_SGX, TEE_TYPE_TDX }};
 const std::array<uint16_t, 1> ALLOWED_ATTESTATION_KEY_TYPES = {{ ECDSA_256_WITH_P256_CURVE }};
 const std::array<uint8_t, 16> INTEL_QE_VENDOR_ID = {{ 0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F, 0x06, 0x07 }};

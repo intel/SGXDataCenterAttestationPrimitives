@@ -503,7 +503,7 @@ def pcs_cache(args):
             SGX_QPL_CACHE_MULTICERTS = 1 << 2
             cache_item_header = struct.pack('<HIQ', 1, SGX_QPL_CACHE_MULTICERTS, int(time.time() + expire_hours * 60 * 60))
 
-            output_file = os.path.join(output_dir, platform["qe_id"] + "_" + platform["pce_id"])
+            output_file = os.path.join(output_dir, (platform["qe_id"] + "_" + platform["pce_id"]).lower())
             with open(output_file, "wb") as ofile:
                 # Write cache header
                 ofile.write(cache_item_header)
