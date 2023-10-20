@@ -299,12 +299,12 @@ tdx_attest_error_t tdx_att_get_quote(
     do {
         vsock_port = get_vsock_port();
         if (!vsock_port) {
-            syslog(LOG_INFO, "libtdx_attest: fallback to tdvmcall mode.");
+            syslog(LOG_INFO, "libtdx_attest: cannot parse sock port - fallback to tdvmcall mode.");
             break;
         }
         s = socket(AF_VSOCK, SOCK_STREAM, 0);
         if (-1 == s) {
-            syslog(LOG_INFO, "libtdx_attest: fallback to tdvmcall mode.");
+            syslog(LOG_INFO, "libtdx_attest: cannot create socket - fallback to tdvmcall mode.");
             break;
         }
         struct sockaddr_vm vm_addr;
@@ -314,7 +314,7 @@ tdx_attest_error_t tdx_att_get_quote(
         vm_addr.svm_port = vsock_port;
         vm_addr.svm_cid = VMADDR_CID_HOST;
         if (connect(s, (struct sockaddr *)&vm_addr, sizeof(vm_addr))) {
-            syslog(LOG_INFO, "libtdx_attest: fallback to tdvmcall mode.");
+            syslog(LOG_INFO, "libtdx_attest: cannot connect - fallback to tdvmcall mode.");
             break;
         }
 
