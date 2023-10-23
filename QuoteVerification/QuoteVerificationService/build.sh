@@ -54,33 +54,15 @@ case $QVL_PATH in
      *) fail "Absolute path to QVL sources should be provided" 3 ;;
 esac
 
-# Build QVL
-buildQvl() {
-  (cd "$QVL_PATH" && ./runUT)
+# Create local copy of QVL sources for Docker context
+copyQvlSources() {
+  mkdir -p "$SCRIPT_DIR/build"
+  cp -R "$QVL_PATH" "$SCRIPT_DIR/build/qvls"
+  rm -rf "$SCRIPT_DIR/build/qvls/Build" "$SCRIPT_DIR"/build/qvls/cmake-build*
 }
 
-if ! buildQvl "$@"; then
-    fail "Error when building QVL" 4
-fi
-
-# Build QVS
-buildQvs() {
-  (cd "$SCRIPT_DIR/src" && npm config set cmake_QVL_PATH="$QVL_PATH/Build/Release/dist" && npm install)
-}
-
-if ! buildQvs "$@"; then
-    fail "Error when building QVS" 5
-fi
-
-# Copy built native libs
-copyNativeLibs() {
-  mkdir -p "$SCRIPT_DIR"/native/lib &&
-  cp "$QVL_PATH"/Build/Release/dist/lib/*.so "$SCRIPT_DIR"/native/lib/ &&
-  cp "$SCRIPT_DIR"/src/qvl/cmake-build-release/Release/*.node "$SCRIPT_DIR"/native/
-}
-
-if ! copyNativeLibs "$@"; then
-    fail "Error when copying native files" 6
+if ! copyQvlSources "$@"; then
+    fail "Error when copying QVL" 5
 fi
 
 # Build Docker Image
@@ -91,5 +73,9 @@ function buildDocker() {
 if ! buildDocker; then
     fail "Error when building Docker image" 7
 fi
+
+pushd ${SCRIPT_DIR}/samples/simple-signing-service || fail "Failed to access SSS dir" 4
+./build.sh
+popd || fail "Failed leave SSS dir" 5
 
 echo "Build - Done"

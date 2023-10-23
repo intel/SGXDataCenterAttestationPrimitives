@@ -267,7 +267,7 @@ static void network_configuration(string &url, string &proxy_type, string &proxy
 {
     //firstly read local configuration File
     char local_configuration_file_path[MAX_PATH] = "";
-    bool ret = get_program_path(local_configuration_file_path, MAX_PATH);
+    bool ret = get_program_path(local_configuration_file_path, MAX_PATH -1);
     if (ret) {
         if(strnlen(local_configuration_file_path ,MAX_PATH)+strnlen(LOCAL_NETWORK_SETTING,MAX_PATH)+sizeof(char) > MAX_PATH) {
             ret = false;
@@ -440,12 +440,15 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
         if (curl_easy_setopt(curl, CURLOPT_WRITEDATA, reinterpret_cast<void *>(&res_body)) != CURLE_OK)
             break;
         //	curl_easy_setopt(curl, CURLOPT_VERBOSE,1L);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+        if (curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST") != CURLE_OK)
+            break;
 
         // size of the POST data 
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strJson.size());
+        if( curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strJson.size()) != CURLE_OK)
+            break;
         // pass in a pointer to the data - libcurl will not copy 
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJson.c_str());
+        if(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJson.c_str()) != CURLE_OK)
+            break;
 
         // proxy setting	
         if (proxy_type.compare("DIRECT") == 0 || proxy_type.compare("direct") == 0) {
@@ -489,7 +492,7 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
 
 bool is_server_url_available() {
     char local_configuration_file_path[MAX_PATH] = "";
-    bool ret = get_program_path(local_configuration_file_path, MAX_PATH);
+    bool ret = get_program_path(local_configuration_file_path, MAX_PATH -1);
     if (ret) {
         if(strnlen(local_configuration_file_path ,MAX_PATH)+strnlen(LOCAL_NETWORK_SETTING,MAX_PATH)+sizeof(char) > MAX_PATH) {
             return false;

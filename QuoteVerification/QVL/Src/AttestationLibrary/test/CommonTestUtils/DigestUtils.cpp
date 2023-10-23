@@ -54,20 +54,21 @@ std::array<uint8_t,32> sha256DigestArray(const Bytes& data)
     return ret;
 }
 
-Bytes sha256Digest(const Bytes& data)
+Bytes sha256Digest(const Bytes& bytes)
 {
+    auto ctx = crypto::make_unique(EVP_MD_CTX_new());
+    const EVP_MD* md = EVP_sha256();
     Bytes hash(SHA256_DIGEST_LENGTH);
-    SHA256_CTX ctx;
-    if(SHA256_Init(&ctx) == 1 &&
-        SHA256_Update(&ctx, data.data(), data.size()) == 1 &&
-        SHA256_Final(hash.data(), &ctx) == 1)
+    uint32_t hashLen;
+    if (ctx.get() != nullptr &&
+        EVP_DigestInit_ex(ctx.get(), md, nullptr) == 1 &&
+        EVP_DigestUpdate(ctx.get(), bytes.data(), bytes.size()) == 1 &&
+        EVP_DigestFinal_ex(ctx.get(), hash.data(), &hashLen) == 1 &&
+        hashLen == SHA256_DIGEST_LENGTH)
     {
         return hash;
     }
-    else
-    {
-        return Bytes{};
-    }
+    return Bytes{};
 }
 
 Bytes sha256Digest(const std::string& data)
@@ -76,20 +77,21 @@ Bytes sha256Digest(const std::string& data)
     return sha256Digest(input);
 }
 
-Bytes sha384Digest(const Bytes& data)
+Bytes sha384Digest(const Bytes& bytes)
 {
+    auto ctx = crypto::make_unique(EVP_MD_CTX_new());
+    const EVP_MD* md = EVP_sha384();
     Bytes hash(SHA384_DIGEST_LENGTH);
-    SHA512_CTX ctx;
-    if(SHA384_Init(&ctx) == 1 &&
-        SHA384_Update(&ctx, data.data(), data.size()) == 1 &&
-        SHA384_Final(hash.data(), &ctx) == 1)
+    uint32_t hashLen;
+    if (ctx.get() != nullptr &&
+        EVP_DigestInit_ex(ctx.get(), md, nullptr) == 1 &&
+        EVP_DigestUpdate(ctx.get(), bytes.data(), bytes.size()) == 1 &&
+        EVP_DigestFinal_ex(ctx.get(), hash.data(), &hashLen) == 1 &&
+        hashLen == SHA384_DIGEST_LENGTH)
     {
         return hash;
     }
-    else
-    {
-        return Bytes{};
-    }
+    return Bytes{};
 }
 
 Bytes sha384Digest(const std::string& data)
@@ -133,10 +135,15 @@ Bytes signMessageSha256(const Bytes& message, EVP_PKEY& privateKey)
     return signStatus == 1 ? signature : Bytes{};
 }
 
-bool verifySig(const Bytes& signature, const Bytes& message, EC_KEY& pubKey)
+bool verifySig(const Bytes& signature, const Bytes& message, EVP_PKEY& pubKey)
 {
-    const auto digest = dcap::DigestUtils::sha256Digest(message);
-    return 1 == ECDSA_verify(0, digest.data(), static_cast<int>(digest.size()), signature.data(), static_cast<int>(signature.size()), &pubKey);
+    auto ctx = crypto::make_unique(EVP_MD_CTX_new());
+    if (ctx.get() == nullptr ||
+        EVP_DigestVerifyInit(ctx.get(), nullptr, EVP_sha256(), nullptr, &pubKey) <= 0)
+    {
+        return false;
+    }
+    return 1 == EVP_DigestVerify(ctx.get(), signature.data(), signature.size(), message.data(), message.size());
 }
 
 }}}}

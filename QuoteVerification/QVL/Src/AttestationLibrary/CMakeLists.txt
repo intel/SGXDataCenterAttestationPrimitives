@@ -50,7 +50,7 @@ if(BUILD_DOCS)
 endif()
 
 hunter_add_package(OpenSSL)
-find_package(OpenSSL 1.1.1 EXACT REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 hunter_add_package(spdlog)
 find_package(spdlog CONFIG REQUIRED)
@@ -173,7 +173,7 @@ if (BUILD_ENCLAVE)
             AttestationParsersStaticEnclave
             "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L${SGX_OPENSSL}/lib64 -L${SGX_SDK}/lib64"
             "-Wl,--whole-archive -l${TRTS_LIBRARY_NAME} -lsgx_tsgxssl -Wl,--no-whole-archive"
-            "-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tsgxssl_crypto -l${TSERVICE_LIBRARY_NAME} -Wl,--end-group"
+            "-Wl,--start-group -lsgx_pthread -lsgx_tstdc -lsgx_tcxx -lsgx_tsgxssl_crypto -l${TSERVICE_LIBRARY_NAME} -Wl,--end-group"
             "-Wl,-Bstatic -Wl,-Bsymbolic"
             "-Wl,-pie,-eenclave_entry -Wl,--export-dynamic"
             "-Wl,--defsym,__ImageBase=0"

@@ -40,6 +40,7 @@
  */
 
 #include <stdio.h>
+#include <limits.h>
 #include "se_trace.h"
 #include "se_memcpy.h"
 #include "se_thread.h"
@@ -121,7 +122,9 @@ bool get_pce_path(
     else //not a dynamic executable
     {
         ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
-        if (i == -1)
+        if (i == -1
+            || buf_size > PATH_MAX // make sure it is safe to do the type conversion, PATH_MAX is defined in limits.h and it is big enough
+            || i == (ssize_t)buf_size) // in this case truncation may have occured, and p_file_path[i] is out of buffer.
             return false;
         p_file_path[i] = '\0';
     }
@@ -183,7 +186,7 @@ static sgx_pce_error_t load_pce(sgx_enclave_id_t *p_pce_eid,
             {
                 sgx_launch_token_t launch_token = { 0 };
                 int launch_token_updated;
-                SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for PCE. %s\n", pce_enclave_path);
+                SE_TRACE(SE_TRACE_NOTICE, "Call sgx_create_enclave for PCE. %s\n", pce_enclave_path);
                 sgx_status = sgx_create_enclave(pce_enclave_path,
                     0,
                     &launch_token,
@@ -241,7 +244,7 @@ static void unload_pce(bool force = false)
         (force || g_pce_status.m_pce_enclave_load_policy != SGX_QL_PERSISTENT)
         )
     {
-        SE_TRACE(SE_TRACE_DEBUG, "unload pce enclave 0X%llX\n", g_pce_status.m_pce_eid);
+        SE_TRACE(SE_TRACE_NOTICE, "unload pce enclave 0X%llX\n", g_pce_status.m_pce_eid);
         sgx_destroy_enclave(g_pce_status.m_pce_eid);
         g_pce_status.m_pce_eid = 0;
     }
@@ -598,4 +601,3 @@ sgx_pce_error_t sgx_set_pce_path(const char* p_path)
     g_pce_status.pce_path[len] = '\0';
     return SGX_PCE_SUCCESS;
 }
-

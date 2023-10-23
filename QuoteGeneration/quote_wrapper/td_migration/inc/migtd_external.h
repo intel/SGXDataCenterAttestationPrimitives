@@ -33,12 +33,6 @@
 #define _MIGTD_EXTERNAL_H_
 
 #include <stdint.h>
-/* Used in Get Quote request memory allocation */
-#define PAGE_SIZE 0x1000
-#define GET_QUOTE_MAX_SIZE (4 * PAGE_SIZE)
-
-#define EIO 5     /* I/O error */
-#define EINVAL 22 /* Invalid argument */
 
 #if defined(__cplusplus)
 extern "C"
@@ -54,8 +48,7 @@ extern "C"
  * @param len             [in, out] the length of request buffer, should not be larger than GET_QUOTE_MAX_SIZE
  *
  * @return 0: Successfully get quote via TDVMCALL.GET_QUOTE.
- * @return -EIO: TDVMCALL returns error failed to get quote.
- * @return -EINVAL: Invalid input argument.
+ * @return !=0: Failed to get quote.
  *
 **/
 int migtd_get_quote(const void* tdquote_req_buf, const uint64_t len);

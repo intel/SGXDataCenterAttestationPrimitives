@@ -77,7 +77,8 @@ class QVSConfig extends config.BaseRestService {
         if (configJson.vcsClient) {
             this.vcsClient = new config.RestClient(configJson.vcsClient);
         }
-        this.crlClient = configJson.crlClient;
+        this.crlClient = new config.BaseRestClient(configJson.crlClient);
+
         this.healthCheck = _.extend({}, configJson.healthCheck);
         this.logger = _.extend({}, configJson.logger);
         this.cache = new config.Cache(configJson.cache);

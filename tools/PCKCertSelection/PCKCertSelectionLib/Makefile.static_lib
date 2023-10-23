@@ -197,7 +197,9 @@ $(BIN_DIR)/%.o: $(UTILS_DIR)/%.cpp
 $(LIB_NAME): $(LIB_CPP_OBJECTS)
 	$(PCKCERTSEL_VERBOSE)echo "Archiving..."
 	$(PCKCERTSEL_VERBOSE)$(AR) -rcs $(BIN_DIR)/$@ $^
-
+	$(PCKCERTSEL_VERBOSE)@$(MKDIR) $(BIN_DIR)/.libcrypto
+	$(PCKCERTSEL_VERBOSE)@$(RM) -f $(BIN_DIR)/.libcrypto/* && cd $(BIN_DIR)/.libcrypto && $(AR) x $(OPENSSL_LIB)/libcrypto.a
+	$(PCKCERTSEL_VERBOSE)$(AR) qD $(BIN_DIR)/$@ $(BIN_DIR)/.libcrypto/*.o
 
 debug:
 	$(PCKCERTSEL_VERBOSE)$(MAKE) DEBUG=1 all

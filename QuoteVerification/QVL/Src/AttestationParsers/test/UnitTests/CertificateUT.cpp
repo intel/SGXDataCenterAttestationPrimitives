@@ -116,10 +116,8 @@ TEST_F(CertificateUT, certificateGetters)
 
     ASSERT_EQ(certificate.getVersion(), 3);
     ASSERT_THAT(certificate.getSerialNumber(), ElementsAreArray(sn));
-
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(keyInt.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(keyInt.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(certificate.getPubKey(), ElementsAreArray(expectedPublicKey));

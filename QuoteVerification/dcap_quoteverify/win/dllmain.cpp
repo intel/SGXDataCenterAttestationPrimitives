@@ -391,9 +391,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
             //Try to unload QvE only when use legacy PERSISTENT policy
             //All the threads will share single QvE instance in this mode
             //
-            extern sgx_ql_request_policy_t g_qve_policy;
-            extern sgx_enclave_id_t g_qve_eid;
-
             if (g_qve_policy == SGX_QL_PERSISTENT) {
                 if (g_qve_eid != 0) {
                     //ignore the return error

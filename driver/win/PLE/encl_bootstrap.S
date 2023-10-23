@@ -85,6 +85,14 @@ encl_entry:
 	push	%rcx # push the address after EENTER
 	push	%rbx # push the enclave base address
 
+	# Sanitize CPU state: x86-64 ABI requires RFLAGS.DF=0 on function
+	# entry, and we additionally clear RFLAGS.AC to prevent #AC-fault side
+	# channels.
+	cld
+	pushfq
+	andq $~0x40000, (%rsp)
+	popfq
+
 	call	encl_body
 
 	pop	%rbx # pop the enclave base address
@@ -142,6 +150,23 @@ sgx_egetkey:
 	pop	%rbx
 	ret
 
+.global get_enclave_base
+get_enclave_base:
+	lea __enclave_base(%rip), %rax
+	ret
+
+	.global get_enclave_size
+get_enclave_size:
+	mov __enclave_size(%rip), %rax
+	ret
+
+	# The following 8 bytes (measured as part of MRENCLAVE) will be
+	# filled in by the untrusted loader with the total size of the
+	# loaded enclave.
+	.global __enclave_size
+__enclave_size:
+	.quad 0x10000
+
 	.section ".data", "aw"
 
 encl_ssa:
@@ -150,7 +175,7 @@ encl_ssa:
 xsave_area:
 	.fill	1, 4, 0x037F		# FCW
 	.fill	5, 4, 0
-	.fill	1, 4, 0x1F80		# MXCSR
+	.fill	1, 4, 0x1FBF		# MXCSR
 	.fill	1, 4, 0xFFFF		# MXCSR_MASK
 	.fill	123, 4, 0
 	.fill	1, 4, 0x80000000	# XCOMP_BV[63] = 1, compaction mode

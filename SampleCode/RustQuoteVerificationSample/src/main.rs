@@ -45,7 +45,6 @@ const SGX_DEBUG_FLAG: i32 = 1;
 #[cfg(not(debug_assertions))]
 const SGX_DEBUG_FLAG: i32 = 0;
 
-
 // C library bindings
 
 #[link(name = "sgx_urts")]
@@ -83,7 +82,6 @@ extern "C" {
     ) -> u32;
 }
 
-
 /// Quote verification with QvE/QVL
 ///
 /// # Param
@@ -95,7 +93,6 @@ extern "C" {
 ///     - If false, quote verification will be performed by untrusted QVL.
 ///
 fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
-
     let mut collateral_expiration_status = 1u32;
     let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
@@ -107,18 +104,20 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
     };
 
     if use_qve {
-
-        #[cfg(not(feature = "TD_ENV"))]
-        {
+#[cfg(not(feature = "TD_ENV"))]
+{
 
         // Trusted quote verification
 
         let rand_nonce = "59jslk201fgjmm;\0";
         let mut qve_report_info: sgx_ql_qe_report_info_t = Default::default();
-    
+
         // set nonce
         //
-        qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_bytes());
+        qve_report_info
+            .nonce
+            .rand
+            .copy_from_slice(rand_nonce.as_bytes());
 
         // get target info of SampleISVEnclave. QvE will target the generated report to this enclave
         //
@@ -140,17 +139,15 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             println!("\tError: Can't load SampleISVEnclave: {:#04x}", sgx_ret);
             return;
         }
-        let mut get_target_info_ret = 0x0001u32;        // SGX_ERROR_UNEXPECTED
+        let mut get_target_info_ret = 0x0001u32; // SGX_ERROR_UNEXPECTED
         let mut tmp_target_info: qvl_sys::sgx_target_info_t = Default::default();
-        let sgx_ret = unsafe {
-            ecall_get_target_info(
-                eid,
-                &mut get_target_info_ret,
-                &mut tmp_target_info,
-            )
-        };
+        let sgx_ret =
+            unsafe { ecall_get_target_info(eid, &mut get_target_info_ret, &mut tmp_target_info) };
         if sgx_ret != 0 || get_target_info_ret != 0 {
-            println!("\tError in sgx_get_target_info. {:#04x}", get_target_info_ret);
+            println!(
+                "\tError in sgx_get_target_info. {:#04x}",
+                get_target_info_ret
+            );
         } else {
             println!("\tInfo: get target info successfully returned.");
             let unaligned = ptr::addr_of_mut!(qve_report_info.app_enclave_target_info);
@@ -160,8 +157,13 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         // call DCAP quote verify library to set QvE loading policy
         //
         match sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_DEFAULT) {
-            quote3_error_t::SGX_QL_SUCCESS => println!("\tInfo: sgx_qv_set_enclave_load_policy successfully returned."),
-            err => println!("\tError: sgx_qv_set_enclave_load_policy failed: {:#04x}", err as u32),
+            quote3_error_t::SGX_QL_SUCCESS => {
+                println!("\tInfo: sgx_qv_set_enclave_load_policy successfully returned.")
+            }
+            err => println!(
+                "\tError: sgx_qv_set_enclave_load_policy failed: {:#04x}",
+                err as u32
+            ),
         }
 
         // call DCAP quote verify library to get supplemental latest version and data size
@@ -183,25 +185,18 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
                     println!("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.")
                 }
             }
-            Err(e) => println!("\tError: tee_get_quote_supplemental_data_size failed: {:#04x}", e as u32),
+            Err(e) => println!(
+                "\tError: tee_get_quote_supplemental_data_size failed: {:#04x}",
+                e as u32
+            ),
         }
 
         // get collateral
-        let collateral = match tee_qv_get_collateral(quote) {
-            Ok(c) => {
-                println!("\tInfo: tee_qv_get_collateral successfully returned.");
-                Some(c)
-            }
-            Err(e) => {
-                println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32);
-                None
-            }
+        let collateral = tee_qv_get_collateral(quote);
+        match collateral {
+            Ok(ref c) => println!("\tInfo: tee_qv_get_collateral successfully returned."),
+            Err(e) => println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32),
         };
-
-        let p_collateral: Option<&[u8]> = None;
-        // uncomment the next 2 lines, if you want to use the collateral provided by the caller in the verification
-        // let collateral = collateral.unwrap();
-        // let p_collateral = Some(&collateral[..]);
 
         // set current time. This is only for sample purposes, in production mode a trusted time should be used.
         //
@@ -215,14 +210,13 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             _ => Some(&mut supp_data_desc),
         };
 
-
         // call DCAP quote verify library for quote verification
         // here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
         // if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
         // if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote, this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
         match tee_verify_quote(
             quote,
-            p_collateral,
+            collateral.ok().as_ref(),
             current_time,
             Some(&mut qve_report_info),
             p_supplemental_data,
@@ -234,7 +228,6 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             }
             Err(e) => println!("\tError: App: tee_verify_quote failed: {:#04x}", e as u32),
         }
-
 
         // Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
         // e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
@@ -270,16 +263,18 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             )
         };
         if sgx_ret != 0 || verify_qveid_ret != quote3_error_t::SGX_QL_SUCCESS {
-            println!("\tError: Ecall: Verify QvE report and identity failed. {:#04x}", verify_qveid_ret as u32);
+            println!(
+                "\tError: Ecall: Verify QvE report and identity failed. {:#04x}",
+                verify_qveid_ret as u32
+            );
         } else {
             println!("\tInfo: Ecall: Verify QvE report and identity successfully returned.")
         }
 
         unsafe { sgx_destroy_enclave(eid) };
 
-        }
+}
     } else {
-
         // Untrusted quote verification
 
         // call DCAP quote verify library to get supplemental latest version and data size
@@ -301,25 +296,18 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
                     println!("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.")
                 }
             }
-            Err(e) => println!("\tError: tee_get_quote_supplemental_data_size failed: {:#04x}", e as u32),
+            Err(e) => println!(
+                "\tError: tee_get_quote_supplemental_data_size failed: {:#04x}",
+                e as u32
+            ),
         }
 
         // get collateral
-        let collateral = match tee_qv_get_collateral(quote) {
-            Ok(c) => {
-                println!("\tInfo: tee_qv_get_collateral successfully returned.");
-                Some(c)
-            }
-            Err(e) => {
-                println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32);
-                None
-            }
+        let collateral = tee_qv_get_collateral(quote);
+        match collateral {
+            Ok(ref c) => println!("\tInfo: tee_qv_get_collateral successfully returned."),
+            Err(e) => println!("\tError: tee_qv_get_collateral failed: {:#04x}", e as u32),
         };
-
-        let p_collateral: Option<&[u8]> = None;
-        // uncomment the next 2 lines, if you want to use the collateral provided by the caller in the verification
-        // let collateral = collateral.unwrap();
-        // let p_collateral = Some(&collateral[..]);
 
         // set current time. This is only for sample purposes, in production mode a trusted time should be used.
         //
@@ -333,14 +321,13 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             _ => Some(&mut supp_data_desc),
         };
 
-
         // call DCAP quote verify library for quote verification
         // here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
         // if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
         // if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote, this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
         match tee_verify_quote(
             quote,
-            p_collateral,
+            collateral.ok().as_ref(),
             current_time,
             None,
             p_supplemental_data,
@@ -352,9 +339,8 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
             }
             Err(e) => println!("\tError: App: tee_verify_quote failed: {:#04x}", e as u32),
         }
-
     }
-    
+
     // check verification result
     //
     match quote_verification_result {
@@ -373,26 +359,37 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED => {
-            println!("\tWarning: App: Verification completed with Non-terminal result: {:x}", quote_verification_result as u32);
+            println!(
+                "\tWarning: App: Verification completed with Non-terminal result: {:x}",
+                quote_verification_result as u32
+            );
         }
         sgx_ql_qv_result_t::SGX_QL_QV_RESULT_INVALID_SIGNATURE
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_REVOKED
         | sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED
         | _ => {
-            println!("\tError: App: Verification completed with Terminal result: {:x}", quote_verification_result as u32);
+            println!(
+                "\tError: App: Verification completed with Terminal result: {:x}",
+                quote_verification_result as u32
+            );
         }
     }
 
     // check supplemental data if necessary
     //
     if supp_data_desc.data_size > 0 {
-
         // you can check supplemental data based on your own attestation/verification policy
         // here we only print supplemental data version for demo usage
         //
         let version_s = unsafe { supp_data.__bindgen_anon_1.__bindgen_anon_1 };
-        println!("\tInfo: Supplemental data Major Version: {}", version_s.major_version);
-        println!("\tInfo: Supplemental data Minor Version: {}", version_s.minor_version);
+        println!(
+            "\tInfo: Supplemental data Major Version: {}",
+            version_s.major_version
+        );
+        println!(
+            "\tInfo: Supplemental data Minor Version: {}",
+            version_s.minor_version
+        );
 
         // print SA list if exist, SA list is supported from version 3.1
         //
@@ -404,7 +401,6 @@ fn ecdsa_quote_verification(quote: &[u8], use_qve: bool) {
         }
     }
 }
-
 
 #[derive(Parser)]
 struct Cli {
@@ -426,7 +422,6 @@ fn main() {
 
     println!("Info: ECDSA quote path: {}", quote_path);
 
-
     // We demonstrate two different types of quote verification
     //      a. Trusted quote verification - quote will be verified by Intel QvE
     //      b. Untrusted quote verification - quote will be verified by untrusted QVL (Quote Verification Library)
@@ -435,16 +430,16 @@ fn main() {
 
     #[cfg(not(feature = "TD_ENV"))]
     {
-    // Trusted quote verification, ignore error checking
-    //
-    println!("\nTrusted quote verification:");
-    ecdsa_quote_verification(&quote, true);
+        // Trusted quote verification, ignore error checking
+        //
+        println!("\nTrusted quote verification:");
+        ecdsa_quote_verification(&quote, true);
 
-    println!("\n===========================================");
+        println!("\n===========================================");
 
-    // Unrusted quote verification, ignore error checking
-    //
-    println!("\nUntrusted quote verification:");
+        // Unrusted quote verification, ignore error checking
+        //
+        println!("\nUntrusted quote verification:");
     }
     #[cfg(feature = "TD_ENV")]
     // Quote verification inside TD

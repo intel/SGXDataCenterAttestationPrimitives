@@ -49,7 +49,7 @@ fn main() {
             sdk_inc.push_str("-I");
             sdk_inc.push_str(&val);
             sdk_inc.push_str("/include/");
-        },
+        }
         _ => (),
     }
 
@@ -69,7 +69,6 @@ fn main() {
         .no_debug("_tdx_report_data_t")
         .no_debug("_tdx_report_t")
         .no_debug("_tdx_rtmr_event_t")
-        
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))

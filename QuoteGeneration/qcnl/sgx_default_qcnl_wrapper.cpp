@@ -376,8 +376,7 @@ sgx_qcnl_error_t sgx_qcnl_set_logging_callback(sgx_ql_logging_callback_t logger,
 }
 
 sgx_qcnl_error_t sgx_qcnl_clear_cache(uint32_t cache_type) {
-    LocalCache::Instance().clear_cache(cache_type);
-    return SGX_QCNL_SUCCESS;
+    return LocalCache::Instance().clear_cache(cache_type);
 }
 
 sgx_qcnl_error_t sgx_qcnl_global_init() {

@@ -6,6 +6,8 @@ global:
     sgx_pce_sign_report;
     sgx_get_pce_info_without_ppid;
     sgx_set_pce_path;
+    sgx_trace_logger_callback;
+    sgx_trace_loglevel;
 local:
     *;
 };

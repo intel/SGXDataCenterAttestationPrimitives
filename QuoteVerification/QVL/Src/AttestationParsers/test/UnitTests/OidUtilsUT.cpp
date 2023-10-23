@@ -46,6 +46,10 @@ ASN1_TYPE_uptr createOidValueFromLong(int oidType, long oidValue)
         case V_ASN1_INTEGER:
         {
             const auto val = ASN1_INTEGER_new();
+            if (val == nullptr)
+            {
+                return asn1Type;
+            }
             ASN1_INTEGER_set(val, oidValue);
             ASN1_TYPE_set(asn1Type.get(), oidType, val);
             break;
@@ -53,6 +57,10 @@ ASN1_TYPE_uptr createOidValueFromLong(int oidType, long oidValue)
         case V_ASN1_ENUMERATED:
         {
             const auto val = ASN1_ENUMERATED_new();
+            if (val == nullptr)
+            {
+                return asn1Type;
+            }
             ASN1_ENUMERATED_set(val, oidValue);
             ASN1_TYPE_set(asn1Type.get(), oidType, val);
         }

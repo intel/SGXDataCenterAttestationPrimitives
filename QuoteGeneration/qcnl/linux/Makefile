@@ -37,6 +37,7 @@ PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
 ######## SGX CNL Library Settings ########
 
 CNL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
+CNL_Lib_C_Files := $(wildcard *.c ../*.c) ../../common/src/se_thread.c
 
 ######## Include path -- Don't forget to update AESM CMakefile ########
 CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
@@ -58,8 +59,8 @@ ifdef SELF_SIGNED_CERT
 CNL_Lib_Cpp_Flags+= -DSELF_SIGNED_CERT
 endif
 
-CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
-		-lpthread -ldl -lcurl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
+CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 \
+		-lpthread -ldl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
  
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE
@@ -67,6 +68,7 @@ CNL_Lib_Link_Flags += -DDISABLE_TRACE
 endif
 
 CNL_Lib_Cpp_Objects := $(CNL_Lib_Cpp_Files:.cpp=.o)
+CNL_Lib_C_Objects := $(CNL_Lib_C_Files:.c=.o)
 CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 PCK_Selection_Cpp_Objects := $(wildcard ../../../tools/PCKCertSelection/static_out/*.o)
 
@@ -98,11 +100,15 @@ $(CNL_Lib_Cpp_Objects): %.o: %.cpp
 	@$(CXX) $(CNL_Lib_Cpp_Flags) -MMD -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Lib_Static)
-	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
+$(CNL_Lib_C_Objects): %.o: %.c
+	@$(CC) $(CNL_Lib_C_Flags) -c $< -o $@
+	@echo "CC  <=  $<"
 
-$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Lib_Static)
-	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects) $(PCK_Selection_Cpp_Objects)
+$(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) $(PCK_Selection_Lib_Static)
+	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
+
+$(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) $(PCK_Selection_Lib_Static)
+	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects)  $(PCK_Selection_Cpp_Objects)
 
 $(PCK_Selection_Lib_Static):
 	make -C ../../../tools/PCKCertSelection/PCKCertSelectionLib -f Makefile.static_lib

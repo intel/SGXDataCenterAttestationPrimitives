@@ -35,6 +35,7 @@ SGX_DEBUG ?= 0
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_ARCH ?= x64
 SGX_QPL_LOGGING ?= 1
+SGX_TRACE_LOGGING ?= 0
 
 
 
@@ -81,6 +82,10 @@ App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_INFO
 endif
 else
 App_Cpp_Flags += -USGX_QPL_LOGGING
+endif
+
+ifneq ($(SGX_TRACE_LOGGING), 0)
+App_Cpp_Flags += -DSGX_TRACE_LOGGING=$(SGX_TRACE_LOGGING)
 endif
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)

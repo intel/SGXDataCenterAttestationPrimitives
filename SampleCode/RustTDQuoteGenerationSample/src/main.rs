@@ -29,20 +29,18 @@
  *
  */
 
-use tdx_attest_rs;
 use rand::Rng;
 use std::fs;
+use tdx_attest_rs;
 
 fn main() {
     let mut rng = rand::thread_rng();
-    let report_data = tdx_attest_rs::tdx_report_data_t{
+    let report_data = tdx_attest_rs::tdx_report_data_t {
         d: [rng.gen::<u8>(); 64usize],
     };
     println!("TDX report data: {:?}", report_data.d);
 
-    let mut tdx_report = tdx_attest_rs::tdx_report_t{
-        d: [0; 1024usize],
-    };
+    let mut tdx_report = tdx_attest_rs::tdx_report_t { d: [0; 1024usize] };
     let result = tdx_attest_rs::tdx_att_get_report(Some(&report_data), &mut tdx_report);
     if result != tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS {
         println!("Failed to get the report.");
@@ -50,10 +48,13 @@ fn main() {
     }
     println!("TDX report: {:?}", tdx_report.d);
 
-    let mut selected_att_key_id = tdx_attest_rs::tdx_uuid_t{
-        d: [0; 16usize],
-    };
-    let (result, quote) = tdx_attest_rs::tdx_att_get_quote(Some(&report_data), None, Some(&mut selected_att_key_id), 0);
+    let mut selected_att_key_id = tdx_attest_rs::tdx_uuid_t { d: [0; 16usize] };
+    let (result, quote) = tdx_attest_rs::tdx_att_get_quote(
+        Some(&report_data),
+        None,
+        Some(&mut selected_att_key_id),
+        0,
+    );
     if result != tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS {
         println!("Failed to get the quote.");
         return;
@@ -64,11 +65,11 @@ fn main() {
             println!("TDX quote data: {:?}", q);
             println!("Successfully get the TD Quote.");
             fs::write("quote.dat", q).expect("Unable to write quote file.");
-        },
+        }
         None => {
             println!("Failed to get the quote.");
             return;
-        },
+        }
     }
     return;
 }

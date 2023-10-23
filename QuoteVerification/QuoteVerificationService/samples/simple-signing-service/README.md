@@ -6,7 +6,31 @@ DO NOT USE THIS IN PRODUCTION.
 
 Non-SGX platform is sufficient, tested with Ubuntu 18.04 and Ubuntu 20.04
 
-Install: 
+For easier setup use docker, however it can be run manually without containers.
+
+## Quick Setup
+With self-signed certs, scripts and docker image
+
+Requirements:
+ - [Docker](https://www.docker.com/) (tested with version 20.10.11)
+    - ```$ curl -fsSL https://get.docker.com -o get-docker.sh```
+    - ```$ sudo sh ./get-docker.sh```
+
+### Building and Starting Service
+```bash
+# Build sss:latest docker image
+./build.sh
+
+# Create self-signed certs
+./prepareCerts.sh
+
+# Run SSS
+./runSSS.sh
+```
+Healthcheck is performed automatically to ensure SSS is operable.
+
+## Manual Setup
+Requirements:
  - [Node.js](https://nodejs.org/en/) (tested with version 16.13.1)
  - [OpenSSL](https://www.openssl.org/ "OpenSSL") (tested with version 1.1.0g)
 
@@ -39,7 +63,9 @@ To allow requests from Quote Verification Service, QVS client certificate has to
 
 To do so, please [create QVS Client certificate](../../configuration-default/certificates/README.md#configure-mtls-with-sss). Expected result is that qvs-to-sss-client-cert.pem copy is located in SSS's directory.
 
-## Building and Starting Service
+
+
+## Building and Starting Service Manually
 
 Build simple-signing-service:
 
@@ -61,7 +87,7 @@ following: [../../configuration-default/certificates/README.md](../../configurat
 
 ```
 curl http://localhost:8796/health
-curl --cacert ./cert.pem --key ../../configuration-default/certificates/qvs-to-sss-client-key.pem --cert ../../configuration-default/certificates/qvs-to-sss-client-cert.pem  https://localhost:8797/health
+curl --cacert ../../configuration-default/certificates/internal_ca/sss-mtls-cert.pem --key ../../configuration-default/certificates/qvs-to-sss-client-key.pem --cert ../../configuration-default/certificates/qvs-to-sss-client-cert.pem  https://localhost:8797/health
 ```
 
 ## Configuration for Quote Verification Service 

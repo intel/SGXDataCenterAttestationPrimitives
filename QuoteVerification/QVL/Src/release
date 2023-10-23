@@ -30,16 +30,16 @@
 BUILD_ATTESTATION_APP=ON
 BUILD_TESTS=ON
 BUILD_DOCS=OFF
+export MAKEFLAGS=${MAKEFLAGS:-j3}
+
 
 mkdir -p cmake-build-release && pushd cmake-build-release &&
 cmake ../ -DBUILD_DOCS=$BUILD_DOCS \
           -DBUILD_ATTESTATION_APP=$BUILD_ATTESTATION_APP \
           -DBUILD_TESTS=$BUILD_TESTS \
-          -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_COMPILER=clang++ \
           -DCMAKE_BUILD_TYPE=Release \
-          -G "CodeBlocks - Unix Makefiles" \
+          -G "Unix Makefiles" \
           "$@" \
-          && make -j6 && make install &&
+          && make && make install &&
 
 popd

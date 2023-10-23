@@ -53,7 +53,7 @@
 #define RS_PLATFORM_REGISTRATION_URL_PATH   "/sgx/registration/v1/platform"
 #define RS_PACKAGE_ADD_URL_PATH             "/sgx/registration/v1/package"
 
-MPNetwork::MPNetwork(const string serverAddress, const string subscriptionKey, const ProxyConf proxy, const LogLevel logLevel) {
+MPNetwork::MPNetwork(const string serverAddress, const string subscriptionKey, const ProxyConf &proxy, const LogLevel logLevel) {
     m_sender = new MPSynchronicSender(proxy, logLevel);
     m_logLevel = logLevel;
     m_serverAddress = serverAddress;

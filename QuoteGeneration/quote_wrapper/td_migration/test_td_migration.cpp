@@ -52,9 +52,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TDX_ATTEST_DEV_PATH "/dev/tdx-guest"
-#define TDX_CMD_GET_TDREPORT _IOWR('T', 0x01, __u64)
-#define TDX_CMD_GEN_QUOTE _IOR('T', 0x02, __u64)
+#define TDX_ATTEST_DEV_PATH     "/dev/tdx_guest"
+#define TDX_CMD_GET_REPORT0     _IOWR('T', 1, struct tdx_report_req)
+#define TDX_CMD_GET_QUOTE       _IOR('T', 4, struct tdx_quote_req)
 
 #define HEX_DUMP_SIZE 16
 
@@ -68,17 +68,14 @@ typedef struct _tdx_report_data_t
 } tdx_report_data_t;
 
 struct tdx_report_req {
-    __u8 subtype;
-    __u64 reportdata;
-    __u32 rpd_len;
-    __u64 tdreport;
-    __u32 tdr_len;
+    __u8 reportdata[TDX_REPORT_DATA_SIZE];
+    __u8 tdreport[TDX_REPORT_SIZE];
 };
-typedef struct _get_quote_ioctl_arg_t
-{
-    void* p_blob;
-    size_t len;
-} get_quote_ioctl_arg_t;
+
+struct tdx_quote_req {
+    __u64 buf;
+    __u64 len;
+};
 #pragma pack(pop)
 
 static void print_hex_dump(const char* title, const char* prefix_str,
@@ -107,38 +104,40 @@ static void print_hex_dump(const char* title, const char* prefix_str,
 
 static bool get_tdx_report(void* p_tdx_report)
 {
+    bool ret = false;
     if (NULL == p_tdx_report)
     {
-        return false;
+        return ret;
     }
 
     int devfd = -1;
-    struct tdx_report_req req;
+    struct tdx_report_req req = {0};
     tdx_report_data_t report_data = {{0}};
     uint8_t tdx_report[TDX_REPORT_SIZE] = {0};
 
-    req.subtype = 0;
-    req.reportdata = (__u64)report_data.d;
-    req.rpd_len = TDX_REPORT_DATA_SIZE;
-    req.tdreport = (__u64)tdx_report;
-    req.tdr_len = TDX_REPORT_SIZE;
+    memcpy(req.reportdata, report_data.d, sizeof(req.reportdata));
 
     devfd = open(TDX_ATTEST_DEV_PATH, O_RDWR | O_SYNC);
     if (-1 == devfd)
     {
         perror(NULL);
-        return false;
+        goto ret_point;
     }
 
-    if (-1 == ioctl(devfd, TDX_CMD_GET_TDREPORT, &req))
+    if (-1 == ioctl(devfd, TDX_CMD_GET_REPORT0, &req))
     {
         perror(NULL);
-        close(devfd);
-        return false;
+        goto ret_point;
     }
-    close(devfd);
+    
+    memcpy(p_tdx_report, req.tdreport, sizeof(req.tdreport));
+    ret = true;
 
-    memcpy(p_tdx_report, tdx_report, sizeof(tdx_report));
+ret_point:
+    if (-1 != devfd)
+    {
+        close(devfd);
+    }
     return true;
 }
 
@@ -165,13 +164,13 @@ std::vector<uint8_t> readBinaryContent(const std::string& filePath)
  *  migtd_get_quote is the inteferface provided by MigTD Core to invoke TDVMCALL<Get_Quote> during MigTD env.
  *  Here for testing in TD Guest OS, it will call the IOCTL inteface provied by TD Guest OS
  **/
-int migtd_get_quote(const void* tdquote_req_buf, const uint64_t len)
+int migtd_get_quote(const void* p_get_quote_blob, const uint64_t len)
 {
     int devfd = -1;
     int ret = -1;
-    get_quote_ioctl_arg_t arg;
+    struct tdx_quote_req arg;
 
-    if (NULL == tdquote_req_buf || len > MIGTD_REQ_BUF_SIZE)
+    if (NULL == p_get_quote_blob || len > MIGTD_REQ_BUF_SIZE)
     {
         goto ret_point;
     }
@@ -183,21 +182,22 @@ int migtd_get_quote(const void* tdquote_req_buf, const uint64_t len)
         goto ret_point;
     }
 
-    arg.p_blob = (void*)tdquote_req_buf;
+    arg.buf = (__u64)p_get_quote_blob;
     arg.len = len;
-    ret = ioctl(devfd, TDX_CMD_GEN_QUOTE, &arg);
+
+    ret = ioctl(devfd, TDX_CMD_GET_QUOTE, &arg);
     if (0 != ret)
     {
         perror(NULL);
         goto ret_point;
     }
+    ret = 0;
 
 ret_point:
     if (-1 != devfd)
     {
         close(devfd);
     }
-    ret = 0;
     return ret;
 }
 
@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
         goto ret_point;
     }
 
-    print_hex_dump("\n\t\tTD report data\n", " ", (uint8_t*)p_tdx_report,
+    print_hex_dump("\n\t\tTD report Info\n", " ", (uint8_t*)p_tdx_report,
                    TDX_REPORT_SIZE);
     fprintf(stdout, "\nSuccessfully get the TD Report\n");
 

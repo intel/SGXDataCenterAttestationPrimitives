@@ -51,7 +51,7 @@ Bytes sha384Digest(const Bytes& data);
 Bytes sha384Digest(const std::string& data);
 
 Bytes signMessageSha256(const Bytes& message, EVP_PKEY& privateKey);
-bool verifySig(const Bytes& signature, const Bytes& message, EC_KEY& pubKey);
+bool verifySig(const Bytes& signature, const Bytes& message, EVP_PKEY& pubKey);
 }
 
 }}}

@@ -42,13 +42,11 @@ TEST(keyUtilsTest, rawTo256EcdsaKeyShouldReturnCorrectKey)
 {
     // GIVEN
     auto prv = dcap::test::priv(dcap::test::PEM_PRV);
-    auto evp = dcap::crypto::make_unique(EVP_PKEY_new());
-    ASSERT_TRUE(1 == EVP_PKEY_set1_EC_KEY(evp.get(), prv.get()));
     auto pb = dcap::test::pub(dcap::test::PEM_PUB);
-    ASSERT_TRUE(1 == EC_KEY_check_key(pb.get()));
+    ASSERT_TRUE(1 == EVP_PKEY_eq(pb.get(), prv.get()));
     
     const std::vector<uint8_t> data(150, 0xff);
-    const auto sig = dcap::DigestUtils::signMessageSha256(data, *evp);
+    const auto sig = dcap::DigestUtils::signMessageSha256(data, *prv);
     ASSERT_FALSE(sig.empty());
     ASSERT_TRUE(dcap::DigestUtils::verifySig(sig, data, *pb));
 
@@ -59,7 +57,7 @@ TEST(keyUtilsTest, rawTo256EcdsaKeyShouldReturnCorrectKey)
     
     const auto rawUncompressedPubKeyWithoutHeader = dcap::test::getRawPub(*pb);
     ASSERT_TRUE(64 == rawUncompressedPubKeyWithoutHeader.size());
-    std::array<uint8_t, 64> arr;
+    std::array<uint8_t, 64> arr{};
     std::copy_n(rawUncompressedPubKeyWithoutHeader.begin(), 64, arr.begin());
     
     // WHEN

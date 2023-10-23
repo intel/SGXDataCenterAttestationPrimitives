@@ -80,7 +80,9 @@ class TestContext {
         };
 
         this.sgxQuote = 'AwACAAAAAAAEAAkAk5pyM/ecTKmUCg2zlX8GB3cEhXlSheEulmeokact7P4AAAAADQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAA/NbIKlebNUxhlIX/ysdhdjxtT2O+JTpqaPcLeJTp9SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyEBhE5TtWVUKTgl2yS/DCkZ8aq0eu1aesDBuOxNUj9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALhAAAExARVhwI2Qn6dtUK6O0qXpk97fZreM6ZtKxZVT5qFn/ZAqhUiOaiGMMIpu9SxOZfKnaZ3zTwkCVf2sApkYogL94Ijy59eb/nU0Lj+srbesE7PmrZ5M54oX1drz7Xxc74J+kA8tTxBaAZLNR6Z4BC1nUDtqqhaglnM8WwRXwXvH9DQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFQAAAAAAAAAHAAAAAAAAAAoqYO/EltvIi0w5bLQ4hA9bfdxLGAaAdJiKy10HVPF7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACMT1d115ZQPpYTf3fGioKaAFasje1wFAsIGwlEkMV7/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACKe7gLvTbu8WKg4PBEDSsru/MqCZWIrP03ttBj2bRkkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeEbJ4qdQbfFHhAGIjijcPWHDmKmD4EMd3ONCtaLkQNHXBB9+H84y46sChtz9w4aYlBGpPOFQYFPwFxdBZEFhBiAAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8FAMYNAAAtLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRWdEQ0NCQ2FnQXdJQkFnSVVWdlV0aGxBQjJjM2xvNms1T1M5YllOUlF2aEl3Q2dZSUtvWkl6ajBFQXdJd2NURWpNQ0VHQTFVRQpBd3dhU1c1MFpXd2dVMGRZSUZCRFN5QlFjbTlqWlhOemIzSWdRMEV4R2pBWUJnTlZCQW9NRVVsdWRHVnNJRU52Y25CdmNtRjBhVzl1Ck1SUXdFZ1lEVlFRSERBdFRZVzUwWVNCRGJHRnlZVEVMTUFrR0ExVUVDQXdDUTBFeEN6QUpCZ05WQkFZVEFsVlRNQjRYRFRFNU1UQXgKTlRBM01qQTFORm9YRFRJMk1UQXhOVEEzTWpBMU5Gb3djREVpTUNBR0ExVUVBd3daU1c1MFpXd2dVMGRZSUZCRFN5QkRaWEowYVdacApZMkYwWlRFYU1CZ0dBMVVFQ2d3UlNXNTBaV3dnUTI5eWNHOXlZWFJwYjI0eEZEQVNCZ05WQkFjTUMxTmhiblJoSUVOc1lYSmhNUXN3CkNRWURWUVFJREFKRFFURUxNQWtHQTFVRUJoTUNWVk13V1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVFFeklzY0lFa3QKQ1NsNmdMTkN2a3haSVhNYmxOcU9KWTg4cFdpUENMKy9VZkViUktpZ3VCUVQ2MU0xVlAySGgyaWk2enBrUEhrT3NTSW02Z25JMjE4UwpvNElDbXpDQ0FwY3dId1lEVlIwakJCZ3dGb0FVME9pcTJuWFgrUzVKRjVnOGV4UmwwTlh5V1Uwd1h3WURWUjBmQkZnd1ZqQlVvRktnClVJWk9hSFIwY0hNNkx5OWhjR2t1ZEhKMWMzUmxaSE5sY25acFkyVnpMbWx1ZEdWc0xtTnZiUzl6WjNndlkyVnlkR2xtYVdOaGRHbHYKYmk5Mk1pOXdZMnRqY213L1kyRTljSEp2WTJWemMyOXlNQjBHQTFVZERnUVdCQlIyMHBhUkRJUXN1RlJxNGtrMWpmSUVlV0lxZGpBTwpCZ05WSFE4QkFmOEVCQU1DQnNBd0RBWURWUjBUQVFIL0JBSXdBRENDQWRRR0NTcUdTSWI0VFFFTkFRU0NBY1V3Z2dIQk1CNEdDaXFHClNJYjRUUUVOQVFFRUVJYTduYkdWNnJpWkpIejZDSlFsK0k0d2dnRmtCZ29xaGtpRytFMEJEUUVDTUlJQlZEQVFCZ3NxaGtpRytFMEIKRFFFQ0FRSUJEVEFRQmdzcWhraUcrRTBCRFFFQ0FnSUJEVEFRQmdzcWhraUcrRTBCRFFFQ0F3SUJBakFRQmdzcWhraUcrRTBCRFFFQwpCQUlCQkRBUUJnc3Foa2lHK0UwQkRRRUNCUUlCQVRBUkJnc3Foa2lHK0UwQkRRRUNCZ0lDQUlBd0VBWUxLb1pJaHZoTkFRMEJBZ2NDCkFRTXdFQVlMS29aSWh2aE5BUTBCQWdnQ0FRQXdFQVlMS29aSWh2aE5BUTBCQWdrQ0FRQXdFQVlMS29aSWh2aE5BUTBCQWdvQ0FRQXcKRUFZTEtvWklodmhOQVEwQkFnc0NBUUF3RUFZTEtvWklodmhOQVEwQkFnd0NBUUF3RUFZTEtvWklodmhOQVEwQkFnMENBUUF3RUFZTApLb1pJaHZoTkFRMEJBZzRDQVFBd0VBWUxLb1pJaHZoTkFRMEJBZzhDQVFBd0VBWUxLb1pJaHZoTkFRMEJBaEFDQVFBd0VBWUxLb1pJCmh2aE5BUTBCQWhFQ0FRa3dId1lMS29aSWh2aE5BUTBCQWhJRUVBME5BZ1FCZ0FNQUFBQUFBQUFBQUFBd0VBWUtLb1pJaHZoTkFRMEIKQXdRQ0FBQXdGQVlLS29aSWh2aE5BUTBCQkFRR0FKQnVvUUFBTUE4R0NpcUdTSWI0VFFFTkFRVUtBUUF3Q2dZSUtvWkl6ajBFQXdJRApTQUF3UlFJZ2Y4QmJqLzl4VmJlamhxbnRocjFjSGNYNWZGNU1TdFM1dENnWm13Q0w5OElDSVFDVFgrTGk1ZHJPNzRnc2RYYmpyYXdoCnVaMFdzTlJFSTdXSUVQRWQ5ZnAvS2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNsekNDQWo2Z0F3SUJBZ0lWQU5Eb3F0cDExL2t1U1JlWVBIc1VaZERWOGxsTk1Bb0dDQ3FHU000OUJBTUMKTUdneEdqQVlCZ05WQkFNTUVVbHVkR1ZzSUZOSFdDQlNiMjkwSUVOQk1Sb3dHQVlEVlFRS0RCRkpiblJsYkNCRApiM0p3YjNKaGRHbHZiakVVTUJJR0ExVUVCd3dMVTJGdWRHRWdRMnhoY21FeEN6QUpCZ05WQkFnTUFrTkJNUXN3CkNRWURWUVFHRXdKVlV6QWVGdzB4T0RBMU1qRXhNRFExTURoYUZ3MHpNekExTWpFeE1EUTFNRGhhTUhFeEl6QWgKQmdOVkJBTU1Ha2x1ZEdWc0lGTkhXQ0JRUTBzZ1VISnZZMlZ6YzI5eUlFTkJNUm93R0FZRFZRUUtEQkZKYm5SbApiQ0JEYjNKd2IzSmhkR2x2YmpFVU1CSUdBMVVFQnd3TFUyRnVkR0VnUTJ4aGNtRXhDekFKQmdOVkJBZ01Ba05CCk1Rc3dDUVlEVlFRR0V3SlZVekJaTUJNR0J5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEEwSUFCTDlxK05NcDJJT2cKdGRsMWJrL3VXWjUrVEdRbThhQ2k4ejc4ZnMrZktDUTNkK3VEelhuVlRBVDJaaERDaWZ5SXVKd3ZOM3dOQnA5aQpIQlNTTUpNSnJCT2pnYnN3Z2Jnd0h3WURWUjBqQkJnd0ZvQVVJbVVNMWxxZE5JbnpnN1NWVXI5UUd6a25CcXd3ClVnWURWUjBmQkVzd1NUQkhvRVdnUTRaQmFIUjBjSE02THk5alpYSjBhV1pwWTJGMFpYTXVkSEoxYzNSbFpITmwKY25acFkyVnpMbWx1ZEdWc0xtTnZiUzlKYm5SbGJGTkhXRkp2YjNSRFFTNWpjbXd3SFFZRFZSME9CQllFRk5EbwpxdHAxMS9rdVNSZVlQSHNVWmREVjhsbE5NQTRHQTFVZER3RUIvd1FFQXdJQkJqQVNCZ05WSFJNQkFmOEVDREFHCkFRSC9BZ0VBTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUMvOWorODRUK0h6dFZPL3NPUUJXSmJTZCsvMnVleEsKNCthQTBqY0ZCTGNwQWlBM2RoTXJGNWNENTJ0NkZxTXZBSXBqOFhkR215MmJlZWxqTEpLK3B6cGNSQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNqakNDQWpTZ0F3SUJBZ0lVSW1VTTFscWROSW56ZzdTVlVyOVFHemtuQnF3d0NnWUlLb1pJemowRUF3SXcKYURFYU1CZ0dBMVVFQXd3UlNXNTBaV3dnVTBkWUlGSnZiM1FnUTBFeEdqQVlCZ05WQkFvTUVVbHVkR1ZzSUVOdgpjbkJ2Y21GMGFXOXVNUlF3RWdZRFZRUUhEQXRUWVc1MFlTQkRiR0Z5WVRFTE1Ba0dBMVVFQ0F3Q1EwRXhDekFKCkJnTlZCQVlUQWxWVE1CNFhEVEU0TURVeU1URXdOREV4TVZvWERUTXpNRFV5TVRFd05ERXhNRm93YURFYU1CZ0cKQTFVRUF3d1JTVzUwWld3Z1UwZFlJRkp2YjNRZ1EwRXhHakFZQmdOVkJBb01FVWx1ZEdWc0lFTnZjbkJ2Y21GMAphVzl1TVJRd0VnWURWUVFIREF0VFlXNTBZU0JEYkdGeVlURUxNQWtHQTFVRUNBd0NRMEV4Q3pBSkJnTlZCQVlUCkFsVlRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVDNm5Fd01ESVlaT2ovaVBXc0N6YUVLaTcKMU9pT1NMUkZoV0dqYm5CVkpmVm5rWTR1M0lqa0RZWUwwTXhPNG1xc3lZamxCYWxUVll4RlAyc0pCSzV6bEtPQgp1ekNCdURBZkJnTlZIU01FR0RBV2dCUWlaUXpXV3AwMGlmT0R0SlZTdjFBYk9TY0dyREJTQmdOVkhSOEVTekJKCk1FZWdSYUJEaGtGb2RIUndjem92TDJObGNuUnBabWxqWVhSbGN5NTBjblZ6ZEdWa2MyVnlkbWxqWlhNdWFXNTAKWld3dVkyOXRMMGx1ZEdWc1UwZFlVbTl2ZEVOQkxtTnliREFkQmdOVkhRNEVGZ1FVSW1VTTFscWROSW56ZzdTVgpVcjlRR3prbkJxd3dEZ1lEVlIwUEFRSC9CQVFEQWdFR01CSUdBMVVkRXdFQi93UUlNQVlCQWY4Q0FRRXdDZ1lJCktvWkl6ajBFQXdJRFNBQXdSUUlnUVFzLzA4cnljZFBhdUNGazhVUFFYQ01BbHNsb0JlN053YVFHVGNkcGEwRUMKSVFDVXQ4U0d2eEttanBjTS96MFdQOUR2bzhoMms1ZHUxaVdEZEJrQW4rMGlpQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K';
+        this.sgxQuoteBody = 'AwACAAAAAAAEAAkAk5pyM/ecTKmUCg2zlX8GB3cEhXlSheEulmeokact7P4AAAAADQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAA/NbIKlebNUxhlIX/ysdhdjxtT2O+JTpqaPcLeJTp9SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyEBhE5TtWVUKTgl2yS/DCkZ8aq0eu1aesDBuOxNUj9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
         this.tdxQuote = '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';
+        this.tdxQuoteBody = 'BAACAIEAAAAAAAAAk5pyM/ecTKmUCg2zlX8GB0PP8xCV14+q/cEZXptW+nYebWwaUsGjjPft8wpSS067BJ9ZxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
         this.certificationData = `-----BEGIN CERTIFICATE-----
 MIIEgDCCBCagAwIBAgIUVvUthlAB2c3lo6k5OS9bYNRQvhIwCgYIKoZIzj0EAwIwcTEjMCEGA1UE
 AwwaSW50ZWwgU0dYIFBDSyBQcm9jZXNzb3IgQ0ExGjAYBgNVBAoMEUludGVsIENvcnBvcmF0aW9u
@@ -198,122 +200,40 @@ IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
                         {
                             tcb: {
                                 sgxtcbcomponents: [
-                                    {
-                                        svn: 3
-                                    },
-                                    {
-                                        svn: 2
-                                    },
-                                    {
-                                        svn: 1
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    }
+                                    { svn: 3 },
+                                    { svn: 2 },
+                                    { svn: 1 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 }
                                 ],
                                 tdxtcbcomponents: [
-                                    {
-                                        svn:      82,
-                                        category: 'KRYYIXKC8U',
-                                        type:     '@TU9B14XQO'
-                                    },
-                                    {
-                                        svn:      193,
-                                        category: '504X036OI0',
-                                        type:     'EQJ363GEJV'
-                                    },
-                                    {
-                                        svn:      163,
-                                        category: 'JZT5BUBBET',
-                                        type:     '@6ZH630STD'
-                                    },
-                                    {
-                                        svn:      140,
-                                        category: 'XMJJ814468',
-                                        type:     '1G0N1J G9D'
-                                    },
-                                    {
-                                        svn:      247,
-                                        category: 'HGVSWL@TCR',
-                                        type:     '9WZUC8QV@G'
-                                    },
-                                    {
-                                        svn: 237
-                                    },
-                                    {
-                                        svn: 243
-                                    },
-                                    {
-                                        svn: 10
-                                    },
-                                    {
-                                        svn: 82
-                                    },
-                                    {
-                                        svn:      75,
-                                        category: 'GDXEGMOEMR',
-                                        type:     'TC145 MZV0'
-                                    },
-                                    {
-                                        svn:      78,
-                                        category: 'L9GDQAPJEN',
-                                        type:     'I YVRGWSOR'
-                                    },
-                                    {
-                                        svn:      187,
-                                        category: 'AW 0H0XEFY',
-                                        type:     'PNGZ1XU075'
-                                    },
-                                    {
-                                        svn: 4
-                                    },
-                                    {
-                                        svn: 159
-                                    },
-                                    {
-                                        svn:      89,
-                                        category: 'JLH22L7UTB',
-                                        type:     'GX3A1IZC82'
-                                    },
-                                    {
-                                        svn: 199
-                                    },
+                                    { svn: 82, category: 'KRYYIXKC8U', type: '@TU9B14XQO' },
+                                    { svn: 193, category: '504X036OI0', type: 'EQJ363GEJV' },
+                                    { svn: 163, category: 'JZT5BUBBET', type: '@6ZH630STD' },
+                                    { svn: 140, category: 'XMJJ814468', type: '1G0N1J G9D' },
+                                    { svn: 247, category: 'HGVSWL@TCR', type: '9WZUC8QV@G' },
+                                    { svn: 237 },
+                                    { svn: 243 },
+                                    { svn: 10 },
+                                    { svn: 82 },
+                                    { svn: 75, category: 'GDXEGMOEMR', type: 'TC145 MZV0' },
+                                    { svn: 78, category: 'L9GDQAPJEN', type: 'I YVRGWSOR' },
+                                    { svn: 187, category: 'AW 0H0XEFY', type: 'PNGZ1XU075' },
+                                    { svn: 4 },
+                                    { svn: 159 },
+                                    { svn: 89, category: 'JLH22L7UTB', type: 'GX3A1IZC82' },
+                                    { svn: 199 },
                                 ],
                                 pcesvn: 3,
                             },
@@ -323,124 +243,40 @@ IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
                         {
                             tcb: {
                                 sgxtcbcomponents: [
-                                    {
-                                        svn: 3
-                                    },
-                                    {
-                                        svn: 2
-                                    },
-                                    {
-                                        svn:      0,
-                                        category: 'cat1',
-                                        type:     'type1'
-                                    },
-                                    {
-                                        svn:      0,
-                                        category: 'cat1',
-                                    },
-                                    {
-                                        svn:  0,
-                                        type: 'type1'
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    }
+                                    { svn: 3 },
+                                    { svn: 2 },
+                                    { svn: 0, category: 'cat1', type: 'type1' }, // this value is intentionally OutOfDate with the same category and type as TDX value to test value deduplication
+                                    { svn: 0, category: 'cat1' },
+                                    { svn: 0, type: 'type1' },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 }
                                 ],
                                 tdxtcbcomponents: [
-                                    {
-                                        svn:      81,
-                                        category: 'KRYYIXKC8U',
-                                        type:     '@TU9B14XQO'
-                                    },
-                                    {
-                                        svn:      193,
-                                        category: '504X036OI0',
-                                        type:     'EQJ363GEJV'
-                                    },
-                                    {
-                                        svn:  163,
-                                        type: '@6ZH630STD'
-                                    },
-                                    {
-                                        svn:      140,
-                                        category: 'XMJJ814468',
-                                    },
-                                    {
-                                        svn:      247,
-                                        category: 'HGVSWL@TCR',
-                                        type:     '9WZUC8QV@G'
-                                    },
-                                    {
-                                        svn: 237
-                                    },
-                                    {
-                                        svn: 243
-                                    },
-                                    {
-                                        svn: 10
-                                    },
-                                    {
-                                        svn: 82
-                                    },
-                                    {
-                                        svn:      75,
-                                        category: 'GDXEGMOEMR',
-                                        type:     'TC145 MZV0'
-                                    },
-                                    {
-                                        svn:      78,
-                                        category: 'L9GDQAPJEN',
-                                        type:     'I YVRGWSOR'
-                                    },
-                                    {
-                                        svn:      187,
-                                        category: 'AW 0H0XEFY',
-                                        type:     'PNGZ1XU075'
-                                    },
-                                    {
-                                        svn: 4
-                                    },
-                                    {
-                                        svn: 159
-                                    },
-                                    {
-                                        svn:      89,
-                                        category: 'JLH22L7UTB',
-                                        type:     'GX3A1IZC82'
-                                    },
-                                    {
-                                        svn: 199
-                                    },
+                                    { svn: 81, category: 'KRYYIXKC8U', type: '@TU9B14XQO' },
+                                    { svn: 193, category: '504X036OI0', type: 'EQJ363GEJV' },
+                                    { svn: 163, type: '@6ZH630STD' },
+                                    { svn: 140, category: 'XMJJ814468' },
+                                    { svn: 247, category: 'HGVSWL@TCR', type: '9WZUC8QV@G' },
+                                    { svn: 237 },
+                                    { svn: 243 },
+                                    { svn: 9, category: 'cat1', type: 'type1' }, // this value is intentionally OutOfDate with the same category and type as SGX value to test value deduplication
+                                    { svn: 82 },
+                                    { svn: 75, category: 'GDXEGMOEMR', type: 'TC145 MZV0' },
+                                    { svn: 78, category: 'L9GDQAPJEN', type: 'I YVRGWSOR' },
+                                    { svn: 187, category: 'AW 0H0XEFY', type: 'PNGZ1XU075' },
+                                    { svn: 4 },
+                                    { svn: 159 },
+                                    { svn: 89, category: 'JLH22L7UTB', type: 'GX3A1IZC82' },
+                                    { svn: 199 },
                                 ],
                                 pcesvn: 3,
                             },
@@ -462,15 +298,11 @@ IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
                 tcbEvaluationDataNumber: 0,
                 tcbLevels:               [
                     {
-                        tcb: {
-                            isvsvn: 4
-                        },
+                        tcb: { isvsvn: 4 },
                         advisoryIDs
                     },
                     {
-                        tcb: {
-                            isvsvn: 12677
-                        },
+                        tcb: { isvsvn: 12677 },
                         advisoryIDs
                     }
                 ]
@@ -507,6 +339,31 @@ IQCUt8SGvxKmjpcM/z0WP9Dvo8h2k5du1iWDdBkAn+0iiA==
             .setupCertificateChain()
             .setupSignature();
     }
+
+    assertPositive(ctx) {
+        assert.equal(ctx.status, 200);
+        assert.equal(this.qvl.getCertificationData.callCount, 1);
+        assert.equal(this.qvl.getPckCertificateData.callCount, 1);
+        assert.equal(this.qvl.getCrlDistributionPoint.callCount, 2);
+        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
+        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
+        assert.equal(ctx.body.version, 5);
+        assert.equal(ctx.body.attestationType, 'ECDSA');
+        assert.equal(iso8601Regex.test(ctx.body.tcbDate), true, 'Date format should be in ISO 8601');
+        assert.strictEqual(ctx.log.error.callCount, 0);
+    }
+
+    assertPositiveSgxStandard(ctx) {
+        this.assertPositive(ctx);
+        assert.equal(ctx.body.teeType, 'SGX_STANDARD');
+        assert.equal(ctx.body.isvQuoteBody, this.sgxQuoteBody);
+    }
+
+    assertPositiveTdx(ctx) {
+        this.assertPositive(ctx);
+        assert.equal(ctx.body.teeType, 'TDX');
+        assert.equal(ctx.body.isvQuoteBody, this.tdxQuoteBody);
+    }
 }
 
 describe('verify attestation evidence handler tests', () => {
@@ -518,31 +375,14 @@ describe('verify attestation evidence handler tests', () => {
         ctx.request.body = {
             isvQuote: c.sgxQuote
         };
-        c.setupCertificationData()
-            .setupPckCertificateData()
-            .setupCrlDistributionPoint()
-            .setupTcbInfo()
-            .setupQeIdentity()
-            .setupVerifyQuote()
-            .setupCertificateChain()
-            .setupSignature();
+        c.defaultSetup();
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
+        c.assertPositiveSgxStandard(ctx);
         assert.equal(Object.keys(ctx.body).length, 9, 'Unexpected number of fields in response');
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
-        assert.equal(ctx.body.teeType, 'SGX_STANDARD');
         assert.equal(ctx.body.isvQuoteStatus, 'OK');
-        assert.equal(ctx.body.isvQuoteBody, 'AwACAAAAAAAEAAkAk5pyM/ecTKmUCg2zlX8GB3cEhXlSheEulmeokact7P4AAAAADQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAA/NbIKlebNUxhlIX/ysdhdjxtT2O+JTpqaPcLeJTp9SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyEBhE5TtWVUKTgl2yS/DCkZ8aq0eu1aesDBuOxNUj9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
-        assert.equal(iso8601Regex.test(ctx.body.tcbDate), true, 'Date format should be in ISO 8601');
         assert.equal(ctx.body.advisoryIDs, undefined);
     });
 
@@ -567,18 +407,8 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
-        assert.equal(Object.keys(ctx.body).length, 11, 'Unexpected number of fields in response');
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
-        assert.equal(ctx.body.teeType, 'SGX_STANDARD');
+        c.assertPositiveSgxStandard(ctx);
         assert.equal(ctx.body.isvQuoteStatus, 'OK');
-        assert.equal(ctx.body.isvQuoteBody, 'AwACAAAAAAAEAAkAk5pyM/ecTKmUCg2zlX8GB3cEhXlSheEulmeokact7P4AAAAADQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAA/NbIKlebNUxhlIX/ysdhdjxtT2O+JTpqaPcLeJTp9SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyEBhE5TtWVUKTgl2yS/DCkZ8aq0eu1aesDBuOxNUj9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
         assert.equal(ctx.body.advisoryURL, 'https://security-center.intel.com');
         assert.equal(JSON.stringify(ctx.body.advisoryIDs), JSON.stringify(['INTEL-SA-38861', 'INTEL-SA-54321', 'INTEL-SA-68515']));
@@ -610,17 +440,8 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
-        assert.equal(ctx.body.teeType, 'SGX_STANDARD');
+        c.assertPositiveSgxStandard(ctx);
         assert.equal(ctx.body.isvQuoteStatus, 'TCB_OUT_OF_DATE');
-        assert.equal(ctx.body.isvQuoteBody, 'AwACAAAAAAAEAAkAk5pyM/ecTKmUCg2zlX8GB3cEhXlSheEulmeokact7P4AAAAADQ0DBf+AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAAA/NbIKlebNUxhlIX/ysdhdjxtT2O+JTpqaPcLeJTp9SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyEBhE5TtWVUKTgl2yS/DCkZ8aq0eu1aesDBuOxNUj9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
         assert.equal(ctx.body.advisoryURL, 'https://security-center.intel.com');
         assert.equal(JSON.stringify(ctx.body.advisoryIDs), JSON.stringify(['INTEL-SA-38861', 'INTEL-SA-68515']));
@@ -649,18 +470,9 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
+        c.assertPositiveTdx(ctx);
         assert.equal(Object.keys(ctx.body).length, 9, 'Unexpected number of fields in response');
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
-        assert.equal(ctx.body.teeType, 'TDX');
         assert.equal(ctx.body.isvQuoteStatus, 'OK');
-        assert.equal(ctx.body.isvQuoteBody, 'BAACAIEAAAAAAAAAk5pyM/ecTKmUCg2zlX8GB0PP8xCV14+q/cEZXptW+nYebWwaUsGjjPft8wpSS067BJ9ZxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
     });
 
@@ -685,18 +497,11 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
+        c.assertPositive(ctx);
         assert.equal(Object.keys(ctx.body).length, 11, 'Unexpected number of fields in response');
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
         assert.equal(ctx.body.teeType, 'TDX');
         assert.equal(ctx.body.isvQuoteStatus, 'OK');
-        assert.equal(ctx.body.isvQuoteBody, 'BAACAIEAAAAAAAAAk5pyM/ecTKmUCg2zlX8GB0PP8xCV14+q/cEZXptW+nYebWwaUsGjjPft8wpSS067BJ9ZxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+        assert.equal(ctx.body.isvQuoteBody, c.tdxQuoteBody);
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
         assert.equal(ctx.body.advisoryURL, 'https://security-center.intel.com');
         assert.equal(JSON.stringify(ctx.body.advisoryIDs), JSON.stringify(['INTEL-SA-38861', 'INTEL-SA-68515']));
@@ -728,17 +533,10 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
-        assert.equal(c.qvl.getCertificationData.callCount, 1);
-        assert.equal(c.qvl.getPckCertificateData.callCount, 1);
-        assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
-        assert.equal((/^\d+$/).test(ctx.body.id), true, 'ID field should be a 128 bit number');
-        assert.equal(iso8601Regex.test(ctx.body.timestamp), true, 'Date format should be in ISO 8601');
-        assert.equal(ctx.body.version, 5);
-        assert.equal(ctx.body.attestationType, 'ECDSA');
+        c.assertPositive(ctx);
         assert.equal(ctx.body.teeType, 'TDX');
         assert.equal(ctx.body.isvQuoteStatus, 'TCB_OUT_OF_DATE');
-        assert.equal(ctx.body.isvQuoteBody, 'BAACAIEAAAAAAAAAk5pyM/ecTKmUCg2zlX8GB0PP8xCV14+q/cEZXptW+nYebWwaUsGjjPft8wpSS067BJ9ZxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+        assert.equal(ctx.body.isvQuoteBody, c.tdxQuoteBody);
         assert.equal(ctx.body.tcbEvaluationDataNumber, 0);
         assert.equal(ctx.body.advisoryURL, 'https://security-center.intel.com');
         assert.equal(JSON.stringify(ctx.body.advisoryIDs), JSON.stringify(['INTEL-SA-38861', 'INTEL-SA-68515']));
@@ -748,7 +546,7 @@ describe('verify attestation evidence handler tests', () => {
         assert.equal(Object.keys(ctx.body).length, 14, 'Unexpected number of fields in response');
     });
 
-    it('execute - SGX - TCB level mismatch', async() => {
+    it('execute - TDX - TCB level mismatch', async() => {
         // GIVEN
         const c = new TestContext();
         const target = await c.getTarget();
@@ -776,7 +574,7 @@ describe('verify attestation evidence handler tests', () => {
         assert.equal(ctx.body, undefined, 'Unexpected body response');
     });
 
-    it('execute - SGX - Enclave TCB level mismatch', async() => {
+    it('execute - TDX - Enclave TCB level mismatch', async() => {
         // GIVEN
         const c = new TestContext();
         const target = await c.getTarget();
@@ -796,9 +594,7 @@ describe('verify attestation evidence handler tests', () => {
                 tcbEvaluationDataNumber: 0,
                 tcbLevels:               [
                     {
-                        tcb: {
-                            isvsvn: 12978
-                        }
+                        tcb: { isvsvn: 12978 }
                     }
                 ]
             }
@@ -813,6 +609,35 @@ describe('verify attestation evidence handler tests', () => {
         assert.equal(c.qvl.getPckCertificateData.callCount, 1);
         assert.equal(c.qvl.getCrlDistributionPoint.callCount, 2);
         assert.equal(ctx.body, undefined, 'Unexpected body response');
+    });
+
+    it('execute - TDX - Enclave TCB level match between levels', async() => {
+        const expectedAdvisoryIds = ['INTEL-SA-54321'];
+        const c = new TestContext();
+        const target = await c.getTarget();
+        const ctx = await c.getCtx();
+        ctx.request.body = {
+            isvQuote: c.tdxQuote
+        };
+        c.defaultSetup();
+        const qeIdentity = {
+            enclaveIdentity: {
+                tcbEvaluationDataNumber: 0,
+                tcbLevels:               [
+                    {
+                        tcb:         { isvsvn: 555 },
+                        advisoryIDs: expectedAdvisoryIds
+                    }
+                ]
+            }
+        };
+        c.pcsClient.getSgxQeIdentity.resolves({ status: 200, body: qeIdentity });
+        c.pcsClient.getTdxQeIdentity.resolves({ status: 200, body: qeIdentity });
+        // WHEN
+        await target.verifyAttestationEvidence(ctx);
+        // THEN
+        c.assertPositiveTdx(ctx);
+        assert.deepEqual(ctx.body.advisoryIDs, expectedAdvisoryIds);
     });
 
     it('execute - TDX - TCB level mismatch', async() => {
@@ -833,122 +658,40 @@ describe('verify attestation evidence handler tests', () => {
                         {
                             tcb: {
                                 sgxtcbcomponents: [
-                                    {
-                                        svn: 3
-                                    },
-                                    {
-                                        svn: 2
-                                    },
-                                    {
-                                        svn: 1
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    },
-                                    {
-                                        svn: 0
-                                    }
+                                    { svn: 3 },
+                                    { svn: 2 },
+                                    { svn: 1 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 },
+                                    { svn: 0 }
                                 ],
                                 tdxtcbcomponents: [
-                                    {
-                                        svn:      83,
-                                        category: 'KRYYIXKC8U',
-                                        type:     '@TU9B14XQO'
-                                    },
-                                    {
-                                        svn:      193,
-                                        category: '504X036OI0',
-                                        type:     'EQJ363GEJV'
-                                    },
-                                    {
-                                        svn:      163,
-                                        category: 'JZT5BUBBET',
-                                        type:     '@6ZH630STD'
-                                    },
-                                    {
-                                        svn:      140,
-                                        category: 'XMJJ814468',
-                                        type:     '1G0N1J G9D'
-                                    },
-                                    {
-                                        svn:      247,
-                                        category: 'HGVSWL@TCR',
-                                        type:     '9WZUC8QV@G'
-                                    },
-                                    {
-                                        svn: 237
-                                    },
-                                    {
-                                        svn: 243
-                                    },
-                                    {
-                                        svn: 10
-                                    },
-                                    {
-                                        svn: 82
-                                    },
-                                    {
-                                        svn:      75,
-                                        category: 'GDXEGMOEMR',
-                                        type:     'TC145 MZV0'
-                                    },
-                                    {
-                                        svn:      78,
-                                        category: 'L9GDQAPJEN',
-                                        type:     'I YVRGWSOR'
-                                    },
-                                    {
-                                        svn:      187,
-                                        category: 'AW 0H0XEFY',
-                                        type:     'PNGZ1XU075'
-                                    },
-                                    {
-                                        svn: 4
-                                    },
-                                    {
-                                        svn: 159
-                                    },
-                                    {
-                                        svn:      89,
-                                        category: 'JLH22L7UTB',
-                                        type:     'GX3A1IZC82'
-                                    },
-                                    {
-                                        svn: 199
-                                    },
+                                    { svn: 83, category: 'KRYYIXKC8U', type: '@TU9B14XQO' },
+                                    { svn: 193, category: '504X036OI0', type: 'EQJ363GEJV' },
+                                    { svn: 163, category: 'JZT5BUBBET', type: '@6ZH630STD' },
+                                    { svn: 140, category: 'XMJJ814468', type: '1G0N1J G9D' },
+                                    { svn: 247, category: 'HGVSWL@TCR', type: '9WZUC8QV@G' },
+                                    { svn: 237 },
+                                    { svn: 243 },
+                                    { svn: 10 },
+                                    { svn: 82 },
+                                    { svn: 75, category: 'GDXEGMOEMR', type: 'TC145 MZV0' },
+                                    { svn: 78, category: 'L9GDQAPJEN', type: 'I YVRGWSOR' },
+                                    { svn: 187, category: 'AW 0H0XEFY', type: 'PNGZ1XU075' },
+                                    { svn: 4 },
+                                    { svn: 159 },
+                                    { svn: 89, category: 'JLH22L7UTB', type: 'GX3A1IZC82' },
+                                    { svn: 199 },
                                 ],
                                 pcesvn: 3,
                             },
@@ -993,104 +736,40 @@ describe('verify attestation evidence handler tests', () => {
                             {
                                 tcb: {
                                     sgxtcbcomponents: [
-                                        {
-                                            svn: 3
-                                        },
-                                        {
-                                            svn: 2
-                                        },
-                                        {
-                                            svn: 1
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        }
+                                        { svn: 3 },
+                                        { svn: 2 },
+                                        { svn: 1 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 }
                                     ],
                                     tdxtcbcomponents: [
-                                        {
-                                            svn: 82
-                                        },
-                                        {
-                                            svn: 193
-                                        },
-                                        {
-                                            svn: 163
-                                        },
-                                        {
-                                            svn: 140
-                                        },
-                                        {
-                                            svn: 247
-                                        },
-                                        {
-                                            svn: 237
-                                        },
-                                        {
-                                            svn: 243
-                                        },
-                                        {
-                                            svn: 10
-                                        },
-                                        {
-                                            svn: 82
-                                        },
-                                        {
-                                            svn: 75
-                                        },
-                                        {
-                                            svn: 78
-                                        },
-                                        {
-                                            svn: 187
-                                        },
-                                        {
-                                            svn: 4
-                                        },
-                                        {
-                                            svn: 159
-                                        },
-                                        {
-                                            svn: 89
-                                        },
-                                        {
-                                            svn: 199
-                                        },
+                                        { svn: 82 },
+                                        { svn: 193 },
+                                        { svn: 163 },
+                                        { svn: 140 },
+                                        { svn: 247 },
+                                        { svn: 237 },
+                                        { svn: 243 },
+                                        { svn: 10 },
+                                        { svn: 82 },
+                                        { svn: 75 },
+                                        { svn: 78 },
+                                        { svn: 187 },
+                                        { svn: 4 },
+                                        { svn: 159 },
+                                        { svn: 89 },
+                                        { svn: 199 },
                                     ],
                                     pcesvn: 3,
                                 },
@@ -1100,104 +779,40 @@ describe('verify attestation evidence handler tests', () => {
                             {
                                 tcb: {
                                     sgxtcbcomponents: [
-                                        {
-                                            svn: 3
-                                        },
-                                        {
-                                            svn: 2
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        },
-                                        {
-                                            svn: 0
-                                        }
+                                        { svn: 3 },
+                                        { svn: 2 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 },
+                                        { svn: 0 }
                                     ],
                                     tdxtcbcomponents: [
-                                        {
-                                            svn: 82
-                                        },
-                                        {
-                                            svn: 193
-                                        },
-                                        {
-                                            svn: 163
-                                        },
-                                        {
-                                            svn: 140,
-                                        },
-                                        {
-                                            svn: 247
-                                        },
-                                        {
-                                            svn: 237
-                                        },
-                                        {
-                                            svn: 243
-                                        },
-                                        {
-                                            svn: 10
-                                        },
-                                        {
-                                            svn: 82
-                                        },
-                                        {
-                                            svn: 75
-                                        },
-                                        {
-                                            svn: 78
-                                        },
-                                        {
-                                            svn: 187
-                                        },
-                                        {
-                                            svn: 4
-                                        },
-                                        {
-                                            svn: 159
-                                        },
-                                        {
-                                            svn: 89
-                                        },
-                                        {
-                                            svn: 199
-                                        },
+                                        { svn: 82 },
+                                        { svn: 193 },
+                                        { svn: 163 },
+                                        { svn: 140 },
+                                        { svn: 247 },
+                                        { svn: 237 },
+                                        { svn: 243 },
+                                        { svn: 10 },
+                                        { svn: 82 },
+                                        { svn: 75 },
+                                        { svn: 78 },
+                                        { svn: 187 },
+                                        { svn: 4 },
+                                        { svn: 159 },
+                                        { svn: 89 },
+                                        { svn: 199 },
                                     ],
                                     pcesvn: 3,
                                 },
@@ -1215,7 +830,7 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.equal(ctx.status, 200);
+        c.assertPositiveTdx(ctx);
         assert.equal(ctx.body.advisoryIDs, undefined);
     });
 
@@ -1415,9 +1030,8 @@ describe('verify attestation evidence handler tests', () => {
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.strictEqual(ctx.body.hasOwnProperty('nonce'), false);
-            assert.strictEqual(ctx.log.error.callCount, 0);
         });
     });
 
@@ -1436,7 +1050,7 @@ describe('verify attestation evidence handler tests', () => {
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.strictEqual(ctx.body.hasOwnProperty('configuration'), false);
         });
 
@@ -1449,12 +1063,11 @@ describe('verify attestation evidence handler tests', () => {
                 isvQuote: c.sgxQuote,
                 nonce:    c.nonce
             };
-            c.defaultSetup();
-            c.setupPckCertificateData({ dynamicPlatform: true });
+            c.defaultSetup().setupPckCertificateData({ dynamicPlatform: true });
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.deepEqual(ctx.body.configuration, ['DYNAMIC_PLATFORM']);
         });
 
@@ -1467,12 +1080,11 @@ describe('verify attestation evidence handler tests', () => {
                 isvQuote: c.sgxQuote,
                 nonce:    c.nonce
             };
-            c.defaultSetup();
-            c.setupPckCertificateData({ cachedKeys: true });
+            c.defaultSetup().setupPckCertificateData({ cachedKeys: true });
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.deepEqual(ctx.body.configuration, ['CACHED_KEYS']);
         });
 
@@ -1485,12 +1097,11 @@ describe('verify attestation evidence handler tests', () => {
                 isvQuote: c.sgxQuote,
                 nonce:    c.nonce
             };
-            c.defaultSetup();
-            c.setupPckCertificateData({ smtEnabled: true });
+            c.defaultSetup().setupPckCertificateData({ smtEnabled: true });
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.deepEqual(ctx.body.configuration, ['SMT_ENABLED']);
         });
 
@@ -1503,8 +1114,7 @@ describe('verify attestation evidence handler tests', () => {
                 isvQuote: c.sgxQuote,
                 nonce:    c.nonce
             };
-            c.defaultSetup();
-            c.setupPckCertificateData({
+            c.defaultSetup().setupPckCertificateData({
                 dynamicPlatform: true,
                 cachedKeys:      true,
                 smtEnabled:      true
@@ -1512,7 +1122,7 @@ describe('verify attestation evidence handler tests', () => {
             // WHEN
             await target.verifyAttestationEvidence(ctx);
             // THEN
-            assert.strictEqual(ctx.status, 200);
+            c.assertPositiveSgxStandard(ctx);
             assert.deepEqual(ctx.body.configuration, ['DYNAMIC_PLATFORM', 'CACHED_KEYS', 'SMT_ENABLED']);
         });
 
@@ -1764,7 +1374,7 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.strictEqual(ctx.status, 200);
+        c.assertPositiveSgxStandard(ctx);
         assert.strictEqual(c.qvl.verifyQuote.callCount, 1);
         assert.strictEqual(c.qvl.verifyQuote.args[0][7], hexString.toLowerCase());
         assert.strictEqual(c.qvl.verifyQuote.args[0][8], hexString.toLowerCase());
@@ -1788,7 +1398,7 @@ describe('verify attestation evidence handler tests', () => {
         // WHEN
         await target.verifyAttestationEvidence(ctx);
         // THEN
-        assert.strictEqual(ctx.status, 200);
+        c.assertPositiveSgxStandard(ctx);
     });
 
     it('scalable sgx type', async() => {

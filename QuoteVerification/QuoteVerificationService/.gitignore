@@ -1,3 +1,4 @@
+build
 native
 src/qvl/cmake-*
 src/node_modules

@@ -31,25 +31,27 @@
 
 
 #include "DigestUtils.h"
+#include "OpensslHelpers/OpensslTypes.h"
 
 #include <openssl/sha.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
-Bytes sha256Digest(const Bytes& data)
+Bytes sha256Digest(const Bytes& bytes)
 {
+    auto ctx = crypto::make_unique(EVP_MD_CTX_new());
+    const EVP_MD* md = EVP_sha256();
     Bytes hash(SHA256_DIGEST_LENGTH);
-    SHA256_CTX ctx;
-    if(SHA256_Init(&ctx) == 1 &&
-        SHA256_Update(&ctx, data.data(), data.size()) == 1 &&
-        SHA256_Final(hash.data(), &ctx) == 1)
+    uint32_t hashLen;
+    if (ctx.get() != nullptr &&
+        EVP_DigestInit_ex(ctx.get(), md, nullptr) == 1 &&
+        EVP_DigestUpdate(ctx.get(), bytes.data(), bytes.size()) == 1 &&
+        EVP_DigestFinal_ex(ctx.get(), hash.data(), &hashLen) == 1 &&
+        hashLen == SHA256_DIGEST_LENGTH)
     {
         return hash;
     }
-    else
-    {
-        return Bytes{};
-    }
+    return Bytes{};
 }
 
 }}}}

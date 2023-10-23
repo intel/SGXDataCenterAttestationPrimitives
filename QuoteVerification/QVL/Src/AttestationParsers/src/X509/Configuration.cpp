@@ -102,6 +102,8 @@ Configuration::Configuration(const ASN1_TYPE *configurationSeq)
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
+        crypto::validateOid(oids::CONFIGURATION, oidName, V_ASN1_OBJECT);
+
         const auto oidValue = sk_ASN1_TYPE_value(oidTuple.get(), 1);
         const auto oidNameStr = obj2Str(oidName->value.object);
 

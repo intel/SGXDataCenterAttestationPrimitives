@@ -46,6 +46,7 @@
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
 #include <openssl/cmac.h>
+#include <openssl/param_build.h>
 
 namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
@@ -66,9 +67,7 @@ using BIGNUM_uptr                   = std::unique_ptr<BIGNUM,                   
 using BN_CTX_uptr                   = std::unique_ptr<BN_CTX,                   decltype(&BN_CTX_free)>;
 using BIO_uptr                      = std::unique_ptr<BIO,                      decltype(&BIO_free_all)>;
 using CONF_uptr                     = std::unique_ptr<CONF,                     decltype(&NCONF_free)>;
-using CMAC_CTX_uptr                 = std::unique_ptr<CMAC_CTX,                 decltype(&CMAC_CTX_free)>;
 using EC_GROUP_uptr                 = std::unique_ptr<EC_GROUP,                 decltype(&EC_GROUP_free)>;
-using EC_KEY_uptr                   = std::unique_ptr<EC_KEY,                   decltype(&EC_KEY_free)>;
 using EC_POINT_uptr                 = std::unique_ptr<EC_POINT,                 decltype(&EC_POINT_free)>;
 using ECDSA_SIG_uptr                = std::unique_ptr<ECDSA_SIG,                decltype(&ECDSA_SIG_free)>;
 using EVP_CIPHER_CTX_uptr           = std::unique_ptr<EVP_CIPHER_CTX,           decltype(&freeEVP_CIPHER_CTX)>;
@@ -76,7 +75,8 @@ using EVP_MD_CTX_uptr               = std::unique_ptr<EVP_MD_CTX,               
 using EVP_PKEY_uptr                 = std::unique_ptr<EVP_PKEY,                 decltype(&EVP_PKEY_free)>;
 using EVP_PKEY_sptr                 = std::shared_ptr<EVP_PKEY>;
 using EVP_PKEY_CTX_uptr             = std::unique_ptr<EVP_PKEY_CTX,             decltype(&EVP_PKEY_CTX_free)>;
-using RSA_uptr                      = std::unique_ptr<RSA,                      decltype(&RSA_free)>;
+using OSSL_PARAM_uptr               = std::unique_ptr<OSSL_PARAM,               decltype(&OSSL_PARAM_free)>;
+using OSSL_PARAM_BLD_uptr           = std::unique_ptr<OSSL_PARAM_BLD,           decltype(&OSSL_PARAM_BLD_free)>;
 using STACK_OF_ASN1TYPE_uptr        = std::unique_ptr<STACK_OF(ASN1_TYPE),      decltype(&freeSTACK_OF_ASN1TYPE)>;
 using STACK_OF_X509_uptr            = std::unique_ptr<STACK_OF(X509),           decltype(&freeSTACK_OF_X509)>;
 using STACK_OF_X509_EXTENSION_uptr  = std::unique_ptr<STACK_OF(X509_EXTENSION), decltype(&freeSTACK_OF_X509_EXTENSION)>;
@@ -184,21 +184,9 @@ inline CONF_uptr make_unique(CONF* raw_pointer)
 }
 
 template<>
-inline CMAC_CTX_uptr make_unique(CMAC_CTX* raw_pointer)
-{
-    return CMAC_CTX_uptr(raw_pointer, CMAC_CTX_free);
-}
-
-template<>
 inline EC_GROUP_uptr make_unique(EC_GROUP* raw_pointer)
 {
     return EC_GROUP_uptr(raw_pointer, EC_GROUP_free);
-}
-
-template<>
-inline EC_KEY_uptr make_unique(EC_KEY* raw_pointer)
-{
-    return EC_KEY_uptr(raw_pointer, EC_KEY_free);
 }
 
 template<>
@@ -238,9 +226,15 @@ inline EVP_PKEY_CTX_uptr make_unique(EVP_PKEY_CTX* raw_pointer)
 }
 
 template<>
-inline RSA_uptr make_unique(RSA* raw_pointer)
+inline OSSL_PARAM_uptr make_unique(OSSL_PARAM* raw_pointer)
 {
-    return RSA_uptr(raw_pointer, RSA_free);
+    return { raw_pointer, OSSL_PARAM_free };
+}
+
+template<>
+inline OSSL_PARAM_BLD_uptr make_unique(OSSL_PARAM_BLD* raw_pointer)
+{
+    return { raw_pointer, OSSL_PARAM_BLD_free };
 }
 
 template<>

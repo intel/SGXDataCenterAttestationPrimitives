@@ -10,6 +10,8 @@ global:
     load_qe;
     get_qpl_handle;
     sgx_set_ide_path;
+    sgx_trace_logger_callback;
+    sgx_trace_loglevel;
 local:
     *;
 };

@@ -31,60 +31,55 @@
 
 #include "KeyUtils.h"
 
+#include <openssl/param_build.h>
+
 #include <algorithm>
 #include <array>
+#include <iterator>
 
-namespace intel { namespace sgx { namespace dcap { namespace crypto {
+namespace intel::sgx::dcap::crypto {
 
-crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey)
+crypto::EVP_PKEY_uptr rawToP256PubKey(const std::array<uint8_t, 64>& rawKey)
 {
-    auto empty = crypto::make_unique<EVP_PKEY>(nullptr);
-
-    auto copy = crypto::make_unique(EC_KEY_dup(&ecKey));
-    if(!copy)
+    // prepare key structs
+    EVP_PKEY *pubKey = nullptr;
+    auto pkey = crypto::make_unique<EVP_PKEY>(nullptr);
+    // prepare public key raw data
+    auto data = std::vector<uint8_t>();
+    data.reserve(rawKey.size() + 1);
+    data.insert(data.begin(), POINT_CONVERSION_UNCOMPRESSED);
+    std::copy(rawKey.begin(), rawKey.end(), std::back_inserter(data));
+    // prepare OSSL params
+    OSSL_PARAM_BLD_uptr param_bld = crypto::make_unique<OSSL_PARAM_BLD>(OSSL_PARAM_BLD_new());
+    if (param_bld.get() == nullptr
+        || OSSL_PARAM_BLD_push_utf8_string(param_bld.get(), "group",SN_X9_62_prime256v1, 0) != 1)
     {
-        return empty;
+        return pkey; // empty key
     }
-
-    crypto::EVP_PKEY_uptr evpKey = crypto::make_unique<EVP_PKEY>(EVP_PKEY_new());
-    if (!evpKey)
+    OSSL_PARAM_uptr params = crypto::make_unique<OSSL_PARAM>(OSSL_PARAM_BLD_to_param(param_bld.get()));
+    EVP_PKEY_CTX_uptr ctx = crypto::make_unique<EVP_PKEY_CTX>(EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr));
+    if (ctx.get() == nullptr
+        || params.get() == nullptr
+        || EVP_PKEY_fromdata_init(ctx.get()) <= 0
+        || EVP_PKEY_fromdata(ctx.get(), &pubKey, OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS, params.get()) <= 0)
     {
-        return empty;
+        return pkey; // empty key
     }
-
-    if (1 != EVP_PKEY_set1_EC_KEY(evpKey.get(), copy.get()))
+    pkey.reset(pubKey);
+    if (pkey.get() == nullptr)
     {
-        return empty;
+        return pkey; // empty key
     }
-
-    return evpKey;
+    const auto *pp = data.data();
+    auto ret = d2i_PublicKey(EVP_PKEY_EC, &pubKey, &pp, static_cast<long>(data.size()));
+    if (ret == nullptr)
+    {
+        return crypto::make_unique<EVP_PKEY>(nullptr); // empty key
+    }
+    return pkey; // valid key
 }
 
-crypto::EC_KEY_uptr rawToP256PubKey(const std::array<uint8_t, 64>& rawKey)
-{
-    const auto group = crypto::make_unique(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
-    auto bnX = crypto::make_unique(BN_new());
-    auto bnY = crypto::make_unique(BN_new());
-    BN_bin2bn(rawKey.data(), 32, bnX.get());
-    BN_bin2bn((rawKey.data() + 32), 32, bnY.get());
-
-    auto empty = crypto::make_unique<EC_KEY>(nullptr);
-    auto point = crypto::make_unique(EC_POINT_new(group.get()));
-    if(1 != EC_POINT_set_affine_coordinates_GFp(group.get(), point.get(), bnX.get(), bnY.get(), nullptr))
-    {
-        return empty;
-    }
-   
-    auto ret = crypto::make_unique(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
-    if(1 != EC_KEY_set_public_key(ret.get(), point.get()))
-    {
-        return empty;
-    }
-
-    return ret;
-}
-
-crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey)
+crypto::EVP_PKEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey)
 {
     std::array<uint8_t, 64> raw{};
     std::copy_n(rawKey.begin() + 1, raw.size(), raw.begin()); // skip header byte
@@ -92,4 +87,4 @@ crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey)
     return rawToP256PubKey(raw);
 }
 
-}}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {
+} // intel::sgx::dcap::crypto

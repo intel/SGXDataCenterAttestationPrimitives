@@ -1,4 +1,5 @@
 import urllib
+import urllib3
 import requests
 import json
 import binascii
@@ -9,6 +10,7 @@ from platform import system
 from lib.intelsgx.credential import Credentials
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+from pkg_resources import parse_version
 
 certBegin= '-----BEGIN CERTIFICATE-----'
 certEnd= '-----END CERTIFICATE-----'
@@ -56,7 +58,10 @@ class PCS:
         
         PARAMS = {}
         https = requests.Session()
-        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        if parse_version(urllib3.__version__) < parse_version('1.26.0'):
+            https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        else:
+            https.mount("https://", HTTPAdapter(max_retries=Retry(allowed_methods=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
         r = https.get(url = url, headers=headers, params = PARAMS, verify=True)
 
         return r
@@ -71,7 +76,10 @@ class PCS:
         
         PARAMS = {}
         https = requests.Session()
-        https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        if parse_version(urllib3.__version__) < parse_version('1.26.0'):
+            https.mount("https://", HTTPAdapter(max_retries=Retry(method_whitelist=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
+        else:
+            https.mount("https://", HTTPAdapter(max_retries=Retry(allowed_methods=["HEAD", "GET", "PUT", "POST", "DELETE", "OPTIONS", "TRACE"])))
         r = https.post(url = url, headers=headers, params = PARAMS, data=json.dumps(data), verify=True)
 
         return r

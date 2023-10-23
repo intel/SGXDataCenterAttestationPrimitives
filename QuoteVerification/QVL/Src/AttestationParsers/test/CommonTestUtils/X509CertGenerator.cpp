@@ -280,6 +280,10 @@ void X509CertGenerator::addSGXPckExtensions(const crypto::X509_uptr &cert, const
     }
 
     auto sgxExtensionsOctet = crypto::make_unique(ASN1_OCTET_STRING_new());
+    if (sgxExtensionsOctet.get() == nullptr)
+    {
+        throw std::runtime_error("ASN1_OCTET_STRING_new returned null");
+    }
     sgxExtensionsOctet->length =
         ASN1_item_i2d((ASN1_VALUE *)sgxExtensions.get(), &sgxExtensionsOctet->data, ASN1_ITEM_rptr(crypto::SGX_EXTENSIONS));
 
@@ -296,20 +300,20 @@ void X509CertGenerator::signCert(const crypto::X509_uptr& cert, const EVP_PKEY *
 
 crypto::EVP_PKEY_uptr X509CertGenerator::generateEcKeypair() const
 {
-    crypto::EVP_PKEY_uptr evpKey = crypto::make_unique<EVP_PKEY>(EVP_PKEY_new());
-
-    int ecGroup = OBJ_txt2nid("prime256v1");
-    crypto::EC_KEY_uptr ecKey = crypto::make_unique<EC_KEY>(EC_KEY_new_by_curve_name(ecGroup));
-    EC_KEY_set_asn1_flag(ecKey.get(), OPENSSL_EC_NAMED_CURVE);
-	if (1 != EC_KEY_generate_key(ecKey.get()))
-	{
-        throw std::runtime_error("Error generating the ECC key.");
-    }
-    if (1 != EVP_PKEY_set1_EC_KEY(evpKey.get(), ecKey.get()))
+    EVP_PKEY* privateKey = nullptr;
+    crypto::EVP_PKEY_CTX_uptr ctx = crypto::make_unique<EVP_PKEY_CTX>(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr));
+    if (!ctx)
     {
-        throw std::runtime_error("Error assigning ECC key to EVP_PKEY structure.");
+        throw std::runtime_error("Error generating prime256v1 key pair - failed to create the key context");
     }
-    return evpKey;
+
+    if (EVP_PKEY_keygen_init(ctx.get()) <= 0 ||
+        EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(), NID_X9_62_prime256v1) <= 0 ||
+        EVP_PKEY_keygen(ctx.get(), &privateKey) <= 0)
+    {
+        throw std::runtime_error("Error generating prime256v1 key pair.");
+    }
+    return crypto::make_unique<EVP_PKEY>(privateKey);
 }
 
 void X509CertGenerator::add_ext(X509 *cert, int nid, char *value) const

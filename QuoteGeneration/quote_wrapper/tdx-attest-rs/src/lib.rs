@@ -32,15 +32,15 @@
 //! This is the Intel TDX attestation library for Rust.
 #![allow(non_camel_case_types)]
 
-use std::option::Option;
 use std::mem;
+use std::option::Option;
 pub use tdx_attest_sys::tdx_attest_error_t;
 pub use tdx_attest_sys::tdx_report_data_t;
 pub use tdx_attest_sys::tdx_report_t;
 pub use tdx_attest_sys::tdx_rtmr_event_t;
 pub use tdx_attest_sys::tdx_uuid_t;
 
-/// Request a Quote of the calling TD. 
+/// Request a Quote of the calling TD.
 ///
 /// # Param
 /// - **tdx_report_data**\
@@ -71,7 +71,7 @@ pub use tdx_attest_sys::tdx_uuid_t;
 /// # Examples
 /// ```
 /// use tdx_attest_rs::*;
-/// 
+///
 /// let tdx_report_data = tdx_report_data_t{
 ///    d: [0; 64usize],
 /// };
@@ -95,9 +95,7 @@ pub fn tdx_att_get_quote(
         None => std::ptr::null_mut(),
     };
     let (p_att_key_id_list, att_key_id_list_size) = match att_key_id_list {
-        Some(p) => {
-            (p.as_ptr() as *const tdx_uuid_t, p.len() as u32)
-        },
+        Some(p) => (p.as_ptr() as *const tdx_uuid_t, p.len() as u32),
         None => (std::ptr::null(), 0u32),
     };
     let p_att_key_id = match att_key_id {
@@ -107,16 +105,23 @@ pub fn tdx_att_get_quote(
     let mut buf = std::ptr::null_mut();
     let mut buf_len = 0;
     unsafe {
-        let result = tdx_attest_sys::tdx_att_get_quote(p_tdx_report_data, p_att_key_id_list, att_key_id_list_size, p_att_key_id,
-            &mut buf, &mut buf_len, flags);
+        let result = tdx_attest_sys::tdx_att_get_quote(
+            p_tdx_report_data,
+            p_att_key_id_list,
+            att_key_id_list_size,
+            p_att_key_id,
+            &mut buf,
+            &mut buf_len,
+            flags,
+        );
         match result {
             tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                 assert!(!buf.is_null());
                 assert!(buf_len > 0);
                 let quote = std::slice::from_raw_parts(buf, buf_len as usize).to_vec();
                 tdx_attest_sys::tdx_att_free_quote(buf);
-                return (result, Some(quote))
-            },
+                return (result, Some(quote));
+            }
             _ => return (result, None),
         }
     }
@@ -145,7 +150,7 @@ pub fn tdx_att_get_quote(
 /// # Examples
 /// ```
 /// use tdx_attest_rs::*;
-/// 
+///
 /// let tdx_report_data = tdx_report_data_t{
 ///    d: [0; 64usize],
 /// };
@@ -162,9 +167,7 @@ pub fn tdx_att_get_report(
         Some(p) => p as *const tdx_report_data_t,
         None => std::ptr::null_mut(),
     };
-    unsafe {
-        tdx_attest_sys::tdx_att_get_report(p_tdx_report_data, tdx_report)
-    }
+    unsafe { tdx_attest_sys::tdx_att_get_report(p_tdx_report_data, tdx_report) }
 }
 
 /// Extend one of the TDX runtime measurement registers (RTMRs).
@@ -197,9 +200,7 @@ pub fn tdx_att_get_report(
 /// let result = tdx_att_extend(&rtmr_event);
 /// ```
 
-pub fn tdx_att_extend(
-    rtmr_event: &[u8],
-) -> tdx_attest_error_t {
+pub fn tdx_att_extend(rtmr_event: &[u8]) -> tdx_attest_error_t {
     if rtmr_event.len() < mem::size_of::<tdx_rtmr_event_t>() {
         return tdx_attest_error_t::TDX_ATTEST_ERROR_INVALID_PARAMETER;
     }
@@ -227,22 +228,27 @@ pub fn tdx_att_extend(
 /// use tdx_attest_rs::*;
 /// let (result, att_key_id_list) = tdx_att_get_supported_att_key_ids();
 /// ```
-pub fn tdx_att_get_supported_att_key_ids(
-) -> (tdx_attest_error_t, Option<Vec<tdx_uuid_t>>){
+pub fn tdx_att_get_supported_att_key_ids() -> (tdx_attest_error_t, Option<Vec<tdx_uuid_t>>) {
     let mut list_count = 0;
     unsafe {
-        let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(std::ptr::null_mut() as *mut tdx_uuid_t, &mut list_count);
+        let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(
+            std::ptr::null_mut() as *mut tdx_uuid_t,
+            &mut list_count,
+        );
         match result {
             tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                let mut att_key_id_list = vec![tdx_uuid_t{d: [0; 16usize],}; list_count as usize];
-                let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(att_key_id_list.as_mut_ptr(), &mut list_count);
+                let mut att_key_id_list = vec![tdx_uuid_t { d: [0; 16usize] }; list_count as usize];
+                let result = tdx_attest_sys::tdx_att_get_supported_att_key_ids(
+                    att_key_id_list.as_mut_ptr(),
+                    &mut list_count,
+                );
                 match result {
                     tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                         return (result, Some(att_key_id_list))
-                    },
+                    }
                     _ => return (result, None),
                 }
-            },
+            }
             _ => return (result, None),
         }
     }
@@ -251,34 +257,26 @@ pub fn tdx_att_get_supported_att_key_ids(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_tdx_att_get_report() {
-        let tdx_report_data = tdx_report_data_t{
-            d: [0; 64usize],
-        };
-        let mut tdx_report = tdx_report_t{
-            d: [0; 1024usize],
-
-        };
+        let tdx_report_data = tdx_report_data_t { d: [0; 64usize] };
+        let mut tdx_report = tdx_report_t { d: [0; 1024usize] };
         let result = tdx_att_get_report(Some(&tdx_report_data), &mut tdx_report);
         assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
     }
 
     #[test]
     fn test_tdx_att_get_quote() {
-        let tdx_report_data = tdx_report_data_t{
-            d: [0; 64usize],
-        };
-        let mut att_key_id = tdx_uuid_t{
-            d: [0; 16usize],
-        };
-        let (result, quote) = tdx_att_get_quote(Some(&tdx_report_data), None, Some(&mut att_key_id), 0);
+        let tdx_report_data = tdx_report_data_t { d: [0; 64usize] };
+        let mut att_key_id = tdx_uuid_t { d: [0; 16usize] };
+        let (result, quote) =
+            tdx_att_get_quote(Some(&tdx_report_data), None, Some(&mut att_key_id), 0);
         println!("att_key_id {:?}", att_key_id.d);
         match quote {
-            q =>       println!("quote {:?}", q),
+            q => println!("quote {:?}", q),
         }
-        assert_eq!(result,tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
+        assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
     }
 
     #[test]
@@ -286,7 +284,7 @@ mod tests {
         let mut rtmr_event = [0u8; mem::size_of::<tdx_rtmr_event_t>()];
         rtmr_event[0] = 1;
         let result = tdx_att_extend(&rtmr_event);
-        assert_eq!(result,tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
+        assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
     }
 
     #[test]
@@ -297,6 +295,6 @@ mod tests {
         for id in ids {
             println!("att_key_id {:?}", id.d);
         }
-        assert_eq!(result,tdx_attest_error_t::TDX_ATTEST_SUCCESS);
+        assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_SUCCESS);
     }
 }

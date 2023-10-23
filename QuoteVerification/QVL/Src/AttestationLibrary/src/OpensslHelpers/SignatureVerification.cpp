@@ -42,22 +42,7 @@ bool verifySignature(const pckparser::CrlStore& crl, const std::vector<uint8_t>&
     {
         return false;
     }
-    const auto evp = crypto::toEvp(*publicKey);
-    if(!evp)
-    {
-        return false;
-    }
-    return 1 == X509_CRL_verify(&const_cast<X509_CRL&>(crl.getCrl()), evp.get());
-}
-
-bool verifySha256Signature(const Bytes& signature, const Bytes& msg, const EC_KEY& pubKey)
-{
-    const auto evp = crypto::toEvp(pubKey);
-    if(!evp)
-    {
-        return false;
-    }
-    return verifySha256Signature(signature, msg, *evp);
+    return 1 == X509_CRL_verify(&const_cast<X509_CRL&>(crl.getCrl()), publicKey.get());
 }
 
 bool verifySha256Signature(const Bytes& signature, const Bytes& message, const EVP_PKEY& pubKey)
@@ -104,13 +89,13 @@ std::vector<uint8_t> rawEcdsaSignatureToDER(const std::array<uint8_t,constants::
 }
 
 bool verifySha256EcdsaSignature(const std::array<uint8_t, constants::ECDSA_P256_SIGNATURE_BYTE_LEN> &signature,
-                                const std::vector<uint8_t> &message, const EC_KEY &publicKey)
+                                const std::vector<uint8_t> &message, const EVP_PKEY &publicKey)
 {
     const std::vector<uint8_t> sig = rawEcdsaSignatureToDER(signature);
     return verifySha256Signature(sig, message, publicKey);
 }
 
-bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const EC_KEY &publicKey)
+bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const EVP_PKEY &publicKey)
 {
     if(signature.size() != constants::ECDSA_P256_SIGNATURE_BYTE_LEN)
     {

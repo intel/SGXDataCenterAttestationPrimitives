@@ -86,6 +86,7 @@ class TestContext {
             ConfigLoader:     ConfigLoaderMock,
             HealthCheck:      sinon.stub(),
             RestClient:       sinon.stub(),
+            BaseRestClient:   sinon.stub(),
             appendConfigPath: sinon.spy(),
             load:             sinon.stub(),
         };
@@ -113,20 +114,16 @@ const getCorrectConfig = () => {
             retries:         3,
             initialInterval: 100,
             factor:          2
+        },
+        crlClient: {
+            caCertDirectories: ''
         }
     };
 };
 
 const getCorrectConfigWithVCS = () => {
     return {
-        service: {
-            caCertDirectories: 'someElement'
-        },
-        pcsClient: {
-            retries:         3,
-            initialInterval: 100,
-            factor:          2
-        },
+        ...getCorrectConfig(),
         vcsClient: {
             retries:         3,
             initialInterval: 100,

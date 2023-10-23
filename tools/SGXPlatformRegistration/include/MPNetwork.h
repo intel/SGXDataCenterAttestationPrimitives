@@ -64,7 +64,7 @@ public:
      * @param proxy             - input parameter, desired proxy configurations.
      * @param logLevel          - input parameter, desired logging level.
      */
-    MPNetworkDllExport MPNetwork(const string serverAddress, const string subscriptionKey, const ProxyConf proxy, const LogLevel logLevel = MP_REG_LOG_LEVEL_ERROR);
+    MPNetworkDllExport MPNetwork(const string serverAddress, const string subscriptionKey, const ProxyConf &proxy, const LogLevel logLevel = MP_REG_LOG_LEVEL_ERROR);
 
     /**
      * Sends request to the registration server.

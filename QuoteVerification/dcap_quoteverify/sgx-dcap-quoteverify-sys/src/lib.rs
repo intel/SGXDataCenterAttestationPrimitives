@@ -41,7 +41,7 @@
 //! *Please refer to [SGX DCAP Linux installation guide](
 //! https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf)
 //! to install above dependencies.*
-//! 
+//!
 //! *Note that you need to install **libsgx-dcap-quote-verify-dev** and **clang** for this package.*
 
 #![allow(non_upper_case_globals)]

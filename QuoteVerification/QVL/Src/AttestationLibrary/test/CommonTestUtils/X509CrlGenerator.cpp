@@ -150,6 +150,10 @@ void X509CrlGenerator::addStandardCrlExtensions(const crypto::X509_CRL_uptr& crl
     X509_CRL_add_ext(crlPtr, ext.get(), atPosition);
 
     auto crlNumber = crypto::make_unique(ASN1_INTEGER_new());
+    if (crlNumber.get() == nullptr)
+    {
+        throw std::runtime_error("ASN1_INTEGER_new returned null");
+    }
     ASN1_INTEGER_set(crlNumber.get(), 1000);
     X509_CRL_add1_ext_i2d(crlPtr, NID_crl_number, crlNumber.get(), nonCritical, flags);
 }

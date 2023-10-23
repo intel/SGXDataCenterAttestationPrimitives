@@ -42,6 +42,7 @@
 #include "sgx_qve_def.h"
 #include "sgx_error.h"
 #include "sgx_eid.h"
+#include <atomic>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -62,6 +63,13 @@ typedef enum {
     CLASS_TDX_QVL,
     CLASS_TDX_QVE
 } tee_class_type_t;
+
+// Default policy is SGX_QL_EPHEMERAL, which is same with legacy DCAP QVL behavior
+//
+extern std::atomic<sgx_ql_request_policy_t> g_qve_policy;
+extern std::atomic<bool> policy_set_once;
+
+extern sgx_enclave_id_t g_qve_eid;
 
 //SGX&TDX untrusted quote verification related APIs
 //

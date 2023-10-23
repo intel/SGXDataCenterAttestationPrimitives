@@ -52,20 +52,21 @@ if (Config.has('proxy') && Config.get('proxy')) {
   };
 }
 
+function is_early_access_portal(url) {
+  if (url.startsWith("https://validation.api.trustedservices.intel.com/"))
+    return true;
+  else
+    return false;
+}
+
 async function do_request(url, options) {
   try {
-    // hide API KEY from log
-    let temp_key = null;
-    if (
-      'headers' in options &&
-      'Ocp-Apim-Subscription-Key' in options.headers
-    ) {
-      temp_key = options.headers['Ocp-Apim-Subscription-Key'];
-      options.headers['Ocp-Apim-Subscription-Key'] =
-        temp_key.substr(0, 5) + '***';
-    }
-    if (temp_key) {
-      options.headers['Ocp-Apim-Subscription-Key'] = temp_key;
+    // check for early access portal
+    if (is_early_access_portal(url)) {
+      if (!options.headers) {
+        options.headers = {};
+      }
+      options.headers['Ocp-Apim-Subscription-Key'] = Config.get('ApiKey');
     }
 
     // global opitons ( proxy, timeout, etc)

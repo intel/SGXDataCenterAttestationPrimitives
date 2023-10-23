@@ -395,8 +395,6 @@ void sgx_qv_trusted::set_eid(sgx_enclave_id_t eid)
 
 sgx_qv_trusted::~sgx_qv_trusted()
 {
-    extern sgx_ql_request_policy_t g_qve_policy;
-
     //Only unload QvE when use multi-thread PERSISTENT here
     //the thread local object will guarantee destructor will only called before thread exit
     //legacy PERSISTENT need to unload QvE manually, we will do it before unloading library

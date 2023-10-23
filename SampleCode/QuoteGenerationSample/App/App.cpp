@@ -36,6 +36,7 @@
  * demonstrate the usage of quote generation.
  */
 
+
 #if defined(_MSC_VER)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -85,7 +86,9 @@ using namespace std;
         fflush(stdout);                           \
     } while (0)
 
-bool create_app_enclave_report(sgx_target_info_t qe_target_info, sgx_report_t *app_report)
+
+bool create_app_enclave_report(sgx_target_info_t &qe_target_info, sgx_report_t *app_report)
+
 {
         bool ret = true;
         uint32_t retval = 0;
@@ -122,7 +125,6 @@ CLEANUP:
         return ret;
 }
 
-#ifdef SGX_QPL_LOGGING
 void qpl_logger(sgx_ql_log_level_t level, const char *message)
 {
     const string pre_qcnl = "[QCNL]";
@@ -134,6 +136,8 @@ void qpl_logger(sgx_ql_log_level_t level, const char *message)
             msg.insert(pre_qcnl.length(), " Info: ");
         else if (msg.find(pre_qpl) == 0)
             msg.insert(pre_qcnl.length(), "Info: ");
+        else
+            msg.insert(0, "Info: ");
         printf("%s", msg.c_str());
     }
     else if (level == SGX_QL_LOG_ERROR)
@@ -142,10 +146,30 @@ void qpl_logger(sgx_ql_log_level_t level, const char *message)
             msg.insert(pre_qcnl.length(), " Error: ");
         else if (msg.find(pre_qpl) == 0)
             msg.insert(pre_qcnl.length(), "Error: ");
+        else
+            msg.insert(0, "Error: ");
+        printf("%s", msg.c_str());
+    } else if (level == SGX_QL_LOG_DEBUG)
+    {
+        if (msg.find(pre_qcnl) == 0)
+            msg.insert(pre_qcnl.length(), " DEBUG: ");
+        else if (msg.find(pre_qpl) == 0)
+            msg.insert(pre_qcnl.length(), "DEBUG: ");
+        else
+            msg.insert(0, "DEBUG: ");
+        printf("%s", msg.c_str());
+    }
+    else if (level == SGX_QL_LOG_TRACE)
+    {
+        if (msg.find(pre_qcnl) == 0)
+            msg.insert(pre_qcnl.length(), " TRACE: ");
+        else if (msg.find(pre_qpl) == 0)
+            msg.insert(pre_qcnl.length(), "TRACE: ");
+        else
+            msg.insert(0, "TRACE: ");
         printf("%s", msg.c_str());
     }
 }
-#endif
 
 vector<uint8_t> readBinaryContent(const string& filePath)
 {
@@ -176,23 +200,22 @@ void usage() {
 int main(int argc, char* argv[])
 {
 
-
     int ret = 0;
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
     uint8_t* p_quote_buffer = NULL;
     sgx_target_info_t qe_target_info = { 0 };
-    sgx_report_t app_report;
-    sgx_quote3_t *p_quote;
-    sgx_ql_auth_data_t *p_auth_data;
-    sgx_ql_ecdsa_sig_data_t *p_sig_data;
-    sgx_ql_certification_data_t *p_cert_data;
+    sgx_report_t app_report = { 0 };
+    sgx_quote3_t *p_quote = NULL;
+    sgx_ql_auth_data_t *p_auth_data = NULL;
+    sgx_ql_ecdsa_sig_data_t *p_sig_data = NULL;
+    sgx_ql_certification_data_t *p_cert_data = NULL;
     FILE *fptr = NULL;
     bool is_out_of_proc = false;
     int option_index = 0;
-    int c;
+    int c = 0;
     bool target_info_provided = false;
-    string qpl_library_path;
+    string qpl_library_path = "";
 
     char *out_of_proc = getenv(SGX_AESM_ADDR);
     if(out_of_proc)
@@ -206,6 +229,10 @@ int main(int argc, char* argv[])
 
 #ifdef SGX_QPL_LOGGING
     sgx_ql_set_logging_callback(qpl_logger, SGX_QPL_LOGGING);
+#endif
+
+#ifdef SGX_TRACE_LOGGING
+    sgx_ql_set_trace_callback(qpl_logger, (sgx_ql_log_level_t)(SGX_TRACE_LOGGING - 1));
 #endif
 
 #if !defined(_MSC_VER)

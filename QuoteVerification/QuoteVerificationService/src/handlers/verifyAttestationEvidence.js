@@ -47,8 +47,6 @@ const random = require('../util/random');
 const validator = require('validator');
 
 const uriString = 'URI:';
-const tdxsvnOffsetInQuote = 48; // 48 is the size of header
-const tdxsvnSize = 16;
 
 const attestationReportSigningChain = config.target.attestationReportSigningCertificate + config.target.attestationReportSigningCaCertificate;
 const trustedRootPublicKey = decodeURIComponent(config.target.trustedRootPublicKey);
@@ -174,25 +172,25 @@ async function verifyAttestationEvidence(ctx) {
 
         const pcesvn = pckCertData.pcesvn;
         const cpusvn = pckCertData.cpusvn;
-        const tdxsvn = (quoteType === 'TDX') ? quote.slice(tdxsvnOffsetInQuote, tdxsvnOffsetInQuote + tdxsvnSize) : undefined;
-
-        const matchedTcbInfoTcbLevel = matchTcbInfoTcbLevel(tcbInfo, cpusvn, pcesvn, tdxsvn);
-        if (!matchedTcbInfoTcbLevel) {
-            ctx.log.error(`Could not match TCB level (${JSON.stringify(cpusvn)}|${pcesvn}|{${JSON.stringify(tdxsvn)}) from certificate/quote to any TCB level from TCB Info`);
-            ctx.status = 400;
-            return;
-        }
-        ctx.log.info(`Matched to ${matchedTcbInfoTcbLevel.tcbStatus}. Matched TCB level is ${JSON.stringify(matchedTcbInfoTcbLevel)}`);
-
-        const matchedEnclaveTcbTcbLevel = matchEnclaveTcbTcbLevel(qeIdentity, isvsvn);
-        if (!matchedEnclaveTcbTcbLevel) {
-            ctx.log.error(`Could not match ISVSVN (${isvsvn}) from quote to any TCB level from Enclave Identity`);
-            ctx.status = 400;
-            return;
-        }
-        ctx.log.info(`Matched Enclave TCB Level ${JSON.stringify(matchedEnclaveTcbTcbLevel)}`);
+        const tdxsvn = readTdxsvn(quote);
 
         if (['OK', 'TCB_OUT_OF_DATE', 'TCB_OUT_OF_DATE_AND_CONFIGURATION_NEEDED', 'CONFIGURATION_NEEDED', 'SW_HARDENING_NEEDED', 'CONFIGURATION_AND_SW_HARDENING_NEEDED'].includes(isvQuoteStatus)) {
+            const matchedTcbInfoTcbLevel = matchTcbInfoTcbLevel(tcbInfo, cpusvn, pcesvn, tdxsvn);
+            if (!matchedTcbInfoTcbLevel) {
+                ctx.log.error(`Could not match TCB level (${JSON.stringify(cpusvn)}|${pcesvn}|{${JSON.stringify(tdxsvn)}) from certificate/quote to any TCB level from TCB Info`);
+                ctx.status = 400;
+                return;
+            }
+            ctx.log.info(`Matched to ${matchedTcbInfoTcbLevel.tcbStatus}. Matched TCB level is ${JSON.stringify(matchedTcbInfoTcbLevel)}`);
+
+            const matchedEnclaveTcbTcbLevel = matchEnclaveTcbTcbLevel(qeIdentity, isvsvn);
+            if (!matchedEnclaveTcbTcbLevel) {
+                ctx.log.error(`Could not match ISVSVN (${isvsvn}) from quote to any TCB level from Enclave Identity`);
+                ctx.status = 400;
+                return;
+            }
+            ctx.log.info(`Matched Enclave TCB Level ${JSON.stringify(matchedEnclaveTcbTcbLevel)}`);
+
             if (matchedTcbInfoTcbLevel.advisoryIDs || matchedEnclaveTcbTcbLevel.advisoryIDs) {
                 report.advisoryURL = 'https://security-center.intel.com';
                 const advisoryIds = collectAdvisoryIds(matchedTcbInfoTcbLevel, matchedEnclaveTcbTcbLevel);
@@ -200,12 +198,12 @@ async function verifyAttestationEvidence(ctx) {
                     report.advisoryIDs = _.sortedUniq(advisoryIds.sort());
                 }
             }
-        }
 
-        if (['TCB_OUT_OF_DATE', 'TCB_OUT_OF_DATE_AND_CONFIGURATION_NEEDED'].includes(isvQuoteStatus)) {
-            const tcbComponentsOutOfDate = collectTcbComponentsOutOfDate(quoteType, tcbInfo, matchedTcbInfoTcbLevel);
-            if (!_.isEmpty(tcbComponentsOutOfDate)) {
-                report.tcbComponentsOutOfDate = tcbComponentsOutOfDate;
+            if (['TCB_OUT_OF_DATE', 'TCB_OUT_OF_DATE_AND_CONFIGURATION_NEEDED'].includes(isvQuoteStatus)) {
+                const tcbComponentsOutOfDate = collectTcbComponentsOutOfDate(quoteType, tcbInfo, matchedTcbInfoTcbLevel);
+                if (!_.isEmpty(tcbComponentsOutOfDate)) {
+                    report.tcbComponentsOutOfDate = tcbComponentsOutOfDate;
+                }
             }
         }
 
@@ -297,7 +295,7 @@ function collectTcbComponentsOutOfDate(quoteType, tcbInfo, matchedTcbInfoTcbLeve
             return filtered;
         }, []));
     }
-    return tcbComponentsOutOfDate;
+    return _.uniqWith(tcbComponentsOutOfDate, _.isEqual); // return unique values
 }
 
 /**
@@ -615,6 +613,24 @@ function readIsvsvn(quote) {
     return quote.readUInt16LE(isvsvnOffset);
 }
 
+const tdxsvnOffsetInQuoteV4 = 48; // 48 is the size of header
+const tdxsvnOffsetInQuoteV5 = 54;
+const tdxsvnSize = 16;
+
+/**
+ * Reads TDXSVN from TDX quote
+ */
+function readTdxsvn(quote) {
+    const { quoteVersion, quoteType } = readQuoteVersion(quote);
+
+    if (quoteType !== 'TDX') {
+        return undefined;
+    }
+
+    const tdxsvnOffset = (quoteVersion === 4) ? tdxsvnOffsetInQuoteV4 : tdxsvnOffsetInQuoteV5;
+    return quote.slice(tdxsvnOffset, tdxsvnOffset + tdxsvnSize);
+}
+
 /**
  * Converts crl to string format expected by QVL
  * @param {{status: number, body: Buffer}} crl - response from getCrlFromDistributionPoint
@@ -622,7 +638,7 @@ function readIsvsvn(quote) {
  */
 function parseCrlFromDistributionPoint(crl) {
     if (crl.status !== STATUSES.STATUS_OK.httpCode) {
-        throw new Error('Failed to retrieve one of CRLs. Distribution Point returned status: ' + crl.status);
+        throw new Error('Failed to retrieve one of CRLs. Distribution Point returned status: ' + (crl.status || crl));
     }
     // PEM format - QVL requires utf8 string
     if (crl.body.toString().startsWith('-----BEGIN')) {

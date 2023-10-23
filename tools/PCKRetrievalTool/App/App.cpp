@@ -365,13 +365,18 @@ cache_server_delivery_status_t send_collected_data_to_server(uint8_t* p_data_buf
         }
     }
     else {
-        // Output PCK Cert Retrieval Data
+        if(p_data_buffer == NULL) {
+            fprintf(stderr, "Error: the data buffer is NULL. \n");
+            return DELIVERY_FAIL;
+        }	
+         // Output PCK Cert Retrieval Data
         raw_data_size = platform_manifest_buffer_size + data_length_except_platform_manifest;
         raw_data = new (std::nothrow) uint8_t[raw_data_size];
         if (raw_data == NULL) {
             fprintf(stderr,"Error: Memory has been used up.\n");
             return DELIVERY_FAIL;
         }
+       
         memset(raw_data, 0x00, raw_data_size);
         memcpy(raw_data, p_data_buffer, data_length_except_platform_manifest);
 

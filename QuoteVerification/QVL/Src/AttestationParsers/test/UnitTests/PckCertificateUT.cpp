@@ -145,9 +145,8 @@ TEST_F(PckCertificateUT, processorPckCertificateGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
@@ -181,9 +180,8 @@ TEST_F(PckCertificateUT, platformPckCertificateGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
@@ -217,9 +215,8 @@ TEST_F(PckCertificateUT, platformPckCertificateWithIntegrityGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
@@ -253,9 +250,8 @@ TEST_F(PckCertificateUT, unknownTypeCertificateGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 1000);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
@@ -305,4 +301,45 @@ TEST_F(PckCertificateUT, pckCertificateParseWithWrongAmountOfExtensions)
     pemProcessorPckCert = certGenerator.x509ToString(brokenCert.get());
     // Exception thrown because of SGX TCB extension is not equal 5 or 7
     ASSERT_THROW(x509::PckCertificate::parse(pemProcessorPckCert), InvalidExtensionException);
+}
+
+// Parsing certificate issued by Fuzzer
+std::string FuzzerPEM = "-----BEGIN CERTIFICATE-----\n"
+                        "MIIEgjCCBCmgAwIBAgIVAPj86fa3dpXXSaait3YKJklN2QV2MAoGCCqGSM49BAMC\n"
+                        "MHExIzAhBgNVBAMMGkludGVsIFNHWCBQQ0sgUHJvY2Vzc29yIENBMRowGAYDVQQK\n"
+                        "DBFJbnRlbCBDb3Jwb3JhdGlvbjEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNV\n"
+                        "BAgMAkNBMQswCQYDVQQGEwJVUzAeFw0yMTA4MDYxMzU1MTRaFw0yODA4MDYxMzU1\n"
+                        "MTRaMHAxIjAgBgNVBAMMGUludGVsIFNHWCBQQ0sgQ2VydGlmaWNhdGUxGjAYBgNV\n"
+                        "BAoMEUludGVsIENvcnBvcmF0aW9uMRQwEgYDVQQHDAtTYW50YSBDbGFyYTELMAkG\n"
+                        "A1UECAwCQ0ExCzAJBgNVBAYTAlVTMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\n"
+                        "IcT6WLztCuV6iT8zziAYQb/k2fBUVL2rYYL9ifodAbswe1E2vHfIl3nX5TKmXsPp\n"
+                        "1PQ64JP8Wa5UK5TiCxdmC6OCAp0wggKZMB8GA1UdIwQYMBaAFANWISC6W4XP1Nt6\n"
+                        "peRxuHn4tZixMFgGA1UdHwRRME8wTaBLoEmGR2h0dHBzOi8vY2VydGlmaWNhdGVz\n"
+                        "LnRydXN0ZWRzZXJ2aWNlcy5pbnRlbC5jb20vSW50ZWxTR1hQQ0tQcm9jZXNzb3Iu\n"
+                        "Y3JsMB0GA1UdDgQWBBSUMBN/O1dgNPo1uGvZXakTI9+FcTAOBgNVHQ8BAf8EBAMC\n"
+                        "BsAwDAYDVR0TAQH/BAIwADCCAd0GCSqGSIb4TQENAQSCAc4wggHKMB4GCiqGSIb4\n"
+                        "TQENAQEEECEddULzbDUR7X+23WNJs+IwggFtBgoqhkiG+E0BDQECMIIBXTAQBgsq\n"
+                        "hkiG+E0BDQECAQIBUjARBgsqhkiG+E0BDQECAgICAMEwEQYLKoZIhvhNAQ0BAgMC\n"
+                        "AgCjMBEGCyqGSIb4TQENAQIEAgIAjDARBgsqhkiG+E0BDQECBQICAPcwEQYLKoZI\n"
+                        "hvhNAQ0BAgYCAgDtMBEGCyqGSIb4TQENAQIHAgIA8zAQBgsqhkiG+E0BDQECCAIB\n"
+                        "CjAQBgsqhkiG+E0BDQECCQIBUjAQBgsqhkiG+E0BDQECCgIBSzAQBgsqhkiG+E0B\n"
+                        "DQECCwIBTjARBgsqhkiG+E0BDQECDAICALswEAYLKoZIhvhNAQ0BAg0CAQQwEQYL\n"
+                        "KoZIhvhNAQ0BAg4CAgCfMBMBAf8wDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgENAQIQ\n"
+                        "AgIAxzARBgsqhkiG+E0BDQECEQICKWEwHwYLKoZIhvhNAQ0BAhIEEFLBo4z37fMK\n"
+                        "UktOuwSfWccwEAYKKoZIhvhQBNA0AwQCimcwFAYKKoZIhvhNAQ0BBAQG7XQq+K31\n"
+                        "MA8GCiqGSIb4TQENAQKUAQAwCgYIKoZIzj0EAwIDRwAwRAIgX3COA7iS3GwLO1v4\n"
+                        "Ft2fL1WUlShk19OJb1W5GcZSrPMCIEwEmDStayUNO/c02Vas+Oc9rGkC6VVagXmx\n"
+                        "jE1xxVlK\n"
+                        "-----END CERTIFICATE-----";
+
+
+/*
+ * The certificate above has the wrong OIDname type because expected type for correct parsing is V_ASN1_OBJECT
+ * which indicates we are dealing with an identifier while IODname has the type V_ASN1_BOOLEAN which represent
+ * a boolean logical value for specific characteristic or atribute. In this case it should be an identifier.
+*/
+TEST_F(PckCertificateUT, pckCertificateParseWithInvalidOIDnameTypeCert)
+{
+    // Exception thrown because of wrong type oidName
+    ASSERT_THROW(x509::PckCertificate::parse(FuzzerPEM), parser::FormatException);
 }

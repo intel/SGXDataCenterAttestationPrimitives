@@ -350,63 +350,63 @@ JNIEXPORT jobject JNICALL Java_com_intel_sgx_SgxDcapVerifyQuoteJNI_sgx_1qv_1veri
     tmp_len = (*jenv)->GetArrayLength(jenv, pck_crl);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, pck_crl, NULL);
     p_quote_collateral->pck_crl =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->pck_crl_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->pck_crl, 0,(size_t) tmp_len + 1);
+        (char *)malloc((size_t)tmp_len ); 
+    p_quote_collateral->pck_crl_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->pck_crl, 0,(size_t) tmp_len);
     memcpy(p_quote_collateral->pck_crl, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, pck_crl, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, pck_crl_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, pck_crl_issuer, NULL);
     p_quote_collateral->pck_crl_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->pck_crl_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->pck_crl_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->pck_crl_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->pck_crl_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->pck_crl_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, pck_crl_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, qe_identity);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, qe_identity, NULL);
     p_quote_collateral->qe_identity =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->qe_identity_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->qe_identity, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->qe_identity_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->qe_identity, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->qe_identity, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, qe_identity, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, qe_identity_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, qe_identity_issuer, NULL);
     p_quote_collateral->qe_identity_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->qe_identity_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->qe_identity_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->qe_identity_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->qe_identity_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->qe_identity_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, qe_identity_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, tcb_info);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, tcb_info, NULL);
     p_quote_collateral->tcb_info =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->tcb_info_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->tcb_info, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->tcb_info_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->tcb_info, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->tcb_info, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, tcb_info, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, tcb_info_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, tcb_info_issuer, NULL);
     p_quote_collateral->tcb_info_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->tcb_info_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->tcb_info_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->tcb_info_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->tcb_info_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->tcb_info_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, tcb_info_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, root_ca_crl);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, root_ca_crl, NULL);
     p_quote_collateral->root_ca_crl =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->root_ca_crl_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->root_ca_crl, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->root_ca_crl_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->root_ca_crl, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->root_ca_crl, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, root_ca_crl, tmp_byte, 0);
   }
@@ -813,63 +813,63 @@ JNIEXPORT jobject JNICALL Java_com_intel_sgx_SgxDcapVerifyQuoteJNI_tee_1verify_1
     tmp_len = (*jenv)->GetArrayLength(jenv, pck_crl);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, pck_crl, NULL);
     p_quote_collateral->pck_crl =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->pck_crl_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->pck_crl, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->pck_crl_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->pck_crl, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->pck_crl, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, pck_crl, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, pck_crl_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, pck_crl_issuer, NULL);
     p_quote_collateral->pck_crl_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->pck_crl_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->pck_crl_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->pck_crl_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->pck_crl_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->pck_crl_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, pck_crl_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, qe_identity);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, qe_identity, NULL);
     p_quote_collateral->qe_identity =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->qe_identity_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->qe_identity, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->qe_identity_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->qe_identity, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->qe_identity, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, qe_identity, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, qe_identity_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, qe_identity_issuer, NULL);
     p_quote_collateral->qe_identity_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->qe_identity_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->qe_identity_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->qe_identity_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->qe_identity_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->qe_identity_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, qe_identity_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, tcb_info);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, tcb_info, NULL);
     p_quote_collateral->tcb_info =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->tcb_info_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->tcb_info, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->tcb_info_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->tcb_info, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->tcb_info, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, tcb_info, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, tcb_info_issuer);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, tcb_info_issuer, NULL);
     p_quote_collateral->tcb_info_issuer_chain =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->tcb_info_issuer_chain_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->tcb_info_issuer_chain, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->tcb_info_issuer_chain_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->tcb_info_issuer_chain, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->tcb_info_issuer_chain, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, tcb_info_issuer, tmp_byte, 0);
 
     tmp_len = (*jenv)->GetArrayLength(jenv, root_ca_crl);
     tmp_byte = (*jenv)->GetByteArrayElements(jenv, root_ca_crl, NULL);
     p_quote_collateral->root_ca_crl =
-        (char *)malloc((size_t)tmp_len + 1); // 1 byte for NULL
-    p_quote_collateral->root_ca_crl_size = (uint32_t)(tmp_len + 1);
-    memset(p_quote_collateral->root_ca_crl, 0, (size_t)tmp_len + 1);
+        (char *)malloc((size_t)tmp_len); 
+    p_quote_collateral->root_ca_crl_size = (uint32_t)(tmp_len);
+    memset(p_quote_collateral->root_ca_crl, 0, (size_t)tmp_len);
     memcpy(p_quote_collateral->root_ca_crl, tmp_byte, (size_t)tmp_len);
     (*jenv)->ReleaseByteArrayElements(jenv, root_ca_crl, tmp_byte, 0);
   }

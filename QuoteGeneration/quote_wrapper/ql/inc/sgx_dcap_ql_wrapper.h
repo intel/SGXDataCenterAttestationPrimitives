@@ -67,6 +67,9 @@ typedef enum
     SGX_QL_IDE_PATH,
 } sgx_ql_path_type_t;
 quote3_error_t sgx_ql_set_path(sgx_ql_path_type_t path_type, const char *p_path);
+
+quote3_error_t sgx_ql_set_trace_callback(sgx_ql_logging_callback_t logger, sgx_ql_log_level_t loglevel);
+
 #endif
 
 #if defined(__cplusplus)
