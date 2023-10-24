@@ -1,5 +1,5 @@
 asn1==2.4.1
-cryptography==41.0.3
+cryptography==41.0.4
 keyring==23.0.0
 pyOpenSSL==23.2.0
 pypac==0.14.0
