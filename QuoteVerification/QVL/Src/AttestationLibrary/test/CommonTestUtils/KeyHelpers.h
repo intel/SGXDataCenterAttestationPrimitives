@@ -54,72 +54,34 @@ hrxYu3ssRADj5pHfONfVB5uTU4bF72+tHNCCy39Xk+iAJy0tU0VUH5TuDw==
 -----END PUBLIC KEY-----
 )pub";
 
-inline dcap::crypto::EC_KEY_uptr priv(const std::string& pem)
+inline dcap::crypto::EVP_PKEY_uptr priv(const std::string& pem)
 {
     auto bio = dcap::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
-    auto ret = dcap::crypto::make_unique(EC_KEY_new());
-    auto* retRaw = ret.release();
-    PEM_read_bio_ECPrivateKey(bio.get(), &retRaw, nullptr, nullptr);
-    ret.reset(retRaw);
-    return ret;
+    return crypto::make_unique(PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 }
 
-inline dcap::crypto::EC_KEY_uptr pub(const std::string& pem)
+inline dcap::crypto::EVP_PKEY_uptr pub(const std::string& pem)
 {
     auto bio = dcap::crypto::make_unique(BIO_new_mem_buf(static_cast<void*>(const_cast<char*>(pem.c_str())), static_cast<int>(pem.length())));
-    auto ret = dcap::crypto::make_unique(EC_KEY_new());
-    auto* retRaw = ret.release();
-    PEM_read_bio_EC_PUBKEY(bio.get(), &retRaw, nullptr, nullptr);
-    ret.reset(retRaw);
-    return ret;
+    return crypto::make_unique(PEM_read_bio_PUBKEY(bio.get(), nullptr, nullptr, nullptr));
 }
 
-inline crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey)
+inline std::vector<uint8_t> getVectorPub(const EVP_PKEY& ecPubKey)
 {
-    auto empty = crypto::make_unique<EVP_PKEY>(nullptr);
-    auto copy = crypto::make_unique(EC_KEY_dup(&ecKey));
-    if(!copy)
-    {
-        return empty;
-    }
+    auto pKeyLen = static_cast<size_t>(i2d_PublicKey(&ecPubKey, nullptr));
+    auto pubKey = std::vector<uint8_t>(pKeyLen);
+    auto data = pubKey.data();
+    i2d_PublicKey(&ecPubKey, &data);
 
-    crypto::EVP_PKEY_uptr evpKey = crypto::make_unique<EVP_PKEY>(EVP_PKEY_new());
-    if (!evpKey)
-    {
-        return empty;
-    }
-
-    if (1 != EVP_PKEY_set1_EC_KEY(evpKey.get(), copy.get()))
-    {
-        return empty;
-    }
-
-    return evpKey;
+    return pubKey;
 }
 
-inline std::vector<uint8_t> getVectorPub(const EC_KEY& ecPubKey)
-{
-    const auto convForm = EC_KEY_get_conv_form(&ecPubKey);
-
-    // internal pointer
-    const EC_POINT *ecPoint = EC_KEY_get0_public_key(&ecPubKey);
-    const auto bn = dcap::crypto::make_unique(EC_POINT_point2bn(EC_KEY_get0_group(&ecPubKey), ecPoint, convForm, BN_new(), nullptr));
-    const int bnLen = BN_num_bytes(bn.get());
-    if(bnLen != 65) // 64 bytes of key plus one header byte
-    {
-        return {};
-    }
-    std::vector<uint8_t> tmp(static_cast<size_t>(bnLen));
-    BN_bn2bin(bn.get(), tmp.data());
-    return tmp;
-}
-
-inline std::array<uint8_t,64> getRawPub(const EC_KEY& ecPubKey)
+inline std::array<uint8_t,64> getRawPub(const EVP_PKEY& ecPubKey)
 {
     std::vector<uint8_t> tmp = getVectorPub(ecPubKey);
 
-    std::array<uint8_t,64> ret;
-    std::copy_n(tmp.begin() + 1, 64, ret.begin()); // ommit header byte
+    std::array<uint8_t,64> ret{};
+    std::copy_n(tmp.begin() + 1, 64, ret.begin()); // omit header byte
     return ret;
 }
 

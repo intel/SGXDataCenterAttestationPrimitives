@@ -175,7 +175,7 @@ int FSUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataSi
         // remove immutable flag
         rc = ioctl(fd, FS_IOC_GETFLAGS, &oflags);
         if (rc < 0) {
-            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to get UEFI var %d flags, error: %s\n", UEFIvarNamePath, strerror(errno));
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to get UEFI var %s flags, error: %s\n", UEFIvarNamePath, strerror(errno));
             break;
 		}
         
@@ -184,7 +184,7 @@ int FSUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataSi
 			oflags &= ~FS_IMMUTABLE_FL;
 			rc = ioctl(fd, FS_IOC_SETFLAGS, &oflags);
 			if (rc < 0) {
-                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to set UEFI var %d flags, error: %s\n", UEFIvarNamePath, strerror(errno));
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to set UEFI var %s flags, error: %s\n", UEFIvarNamePath, strerror(errno));
                 break;
 			}
 		}

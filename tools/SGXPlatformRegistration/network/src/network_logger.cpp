@@ -40,15 +40,16 @@
 #ifndef _WIN32
 
 void network_log_message_aux(LogLevel glog_level, LogLevel level, const char *format, ...) {
-	va_list myargs;
-	va_start(myargs, format);
+    va_list myargs;
+    va_start(myargs, format);
 
     if (glog_level < level) {
+        va_end(myargs);
         return;
     }
 
-	if (log_message_aux) {
-		log_message_aux(level, format, myargs);
+    if (log_message_aux) {
+        log_message_aux(level, format, myargs);
     } else {
         switch (level) {
             case MP_REG_LOG_LEVEL_ERROR:
@@ -60,18 +61,19 @@ void network_log_message_aux(LogLevel glog_level, LogLevel level, const char *fo
             default:
                 break;
         }
-		vprintf(format, myargs);
+        vprintf(format, myargs);
     }
-	va_end(myargs);
+    va_end(myargs);
 }
 
 #else
 
 void default_network_log_message(LogLevel glog_level, LogLevel level, const char *format, ...) {
-	va_list myargs;
-	va_start(myargs, format);
+    va_list myargs;
+    va_start(myargs, format);
 
     if (glog_level < level) {
+        va_end(myargs);
         return;
     }
 
@@ -85,8 +87,8 @@ void default_network_log_message(LogLevel glog_level, LogLevel level, const char
         default:
             break;
     }
-	vprintf(format, myargs);
-	va_end(myargs);
+    vprintf(format, myargs);
+    va_end(myargs);
 }
 
 #endif

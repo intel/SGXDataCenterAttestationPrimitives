@@ -33,8 +33,8 @@
 #![allow(non_camel_case_types)]
 
 pub use sgx_dcap_ql_sys::quote3_error_t;
-pub use sgx_dcap_ql_sys::sgx_target_info_t;
 pub use sgx_dcap_ql_sys::sgx_report_t;
+pub use sgx_dcap_ql_sys::sgx_target_info_t;
 
 /// Request rarget info of Quote enclave.
 ///
@@ -58,12 +58,8 @@ pub use sgx_dcap_ql_sys::sgx_report_t;
 /// let mut target_info: sgx_target_info_t = Default::default();
 /// let result = sgx_qe_get_target_info(&mut target_info);
 /// ```
-pub fn sgx_qe_get_target_info(
-    qe_target_info: &mut sgx_target_info_t,
-) -> quote3_error_t {
-    unsafe {
-        sgx_dcap_ql_sys::sgx_qe_get_target_info(qe_target_info)
-    }
+pub fn sgx_qe_get_target_info(qe_target_info: &mut sgx_target_info_t) -> quote3_error_t {
+    unsafe { sgx_dcap_ql_sys::sgx_qe_get_target_info(qe_target_info) }
 }
 
 /// Request a Quote of the calling TD.
@@ -94,23 +90,20 @@ pub fn sgx_qe_get_target_info(
 /// let sgx_report:sgx_report_t = Default::default();
 /// let (result, quote) = sgx_qe_get_quote(&sgx_report);
 /// ```
-pub fn sgx_qe_get_quote(
-    app_report: &sgx_report_t,
-) -> (quote3_error_t, Option<Vec<u8>>) {
+pub fn sgx_qe_get_quote(app_report: &sgx_report_t) -> (quote3_error_t, Option<Vec<u8>>) {
     let mut buf_len = 0;
     unsafe {
         let result = sgx_dcap_ql_sys::sgx_qe_get_quote_size(&mut buf_len);
         match result {
             quote3_error_t::SGX_QL_SUCCESS => {
                 let mut quote = vec![0u8; buf_len as usize];
-                let result = sgx_dcap_ql_sys::sgx_qe_get_quote(app_report, buf_len, quote.as_mut_ptr());
+                let result =
+                    sgx_dcap_ql_sys::sgx_qe_get_quote(app_report, buf_len, quote.as_mut_ptr());
                 match result {
-                    quote3_error_t::SGX_QL_SUCCESS => {
-                        return (result, Some(quote))
-                    },
+                    quote3_error_t::SGX_QL_SUCCESS => return (result, Some(quote)),
                     _ => return (result, None),
                 }
-            },
+            }
             _ => return (result, None),
         }
     }
@@ -124,18 +117,22 @@ mod tests {
     fn test_sgx_qe_get_target_info() {
         let mut target_info: sgx_target_info_t = Default::default();
         let result = sgx_qe_get_target_info(&mut target_info);
-        assert!(result == quote3_error_t::SGX_QL_INTERFACE_UNAVAILABLE
-             || result == quote3_error_t::SGX_QL_SUCCESS);
+        assert!(
+            result == quote3_error_t::SGX_QL_INTERFACE_UNAVAILABLE
+                || result == quote3_error_t::SGX_QL_SUCCESS
+        );
     }
 
     #[test]
     fn test_sgx_qe_get_quote() {
-        let sgx_report:sgx_report_t = Default::default();
+        let sgx_report: sgx_report_t = Default::default();
         let (result, quote) = sgx_qe_get_quote(&sgx_report);
         match quote {
-            q =>       println!("quote {:?}", q),
+            q => println!("quote {:?}", q),
         }
-        assert!(result == quote3_error_t::SGX_QL_INTERFACE_UNAVAILABLE
-             || result == quote3_error_t::SGX_QL_INVALID_REPORT);
+        assert!(
+            result == quote3_error_t::SGX_QL_INTERFACE_UNAVAILABLE
+                || result == quote3_error_t::SGX_QL_INVALID_REPORT
+        );
     }
 }

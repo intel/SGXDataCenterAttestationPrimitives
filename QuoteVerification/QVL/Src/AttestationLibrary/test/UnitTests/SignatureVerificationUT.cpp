@@ -42,14 +42,12 @@ TEST(signatureVerification, shouldVerifyRawEcdsaSignature)
 {
     // GIVEN
     auto prv = dcap::test::priv(dcap::test::PEM_PRV);
-    auto evp = dcap::crypto::make_unique(EVP_PKEY_new());
-    ASSERT_TRUE(1 == EVP_PKEY_set1_EC_KEY(evp.get(), prv.get()));
     auto pb = dcap::test::pub(dcap::test::PEM_PUB);
-    ASSERT_TRUE(1 == EC_KEY_check_key(pb.get()));
+    ASSERT_TRUE(1 == EVP_PKEY_eq(pb.get(), prv.get()));
     
     std::vector<uint8_t> data(150);
     std::fill(data.begin(), data.end(), 0xff);
-    const auto sig = dcap::DigestUtils::signMessageSha256(data, *evp);
+    const auto sig = dcap::DigestUtils::signMessageSha256(data, *prv);
     ASSERT_TRUE(!sig.empty());
     ASSERT_TRUE(dcap::DigestUtils::verifySig(sig, data, *pb));
 

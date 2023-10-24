@@ -235,7 +235,7 @@ bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
     char enclave_path[MAX_PATH] = "";
 #endif
 
-    if (!get_program_path(enclave_path, MAX_PATH))
+    if (!get_program_path(enclave_path, MAX_PATH - 1))
         return false;
 #if defined(_MSC_VER)    
     if (_tcsnlen(enclave_path, MAX_PATH) + _tcsnlen(enclave_name, MAX_PATH) + sizeof(char) > MAX_PATH)
@@ -341,6 +341,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
     mpResult = p_mp_uefi_init(EFIVARS_FILE_SYSTEM_IN_OS, MP_REG_LOG_LEVEL_NONE);
     if (mpResult != MP_SUCCESS) {
         printf("Error: couldn't init UEFI shared library.\n");
+        CLOSELIBRARYHANDLE(uefi_lib_handle);
         return ret;
     }
     do {
@@ -368,7 +369,7 @@ uefi_status_t get_platform_manifest(uint8_t ** buffer, uint16_t &out_buffer_size
         else {
             MpRegistrationStatus status;
             MpResult mpResult_registration_status = p_mp_uefi_get_registration_status(&status);
-            if (mpResult != MP_SUCCESS) {
+            if (mpResult_registration_status != MP_SUCCESS) {
                 printf("Warning: error occurred while getting registration status, the error code is: %d \n", mpResult_registration_status);
                 break;
             }

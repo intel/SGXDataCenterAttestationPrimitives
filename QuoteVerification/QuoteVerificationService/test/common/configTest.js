@@ -1039,12 +1039,13 @@ describe('configTest', () => {
             assert.throws(() => {
                 //GIVEN / WHEN
                 new config.RestClient({
-                    port:            80,
-                    retries:         3,
-                    initialInterval: 100,
-                    factor:          3,
-                    certFile:        'certFile',
-                    keyFile:         'keyFile'
+                    port:              80,
+                    retries:           3,
+                    initialInterval:   100,
+                    factor:            3,
+                    certFile:          'certFile',
+                    keyFile:           'keyFile',
+                    caCertDirectories: 'caCertDir'
                 });
             }, /Missing required property: host/);
         });
@@ -1054,13 +1055,14 @@ describe('configTest', () => {
             assert.throws(() => {
                 //GIVEN / WHEN
                 new config.RestClient({
-                    host:            'host',
-                    retries:         3,
-                    initialInterval: 100,
-                    factor:          3,
-                    certFile:        'certFile',
-                    keyFile:         'keyFile',
-                    servername:      ''
+                    host:              'host',
+                    retries:           3,
+                    initialInterval:   100,
+                    factor:            3,
+                    certFile:          'certFile',
+                    keyFile:           'keyFile',
+                    servername:        '',
+                    caCertDirectories: 'caCertDir'
                 });
             }, /Missing required property: port/);
         });

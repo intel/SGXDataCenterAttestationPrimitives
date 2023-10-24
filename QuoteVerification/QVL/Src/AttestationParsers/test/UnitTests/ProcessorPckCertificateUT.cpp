@@ -148,9 +148,8 @@ TEST_F(ProcessorPckCertificateUT, processorPckCertificateGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));
@@ -184,9 +183,8 @@ TEST_F(ProcessorPckCertificateUT, platformPckCertificateGetters)
     ASSERT_EQ(pckCertificate.getVersion(), 3);
     ASSERT_THAT(pckCertificate.getSerialNumber(), ElementsAreArray(sn));
 
-    auto ecKey = crypto::make_unique(EVP_PKEY_get1_EC_KEY(key.get()));
     uint8_t *pubKey = nullptr;
-    auto pKeyLen = EC_KEY_key2buf(ecKey.get(), EC_KEY_get_conv_form(ecKey.get()), &pubKey, NULL);
+    auto pKeyLen = i2d_PublicKey(key.get(), &pubKey);
     std::vector<uint8_t> expectedPublicKey { pubKey, pubKey + pKeyLen };
 
     ASSERT_THAT(pckCertificate.getPubKey(), ElementsAreArray(expectedPublicKey));

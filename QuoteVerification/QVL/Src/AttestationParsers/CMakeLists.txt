@@ -50,7 +50,7 @@ if(BUILD_DOCS)
 endif()
 
 hunter_add_package(OpenSSL)
-find_package(OpenSSL 1.1.1 EXACT REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 hunter_add_package(spdlog)
 find_package(spdlog CONFIG REQUIRED)

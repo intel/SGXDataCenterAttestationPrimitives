@@ -38,14 +38,131 @@
 #include "network_wrapper.h"
 #include "qcnl_config.h"
 #include "se_memcpy.h"
+#include "se_thread.h"
 #include "sgx_default_qcnl_wrapper.h"
 #include <curl/curl.h>
+#include <dlfcn.h>
 #include <unistd.h>
 
 typedef struct _network_malloc_info_t {
     char *base;
     uint32_t size;
 } network_malloc_info_t;
+
+#define LIBCURL_NAME "libcurl.so"
+#define LIBCURL4_NAME LIBCURL_NAME".4"
+
+static se_mutex_t g_dlopen_mutex;
+static void *g_dlopen_handle = NULL;
+
+static CURLcode (*f_global_init)(long) = NULL;
+static CURL *(*f_easy_init)(void) = NULL;
+static struct curl_slist *(*f_slist_append)(struct curl_slist *, const char *) = NULL;
+static CURLcode (*f_easy_setopt)(CURL *, CURLoption, ...) = NULL;
+static CURLcode (*f_easy_getinfo)(CURL *curl, CURLINFO info, ...) = NULL;
+static CURLcode (*f_easy_perform)(CURL *) = NULL;
+static void (*f_easy_cleanup)(CURL *) = NULL;
+static void (*f_global_cleanup)(void) = NULL;
+static const char* (*f_easy_strerror)(CURLcode) = NULL;
+static void (*f_slist_free_all)(struct curl_slist *) = NULL;
+
+static void __attribute__((constructor)) _sgx__qcnl_ql_init()
+{
+    se_mutex_init(&g_dlopen_mutex);
+}
+
+static void __attribute__((destructor)) _sgx_qcnl_fini(void) {
+    if (g_dlopen_handle != NULL) {
+        dlclose(g_dlopen_handle);
+        g_dlopen_handle = NULL;
+    }
+    se_mutex_destroy(&g_dlopen_mutex);
+}
+
+sgx_qcnl_error_t prepare_curl() {
+    static bool libcurl_ready = false;
+    if (libcurl_ready)
+        return SGX_QCNL_SUCCESS;
+
+    sgx_qcnl_error_t ret = SGX_QCNL_NETWORK_INIT_ERROR;
+    se_mutex_lock(&g_dlopen_mutex);
+    do {
+        if (libcurl_ready) {
+            ret = SGX_QCNL_SUCCESS;
+            break;
+        }
+
+        const char *libcurl_name = LIBCURL_NAME;
+        // With the dlopen (RTLD_DEEPBIND) for libcurl, it forces the libcurl to look up symbols in its dependencies.
+        g_dlopen_handle = dlopen(LIBCURL_NAME, RTLD_LAZY | RTLD_DEEPBIND);
+        if (NULL == g_dlopen_handle) {
+            libcurl_name = LIBCURL4_NAME;
+            g_dlopen_handle = dlopen(LIBCURL4_NAME, RTLD_LAZY | RTLD_DEEPBIND);
+            if (NULL == g_dlopen_handle) {
+                qcnl_log(SGX_QL_LOG_ERROR, "Cannot open shared library %s or %s.", LIBCURL_NAME, LIBCURL4_NAME);
+                break;
+            }
+        }
+        f_global_init = (CURLcode(*)(long))dlsym(g_dlopen_handle, "curl_global_init");
+        if (dlerror() != NULL || !f_global_init) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_global_init in %s.", libcurl_name);
+            break;
+        }
+        f_easy_init = (CURL * (*)(void)) dlsym(g_dlopen_handle, "curl_easy_init");
+        if (dlerror() != NULL || !f_easy_init) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_init in %s.", libcurl_name);
+            break;
+        }
+        f_slist_append = (struct curl_slist * (*)(struct curl_slist *, const char *))
+            dlsym(g_dlopen_handle, "curl_slist_append");
+        if (dlerror() != NULL || !f_slist_append) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_slist_append in %s.", libcurl_name);
+            break;
+        }
+        f_easy_setopt = (CURLcode(*)(CURL *, CURLoption, ...))dlsym(g_dlopen_handle, "curl_easy_setopt");
+        if (dlerror() != NULL || !f_easy_setopt) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_setopt in %s.", libcurl_name);
+            break;
+        }
+        f_easy_getinfo = (CURLcode(*)(CURL *, CURLINFO, ...))dlsym(g_dlopen_handle, "curl_easy_getinfo");
+        if (dlerror() != NULL || !f_easy_getinfo) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_getinfo in %s.", libcurl_name);
+            break;
+        }
+        f_easy_perform = (CURLcode(*)(CURL *))dlsym(g_dlopen_handle, "curl_easy_perform");
+        if (dlerror() != NULL || !f_easy_perform) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_perform in %s.", libcurl_name);
+            break;
+        }
+        f_easy_cleanup = (void (*)(CURL *))dlsym(g_dlopen_handle, "curl_easy_cleanup");
+        if (dlerror() != NULL || !f_easy_cleanup) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_cleanup in %s.", libcurl_name);
+            break;
+        }
+        f_global_cleanup = (void (*)(void))dlsym(g_dlopen_handle, "curl_global_cleanup");
+        if (dlerror() != NULL || !f_global_cleanup) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_global_cleanup in %s.", libcurl_name);
+            break;
+        }
+        f_easy_strerror = (const char *(*)(CURLcode))dlsym(g_dlopen_handle, "curl_easy_strerror");
+        if (dlerror() != NULL || !f_easy_strerror) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_easy_strerror in %s.", libcurl_name);
+            break;
+        }
+        f_slist_free_all = (void (*)(curl_slist *))dlsym(g_dlopen_handle, "curl_slist_free_all");
+        if (dlerror() != NULL || !f_slist_free_all) {
+            qcnl_log(SGX_QL_LOG_ERROR, "Cannot dlsym curl_slist_free_all in %s.", libcurl_name);
+            break;
+        }
+
+        f_global_init(CURL_GLOBAL_DEFAULT);
+        libcurl_ready = true;
+        ret = SGX_QCNL_SUCCESS;
+    } while(0);
+
+    se_mutex_unlock(&g_dlopen_mutex);
+    return ret;
+}
 
 static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream) {
     network_malloc_info_t *s = reinterpret_cast<network_malloc_info_t *>(stream);
@@ -105,7 +222,7 @@ static sgx_qcnl_error_t curl_error_to_qcnl_error(CURLcode curl_error) {
 
 template <typename T>
 static CURLcode curl_set_opt_with_log(CURL *handle, CURLoption option, T param) {
-    CURLcode result = curl_easy_setopt(handle, option, param);
+    CURLcode result = f_easy_setopt(handle, option, param);
     if (result != CURLE_OK) {
         auto optionStr = std::to_string(option);
         qcnl_log(SGX_QL_LOG_ERROR, "curl_easy_setopt(%s) returned %d.", optionStr.c_str(), result);
@@ -173,8 +290,11 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
 
     qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Request URL %s \n", url);
 
+    if (prepare_curl() != SGX_QCNL_SUCCESS)
+        return SGX_QCNL_NETWORK_INIT_ERROR;
+
     do {
-        curl = curl_easy_init();
+        curl = f_easy_init();
         if (!curl)
             break;
 
@@ -183,12 +303,12 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
 
         // append user token
         if (user_token && user_token_size > 0) {
-            if ((headers = curl_slist_append(headers, "Content-Type: application/json")) == NULL)
+            if ((headers = f_slist_append(headers, "Content-Type: application/json")) == NULL)
                 break;
 
             std::string user_token_header("user-token: ");
             user_token_header.append(reinterpret_cast<const char *>(user_token), user_token_size);
-            if ((headers = curl_slist_append(headers, user_token_header.c_str())) == NULL)
+            if ((headers = f_slist_append(headers, user_token_header.c_str())) == NULL)
                 break;
         }
 
@@ -198,7 +318,7 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
             string key = it->first;
             string value = it->second;
             string headerline = key + ": " + value;
-            headers = curl_slist_append(headers, headerline.c_str());
+            headers = f_slist_append(headers, headerline.c_str());
             it++;
         }
 
@@ -248,10 +368,10 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
             // Perform request
             bool need_retry = false;
             long http_code = 0;
-            curl_ret = curl_easy_perform(curl);
+            curl_ret = f_easy_perform(curl);
 
             if (curl_ret == CURLE_OK) {
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                f_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
                 qcnl_log(SGX_QL_LOG_INFO, "[QCNL] HTTP status code: %ld \n", http_code);
                 if (http_code == 200) {
                     break;
@@ -274,7 +394,7 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
             } else {
                 if (curl_ret != CURLE_OK) {
                     qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Encountered CURL error: (%d) %s \n",
-                             curl_ret, curl_easy_strerror(curl_ret));
+                             curl_ret, f_easy_strerror(curl_ret));
                     ret = curl_error_to_qcnl_error(curl_ret);
                 } else
                     ret = pccs_status_to_qcnl_error(http_code);
@@ -293,8 +413,8 @@ sgx_qcnl_error_t qcnl_https_request(const char *url,
 
 cleanup:
     if (curl) {
-        curl_easy_cleanup(curl);
-        curl_slist_free_all(headers);
+        f_easy_cleanup(curl);
+        f_slist_free_all(headers);
     }
     if (ret != SGX_QCNL_SUCCESS) {
         if (res_body.base) {

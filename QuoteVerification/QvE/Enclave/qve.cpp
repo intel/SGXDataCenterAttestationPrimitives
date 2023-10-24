@@ -53,6 +53,7 @@
 #else //_TD_MIGRATION
 #include "sgx_dcap_qv_internal.h"
 #include "sgx_quote_4.h"
+#include "sgx_quote_5.h"
 #define memset_s(a,b,c,d) memset(a,c,d)
 #define memcpy_s(a,b,c,d) (memcpy(a,c,b) && 0)
 #endif //_TD_MIGRATION
@@ -227,6 +228,7 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
     case STATUS_SGX_TCB_SIGNING_CERT_REVOKED:
         return SGX_QL_PCK_REVOKED;
     case STATUS_TCB_REVOKED:
+    case STATUS_SGX_ENCLAVE_REPORT_ISVSVN_REVOKED:
         return SGX_QL_TCB_REVOKED;
     case STATUS_UNSUPPORTED_QE_CERTIFICATION:
     case STATUS_UNSUPPORTED_QE_CERTIFICATION_DATA_TYPE:
@@ -246,6 +248,10 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
         return SGX_QL_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED;
     case STATUS_TDX_MODULE_MISMATCH:
         return SGX_QL_TDX_MODULE_MISMATCH;
+    case STATUS_INVALID_QUOTE_SIGNATURE:
+    case STATUS_SGX_CRL_INVALID_SIGNATURE:
+    case STATUS_SGX_QE_IDENTITY_INVALID_SIGNATURE:
+        return SGX_QL_RESULT_INVALID_SIGNATURE;
     default:
         return SGX_QL_ERROR_UNEXPECTED;
     }
@@ -1676,7 +1682,7 @@ quote3_error_t sgx_qve_verify_quote(
             break;
         }
 
-	//set the expiration_check_data to pass validation, since in migration, we don't case time
+	//set the expiration_check_data to pass validation, since in migration, we don't care time
 #ifdef _TD_MIGRATION
         time_t * _p_expiration_check_date = const_cast<time_t *>(&expiration_check_date);
 	    *_p_expiration_check_date = (latest_issue_date + earliest_expiration_date) / 2;
@@ -1769,18 +1775,75 @@ quote3_error_t sgx_qve_verify_quote(
             }
         }
 #ifdef _TD_MIGRATION
-	    if ( ret == SGX_QL_SUCCESS ) {
-		    memset(p_td_report_body, 0, *p_td_report_body_size);
-	        sgx_quote4_t* tmp_p_quote = (sgx_quote4_t*)p_quote;
-	        //check if quote is tdx format, if not return error
-	        if(tmp_p_quote->header.tee_type == TDX_QUOTE_TYPE)
-	        {
-                memcpy(p_td_report_body, (void*)(&(tmp_p_quote->report_body)), sizeof(tmp_p_quote->report_body));
-                *p_td_report_body_size = sizeof(tmp_p_quote->report_body);
-	        }else{
+        if (ret == SGX_QL_SUCCESS)
+        {
+            memset(p_td_report_body, 0, *p_td_report_body_size);
+            const uint8_t* p = p_quote;
+            // Extract the version
+            uint16_t _version;
+            memcpy(&_version, p, sizeof(uint16_t));
+            // Skip the version and att_key_type to reach the tee_type field
+            p += sizeof(uint16_t) + sizeof(uint16_t); 
+
+            // Extract the tee_type
+            uint32_t _tee_type;
+            memcpy(&_tee_type, p, sizeof(uint32_t));
+
+            // check if quote is tdx format, if not return error
+            if (_tee_type == TDX_QUOTE_TYPE)
+            {
+                if (_version == constants::QUOTE_VERSION_5)
+                {
+                    sgx_quote5_t *tmp_p_quote5 = (sgx_quote5_t *)p_quote;
+
+                    uint16_t _type = tmp_p_quote5->type;
+                    uint32_t _size = tmp_p_quote5->size;
+
+                    if (_type == constants::BODY_TD_REPORT10_TYPE || _type == constants::BODY_TD_REPORT15_TYPE)
+                    {
+                        int required_size = (_type == constants::BODY_TD_REPORT10_TYPE) ? constants::TD_REPORT10_BYTE_LEN : constants::TD_REPORT15_BYTE_LEN;
+                        if (_size != required_size)
+                        {
+                            ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
+                            break;
+                        }
+                        if ((*p_td_report_body_size) < constants::TD_REPORT10_BYTE_LEN)
+                        {
+                            ret = status_error_to_quote3_error(STATUS_INVALID_PARAMETER);
+                            break;
+                        }
+
+                        // Hint: Always return sgx_report2_body_t(584 bytes) per design
+                        // For V4 quote return sgx_report2_body_t directly, for V5 quote return report body w/o mr_servicetd & tee_tcb_svn2
+                        memcpy(p_td_report_body, (void *)(tmp_p_quote5->body), constants::TD_REPORT10_BYTE_LEN);
+                        *p_td_report_body_size = constants::TD_REPORT10_BYTE_LEN;
+                    }
+                    else
+                    {
+                        ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
+                    }
+                }
+                else if (_version == constants::QUOTE_VERSION_4)
+                {
+                    sgx_quote4_t *tmp_p_quote = (sgx_quote4_t *)p_quote;
+                    if ((*p_td_report_body_size) < constants::TD_REPORT10_BYTE_LEN)
+                    {
+                        ret = status_error_to_quote3_error(STATUS_INVALID_PARAMETER);
+                        break;
+                    }
+                    memcpy(p_td_report_body, (void *)(&(tmp_p_quote->report_body)), constants::TD_REPORT10_BYTE_LEN);
+                    *p_td_report_body_size = TD_REPORT10_BYTE_LEN;
+                }
+                else
+                {
                     ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
                 }
-	    }
+            }
+            else
+            {
+                ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
+            }
+        }
 #endif
 
     } while (0);
@@ -1854,7 +1917,8 @@ uint8_t do_verify_quote_integrity(
 	uint32_t collateral_expiration_status;
 	sgx_ql_qv_result_t quote_verification_result;
 
-	if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < sizeof(sgx_report2_body_t) || root_pub_key_size < 0)  {
+  // 3 report types supported, minimum size is ENCLAVE_REPORT_BYTE_LEN. The input size should be larger than the minimum size
+	if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < ENCLAVE_REPORT_BYTE_LEN || root_pub_key_size < 0)  {
 		return SGX_TD_VERIFY_ERROR(SGX_QL_ERROR_INVALID_PARAMETER);
 	}
 	
@@ -1873,10 +1937,6 @@ uint8_t do_verify_quote_integrity(
 			p_td_report_body,
 			p_td_report_body_size);
 
-	if (ret == SGX_QL_SUCCESS){
-			return SGX_TD_VERIFY_ERROR(SGX_QL_SUCCESS);
-
-	}
 			return SGX_TD_VERIFY_ERROR(ret);
 }
 #endif

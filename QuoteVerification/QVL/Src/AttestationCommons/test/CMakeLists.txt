@@ -27,8 +27,14 @@
 cmake_minimum_required(VERSION 3.12)
 set(SUBPROJECT_NAME ${PROJECT_NAME}_UT)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # disable most optimizations for UTs to speed up compilation
+    set(CMAKE_CXX_FLAGS_RELEASE "/Od")
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-Og")
+endif()
+
 hunter_add_package(OpenSSL)
-find_package(OpenSSL 1.1.1 EXACT REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 hunter_add_package(GTest)
 find_package(GTest CONFIG REQUIRED)

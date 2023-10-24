@@ -13,4 +13,4 @@ homepage = "https://github.com/intel/SGXDataCenterAttestationPrimitives"
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.60.1"
+bindgen = "0.65.1"

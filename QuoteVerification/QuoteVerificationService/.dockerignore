@@ -1,13 +1,13 @@
 # 1. Ignore everything
-**
+*
 
 # 2. Add files and directories that should be included
-!configuration-default/**
-!native/QuoteVerificationLibraryWrapper.node
-!native/lib/*
-!src/**
+!configuration-default
+!src
+!test
+!build/qvls
 !Dockerfile
 
-# 3. Exclude QVL Node plugin sources
-src/qvl/*
-!src/qvl/*.js
+# 3. Ignore unnecessary files inside allowed directories
+src/node_modules
+test/node_modules

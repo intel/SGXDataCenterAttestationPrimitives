@@ -37,7 +37,7 @@ option(BUILD_LOGS "Build library with logging support" OFF)
 if(BUILD_ENCLAVE)
 	message("Enclave build is on. Checking required components...")
 	set(SGX_SDK "/opt/intel/sgxsdk" CACHE INTERNAL "SGX SDK location path")
-	set(SGX_OPENSSL "/opt/intel/intel-sgx-ssl/Linux/package" CACHE INTERNAL "SGX OpenSLL location path")
+	set(SGX_OPENSSL "/opt/intel/sgxssl" CACHE INTERNAL "SGX OpenSLL location path")
 	set(SGX_MODE "HW" CACHE INTERNAL "SGX mode: HW or SIM")
 	if (NOT EXISTS ${SGX_SDK})
 		message("SGX SDK was not found in ${SGX_SDK}")
@@ -145,33 +145,35 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
 #hunter has to be imported before 'project()'
 set(HUNTER_STATUS_DEBUG OFF) #set to 'ON' to see debug hunter logs
+if(CMAKE_HOST_WIN32)
+    set(HUNTER_ROOT "$ENV{USERPROFILE}/.cache/hunter")
+    string(REPLACE "\\" "/" HUNTER_ROOT ${HUNTER_ROOT})
+else()
+    set(HUNTER_ROOT "$ENV{HOME}/.cache/hunter")
+endif()
+set(HUNTER_BINARY_DIR "${HUNTER_ROOT}")
 #set(HUNTER_ROOT ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
 #set(HUNTER_BINARY_DIR ${CMAKE_SOURCE_DIR}/ThirdParty/hunter) # in case of Hunter build problems
-#If windows build fails, consider changing HUNTER_ROOT dir to shorter one, by either modifying it's value or commenting out the line below:
+#If windows build fails, consider changing HUNTER_ROOT dir to shorter one, by either modifying its value or commenting out the line below:
 #set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
 
-if(DEFINED HUNTER_WINDOWS_BUILD_DIR)
-    message("Windows build...")
-	set(HUNTER_ROOT "${HUNTER_WINDOWS_BUILD_DIR}" CACHE STRING "hunter root" FORCE)
-else()
-    message("Linux build... ")
-    set(HUNTER_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty/hunter" CACHE STRING "hunter root" FORCE)
-endif()
+message("HUNTER_ROOT=${HUNTER_ROOT}")
+message("HUNTER_BINARY_DIR=${HUNTER_BINARY_DIR}")
 
 option(HUNTER_NO_TOOLCHAIN_ID_RECALCULATION "No Toolchain-ID recalculation" ON)
 option(HUNTER_KEEP_PACKAGE_SOURCES "Keep third party sources" ON)
 
 include("${CMAKE_CURRENT_LIST_DIR}/ThirdParty/hunter/HunterGate.cmake")
 HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.24.8.tar.gz"
-		SHA1 "ca7838dded9a1811b04ffd56175f629e0af82d3d"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.24.17.tar.gz"
+		SHA1 "e6396699e414120e32557fe92db097b7655b760b"
 		FILEPATH "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/config.cmake"
 )
 
 project(SgxEcdsaAttestation)
 
 message("HUNTER_GATE_ROOT: ${HUNTER_GATE_ROOT}")
-file(COPY "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/openssl/hunter.cmake" DESTINATION "${HUNTER_GATE_ROOT}/_Base/Download/Hunter/0.24.8/ca7838d/Unpacked/cmake/projects/OpenSSL/")
+file(COPY "${CMAKE_SOURCE_DIR}/ThirdParty/hunter/openssl/hunter.cmake" DESTINATION "${HUNTER_ROOT}/_Base/Download/Hunter/0.24.17/e639669/Unpacked/cmake/projects/OpenSSL/")
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_THREAD_LIBS_INIT "-lpthread") # Could NOT find Threads (missing: Threads_FOUND) related workarounds
@@ -191,10 +193,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 				"-Wno-gnu-statement-expression" #warns about __FILE__, __LINE__, etc. compiler macros
 				"-Wno-c++98-compat"             #family of warnings indicating this code may cause errors if compiled with C++98 compiler
 				"-Wno-c++98-compat-pedantic"    #same as above
-				"-Wno-used-but-marked-unused"   #detects when a variable is marked as unsued (preprocessor macro or other) and warns if it is used despite that [note: triggers warnings in UT]
-				"-Wno-zero-as-null-pointer-constant" #zero as null pointer constant, mainly for openssl which widely uses 0 for null
-				"-Wno-undefined-var-template"     #visible after upgrading to C++17, does not seem to be a big problem but, TODO investigate on how a proper fix should look like
-				"-Wno-undefined-func-template"    #visible after upgrading to C++17, does not seem to be a big problem but, TODO investigate on how a proper fix should look like
 				)
 		set(CMAKE_CXX_FLAGS_CLANG
 				"-fcolor-diagnostics"           #clang coloured output
@@ -248,7 +246,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 	endif()
 	set(CMAKE_CXX_FLAGS
 			"${CMAKE_C_FLAGS}"
-			"-std=c++14"                    #currently used C++ standard
+			"-std=c++17"                    #currently used C++ standard
 			"-Wnon-virtual-dtor"
 			"${CMAKE_CXX_FLAGS_CLANG}"
 			"${CMAKE_CXX_FLAGS_GCC}"
@@ -275,6 +273,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	set(CMAKE_CXX_FLAGS
+			"/std:c++17"
 			"/analyze"
 			"/DYNAMICBASE"
 			"/EHsc" # catch C++ exceptions, assume extern "C" functions never throw C++ exceptions
@@ -352,7 +351,7 @@ if (BUILD_TESTS)
 				LD_LIBRARY_PATH=../lib ./AttestationCommons_UT --gtest_output="xml:../results/AttestationCommons_UTResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationParsers_UT --gtest_output="xml:../results/AttestationParsers_UTResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationParsers_IT --gtest_output="xml:../results/AttestationParsers_ITResults.xml" &&
-				LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTesults.xml" &&
+				LD_LIBRARY_PATH=../lib ./AttestationLibrary_UT --gtest_output="xml:../results/AttestationLibrary_UTResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationLibrary_IT --gtest_output="xml:../results/AttestationLibrary_ITResults.xml" &&
 				LD_LIBRARY_PATH=../lib ./AttestationApp_UT --gtest_output="xml:../results/AttestationApp_UTResults.xml" &&
 				cd ${CMAKE_SOURCE_DIR}

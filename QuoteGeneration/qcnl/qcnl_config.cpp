@@ -80,7 +80,7 @@ sgx_qcnl_error_t QcnlConfig::load_config_json(const TCHAR *json_file) {
         ifs.clear();
         ifs.seekg(0, ifs.beg);
         if (ifs.get(first_byte) && first_byte == '{') {
-            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Load JSON config error: %s (offset %u).\n",
+            qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Load JSON config error: %s (offset %lu).\n",
                      GetParseError_En(ok.Code()), ok.Offset());
             return SGX_QCNL_CONFIG_INVALID_JSON;
         } else {

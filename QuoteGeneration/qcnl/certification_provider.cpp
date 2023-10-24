@@ -279,12 +279,18 @@ sgx_qcnl_error_t CacheProvider::get_local_certification(const sgx_ql_pck_cert_id
         return ret;
     }
 
-    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Fetching from the local cache for: '%s' \n", cache_key.c_str());
+    qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Fetching local cache from '%s' \n", cache_key.c_str());
 
     vector<uint8_t> value;
     if (!LocalCache::Instance().get_data(cache_key, value)) {
-        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Cache missed. \n");
-        return SGX_QCNL_CACHE_MISSING;
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Local cache file '%s' not found.\n", cache_key.c_str());
+        // try 0000000000000000_0000
+        cache_key = "0000000000000000_0000";
+        qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Fetching local cache from '%s' \n", cache_key.c_str());
+        if (!LocalCache::Instance().get_data(cache_key, value)) {
+            qcnl_log(SGX_QL_LOG_INFO, "[QCNL] Cache missed. \n");
+            return SGX_QCNL_CACHE_MISSING;
+        }
     }
 
     do {

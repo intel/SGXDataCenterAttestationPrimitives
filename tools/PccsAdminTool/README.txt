@@ -37,6 +37,9 @@ optional arguments:
           -o OUTPUT_FILE, --output_file OUTPUT_FILE
                                 The output file name for platform collaterals; default: platform_collaterals.json
           -u URL, --url URL     The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/
+          -p PLATFORM, --platform PLATFORM
+                                Specify what kind of platform you want to fetch FMSPCs and tcbinfos for; default: all", choices=['all','client','E3','E5']
+          -c, --crl             Retrieve only the certificate revocation list (CRL). If an input file is provided, this option will be ignored.
 
 3. Put platform collateral data to PCCS cache db 
   ./pccsadmin.py put [-h] [-u URL] [-i INPUT_FILE]

@@ -41,13 +41,6 @@
 #include <curl/curl.h>
 #include <fstream>
 
-static struct init_solib {
-    init_solib() {
-        // put global initialization logic here
-        curl_global_init(CURL_GLOBAL_DEFAULT);
-    }
-} _init_solib;
-
 sgx_qcnl_error_t QcnlConfigLegacy::load_config() {
     // read configuration File
     bool use_collateral_service = false;

@@ -537,7 +537,7 @@ static void init_sigstruct(struct sgx_sigstruct *ss, bool intel_signed)
 	ss->body.attributesmask = 0xFFFFFFFFFFFFFFFF;
 	ss->body.xfrmmask = 0xFFFFFFFFFFFFFFFF;
 	ss->body.miscmask = 0xFFFFFFFF;
-	ss->body.isvsvn = 1;
+	ss->body.isvsvn = 2;
 
 	if (intel_signed)
 		ss->header.vendor = 0x8086;

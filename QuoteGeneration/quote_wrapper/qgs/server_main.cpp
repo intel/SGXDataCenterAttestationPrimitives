@@ -143,11 +143,13 @@ int main(int argc, const char* argv[])
                          << endl;
                     exit(1);
                 }
+                char value[256] = {};
+                strncpy(value, line.substr(delimiterPos + 1).c_str(), sizeof(value));
+                value[255] = '\0';
                 if (!port && name.compare("port") == 0) {
                     errno = 0;
                     endptr = NULL;
-                    port = strtoul(line.substr(delimiterPos + 1).c_str(),
-                                   &endptr, 10);
+                    port = strtoul(value, &endptr, 10);
                     if (errno || strlen(endptr) || (port > UINT_MAX) ) {
                         cout << "Please input valid port number in "
                              << QGS_CONFIG_FILE << endl;
@@ -156,8 +158,7 @@ int main(int argc, const char* argv[])
                 } else if (!num_threads && name.compare("number_threads") == 0) {
                     errno = 0;
                     endptr = NULL;
-                    num_threads = strtoul(line.substr(delimiterPos + 1).c_str(),
-                                          &endptr, 10);
+                    num_threads = strtoul(value, &endptr, 10);
                     if (errno || strlen(endptr) || (num_threads > 255)) {
                         cout << "Please input valid thread number[0, 255] in "
                              << QGS_CONFIG_FILE << endl;

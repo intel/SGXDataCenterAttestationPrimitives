@@ -338,8 +338,9 @@ describe('qvlTest', () => {
         const resultPromise = wrapper.getPckCertificateData('test-request-id', 'wrong cert');
 
         // THEN
-        await assert.rejects(resultPromise, {
-            error: 'Error getting data from PCK certificate: PEM_read_bio_X509 failed error:0909006C:PEM routines:get_name:no start line'
+        await assert.rejects(resultPromise, (err) => {
+            assert.ok(err.error.includes('no start line'));
+            return true;
         });
     });
 
@@ -363,8 +364,9 @@ describe('qvlTest', () => {
         const resultPromise = wrapper.getCrlDistributionPoint('test-request-id', 'wrong cert');
 
         // THEN
-        await assert.rejects(resultPromise, {
-            error: 'Error getting CRL distribution point: PEM_read_bio_X509 failed error:0909006C:PEM routines:get_name:no start line'
+        await assert.rejects(resultPromise, (err) => {
+            assert.ok(err.error.includes('no start line'));
+            return true;
         });
     });
 

@@ -76,8 +76,8 @@ public class SgxDcapVerifyQuoteJNI {
                                    byte[] qeIdentityIssuerBytes,
                                    byte[] rootCaBytes, long expirationData) {
     return sgx_qv_verify_quote(
-        quoteBytes, pckBytes, pckIssuerBytes, tcbBytes, tcbIssuerBytes,
-        qeIdentityBytes, qeIdentityIssuerBytes, rootCaBytes, expirationData);
+        quoteBytes, pckBytes, pckIssuerBytes, qeIdentityBytes, qeIdentityIssuerBytes,
+        tcbBytes, tcbIssuerBytes, rootCaBytes, expirationData);
   }
 
   public TeeDcapQuoteVerifyResult tee_verify_quote(byte[] quoteBytes) {

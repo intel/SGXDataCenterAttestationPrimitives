@@ -39,17 +39,17 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-1.1.1u
+set openssl_ver_name=openssl-3.0.10
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=win_2.20_1.1.1u
+set sgxssl_ver_name=3.0_Rev1
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
 set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=55eededb3c6569d4210da6f37b9636f8f8c61f0e420c93fa5701e28d25be2449
-set openssl_chksum=e2f8d84b523eecd06c7be7626830370300fbcc15386bf5142d72758f6963ebc6
+set sgxssl_chksum=6371dbe25acdc5a3bbb2978a0a559ad2eefd713b9bbf5d3a45236229c9cc53b6
+set openssl_chksum=1761d4f5b13a1028b9b6f3d4b8e17feb0cedc9370f6afe61d7193d2cdce83323
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%

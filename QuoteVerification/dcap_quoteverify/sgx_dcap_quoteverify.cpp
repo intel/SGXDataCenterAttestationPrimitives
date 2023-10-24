@@ -64,12 +64,9 @@ sgx_enclave_id_t g_qve_eid = 0;
 std::mutex qve_mutex;
 
 // Default policy is SGX_QL_EPHEMERAL, which is same with legacy DCAP QVL behavior
-// Support multi-thread policies are show below, it would not be used by default
-//  * SGX_QL_EPHEMERAL_QVE_MULTI_THREAD
-//  * SGX_QL_PERSISTENT_QVE_MULTI_THREAD
 //
-sgx_ql_request_policy_t g_qve_policy = SGX_QL_EPHEMERAL;
-bool g_policy_flag = false;
+std::atomic<sgx_ql_request_policy_t> g_qve_policy(SGX_QL_EPHEMERAL);
+std::atomic<bool> policy_set_once(false);
 
 thread_local tee_class_type_t current_class_type = CLASS_SGX_QVL;
 
@@ -252,31 +249,18 @@ static quote3_error_t get_verification_supplemental_data_size_and_version(
 quote3_error_t sgx_qv_set_enclave_load_policy(
     sgx_ql_request_policy_t policy)
 {
-    if (policy > SGX_QL_PERSISTENT_QVE_MULTI_THREAD)
-        return SGX_QL_UNSUPPORTED_LOADING_POLICY;
-
     std::lock_guard<std::mutex> lock(qve_mutex);
 
-    if (g_policy_flag == false) {
-        g_qve_policy = policy;
-        g_policy_flag = true;
+    if (policy < SGX_QL_PERSISTENT || policy > SGX_QL_PERSISTENT_QVE_MULTI_THREAD)
+        return SGX_QL_UNSUPPORTED_LOADING_POLICY;
+
+    if (policy_set_once) {
+        SE_TRACE(SE_TRACE_ERROR, "Err: QvE load policy has already been set once in current process.\n");
+        return SGX_QL_UNSUPPORTED_LOADING_POLICY;
     }
 
-    else {
-        //Policy has been set before in current process, we will try to unload QvE if exist
-        //If policy is QL persistent last time, try to unload QvE first
-        SE_TRACE(SE_TRACE_DEBUG, "DEBUG: QvE load policy has been set in current process.\n");
-        if (g_qve_policy == SGX_QL_PERSISTENT) {
-            if (g_qve_eid != 0) {
-                //ignore the return error
-                unload_qve_once(&g_qve_eid);
-                g_qve_eid = 0;
-            }
-        }
-
-        g_qve_policy = policy;
-        g_policy_flag = true;
-    }
+    g_qve_policy = policy;
+    policy_set_once = true;
 
     return SGX_QL_SUCCESS;
 }
@@ -296,6 +280,20 @@ quote3_error_t tee_get_supplemental_data_version_and_size(
         return SGX_QL_ERROR_INVALID_PARAMETER;
 
     return get_verification_supplemental_data_size_and_version(p_data_size, p_version);
+}
+
+void unload_persistent_qve()
+{
+    //Try to unload QvE only when use legacy PERSISTENT policy
+    //All the threads will share single QvE instance in this mode
+    //
+    if (g_qve_policy == SGX_QL_PERSISTENT) {
+        if (g_qve_eid != 0) {
+            //ignore the return error
+            unload_qve_once(&g_qve_eid);
+            g_qve_eid = 0;
+        }
+    }
 }
 
 static quote3_error_t tee_verify_evidence_internal(
@@ -326,8 +324,18 @@ static quote3_error_t tee_verify_evidence_internal(
         if (current_class_type == CLASS_SGX_QVE || current_class_type == CLASS_TDX_QVE) {
             if (g_qve_policy == SGX_QL_PERSISTENT || g_qve_policy == SGX_QL_EPHEMERAL) {
 
-                if (g_qve_eid == 0)
+                if (g_qve_eid == 0) {
                     sgx_ret = load_qve_once(&g_qve_eid);
+
+                    if (g_qve_policy == SGX_QL_PERSISTENT) {
+                        //register the termination function
+                        //only used for QvE persistent mode
+                        //Don't treat the atexit error as critical error, because it will not block any functionality
+                        if (0 != (atexit(unload_persistent_qve))) {
+                            SE_TRACE(SE_TRACE_ERROR, "Err: Register 'unload_persistent_qve' failed.\n");
+                        }
+                    }
+                }
 
                 p_qv->set_eid(g_qve_eid);
             }
@@ -479,9 +487,7 @@ quote3_error_t tee_verify_evidence(
     //parse quote header to get tee type, only support SGX and TDX by now
     tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
 
-    std::unique_ptr<tee_qv_base> p_local_qv = NULL;
-
-    // check quote type
+    //check quote type
     uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
 
     if (*p_type == SGX_QUOTE_TYPE) {

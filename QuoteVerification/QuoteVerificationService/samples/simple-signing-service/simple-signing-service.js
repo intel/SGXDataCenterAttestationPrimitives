@@ -38,20 +38,22 @@ const fs = require('fs');
 const Koa = require('koa');
 const Router = require('koa-router');
 const koaBody = require('koa-body');
+const unparsed = require('koa-body/unparsed');
 const crypto = require('crypto');
 
 const app = new Koa();
 const router = new Router();
 //Sample Configuration
 //Load Signing key, to generate the signature over attestation report
-const signingKey = fs.readFileSync('sign-key.pem', 'utf-8');
-const signingCert = fs.readFileSync('sign-cert.pem', 'utf-8');
+const certPath = 'certificates/';
+const signingKey = fs.readFileSync(certPath + 'sign-key.pem', 'utf-8');
+const signingCert = fs.readFileSync(certPath + 'sign-cert.pem', 'utf-8');
 const algorithm = 'sha384WithRSAEncryption';
 
 //Load HTTPS keys for this service
-const httpsKey = fs.readFileSync('key.pem');
-const httpsCert = fs.readFileSync('cert.pem');
-const caCertPath = 'qvs-to-sss-client-cert.pem';
+const httpsKey = fs.readFileSync(certPath + 'sss-mtls-key.pem');
+const httpsCert = fs.readFileSync(certPath + 'sss-mtls-cert.pem');
+const caCertPath = certPath + 'qvs-to-sss-client-cert.pem';
 const HTTPS_PORT = 8797;
 const HTTP_PORT = 8796;
 const isMtls = true;
@@ -101,23 +103,25 @@ router.post('/sign/attestation-verification-report', (ctx) => {
             description: 'Signature of the request body'
         }
     */
-    console.log('[Request]' + JSON.stringify(ctx.request.body));
+    const rawBodyToSign = ctx.request.body[unparsed];
+    console.log('[Request]' + rawBodyToSign);
 
-    const bodyJsonToString = JSON.stringify(ctx.request.body);
     const signer = crypto.createSign(algorithm);
-    signer.update(bodyJsonToString);
+    signer.update(rawBodyToSign);
     signer.end();
     const signature = signer.sign(signingKey);
     const buff = Buffer.from(signature);
     //Adding extra check to verify if pair sign-key sign-cert is working well just for DEBUG purpose
-    crypto.verify(algorithm, Buffer.from(bodyJsonToString), signingCert, signature);
+    crypto.verify(algorithm, Buffer.from(rawBodyToSign), signingCert, signature);
     //returning signature
-    ctx.body = { signature: buff.toString('base64') };
 
+    ctx.body = { signature: buff.toString('base64') };
     console.log('[Response]' + JSON.stringify(ctx.body));
 });
 
-app.use(koaBody())
+app.use(koaBody({
+        includeUnparsed: true
+    }))
     .use(router.routes())
     .use(router.allowedMethods());
 

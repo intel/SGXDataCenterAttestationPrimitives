@@ -104,8 +104,8 @@ struct QuoteV4VerifierUT: public testing::Test
     {
 
     }
-    const dcap::crypto::EVP_PKEY_uptr privKey = dcap::test::toEvp(*dcap::test::priv(dcap::test::PEM_PRV));
-    const dcap::crypto::EC_KEY_uptr pubKey = dcap::test::pub(dcap::test::PEM_PUB);
+    const dcap::crypto::EVP_PKEY_uptr privKey = dcap::test::priv(dcap::test::PEM_PRV);
+    const dcap::crypto::EVP_PKEY_uptr pubKey = dcap::test::pub(dcap::test::PEM_PUB);
     const std::vector<uint8_t> pckPubKey = dcap::test::getVectorPub(*pubKey);
     const std::vector<uint8_t> ppid{ 1 , 2 };
     const std::vector<uint8_t> cpusvn{ 3, 4 };

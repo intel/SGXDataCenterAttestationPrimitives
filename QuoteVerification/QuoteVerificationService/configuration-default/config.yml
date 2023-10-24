@@ -81,6 +81,7 @@ crlClient:
   initialInterval:     '${QVS_CRL_CLIENT_INITIAL_INTERVAL:100}'
   factor:              '${QVS_CRL_CLIENT_INTERVAL_FACTOR:3}'
   proxy:               '${QVS_CRL_CLIENT_PROXY:}'
+  caCertDirectories:   '${QVS_CRL_CLIENT_CA_CERT_DIRECTORIES:certificates/internal_ca/}'
 
 cache:
   ttl:         '${QVS_CACHE_TTL:900}'

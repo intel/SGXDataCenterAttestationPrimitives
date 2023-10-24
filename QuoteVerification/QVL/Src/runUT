@@ -35,14 +35,13 @@ fi
 
 BUILD_ATTESTATION_APP=ON
 BUILD_TESTS=ON
+export MAKEFLAGS=${MAKEFLAGS:-j3}
 
 mkdir -p Build/$type && pushd Build/$type &&
 cmake ../../ -DBUILD_ATTESTATION_APP=$BUILD_ATTESTATION_APP \
              -DBUILD_TESTS=$BUILD_TESTS \
-             -DCMAKE_C_COMPILER=clang \
-             -DCMAKE_CXX_COMPILER=clang++ \
              -DCMAKE_BUILD_TYPE=$type \
              "$@" \
-             && make runTests -j6 &&
+             && make runTests &&
 
 popd

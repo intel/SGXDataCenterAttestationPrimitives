@@ -283,7 +283,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQuoteFormatWhenQuoteHeaderVersionI
 TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCertFormatWhenVerifyPckCertFail)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV3Generator::CertificationData certificationData;
@@ -293,7 +292,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedPckCertFormatWhenVerifyPckCertFail
 
     quoteV3Generator.withcertificationData(certificationData);
     quoteV3Generator.getAuthSize() += (uint32_t) certificationData.keyData.size();
-    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
 
     enclaveReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey,
                                                                                    quoteV3Generator.getAuthData().qeAuthData.data)));
@@ -396,7 +395,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedUnsuportedQeIdentityFormatWhenQEIdentityIsWr
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3Successffuly)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV3Generator::CertificationData certificationData;
@@ -406,7 +404,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3Successffuly)
 
     quoteV3Generator.withcertificationData(certificationData);
     quoteV3Generator.getAuthSize() += (uint32_t) certificationData.keyData.size();
-    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
 
     enclaveReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey,
                                                                                    quoteV3Generator.getAuthData().qeAuthData.data)));
@@ -444,7 +442,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3Successffuly)
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3SuccessffulyWithNoQeIdentityJson)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV3Generator::CertificationData certificationData;
@@ -454,7 +451,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3SuccessffulyWithNoQ
 
     quoteV3Generator.withcertificationData(certificationData);
     quoteV3Generator.getAuthSize() += (uint32_t) certificationData.keyData.size();
-    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
 
     enclaveReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey,
                                                                                    quoteV3Generator.getAuthData().qeAuthData.data)));
@@ -485,7 +482,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3SuccessffulyWithNoQ
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4Successffuly)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
@@ -507,7 +503,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4Successffuly)
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -517,7 +513,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4Successffuly)
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getEnclaveReport().bytes()), *pckCertKeyPtr);
 
@@ -548,7 +544,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4Successffuly)
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4WithoutQeIdentitySuccessffuly)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV4Generator::EnclaveReport qeReport{};
@@ -566,7 +561,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4WithoutQeIdentit
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -576,7 +571,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4WithoutQeIdentit
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getEnclaveReport().bytes()), *pckCertKeyPtr);
 
@@ -600,7 +595,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifySgxQuoteV4WithoutQeIdentit
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successfully)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     tdxTcbLevels[0].tdxTcbComponents[1].svn = 0; // major TDX module version. To skip TDX Module identity matching
@@ -634,7 +628,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successfully)
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -644,7 +638,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successfully)
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getTdReport().bytes()), *pckCertKeyPtr);
 
@@ -674,7 +668,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4Successfully)
 TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4WithDifferentMrsignerSeam)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
@@ -704,7 +697,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -714,7 +707,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getTdReport().bytes()), *pckCertKeyPtr);
 
@@ -738,7 +731,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
 TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4WithDifferentSeamAttributes)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     quoteV4Generator.getHeader().teeType = constants::TEE_TYPE_TDX;
@@ -768,7 +760,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -778,7 +770,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getTdReport().bytes()), *pckCertKeyPtr);
 
@@ -802,7 +794,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusTdxModuleMismatchWhenVerifyTdxQuoteV4W
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentitySuccessfully)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     tdxTcbLevels[0].tdxTcbComponents[1].svn = 0; // major TDX module version. To skip TDX Module identity matching
@@ -829,7 +820,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentit
     qeReportCertificationData.qeAuthData = qeAuthData;
     qeReportCertificationData.qeReport = qeReport;
     qeReportCertificationData.certificationData = certificationData;
-    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*pckCertPubKeyPtr), qeAuthData.data)));
+    qeReportCertificationData.qeReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(test::getRawPub(*key), qeAuthData.data)));
     qeReportCertificationData.qeReportSignature.signature = signEnclaveReport(qeReportCertificationData.qeReport, *pckCertKeyPtr);
 
     test::QuoteV4Generator::CertificationData qeCertificationData;
@@ -839,7 +830,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentit
 
     quoteV4Generator.withCertificationData(qeCertificationData);
     quoteV4Generator.getAuthSize() = 134 + (uint32_t) qeCertificationData.keyData.size();
-    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV4Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
     quoteV4Generator.getAuthData().ecdsaSignature.signature =
             signAndGetRaw(concat(quoteV4Generator.getHeader().bytes(), quoteV4Generator.getTdReport().bytes()), *pckCertKeyPtr);
 
@@ -863,7 +854,6 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyTdxQuoteV4WithoutQeIdentit
 TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3WithSgxTcbInfoV3Successffuly)
 {
     // GIVEN
-    auto pckCertPubKeyPtr = EVP_PKEY_get0_EC_KEY(key.get());
     auto pckCertKeyPtr = key.get();
 
     test::QuoteV3Generator::CertificationData certificationData;
@@ -873,7 +863,7 @@ TEST_F(VerifyQuoteIT, shouldReturnedStatusOKWhenVerifyQuoteV3WithSgxTcbInfoV3Suc
 
     quoteV3Generator.withcertificationData(certificationData);
     quoteV3Generator.getAuthSize() += (uint32_t) certificationData.keyData.size();
-    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*pckCertPubKeyPtr);
+    quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey = test::getRawPub(*key);
 
     enclaveReport.reportData = assingFirst32(DigestUtils::sha256DigestArray(concat(quoteV3Generator.getAuthData().ecdsaAttestationKey.publicKey,
                                                                                    quoteV3Generator.getAuthData().qeAuthData.data)));

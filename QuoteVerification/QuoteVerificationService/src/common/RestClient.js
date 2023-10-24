@@ -45,7 +45,7 @@ const readFileSafely = require('../common/readFileSafely');
 
 class RestClient {
 
-    constructor(type, host, port, retryCount, retryDelay, factor, certFile, keyFile, caCertDirectories, proxy, servername, keepAlive = true) {
+    constructor(type, host, port, retryCount, retryDelay, factor, certFile, keyFile, caCertDirectories, proxy, servername) {
         this.cfg = {
             address:  'None', // Placeholder, will be populated with first request
             protocol: (type === tlsType.None) ? 'http' : 'https',
@@ -57,31 +57,30 @@ class RestClient {
             proxy,
             servername
         };
-        this.prepareOptions(type, certFile, keyFile, caCertDirectories, keepAlive);
+        this.prepareOptions(type, certFile, keyFile, caCertDirectories);
         this.initializeRequestHandler();
     }
 
-    prepareOptions(type, certFile, keyFile, caCertDirectories, keepAlive) {
+    prepareOptions(type, certFile, keyFile, caCertDirectories) {
         const ca = getCACertificatesSync(caCertDirectories).map(file => readFileSafely(file, 'utf8'));
 
         const agentOptions = {
-            keepAlive,
+            keepAlive:  true,
+            timeout:    60000,
             scheduling: 'lifo',
         };
         const httpsAgentOptions = {
             ...agentOptions,
             ca,
-            rejectUnauthorized: type === tlsType.MTLS,
-            requestCert:        type === tlsType.MTLS,
-            maxVersion:         tlsType.MAX_SECURE_PROTOCOL,
-            minVersion:         tlsType.MIN_SECURE_PROTOCOL,
-            ciphers:            tlsType.CIPHERS,
-            strictSSL:          true,
+            requestCert: type === tlsType.MTLS,
+            maxVersion:  tlsType.MAX_SECURE_PROTOCOL,
+            minVersion:  tlsType.MIN_SECURE_PROTOCOL,
+            ciphers:     tlsType.CIPHERS,
+            servername:  this.cfg.servername
         };
         if (type === tlsType.MTLS) {
             httpsAgentOptions.cert = readFileSafely(certFile, 'utf8');
             httpsAgentOptions.key = readFileSafely(keyFile, 'utf8');
-            httpsAgentOptions.servername = this.cfg.servername;
         }
 
         const proxy = this.cfg.proxy;

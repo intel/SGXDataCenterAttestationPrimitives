@@ -46,11 +46,10 @@ std::vector<uint8_t> rawEcdsaSignatureToDER(const std::array<uint8_t,constants::
 
 bool verifySignature(const pckparser::CrlStore& crl, const std::vector<uint8_t>& publicKey);
 
-bool verifySha256Signature(const Bytes& signature, const Bytes& message, const EC_KEY& publicKey);
 bool verifySha256Signature(const Bytes& signature, const Bytes& message, const EVP_PKEY& publicKey);
 
 template<size_t N>
-bool verifySha256Signature(const Bytes& signature, const std::array<uint8_t,N>& message, const EC_KEY& publicKey)
+bool verifySha256Signature(const Bytes& signature, const std::array<uint8_t,N>& message, const EVP_PKEY& publicKey)
 {
     const std::vector<uint8_t> msg(std::begin(message), std::end(message));
     return verifySha256Signature(signature, msg, publicKey);
@@ -58,15 +57,15 @@ bool verifySha256Signature(const Bytes& signature, const std::array<uint8_t,N>& 
 
 template<size_t N>
 bool verifySha256EcdsaSignature(const std::array<uint8_t, constants::ECDSA_P256_SIGNATURE_BYTE_LEN> &signature,
-                                const std::array<uint8_t, N> &message, const EC_KEY &publicKey)
+                                const std::array<uint8_t, N> &message, const EVP_PKEY &publicKey)
 {
     return verifySha256Signature(rawEcdsaSignatureToDER(signature), message, publicKey);
 }
 
 bool verifySha256EcdsaSignature(const std::array<uint8_t, constants::ECDSA_P256_SIGNATURE_BYTE_LEN> &signature,
-                                const std::vector<uint8_t> &message, const EC_KEY &publicKey);
+                                const std::vector<uint8_t> &message, const EVP_PKEY &publicKey);
 
-bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const EC_KEY &publicKey);
+bool verifySha256EcdsaSignature(const Bytes &signature, const std::vector<uint8_t> &message, const EVP_PKEY &publicKey);
 
 bool verifySha256EcdsaSignature(const dcap::parser::x509::Signature &signature, const std::vector<uint8_t> &message, const std::vector<uint8_t> &publicKey);
 

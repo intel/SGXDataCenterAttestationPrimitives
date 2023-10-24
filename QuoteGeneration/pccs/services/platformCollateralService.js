@@ -33,6 +33,7 @@ import PccsError from '../utils/PccsError.js';
 import PccsStatus from '../constants/pccs_status_code.js';
 import Constants from '../constants/index.js';
 import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 import X509 from '../x509/x509.js';
 import * as platformsDao from '../dao/platformsDao.js';
 import * as pckcertDao from '../dao/pckcertDao.js';
@@ -52,6 +53,7 @@ import {
 import { sequelize } from '../dao/models/index.js';
 
 const ajv = new Ajv();
+addFormats(ajv);
 
 function toUpper(str) {
   if (str) return str.toUpperCase();
@@ -66,11 +68,20 @@ function verify_cert(root1, root2) {
 export async function addPlatformCollateral(collateralJson, version) {
   return await sequelize.transaction(async (t) => {
     //check parameters
+    let validate;
     let valid;
-    if (version < 4)
-      valid = ajv.validate(PLATFORM_COLLATERAL_SCHEMA_V3, collateralJson);
-    else valid = ajv.validate(PLATFORM_COLLATERAL_SCHEMA_V4, collateralJson);
+    if (version < 4) {
+      validate = ajv.compile(PLATFORM_COLLATERAL_SCHEMA_V3);
+    }
+    else {
+      validate = ajv.compile(PLATFORM_COLLATERAL_SCHEMA_V4);
+    }
+    valid = validate(collateralJson);
     if (!valid) {
+      for (const err of validate.errors) {
+        logger.error(err.schemaPath);
+        logger.error(err.message);
+      }
       throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
     }
 

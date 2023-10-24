@@ -215,21 +215,25 @@ public:
 #ifdef _MSC_VER
             wstring wskey(key.begin(), key.end());
             const auto file_name = cache_dir_ + L"\\" + wskey;
-            ::DeleteFile(file_name.c_str());
+            if (!::DeleteFile(file_name.c_str())) {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Error deleting cache item '%s'. \n", key.c_str());
+            }
 #else
             string lowercase = key;
             std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
                            [](unsigned char c) { return std::tolower(c); });
             const auto file_name = cache_dir_ + "/" + lowercase;
-            std::remove(file_name.c_str());
+            if (std::remove(file_name.c_str()) != 0) {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Error deleting cache item '%s'. \n", key.c_str());
+            }
 #endif
         }
     }
 
 #ifdef _WIN32
-    void process_file(const std::wstring &entry_path, int cache_type) {
+    bool process_file(const std::wstring &entry_path, int cache_type) {
 #else
-    void process_file(const std::string & entry_path, int cache_type) {
+    bool process_file(const std::string & entry_path, int cache_type) {
 #endif
         std::ifstream ifs(entry_path, std::ios::in | std::ios::binary);
         if (ifs.is_open()) {
@@ -238,22 +242,30 @@ public:
             if (ifs && cache_header.cache_type & cache_type) {
                 ifs.close();
 #ifdef _WIN32
-                ::DeleteFile(entry_path.c_str());
+                if(!::DeleteFile(entry_path.c_str()))
+                    return false;
 #else
-                std::remove(entry_path.c_str());
+                if (std::remove(entry_path.c_str()) != 0)
+                    return false;
 #endif
             } else {
                 ifs.close();
             }
+            return true;
+        }
+        else {
+            return false;
         }
     }
 
-    void clear_cache(uint32_t cache_type) {
+    sgx_qcnl_error_t clear_cache(uint32_t cache_type) {
+        sgx_qcnl_error_t ret = SGX_QCNL_SUCCESS;
         // Lock the cache mutex
         std::lock_guard<std::mutex> lock(mutex_cache_lock);
 
-        if (cache_dir_.empty())
-            return;
+        if (cache_dir_.empty()) {
+            return ret;
+        }
 
 #ifdef _WIN32
         std::wstring search_path = cache_dir_ + L"\\*.*";
@@ -264,12 +276,16 @@ public:
             do {
                 if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                     std::wstring entry_path = cache_dir_ + L"\\" + fd.cFileName;
-                    process_file(entry_path, cache_type);
+                    if (!process_file(entry_path, cache_type)) {
+                        ret = SGX_QCNL_UNEXPECTED_ERROR;
+                        break;
+                    }
                 }
             } while (FindNextFile(hFind, &fd));
             FindClose(hFind);
         } else {
             qcnl_log(SGX_QL_LOG_ERROR, "Could not open directory: %s \n", cache_dir_.c_str());
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
         }
 #else
         DIR *dir;
@@ -280,14 +296,19 @@ public:
             while ((ent = readdir(dir)) != nullptr) {
                 std::string entry_path = cache_dir_ + "/" + ent->d_name;
                 if (stat(entry_path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
-                    process_file(entry_path, cache_type);
+                    if (!process_file(entry_path, cache_type)) {
+                        ret = SGX_QCNL_UNEXPECTED_ERROR;
+                        break;
+                    }
                 }
             }
             closedir(dir);
         } else {
             qcnl_log(SGX_QL_LOG_ERROR, "Could not open directory: %s \n", cache_dir_.c_str());
+            ret = SGX_QCNL_UNEXPECTED_ERROR;
         }
 #endif
+        return ret;
     }
 
 protected:

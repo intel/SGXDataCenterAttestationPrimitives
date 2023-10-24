@@ -75,10 +75,8 @@ function getRestClientForHost(host, logger) {
             config.crlClient.factor,
             undefined,
             undefined,
-            undefined,
-            config.crlClient.proxy,
-            undefined,
-            false);
+            config.crlClient.caCertDirectories,
+            config.crlClient.proxy);
     
         try {
             cache.clients.set(host, client);

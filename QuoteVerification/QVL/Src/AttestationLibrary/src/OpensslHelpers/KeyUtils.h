@@ -37,9 +37,8 @@
 
 namespace intel { namespace sgx { namespace dcap { namespace crypto {
 
-crypto::EVP_PKEY_uptr toEvp(const EC_KEY &ecKey);
-crypto::EC_KEY_uptr rawToP256PubKey(const std::array<uint8_t, 64>& rawKey);
-crypto::EC_KEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey);
+crypto::EVP_PKEY_uptr rawToP256PubKey(const std::array<uint8_t, 64>& rawKey);
+crypto::EVP_PKEY_uptr rawToP256PubKey(const std::vector<uint8_t>& rawKey);
 
 }}}} // namespace intel { namespace sgx { namespace dcap { namespace crypto {
 

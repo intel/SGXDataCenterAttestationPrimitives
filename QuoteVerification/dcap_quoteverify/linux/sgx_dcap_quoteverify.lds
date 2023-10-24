@@ -13,6 +13,8 @@ global:
     tee_get_supplemental_data_version_and_size;
     tee_verify_quote;
     tee_get_fmspc_from_quote;
+    sgx_trace_logger_callback;
+    sgx_trace_loglevel;
 local:
     *;
 };

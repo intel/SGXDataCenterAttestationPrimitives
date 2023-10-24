@@ -275,11 +275,11 @@ class Cache extends Base {
     }
 }
 
-class RestClient extends Base {
+class BaseRestClient extends Base {
     constructor(config) {
         super();
         this.validate(config, {
-            required:   ['host', 'port', 'retries', 'initialInterval', 'factor', 'tlsClientType', 'caCertDirectories', 'servername'],
+            required:   ['retries', 'initialInterval', 'factor', 'caCertDirectories'],
             properties: {
                 tlsClientType: {
                     'type': 'string', 'enum': ['MTLS', 'TLS', 'None']
@@ -330,6 +330,15 @@ class RestClient extends Base {
         this.servername = config.servername;
 
         appendConfigPath(this, ['certFile', 'keyFile', 'caCertDirectories']);
+    }
+}
+
+class RestClient extends BaseRestClient {
+    constructor(config) {
+        super(config);
+        this.validate(config, {
+            required: ['host', 'port', 'tlsClientType']
+        });
     }
 }
 
@@ -564,6 +573,7 @@ module.exports = {
     Service,
     HealthCheck,
     Logger,
+    BaseRestClient,
     RestClient,
     Cache,
     BaseRestService,

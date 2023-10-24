@@ -29,860 +29,865 @@
  *
  */
 export const PLATFORM_REG_SCHEMA = {
-  title: 'Platform Registration',
-  description: 'Platform Registration Data Format',
-  type: 'object',
-  properties: {
-    qe_id: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 260,
+  "title": "Platform Registration",
+  "description": "Platform Registration Data Format",
+  "type": "object",
+  "properties": {
+    "qe_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 260
     },
-    pce_id: {
-      type: 'string',
-      pattern: '^[a-fA-F0-9]{4}$',
+    "pce_id": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{4}$"
     },
-    cpu_svn: {
-      type: 'string',
-      pattern: '^[a-fA-F0-9]{32}$',
+    "cpu_svn": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{32}$"
     },
-    pce_svn: {
-      type: 'string',
-      pattern: '^[a-fA-F0-9]{4}$',
+    "pce_svn": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{4}$"
     },
-    enc_ppid: {
-      type: 'string',
-      pattern: '^[a-fA-F0-9]{768}$',
+    "enc_ppid": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{768}$"
     },
-    platform_manifest: {
-      type: ['string','null'],
-    },
+    "platform_manifest": {
+      "type": "string",
+      "nullable": true
+    }
   },
-  required: ['qe_id', 'pce_id'],
+  "required": ["qe_id", "pce_id"]
 };
 
 export const PLATFORM_COLLATERAL_SCHEMA_V3 = {
-  title: 'Platform Registration',
-  description: 'Platform Registration Data Format',
-  type: 'object',
-  properties: {
-    platforms: {
-      type: 'array',
-      items: {
-        'type:': 'object',
-        properties: {
-          qe_id: {
-            type: 'string',
-            minLength: 1,
-            maxLength: 260,
+  "title": "Platform Registration",
+  "description": "Platform Registration Data Format",
+  "type": "object",
+  "properties": {
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qe_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 260
           },
-          pce_id: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{4}$',
+          "pce_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{4}$"
           },
-          cpu_svn: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{32}$|^$',
+          "cpu_svn": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{32}$|^$"
           },
-          pce_svn: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{4}$|^$',
+          "pce_svn": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{4}$|^$"
           },
-          enc_ppid: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{768}$|^$',
+          "enc_ppid": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{768}$|^$"
           },
-          platform_manifest: {
-            type: ['string','null'],
-          },
+          "platform_manifest": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        required: ['qe_id', 'pce_id'],
-      },
+        "required": ["qe_id", "pce_id"]
+      }
     },
-    collaterals: {
-      type: 'object',
-      properties: {
-        pck_certs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              qe_id: {
-                type: 'string',
-                minLength: 1,
-                maxLength: 260,
+    "collaterals": {
+      "type": "object",
+      "properties": {
+        "pck_certs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "qe_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 260
               },
-              pce_id: {
-                type: 'string',
-                pattern: '^[a-fA-F0-9]{4}$',
+              "pce_id": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{4}$"
               },
-              enc_ppid: {
-                type: 'string',
-                pattern: '^[a-fA-F0-9]{768}$|^$',
+              "enc_ppid": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{768}$|^$"
               },
-              platform_manifest: {
-                type: ['string','null'],
+              "platform_manifest": {
+                "type": "string",
+                "nullable": true
               },
-              certs: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    tcb: {
-                      type: 'object',
-                      properties: {
-                        sgxtcbcomp01svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+              "certs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tcb": {
+                      "type": "object",
+                      "properties": {
+                        "sgxtcbcomp01svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp02svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp02svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp03svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp03svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp04svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp04svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp05svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp05svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp06svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp06svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp07svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp07svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp08svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp08svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp09svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp09svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp10svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp10svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp11svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp11svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp12svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp12svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp13svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp13svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp14svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp14svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp15svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp15svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp16svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp16svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        pcesvn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 65535,
-                        },
-                      },
+                        "pcesvn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 65535
+                        }
+                      }
                     },
-                    tcbm: {
-                      type: 'string',
-                      pattern: '^[0-9a-fA-F]{36}$',
+                    "tcbm": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{36}$"
                     },
-                    cert: {
-                      type: 'string',
-                    },
+                    "cert": {
+                      "type": "string"
+                    }
                   },
-                  required: ['tcb', 'tcbm', 'cert'],
-                },
-              },
+                  "required": ["tcb", "tcbm", "cert"]
+                }
+              }
             },
-            required: ['qe_id', 'pce_id', 'enc_ppid', 'certs'],
-          },
+            "required": ["qe_id", "pce_id", "enc_ppid", "certs"]
+          }
         },
-        tcbinfos: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              fmspc: {
-                type: 'string',
+        "tcbinfos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fmspc": {
+                "type": "string"
               },
-              tcbinfo: {
-                type: 'object',
-                properties: {
-                  tcbInfo: {
-                    type: 'object',
-                    properties: {
-                      version: {
-                        type: 'integer',
+              "tcbinfo": {
+                "type": "object",
+                "properties": {
+                  "tcbInfo": {
+                    "type": "object",
+                    "properties": {
+                      "version": {
+                        "type": "integer"
                       },
-                      issueDate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "issueDate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      nextUpdate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "nextUpdate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      fmspc: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{12}$',
+                      "fmspc": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{12}$"
                       },
-                      pceId: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{4}$',
+                      "pceId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{4}$"
                       },
-                      tcbType: {
-                        type: 'integer',
+                      "tcbType": {
+                        "type": "integer"
                       },
-                      tcbEvaluationDataNumber: {
-                        type: 'integer',
+                      "tcbEvaluationDataNumber": {
+                        "type": "integer"
                       },
-                      tcbLevels: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            tcb: {
-                              type: 'object',
-                              properties: {
-                                pcesvn: {
-                                  type: 'integer',
+                      "tcbLevels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tcb": {
+                              "type": "object",
+                              "properties": {
+                                "pcesvn": {
+                                  "type": "integer"
                                 },
-                                sgxtcbcomp01svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp01svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp02svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp02svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp03svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp03svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp04svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp04svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp05svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp05svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp06svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp06svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp07svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp07svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp08svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp08svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp09svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp09svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp10svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp10svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp11svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp11svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp12svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp12svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp13svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp13svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp14svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp14svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp15svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
+                                "sgxtcbcomp15svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
                                 },
-                                sgxtcbcomp16svn: {
-                                  type: 'integer',
-                                  minimum: 0,
-                                  maximum: 255,
-                                },
-                              },
+                                "sgxtcbcomp16svn": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 255
+                                }
+                              }
                             },
-                            tcbDate: {
-                              type: 'string',
-                              format: 'date-time',
+                            "tcbDate": {
+                              "type": "string",
+                              "format": "date-time"
                             },
-                            tcbStatus: {
-                              type: 'string',
+                            "tcbStatus": {
+                              "type": "string"
                             },
-                            advisoryIDs: {
-                              type: 'array',
-                              items: {
-                                type: 'string',
-                              },
-                            },
-                          },
-                        },
-                      },
+                            "advisoryIDs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
                     },
+                    "signature": {
+                      "type": "string"
+                    }
                   },
-                  signature: {
-                    type: 'string',
-                  },
+                  "required": ["tcbInfo", "signature"]
+                }
+              }
+            },
+            "required": ["fmspc", "tcbinfo"]
+          }
+        },
+        "pckcacrl": {
+          "type": "object",
+          "properties": {
+            "processorCrl": {
+              "type": "string"
+            },
+            "platformCrl": {
+              "type": "string"
+            }
+          }
+        },
+        "qeidentity": {
+          "type": "string"
+        },
+        "qveidentity": {
+          "type": "string"
+        },
+        "certificates": {
+          "type": "object",
+          "properties": {
+            "SGX-PCK-Certificate-Issuer-Chain": {
+              "type": "object",
+              "properties": {
+                "PROCESSOR": {
+                  "type": "string"
                 },
-                required: ['tcbInfo', 'signature'],
-              },
+                "PLATFORM": {
+                  "type": "string"
+                }
+              }
             },
-            required: ['fmspc', 'tcbinfo'],
+            "SGX-TCB-Info-Issuer-Chain": {
+              "type": "string"
+            },
+            "SGX-Enclave-Identity-Issuer-Chain": {
+              "type": "string"
+            }
           },
+          "required": ["SGX-PCK-Certificate-Issuer-Chain"],
         },
-        pckcacrl: {
-          type: 'object',
-          properties: {
-            processorCrl: {
-              type: 'string',
-            },
-            platformCrl: {
-              type: 'string',
-            },
-          },
-        },
-        qeidentity: {
-          type: 'string',
-        },
-        qveidentity: {
-          type: 'string',
-        },
-        certificates: {
-          type: 'object',
-          properties: {
-            'SGX-PCK-Certificate-Issuer-Chain': {
-              type: 'object',
-              properties: {
-                PROCESSOR: {
-                  type: 'string',
-                },
-                PLATFORM: {
-                  type: 'string',
-                },
-              },
-            },
-            'SGX-TCB-Info-Issuer-Chain': {
-              type: 'string',
-            },
-            'SGX-Enclave-Identity-Issuer-Chain': {
-              type: 'string',
-            },
-          },
-          required: ['SGX-PCK-Certificate-Issuer-Chain'],
-        },
-        rootcacrl: {
-          type: 'string',
-        },
+        "rootcacrl": {
+          "type": "string"
+        }
       },
-      required: ['pck_certs', 'tcbinfos', 'certificates'],
-    },
+      "required": ["pck_certs", "tcbinfos", "certificates"]
+    }
   },
-  required: ['platforms', 'collaterals'],
+  "required": ["platforms", "collaterals"]
 };
 
 export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
-  title: 'Platform Registration',
-  description: 'Platform Registration Data Format',
-  type: 'object',
-  properties: {
-    platforms: {
-      type: 'array',
-      items: {
-        'type:': 'object',
-        properties: {
-          qe_id: {
-            type: 'string',
-            minLength: 1,
-            maxLength: 260,
+  "title": "Platform Registration",
+  "description": "Platform Registration Data Format",
+  "type": "object",
+  "properties": {
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qe_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 260
           },
-          pce_id: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{4}$',
+          "pce_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{4}$"
           },
-          cpu_svn: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{32}$|^$',
+          "cpu_svn": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{32}$|^$"
           },
-          pce_svn: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{4}$|^$',
+          "pce_svn": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{4}$|^$"
           },
-          enc_ppid: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{768}$|^$',
+          "enc_ppid": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{768}$|^$"
           },
-          platform_manifest: {
-            type: ['string','null'],
-          },
+          "platform_manifest": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        required: ['qe_id', 'pce_id'],
-      },
+        "required": ["qe_id", "pce_id"]
+      }
     },
-    collaterals: {
-      type: 'object',
-      properties: {
-        version:{
-          "const": 4,
+    "collaterals": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 4
         },
-        pck_certs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              qe_id: {
-                type: 'string',
-                minLength: 1,
-                maxLength: 260,
+        "pck_certs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "qe_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 260
               },
-              pce_id: {
-                type: 'string',
-                pattern: '^[a-fA-F0-9]{4}$',
+              "pce_id": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{4}$"
               },
-              enc_ppid: {
-                type: 'string',
-                pattern: '^[a-fA-F0-9]{768}$|^$',
+              "enc_ppid": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{768}$|^$"
               },
-              platform_manifest: {
-                type: ['string','null'],
+              "platform_manifest": {
+                "type": "string",
+                "nullable": true
               },
-              certs: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    tcb: {
-                      type: 'object',
-                      properties: {
-                        sgxtcbcomp01svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+              "certs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tcb": {
+                      "type": "object",
+                      "properties": {
+                        "sgxtcbcomp01svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp02svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp02svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp03svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp03svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp04svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp04svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp05svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp05svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp06svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp06svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp07svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp07svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp08svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp08svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp09svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp09svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp10svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp10svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp11svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp11svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp12svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp12svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp13svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp13svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp14svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp14svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp15svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp15svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        sgxtcbcomp16svn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 255,
+                        "sgxtcbcomp16svn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
                         },
-                        pcesvn: {
-                          type: 'integer',
-                          minimum: 0,
-                          maximum: 65535,
-                        },
-                      },
+                        "pcesvn": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 65535
+                        }
+                      }
                     },
-                    tcbm: {
-                      type: 'string',
-                      pattern: '^[0-9a-fA-F]{36}$',
+                    "tcbm": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{36}$"
                     },
-                    cert: {
-                      type: 'string',
-                    },
+                    "cert": {
+                      "type": "string"
+                    }
                   },
-                  required: ['tcb', 'tcbm', 'cert'],
-                },
-              },
+                  "required": ["tcb", "tcbm", "cert"]
+                }
+              }
             },
-            required: ['qe_id', 'pce_id', 'enc_ppid', 'certs'],
-          },
+            "required": ["qe_id", "pce_id", "enc_ppid", "certs"]
+          }
         },
-        tcbinfos: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              fmspc: {
-                type: 'string',
+        "tcbinfos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fmspc": {
+                "type": "string"
               },
-              sgx_tcbinfo: {
-                type: 'object',
-                properties: {
-                  tcbInfo: {
-                    type: 'object',
-                    properties: {
-                      id: {
-                        const: 'SGX',
+              "sgx_tcbinfo": {
+                "type": "object",
+                "properties": {
+                  "tcbInfo": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "const": "SGX"
                       },
-                      version: {
-                        type: 'integer',
+                      "version": {
+                        "type": "integer"
                       },
-                      issueDate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "issueDate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      nextUpdate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "nextUpdate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      fmspc: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{12}$',
+                      "fmspc": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{12}$"
                       },
-                      pceId: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{4}$',
+                      "pceId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{4}$"
                       },
-                      tcbType: {
-                        type: 'integer',
+                      "tcbType": {
+                        "type": "integer"
                       },
-                      tcbEvaluationDataNumber: {
-                        type: 'integer',
+                      "tcbEvaluationDataNumber": {
+                        "type": "integer"
                       },
-                      tcbLevels: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            tcb: {
-                              type: 'object',
-                              properties: {
-                                sgxtcbcomponents: {
-                                  type: 'array',
-                                  items: {
-                                    type: 'object',
-                                    properties: {
-                                      svn: {
-                                        type: 'integer',
+                      "tcbLevels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tcb": {
+                              "type": "object",
+                              "properties": {
+                                "sgxtcbcomponents": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "svn": {
+                                        "type": "integer"
                                       },
-                                      category: {
-                                        type: 'string',
+                                      "category": {
+                                        "type": "string"
                                       },
-                                      type: {
-                                        type: 'string',
-                                      },
+                                      "type": {
+                                        "type": "string"
+                                      }
                                     },
-                                    required: ['svn'],
-                                  },
+                                    "required": ["svn"]
+                                  }
                                 },
-                                pcesvn: {
-                                  type: 'integer',
-                                },
+                                "pcesvn": {
+                                  "type": "integer"
+                                }
                               },
-                              required: ['sgxtcbcomponents'],
+                              "required": ["sgxtcbcomponents"]
                             },
-                            tcbDate: {
-                              type: 'string',
-                              format: 'date-time',
+                            "tcbDate": {
+                              "type": "string",
+                              "format": "date-time"
                             },
-                            tcbStatus: {
-                              type: 'string',
+                            "tcbStatus": {
+                              "type": "string"
                             },
-                            advisoryIDs: {
-                              type: 'array',
-                              items: {
-                                type: 'string',
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
+                            "advisoryIDs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                   },
-                  signature: {
-                    type: 'string',
-                  },
+                  "signature": {
+                    "type": "string"
+                  }
                 },
-                required: ['tcbInfo', 'signature'],
+                "required": ["tcbInfo", "signature"]
               },
-              tdx_tcbinfo: {
-                type: 'object',
-                properties: {
-                  tcbInfo: {
-                    type: 'object',
-                    properties: {
-                      id: {
-                        const: 'TDX',
+              "tdx_tcbinfo": {
+                "type": "object",
+                "properties": {
+                  "tcbInfo": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "const": "TDX"
                       },
-                      version: {
-                        type: 'integer',
+                      "version": {
+                        "type": "integer"
                       },
-                      issueDate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "issueDate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      nextUpdate: {
-                        type: 'string',
-                        format: 'date-time',
+                      "nextUpdate": {
+                        "type": "string",
+                        "format": "date-time"
                       },
-                      fmspc: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{12}$',
+                      "fmspc": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{12}$"
                       },
-                      pceId: {
-                        type: 'string',
-                        pattern: '^[0-9a-fA-F]{4}$',
+                      "pceId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{4}$"
                       },
-                      tcbType: {
-                        type: 'integer',
+                      "tcbType": {
+                        "type": "integer"
                       },
-                      tcbEvaluationDataNumber: {
-                        type: 'integer',
+                      "tcbEvaluationDataNumber": {
+                        "type": "integer"
                       },
-                      mrsignerseam: {
-                        type: 'string',
+                      "mrsignerseam": {
+                        "type": "string"
                       },
-                      tcbLevels: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            tcb: {
-                              type: 'object',
-                              properties: {
-                                sgxtcbcomponents: {
-                                  type: 'array',
-                                  items: {
-                                    type: 'object',
-                                    properties: {
-                                      svn: {
-                                        type: 'integer',
+                      "tcbLevels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tcb": {
+                              "type": "object",
+                              "properties": {
+                                "sgxtcbcomponents": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "svn": {
+                                        "type": "integer"
                                       },
-                                      category: {
-                                        type: 'string',
+                                      "category": {
+                                        "type": "string"
                                       },
-                                      type: {
-                                        type: 'string',
-                                      },
+                                      "type": {
+                                        "type": "string"
+                                      }
                                     },
-                                    required: ['svn'],
-                                  },
+                                    "required": ["svn"]
+                                  }
                                 },
-                                pcesvn: {
-                                  type: 'integer',
+                                "pcesvn": {
+                                  "type": "integer"
                                 },
-                                tdxtcbcomponents: {
-                                  type: 'array',
-                                  items: {
-                                    type: 'object',
-                                    properties: {
-                                      svn: {
-                                        type: 'integer',
+                                "tdxtcbcomponents": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "svn": {
+                                        "type": "integer"
                                       },
-                                      category: {
-                                        type: 'string',
+                                      "category": {
+                                        "type": "string"
                                       },
-                                      type: {
-                                        type: 'string',
-                                      },
+                                      "type": {
+                                        "type": "string"
+                                      }
                                     },
-                                    required: ['svn'],
-                                  },
-                                },
+                                    "required": ["svn"]
+                                  }
+                                }
                               },
-                              required: ['sgxtcbcomponents'],
+                              "required": ["sgxtcbcomponents"]
                             },
-                            tcbDate: {
-                              type: 'string',
-                              format: 'date-time',
+                            "tcbDate": {
+                              "type": "string",
+                              "format": "date-time"
                             },
-                            tcbStatus: {
-                              type: 'string',
+                            "tcbStatus": {
+                              "type": "string"
                             },
-                            advisoryIDs: {
-                              type: 'array',
-                              items: {
-                                type: 'string',
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
+                            "advisoryIDs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                   },
-                  signature: {
-                    type: 'string',
-                  },
+                  "signature": {
+                    "type": "string"
+                  }
                 },
-                required: ['tcbInfo', 'signature'],
-              },
+                "required": ["tcbInfo", "signature"]
+              }
             },
-            required: ['fmspc'],
-          },
+            "required": ["fmspc"]
+          }
         },
-        pckcacrl: {
-          type: 'object',
-          properties: {
-            processorCrl: {
-              type: 'string',
+        "pckcacrl": {
+          "type": "object",
+          "properties": {
+            "processorCrl": {
+              "type": "string"
             },
-            platformCrl: {
-              type: 'string',
-            },
-          },
+            "platformCrl": {
+              "type": "string"
+            }
+          }
         },
-        qeidentity: {
-          type: 'string',
+        "qeidentity": {
+          "type": "string"
         },
-        tdqeidentity: {
-          type: 'string',
+        "tdqeidentity": {
+          "type": "string"
         },
-        qveidentity: {
-          type: 'string',
+        "qveidentity": {
+          "type": "string"
         },
-        certificates: {
-          type: 'object',
-          properties: {
-            'SGX-PCK-Certificate-Issuer-Chain': {
-              type: 'object',
-              properties: {
-                PROCESSOR: {
-                  type: 'string',
+        "certificates": {
+          "type": "object",
+          "properties": {
+            "SGX-PCK-Certificate-Issuer-Chain": {
+              "type": "object",
+              "properties": {
+                "PROCESSOR": {
+                  "type": "string"
                 },
-                PLATFORM: {
-                  type: 'string',
-                },
-              },
+                "PLATFORM": {
+                  "type": "string"
+                }
+              }
             },
-            'SGX-TCB-Info-Issuer-Chain': {
-              type: 'string',
+            "SGX-TCB-Info-Issuer-Chain": {
+              "type": "string"
             },
-            'SGX-Enclave-Identity-Issuer-Chain': {
-              type: 'string',
-            },
+            "SGX-Enclave-Identity-Issuer-Chain": {
+              "type": "string"
+            }
           },
-          required: ['SGX-PCK-Certificate-Issuer-Chain'],
+          "required": ["SGX-PCK-Certificate-Issuer-Chain"]
         },
-        rootcacrl_cdp: {
-          type: 'string',
+        "rootcacrl_cdp": {
+          "type": "string"
         },
-        rootcacrl: {
-          type: 'string',
-        },
+        "rootcacrl": {
+          "type": "string"
+        }
       },
-      required: ['version','pck_certs', 'tcbinfos', 'certificates'],
+      "required": ["version","pck_certs", "tcbinfos", "certificates"],
     },
   },
-  required: ['platforms', 'collaterals'],
+  "required": ["platforms", "collaterals"]
 };

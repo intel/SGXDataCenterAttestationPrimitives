@@ -32,26 +32,26 @@ Requirements:
 
 * cmake version 3.18 or higher
 * make
-* clang++ with c++11 support (5.0.2 or higher is recommended)
+* clang++ with c++11 support (version 5.0.2 or higher is recommended)
 * doxygen version 1.8.14 if BUILD_DOCS is enabled
-* gcc to compile dependant openssl
+* gcc to compile dependant openssl (version 9.4.0 or higher is recommended, because it requires libstdc++ in version 6)
 * bash shell
 * due to self contained third parties, ~230MB disk space is required for full build - debug, release, tests and doc
 * bullseye for code coverage 8.15 or higher
 
 Additional libraries will be downloaded and compiled during first build:
 
-* openssl v1.1.1 (AttestationLibrary dependency)
+* openssl v3.X (AttestationLibrary dependency)
 * googletest (Tests dependency)
 * spdlog (added only if building with logs capabilities)
 
 To build test SGX enclave that includes Quote Verification Library additional libraries are required and should be provided by user:
 
 * Intel SGX SDK - https://software.intel.com/en-us/sgx/sdk
-* Intel SGX SSL - https://github.com/intel/intel-sgx-ssl (has to be built by user manually)
+* Intel SGX SSL - https://github.com/intel/intel-sgx-ssl (The version must be compatible with OpenSSL 3 and must be manually built by the user.)
 * gcc is used to build in this configuration.
 
-By default cmake will try to find them in `/opt/intel/sgxsdk` and `/opt/intel/intel-sgx-ssl/Linux/package`. To override this provide `SGX_SDK` and `SGX_OPENSSL` variables.
+By default cmake will try to find them in `/opt/intel/sgxsdk` and `/opt/intel/sgxssl`. To override this provide `SGX_SDK` and `SGX_OPENSSL` variables.
 
 #### Build in release:
 ````

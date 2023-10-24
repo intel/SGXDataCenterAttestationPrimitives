@@ -31,6 +31,7 @@
 
 enclave {
     from "sgx_tsgxssl.edl" import *;
+    from "sgx_pthread.edl" import *;
 
     include "time.h"
 

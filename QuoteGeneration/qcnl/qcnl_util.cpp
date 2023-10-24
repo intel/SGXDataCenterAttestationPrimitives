@@ -38,7 +38,7 @@
 #include "qcnl_config.h"
 #include <algorithm>
 #ifndef _MSC_VER
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #else
 #include <Windows.h>
 #include <bcrypt.h>
@@ -268,15 +268,35 @@ bool is_collateral_service_pcs() {
 
 #ifndef _MSC_VER
 string sha256(const void *data, size_t data_size) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, data, data_size);
-    SHA256_Final(hash, &sha256);
+    unsigned char hash[EVP_MAX_MD_SIZE]; // Use EVP_MAX_MD_SIZE instead of SHA256_DIGEST_LENGTH
+    unsigned int hash_len; // This will store the actual length of the hash
+
+    // Initialize the context and select the SHA-256 algorithm
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+    if (!mdctx) {
+        return "";
+    }
+
+    if (!EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL)) {
+        EVP_MD_CTX_free(mdctx);
+        return "";
+    }
+
+    if (!EVP_DigestUpdate(mdctx, data, data_size)) {
+        EVP_MD_CTX_free(mdctx);
+        return "";
+    }
+
+    if (!EVP_DigestFinal_ex(mdctx, hash, &hash_len)) {
+        EVP_MD_CTX_free(mdctx);
+        return "";
+    }
+
+    EVP_MD_CTX_free(mdctx); // Always free the context when done
 
     std::string retval;
-    retval.reserve(2 * sizeof(hash) + 1);
-    for (size_t i = 0; i < sizeof(hash); i++) {
+    retval.reserve(2 * hash_len + 1);
+    for (size_t i = 0; i < hash_len; i++) {
         char buf[3];
         snprintf(buf, sizeof(buf), "%02x", hash[i]);
         retval += buf;
@@ -374,8 +394,6 @@ string sha256(const void *data, size_t data_size) {
         retval += buf;
     }
 
-    return retval;
-
 Cleanup:
 
     if (hAlg)
@@ -390,6 +408,6 @@ Cleanup:
     if (pbHash)
         HeapFree(GetProcessHeap(), 0, pbHash);
 
-    return "";
+    return retval;
 }
 #endif

@@ -152,6 +152,8 @@ void PckCertificate::setMembers(stack_st_ASN1_TYPE *sgxExtensions)
         }
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
+        crypto::validateOid(oids::SGX_EXTENSION, oidName, V_ASN1_OBJECT);
+        
         const auto oidValue = sk_ASN1_TYPE_value(oidTuple.get(), 1);
         const auto oidNameStr = obj2Str(oidName->value.object);
 

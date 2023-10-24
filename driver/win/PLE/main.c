@@ -181,6 +181,32 @@ static int create_einittoken(uint8_t *mrenclave,
 	return sign_einittoken(einittoken);
 }
 
+extern uint64_t get_enclave_base(void);
+extern uint64_t get_enclave_size(void);
+
+static bool is_outside_enclave(void *addr, size_t len)
+{
+	uint64_t enclave_start = get_enclave_base();
+	uint64_t enclave_end = enclave_start + get_enclave_size() - 1;
+	uint64_t start = (uint64_t)addr;
+	uint64_t end = 0;
+
+	if(len > 0)
+	{
+		end = start + len - 1;
+	}
+	else
+	{
+		end = start;
+	}
+
+	//check overflow
+	if((start > end) || (enclave_start > enclave_end))
+		return false;
+
+	return ((start > enclave_end) || (end < enclave_start));
+}
+
 void encl_body(struct sgx_launch_request *req)
 {
 	struct sgx_einittoken token;
@@ -191,6 +217,8 @@ void encl_body(struct sgx_launch_request *req)
 	int i;
 
 	if (!req)
+		return;
+	if(!is_outside_enclave(req, sizeof(struct sgx_launch_request)))
 		return;
 
 	memcpy(mrenclave, req->mrenclave, sizeof(mrenclave));

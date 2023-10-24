@@ -381,8 +381,8 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
              (NULL != p_sgx_get_quote_config) &&
             (NULL == error2) &&
              (NULL != p_sgx_free_quote_config)){
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
-            SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
@@ -450,11 +450,11 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
     if (handle != NULL) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_NOTICE, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
 
         sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)GetProcAddress(handle, "sgx_qpl_global_init");
         if (NULL != p_sgx_qpl_global_init) {
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qpl_global_init API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_qpl_global_init API.\n");
             ret_val = p_sgx_qpl_global_init();
             if (SGX_QL_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the sgx_qpl_global_init API. 0x%04x\n", ret_val);
@@ -466,8 +466,8 @@ static quote3_error_t get_platform_quote_cert_data(sgx_ql_pck_cert_id_t *p_pck_c
         p_sgx_free_quote_config = (sgx_free_quote_config_func_t)GetProcAddress(handle, "sgx_ql_free_quote_config");
         if ((NULL != p_sgx_get_quote_config) &&
             (NULL != p_sgx_free_quote_config)){
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
-            SE_TRACE(SE_TRACE_DEBUG, "Request the Quote Config data.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_ql_get_quote_config and sgx_ql_free_quote_config API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Request the Quote Config data.\n");
             ret_val = p_sgx_get_quote_config(p_pck_cert_id, &p_pck_cert_config);
             if (SGX_QL_SUCCESS != ret_val) {
                 SE_PROD_LOG("Error returned from the p_sgx_get_quote_config API. 0x%04x\n", ret_val);
@@ -585,7 +585,9 @@ get_qe_path(const TCHAR *p_file_name,
     else //not a dynamic executable
     {
         ssize_t i = readlink( "/proc/self/exe", p_file_path, buf_size );
-        if (i == -1)
+        if (i == -1
+            || buf_size > PATH_MAX // make sure it is safe to do the type conversion, PATH_MAX is defined in limits.h and it is big enough
+            || i == (ssize_t)buf_size) // in this case truncation may have occured, and p_file_path[i] is out of buffer.
             return false;
         p_file_path[i] = '\0';
     }
@@ -690,7 +692,7 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
             ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
             goto CLEANUP;
         }
-        SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
+        SE_TRACE(SE_TRACE_NOTICE, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
         sgx_status = sgx_create_enclave(qe_enclave_path,
                                         0,
                                         p_launch_token,
@@ -699,14 +701,14 @@ quote3_error_t load_qe(sgx_enclave_id_t *p_qe_eid,
                                         p_qe_attributes);
 #ifndef _MSC_VER
          if (SGX_ERROR_ENCLAVE_FILE_ACCESS == sgx_status) {
-            SE_TRACE(SE_TRACE_DEBUG, "Couldn't open QE file %s and will find legecy QE file.\n", qe_enclave_path);
+            SE_TRACE(SE_TRACE_NOTICE, "Couldn't open QE file %s and will find legecy QE file.\n", qe_enclave_path);
             memset(qe_enclave_path, 0, sizeof(qe_enclave_path));
             if (!get_qe_path(QE3_ENCLAVE_NAME_LEGACY, qe_enclave_path, MAX_PATH)) {
                 SE_TRACE(SE_TRACE_ERROR, "Couldn't find legecy QE file.\n");
                 ret_val = SGX_QL_ENCLAVE_LOAD_ERROR;
                 goto CLEANUP;
             }
-            SE_TRACE(SE_TRACE_DEBUG, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
+            SE_TRACE(SE_TRACE_NOTICE, "Call sgx_create_enclave for QE. %s\n", qe_enclave_path);
             sgx_status = sgx_create_enclave(qe_enclave_path,
                                             0,
                                             p_launch_token,
@@ -769,7 +771,7 @@ void unload_qe()
     // Unload the QE enclave
     if ((0 != g_ql_global_data.m_eid) &&
         (g_ql_global_data.m_load_policy != SGX_QL_PERSISTENT)) {
-        SE_TRACE(SE_TRACE_DEBUG, "Unload QE enclave 0X%lX\n", g_ql_global_data.m_eid);
+        SE_TRACE(SE_TRACE_NOTICE, "Unload QE enclave 0X%lX\n", g_ql_global_data.m_eid);
         sgx_destroy_enclave(g_ql_global_data.m_eid);
         g_ql_global_data.m_eid = 0;
     }
@@ -986,7 +988,7 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)dlsym(handle, "sgx_ql_write_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_write_persistent_data) {
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_ql_write_persistent_data API.\n");
             ret_val = p_sgx_qe_write_persistent_data(p_buf,
                                                         buf_size,
                                                         p_label);
@@ -1003,10 +1005,10 @@ static quote3_error_t write_persistent_data(const uint8_t *p_buf,
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
     if (handle != NULL) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_NOTICE, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_write_persistent_data = (sgx_write_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_write_persistent_data");
         if (NULL != p_sgx_qe_write_persistent_data) {
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_write_persistent_data API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_ql_write_persistent_data API.\n");
             ret_val = p_sgx_qe_write_persistent_data(p_buf,
                 buf_size,
                 p_label);
@@ -1067,7 +1069,7 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)dlsym(handle, "sgx_ql_read_persistent_data");
         if ((error = dlerror()) == NULL &&
             NULL != p_sgx_qe_read_persistent_data) {
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_qe_read_persistent_data API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_qe_read_persistent_data API.\n");
             ret_val = p_sgx_qe_read_persistent_data(p_buf,
                                                     p_buf_size,
                                                     p_label);
@@ -1084,10 +1086,10 @@ static quote3_error_t read_persistent_data(uint8_t *p_buf,
     #else
     handle = LoadLibrary(TEXT(SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME));
     if (handle != NULL) {
-        SE_TRACE(SE_TRACE_DEBUG, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        SE_TRACE(SE_TRACE_NOTICE, "Found the Quote's dependent library. %s.\n", SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         p_sgx_qe_read_persistent_data = (sgx_read_persistent_data_func_t)GetProcAddress(handle, "sgx_ql_read_persistent_data");
         if (NULL != p_sgx_qe_read_persistent_data) {
-            SE_TRACE(SE_TRACE_DEBUG, "Found the sgx_ql_read_persistent_data API.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_ql_read_persistent_data API.\n");
             ret_val = p_sgx_qe_read_persistent_data(p_buf,
                                                     p_buf_size,
                                                     p_label);
@@ -1158,7 +1160,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
         return(SGX_QL_ERROR_INVALID_PARAMETER);
     }
 
-    SE_TRACE(SE_TRACE_DEBUG, "Certify Key.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Certify Key.\n");
     // Set the TCB to the value you want to use when certifying the key.
     // For the reference, use the CPUSNV and PCEISVSVN that matches the test PCK.  CPUSVN = 00000000010100000000000000000000, PCE ISVSVN = 0000
     // For E3's, there will not be a PCK Cert for every CPUSVN+PCE ISVNSVN combination.  The platform will need to know which values to use.
@@ -1170,7 +1172,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
     //pce_cert_psvn.isv_svn = pce_isv_svn;
     SE_TRACE(SE_TRACE_DEBUG, "pce_cert_psvn.cpusvn:\n");
     PRINT_BYTE_ARRAY(SE_TRACE_DEBUG, &p_plaintext_data->cert_cpu_svn, sizeof(p_plaintext_data->cert_cpu_svn));
-    SE_TRACE(SE_TRACE_DEBUG, "\npce_cert_psvn.isv_svn = 0x%04x.\n", p_plaintext_data->cert_pce_info.pce_isv_svn);
+    SE_TRACE(SE_TRACE_NOTICE, "\npce_cert_psvn.isv_svn = 0x%04x.\n", p_plaintext_data->cert_pce_info.pce_isv_svn);
     pce_error = sgx_pce_sign_report(&p_plaintext_data->cert_pce_info.pce_isv_svn,
                                     &p_plaintext_data->cert_cpu_svn,
                                     &p_plaintext_data->qe_report,
@@ -1189,7 +1191,7 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
         goto CLEANUP;
     }
     // Update the ECDSA key blob with certification data
-    SE_TRACE(SE_TRACE_DEBUG, "Update ECDSA blob with cert data.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Update ECDSA blob with cert data.\n");
     sgx_status = store_cert_data(*p_qe3_eid,
                                  (uint32_t*)&qe3_error,
                                  p_plaintext_data,
@@ -1209,14 +1211,14 @@ static quote3_error_t certify_key(uint8_t *p_ecdsa_blob,
         refqt_ret = (quote3_error_t)qe3_error;
         goto CLEANUP;
     } else {
-        SE_TRACE(SE_TRACE_DEBUG, "Certification done.  Store updated ECDSA blob to disk.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "Certification done.  Store updated ECDSA blob to disk.\n");
         refqt_ret = write_persistent_data(p_ecdsa_blob,
                                           SGX_QL_TRUSTED_ECDSA_BLOB_SIZE_SDK,
                                           ECDSA_BLOB_LABEL);
         if (refqt_ret != SGX_QL_SUCCESS) {
             // This should not be a critical failure but a warning.  The ECDSA key is still in memory.
             SE_TRACE(SE_TRACE_WARNING, "Warning, unable to store resealed ECDSA blob to persistent storage.\n");
-            SE_TRACE(SE_TRACE_DEBUG, "File storage is not required for the QE_Library.  Library will use ECDSA Blob cached in memory.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "File storage is not required for the QE_Library.  Library will use ECDSA Blob cached in memory.\n");
             refqt_ret = SGX_QL_SUCCESS;
         }
     }
@@ -1351,7 +1353,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
     }
 
     // Get PCE Target Info
-    SE_TRACE(SE_TRACE_DEBUG, "Call sgx_pce_get_target().\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Call sgx_pce_get_target().\n");
     pce_error = sgx_pce_get_target(&pce_target_info, &pce_isv_svn);
     if (SGX_PCE_SUCCESS != pce_error) {
         SE_TRACE(SE_TRACE_ERROR, "Error, call sgx_pce_get_target [%s], pce_error:%04x.\n", __FUNCTION__, pce_error);
@@ -1360,7 +1362,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
     }
 
     // Load the QE enclave
-    SE_TRACE(SE_TRACE_DEBUG, "Call Load the QE.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Call Load the QE.\n");
     refqt_ret = load_qe(&qe3_eid,
                         &qe3_attributes,
                         &launch_token);
@@ -1393,13 +1395,13 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
     // check to see if the ECDSA blob exists and is valid.
     do {
         if (true == refresh_att_key) {
-            SE_TRACE(SE_TRACE_DEBUG, "Caller requests a new ECDSA Key.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "Caller requests a new ECDSA Key.\n");
             gen_new_key = true;
             break;
         }
         uint32_t blob_size_read = sizeof(g_ql_global_data.m_ecdsa_blob);
         // Get ECDSA Blob if exists
-        SE_TRACE(SE_TRACE_DEBUG, "Read ECDSA blob.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "Read ECDSA blob.\n");
         refqt_ret = read_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                          &blob_size_read,
                                          ECDSA_BLOB_LABEL);
@@ -1410,7 +1412,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
         else if (blob_size_read != sizeof(g_ql_global_data.m_ecdsa_blob)) {
             // If the blob was successfully read from persistent storage, verify its size.
-            SE_TRACE(SE_TRACE_ERROR, "Invalid ECDSA Blob file size. blob_size_read = %uld, sizeof(g_ecdsa_blob) = %uld.  Since caller requested use any key, generate a new key.\n", blob_size_read, (uint32_t)sizeof(g_ql_global_data.m_ecdsa_blob));
+            SE_TRACE(SE_TRACE_WARNING, "Invalid ECDSA Blob file size. blob_size_read = %uld, sizeof(g_ecdsa_blob) = %uld.  Since caller requested use any key, generate a new key.\n", blob_size_read, (uint32_t)sizeof(g_ql_global_data.m_ecdsa_blob));
             gen_new_key = true;
             break;
         }
@@ -1431,14 +1433,14 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             goto CLEANUP;
         }
         if (REFQE3_SUCCESS != qe3_error) {
-            SE_TRACE(SE_TRACE_DEBUG, "Invalid ECDSA Blob verificaton. 0x%04x, generate a new key.\n", qe3_error);
+            SE_TRACE(SE_TRACE_WARNING, "Invalid ECDSA Blob verificaton. 0x%04x, generate a new key.\n", qe3_error);
             gen_new_key = true;
             break;
         }
-        SE_TRACE(SE_TRACE_DEBUG, "Successfully verified ECDSA Blob.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "Successfully verified ECDSA Blob.\n");
         p_qe_target_info->mr_enclave = qe3_report_body.mr_enclave;
         if (resealed) {
-            SE_TRACE(SE_TRACE_DEBUG, "ECDSA Blob was resealed. Store it disk.\n");
+            SE_TRACE(SE_TRACE_NOTICE, "ECDSA Blob was resealed. Store it disk.\n");
             refqt_ret = write_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                               sizeof(g_ql_global_data.m_ecdsa_blob),
                                               ECDSA_BLOB_LABEL);
@@ -1455,7 +1457,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
         // Check to see if the requested certification type matches the type in the blob.
         if(p_seal_data_plain_text->certification_key_type != certification_key_type) {
-            SE_TRACE(SE_TRACE_ERROR, "Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
+            SE_TRACE(SE_TRACE_WARNING, "Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
             gen_new_key = true;
             break;
         }
@@ -1463,14 +1465,14 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         //new key
         if((qe3_report_body.isv_svn > p_seal_data_plain_text->cert_qe_isv_svn) ||
            (0 != memcmp(&p_seal_data_plain_text->raw_cpu_svn, &qe3_report_body.cpu_svn, sizeof(p_seal_data_plain_text->raw_cpu_svn)))) {
-            SE_TRACE(SE_TRACE_ERROR, "Platform TCB has increased, Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
+            SE_TRACE(SE_TRACE_WARNING, "Platform TCB has increased, Requested certificaiton_key_type doesn't match existing blob's type,  Gen and certify new key.\n");
             gen_new_key = true;
             break;
         }
         ///todo: Probably don't need this check.  PCE target info changes shouldn't require re-certification unless there is OwnerID changes.
         //but is safe since it will just uneccessarily cause key regeneration and recertificaiton.
         if(0 != memcmp(&p_seal_data_plain_text->pce_target_info, &pce_target_info, sizeof(p_seal_data_plain_text->pce_target_info))) {
-            SE_TRACE(SE_TRACE_DEBUG, "Recertification is not available since PCE TargetInfo changed. Gen and certify new key.\n");
+            SE_TRACE(SE_TRACE_WARNING, "Recertification is not available since PCE TargetInfo changed. Gen and certify new key.\n");
             gen_new_key = true;
             break;
         }
@@ -1483,7 +1485,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         SE_TRACE(SE_TRACE_DEBUG, "\n");
 
         if (SGX_QL_SUCCESS != (refqt_ret = getencryptedppid(pce_target_info, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE))){
-            SE_TRACE(SE_TRACE_DEBUG, "Fail to retrieve encrypted PPID.\n");
+            SE_TRACE(SE_TRACE_ERROR, "Fail to retrieve encrypted PPID.\n");
             goto CLEANUP;
         }
 
@@ -1537,7 +1539,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             }
             refqt_ret = SGX_QL_SUCCESS;
             if(pce_isv_svn > p_seal_data_plain_text->cert_pce_info.pce_isv_svn) {
-                SE_TRACE(SE_TRACE_DEBUG, "Using raw-PCE_ISVSVN to certify the key and it has increased. Recertify.\n");
+                SE_TRACE(SE_TRACE_WARNING, "Using raw-PCE_ISVSVN to certify the key and it has increased. Recertify.\n");
 
                 // Use the raw TCB of the platform and the EncPPID certification type
                 pce_cert_psvn.cpu_svn = qe3_report_body.cpu_svn;
@@ -1593,7 +1595,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
             if((pce_cert_psvn.isv_svn != p_seal_data_plain_text->cert_pce_info.pce_isv_svn) ||
                (0 != memcmp(&pce_cert_psvn.cpu_svn, &p_seal_data_plain_text->cert_cpu_svn, sizeof(pce_cert_psvn.cpu_svn))))
             {
-                SE_TRACE(SE_TRACE_DEBUG, "The Cert TCB value returned by the platform library is different than the value used to certify the key.  Recertify.\n");
+                SE_TRACE(SE_TRACE_WARNING, "The Cert TCB value returned by the platform library is different than the value used to certify the key.  Recertify.\n");
 
                 // Set up the certification data to update the blob with.
                 memset(&plaintext_data, 0, sizeof(plaintext_data));
@@ -1650,14 +1652,14 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
                 0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f};
 
-        SE_TRACE(SE_TRACE_DEBUG, "Generate and certify a new ECDSA attestation key\n");
+        SE_TRACE(SE_TRACE_NOTICE, "Generate and certify a new ECDSA attestation key\n");
         // It is possible that the public key is supplied by the attestation server.  In this case, the QE3 does not need to
         // generate the encryption key.  The reference, however, always generates the encryption key.
         // NOTE:  Typically, a certification_key_type of PPID_RSA3072_ENCRYPTED implies the private keys is owned by the attestation service
         // and the QE3 does not need to generate a key pair.  The reference will generate a key for PPID_3072_ENCRYPTED
         if (PPID_RSA3072_ENCRYPTED == certification_key_type) {
             if (SGX_QL_SUCCESS != (refqt_ret = getencryptedppid(pce_target_info, encrypted_ppid, REF_RSA_OAEP_3072_MOD_SIZE))) {
-                SE_TRACE(SE_TRACE_DEBUG, "Fail to retrieve encrypted PPID.\n");
+                SE_TRACE(SE_TRACE_ERROR, "Fail to retrieve encrypted PPID.\n");
                 goto CLEANUP;
             }
         } else {
@@ -1667,7 +1669,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
         }
 
         // Generate the ECDSA key
-        SE_TRACE(SE_TRACE_DEBUG, "Get ATT Key.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "Get ATT Key.\n");
         sgx_status = gen_att_key(qe3_eid,
                                  (uint32_t*)&qe3_error,
                                  g_ql_global_data.m_ecdsa_blob,
@@ -1733,7 +1735,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                 // The dependent library was found but it returned an error
                 goto CLEANUP;
             }
-            SE_TRACE(SE_TRACE_DEBUG, "Platform Quote Config callback is not available, use the platform's raw TCB.\n");
+            SE_TRACE(SE_TRACE_WARNING, "Platform Quote Config callback is not available, use the platform's raw TCB.\n");
             refqt_ret = SGX_QL_SUCCESS;
             // Use the raw TCB of the platform and the EncPPID certification type
             pce_cert_psvn.cpu_svn = qe3_report.body.cpu_svn;
@@ -1782,7 +1784,7 @@ quote3_error_t ECDSA256Quote::ecdsa_init_quote(sgx_ql_cert_key_type_t certificat
                                 &qe3_eid);
         if (SGX_QL_SUCCESS != refqt_ret) {
             // ECDSA Blob doesn't exist, need to generate a new key
-            SE_TRACE(SE_TRACE_DEBUG, "Failed to cerify key.\n");
+            SE_TRACE(SE_TRACE_ERROR, "Failed to cerify key.\n");
             goto CLEANUP;
         }
 
@@ -1865,20 +1867,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
         return(SGX_QL_ERROR_INVALID_PARAMETER);
     }
 
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(sgx_quote3_t) = %d.\n",                       (unsigned int)sizeof(sgx_quote3_t));
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(sgx_report_body_t) = %d.\n",                  (unsigned int)sizeof(sgx_report_body_t));
-    SE_TRACE(SE_TRACE_DEBUG, "(2 * sizeof(sgx_ec256_signature_t)) = %d.\n",        (unsigned int)(2 * sizeof(sgx_ec256_signature_t)));
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(sgx_ec256_public_t) = %d.\n",                 (unsigned int)sizeof(sgx_ec256_public_t));
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(uint16_t) = %d.\n",                           (unsigned int)sizeof(uint16_t));
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(uint32_t) = %d.\n",                           (unsigned int)sizeof(uint32_t));
-    SE_TRACE(SE_TRACE_DEBUG, "sizeof(uint32_t) = %d.\n",                           (unsigned int)sizeof(uint32_t));
     SE_TRACE(SE_TRACE_DEBUG, "authentication_data_size = %d.\n",                   (unsigned int)REF_ECDSDA_AUTHENTICATION_DATA_SIZE);
-    if (PPID_CLEARTEXT == certification_key_type) {
-        SE_TRACE(SE_TRACE_DEBUG, "sizeof(ref_ppid_cleartext_cert_info_t) = %d.\n", (unsigned int)sizeof(sgx_ql_ppid_cleartext_cert_info_t));
-    }
-    if (PPID_RSA3072_ENCRYPTED == certification_key_type) {
-        SE_TRACE(SE_TRACE_DEBUG, "sizeof(ref_ppid_rsa3072_encrypted_cert_info_t) = %d.\n", (unsigned int)sizeof(sgx_ql_ppid_rsa3072_encrypted_cert_info_t));
-    }
 
     // Get PCE Target Info
     pce_error = sgx_pce_get_target(&pce_target_info, &pce_isv_svn);
@@ -1889,7 +1878,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
     }
 
     // Load the QE3
-    SE_TRACE(SE_TRACE_DEBUG, "Call Load the QE.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Call Load the QE.\n");
     // Load the QE enclave
     refqt_ret = load_qe(&qe3_eid,
                         &qe3_attributes,
@@ -1908,7 +1897,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
 
     blob_size_read = sizeof(g_ql_global_data.m_ecdsa_blob);
     // Get ECDSA Blob if exists
-    SE_TRACE(SE_TRACE_DEBUG, "Read ECDSA blob from persistent storage.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Read ECDSA blob from persistent storage.\n");
     refqt_ret = read_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                      &blob_size_read,
                                      ECDSA_BLOB_LABEL);
@@ -1947,7 +1936,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
         goto CLEANUP;
     }
     if (resealed) {
-        SE_TRACE(SE_TRACE_DEBUG, "ECDSA Blob was resealed. Store it disk.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "ECDSA Blob was resealed. Store it disk.\n");
         refqt_ret = write_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                           sizeof(g_ql_global_data.m_ecdsa_blob),
                                           ECDSA_BLOB_LABEL);
@@ -1960,7 +1949,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote_size(sgx_ql_cert_key_type_t certif
             refqt_ret = SGX_QL_SUCCESS;
         }
     }
-    SE_TRACE(SE_TRACE_DEBUG, "Successfully verified ECDSA Blob.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Successfully verified ECDSA Blob.\n");
 
     p_sealed_ecdsa = reinterpret_cast<sgx_sealed_data_t *>(g_ql_global_data.m_ecdsa_blob);
     p_seal_data_plain_text = reinterpret_cast<ref_plaintext_ecdsa_data_sdk_t *>(g_ql_global_data.m_ecdsa_blob + sizeof(sgx_sealed_data_t) + p_sealed_ecdsa->plain_text_offset);
@@ -2116,7 +2105,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
 
     // Load the QE3
     memset(&launch_token, 0, sizeof(sgx_launch_token_t));
-    SE_TRACE(SE_TRACE_DEBUG, "Load the QE3. %s\n", QE3_ENCLAVE_NAME);
+    SE_TRACE(SE_TRACE_NOTICE, "Load the QE3. %s\n", QE3_ENCLAVE_NAME);
     // Load the QE enclave
     refqt_ret = load_qe(&qe3_eid,
                         &qe3_attributes,
@@ -2132,10 +2121,10 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
         goto CLEANUP;
     }
 
-    SE_TRACE(SE_TRACE_DEBUG, "Read and verify ecdsa blob\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Read and verify ecdsa blob\n");
     blob_size_read = sizeof(g_ql_global_data.m_ecdsa_blob);
     // Get ECDSA Blob if exists
-    SE_TRACE(SE_TRACE_DEBUG, "Read ECDSA blob.\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Read ECDSA blob.\n");
     refqt_ret = read_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                      &blob_size_read,
                                      ECDSA_BLOB_LABEL);
@@ -2154,7 +2143,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
     }
     memset(&qe3_report_body, 0, sizeof(qe3_report_body));
     // If exists, verify blob.
-    SE_TRACE(SE_TRACE_DEBUG, "Verify blob\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Verify blob\n");
     sgx_status = verify_blob(qe3_eid,
                              (uint32_t*)&qe3_error,
                              (uint8_t*)g_ql_global_data.m_ecdsa_blob,
@@ -2175,7 +2164,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
         goto CLEANUP;
     }
     if (resealed) {
-        SE_TRACE(SE_TRACE_DEBUG, "ECDSA Blob was resealed. Store it.\n");
+        SE_TRACE(SE_TRACE_NOTICE, "ECDSA Blob was resealed. Store it.\n");
         refqt_ret = write_persistent_data((uint8_t*)g_ql_global_data.m_ecdsa_blob,
                                           sizeof(g_ql_global_data.m_ecdsa_blob),
                                           ECDSA_BLOB_LABEL);
@@ -2282,7 +2271,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
         // This is the normal flow when there is no provider library.
         refqt_ret = SGX_QL_SUCCESS;
     }
-    SE_TRACE(SE_TRACE_DEBUG, "Call QE3 gen_quote\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Call QE3 gen_quote\n");
     sgx_status = gen_quote(qe3_eid,
                            (uint32_t*)&qe3_error,
                            (uint8_t*)g_ql_global_data.m_ecdsa_blob,
@@ -2307,7 +2296,7 @@ quote3_error_t ECDSA256Quote::ecdsa_get_quote(const sgx_report_t *p_app_report,
         refqt_ret = (quote3_error_t)qe3_error;
         goto CLEANUP;
     }
-    SE_TRACE(SE_TRACE_DEBUG, "Get quote success\n");
+    SE_TRACE(SE_TRACE_NOTICE, "Get quote success\n");
 
     CLEANUP:
     if(NULL != p_certification_data) {

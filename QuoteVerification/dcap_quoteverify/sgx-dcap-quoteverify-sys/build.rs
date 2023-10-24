@@ -42,22 +42,24 @@ fn main() {
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=bindings.h");
 
-    // Set sdk to search path if SGX_SDK is in environment variable
-    let mut sdk_inc = String::from("-I");
-    if let Ok(val) = env::var("SGX_SDK") {
-        sdk_inc.push_str(&val);
-        sdk_inc.push_str("/include/");
-    }
-
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let bindings = bindgen::Builder::default()
+    let mut builder = bindgen::Builder::default();
+
+    // Set sdk to search path if SGX_SDK is in environment variable
+    if let Ok(val) = env::var("SGX_SDK") {
+        let mut sdk_inc = String::from("-I");
+        sdk_inc.push_str(&val);
+        sdk_inc.push_str("/include/");
+        // Include search path
+        builder = builder.clang_arg(sdk_inc);
+    }
+
+    let bindings = builder
         // The input header we would like to generate
         // bindings for.
         .header("bindings.h")
-        // Include search path
-        .clang_arg(sdk_inc)
         // Convert C enum to Rust enum
         .rustified_enum("_quote3_error_t")
         .rustified_enum("_sgx_ql_request_policy")

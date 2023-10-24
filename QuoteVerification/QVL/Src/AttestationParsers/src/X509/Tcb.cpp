@@ -115,11 +115,14 @@ Tcb::Tcb(const ASN1_TYPE *tcbSeq)
 
         const auto oidName = sk_ASN1_TYPE_value(oidTuple.get(), 0);
         const auto oidValue = sk_ASN1_TYPE_value(oidTuple.get(), 1);
+        crypto::validateOid(oids::TCB, oidName, V_ASN1_OBJECT);
+
         const auto oidNameStr = obj2Str(oidName->value.object);
 
         if (oidNameStr == oids::SGX_TCB_COMP01_SVN) // TODO DRY
         {
             crypto::validateOid(oids::SGX_TCB_COMP01_SVN, oidValue, V_ASN1_INTEGER);
+
             _cpuSvnComponents[0] = crypto::oidToByte(oidValue);
             expectedExtensions.erase(std::remove(expectedExtensions.begin(), expectedExtensions.end(), Extension::Type::SGX_TCB_COMP01_SVN), expectedExtensions.end());
         }
