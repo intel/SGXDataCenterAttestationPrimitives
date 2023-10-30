@@ -120,7 +120,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
     $ make deb_pkg
   ```
-  You can find the generated installers located under `linux/installer/deb/`.
+  You can find the generated installers located under `installer/linux/deb/`.
   **Note**: On Ubuntu 18.04 and Ubuntu 20.04, the above command also generates another debug symbol package with extension name of `.ddeb` for debug purpose.
   **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
   ```
@@ -130,7 +130,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
     $ make rpm_pkg
   ```
-  You can find the generated installers located under `linux/installer/rpm/`.
+  You can find the generated installers located under `installer/linux/rpm/`.
   **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
   ```
     $ make rpm_pkg DEBUG=1
