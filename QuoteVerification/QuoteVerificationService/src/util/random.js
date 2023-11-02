@@ -31,8 +31,9 @@
 
 'use strict';
 
+const { Buffer } = require('node:buffer');
 const uuidGen = require('uuid-random');
 
 module.exports.uuid = () => {
-    return uuidGen.bin().toString('hex');
+    return Buffer.from(uuidGen.bin()).toString('hex');
 };
