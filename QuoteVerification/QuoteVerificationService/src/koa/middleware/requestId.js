@@ -31,13 +31,14 @@
 
 'use strict';
 
+const { Buffer } = require('node:buffer');
 const { WARN, INFO, DEBUG } = require('log4js').levels;
 const uuidGen = require('uuid-random');
 const validators = require('../commonDataValidator');
 const requestLogFormatter = require('../../common/requestLogFormatter');
 
 async function generateReqId() {
-    return uuidGen.bin().toString('hex');
+    return Buffer.from(uuidGen.bin()).toString('hex');
 }
 
 module.exports = (serverLevel) => {
