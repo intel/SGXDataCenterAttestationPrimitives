@@ -38,6 +38,7 @@
 #include <string>
 #include <algorithm>
 #include <iterator>
+#include <cstdint>
 
 namespace intel { namespace sgx { namespace dcap {
 

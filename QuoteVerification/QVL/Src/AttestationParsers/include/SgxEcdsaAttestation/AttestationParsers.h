@@ -47,6 +47,7 @@
 #include <string>
 #include <ctime>
 #include <stdexcept>
+#include <cstdint>
 
 // Forward declarations for rapidjson
 namespace rapidjson {
