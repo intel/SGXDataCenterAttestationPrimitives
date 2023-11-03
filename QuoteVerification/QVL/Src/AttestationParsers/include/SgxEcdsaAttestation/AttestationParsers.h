@@ -830,7 +830,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @param other certificate
              * @return true if equal
              */
-            virtual bool operator==(const Certificate& other) const;
+            bool operator==(const Certificate& other) const;
 
             /**
              * Get version of X509 certificate
@@ -1089,7 +1089,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @param other PCK certificate
              * @return true if equal
              */
-            virtual bool operator==(const PckCertificate& other) const;
+            bool operator==(const PckCertificate& other) const;
 
             /**
              * Get PPID
@@ -1205,7 +1205,7 @@ namespace intel { namespace sgx { namespace dcap { namespace parser
              * @param other PCK certificate
              * @return true if equal
              */
-            virtual bool operator==(const PlatformPckCertificate& other) const;
+            bool operator==(const PlatformPckCertificate& other) const;
 
             /**
              * Get value of Platform Instance ID.
