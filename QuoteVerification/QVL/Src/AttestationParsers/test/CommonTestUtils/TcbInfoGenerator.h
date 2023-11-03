@@ -35,6 +35,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <cstdint>
 
 namespace intel { namespace sgx { namespace dcap {
 

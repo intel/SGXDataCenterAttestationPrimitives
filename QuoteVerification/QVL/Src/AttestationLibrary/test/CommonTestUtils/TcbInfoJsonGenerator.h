@@ -35,6 +35,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <cstdint>
 
 struct TcbComponent
 {

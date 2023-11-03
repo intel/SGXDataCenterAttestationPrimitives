@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cstdint>
 
 namespace intel { namespace sgx { namespace dcap {
 
