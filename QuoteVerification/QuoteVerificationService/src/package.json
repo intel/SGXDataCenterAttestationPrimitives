@@ -1,7 +1,8 @@
 {
     "name": "quoteverificationservice",
     "scripts": {
-        "install": "cmake-js build -d qvl/ -O qvl/cmake-build-release",
+        "wait-for-cmake-js": "timeout 10s bash -c 'until cmake-js --version; do sleep 1; done'",
+        "build-native": "cmake-js build -d qvl/ -O qvl/cmake-build-release",
         "swagger": "node swagger.js"
     },
     "version": "1.0.0",
