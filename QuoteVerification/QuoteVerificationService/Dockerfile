@@ -51,8 +51,8 @@ COPY src /qvs/src
 COPY configuration-default /qvs/configuration-default
 # build QVS
 RUN echo 'cmake_QVL_PATH=/qvl/Build/Release/dist' >> /qvs/src/.npmrc # workaround for npm 9+ https://github.com/npm/cli/issues/5852
-RUN cd /qvs/src && npm install
-# copy compiled bianries
+RUN cd /qvs/src && npm install && npm run wait-for-cmake-js && npm run build-native # workaournd for Text file busy race condition https://github.com/nodejs/docker-node/issues/1918
+# copy compiled binaries
 RUN mkdir -p /qvs/native/lib/ \
  && cp /qvl/Build/Release/dist/lib/*.so /qvs/native/lib/ \
  && cp /qvs/src/qvl/cmake-build-release/Release/*.node /qvs/native/ \
