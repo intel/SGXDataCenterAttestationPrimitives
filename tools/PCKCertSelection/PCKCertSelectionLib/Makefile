@@ -87,7 +87,7 @@ HELPERS_DIR 		:= $(PARSERS_DIR)/OpensslHelpers
 UTILS_DIR 		:= $(PARSERS_COMM_DIR)/Utils
 VER_DIR       := $(QG_DIR)/common/inc/internal
 
-# source files from QVL Attestation Parsers dirs 
+# source files from QVL Attestation Parsers dirs
 PARSER_CPP_FILES	:= ParserUtils.cpp
 X509_CPP_FILES		:= Certificate.cpp DistinguishedName.cpp Extension.cpp PckCertificate.cpp Signature.cpp Tcb.cpp Validity.cpp
 HELPERS_CPP_FILES	:= OidUtils.cpp
@@ -104,7 +104,7 @@ LIB_CPP_FILES		:= \
 	$(addprefix $(HELPERS_DIR)/, HELPERS_CPP_FILES) \
 	$(addprefix $(JSON_DIR)/, JSON_CPP_FILES) \
 	$(addprefix $(UTILS_DIR)/, UTILS_CPP_FILES) \
-	$(LOCAL_CPP_FILES) 
+	$(LOCAL_CPP_FILES)
 
 # generate object files in local dir, also for QVL files
 LIB_CPP_OBJECTS 	:= \
@@ -132,7 +132,7 @@ DEBUG_FLAGS := -m64 -O0 -g
 RELEASE_FLAGS := -m64 -O2 $(COMMON_FLAGS)
 
 # basic library c build flags
-C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror -Wno-overloaded-virtual -Wno-overloaded-virtual $(LIB_INCLUDE_PATHS) 
+C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror -Wno-overloaded-virtual $(LIB_INCLUDE_PATHS)
 C_FLAGS += -UPCK_CERT_SELECTION_WITH_COMPONENT
 
 # link flags, link openssl crypto
@@ -157,7 +157,7 @@ CPP_FLAGS	:= $(C_FLAGS) -std=c++14
 
 ####### Build Targets ##############
 
-.PHONY: all clean 
+.PHONY: all clean
 
 # default targetparser
 all: $(BIN_DIR) $(LIB_NAME)
@@ -169,31 +169,31 @@ all: $(BIN_DIR) $(LIB_NAME)
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # parser source files compiling
-%.o: $(PARSERS_DIR)/%.cpp 
+%.o: $(PARSERS_DIR)/%.cpp
 	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
 	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # x509 source files compiling
-%.o: $(X509_DIR)/%.cpp 
+%.o: $(X509_DIR)/%.cpp
 	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
 	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # helpers source files compiling
-%.o: $(HELPERS_DIR)/%.cpp 
+%.o: $(HELPERS_DIR)/%.cpp
 	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
 	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # json source files compiling
-%.o: $(JSON_DIR)/%.cpp 
+%.o: $(JSON_DIR)/%.cpp
 	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
 	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
 
 # utils source files compiling
-%.o: $(UTILS_DIR)/%.cpp 
+%.o: $(UTILS_DIR)/%.cpp
 	$(PCKCERTSEL_VERBOSE)echo "Compiling $<..."
 	$(PCKCERTSEL_VERBOSE)$(CXX) $(CPP_FLAGS) -c $< -o $@
 	$(PCKCERTSEL_VERBOSE)echo "\t -> $@ done"
@@ -221,4 +221,3 @@ clean:
 
 $(BIN_DIR):
 	$(PCKCERTSEL_VERBOSE)mkdir -p $@
-
