@@ -40,9 +40,9 @@ TDQE_VER := $(shell awk '$$2 ~ /TDQE_VERSION/ { print substr($$3, 2, length($$3)
 
 TCRYPTO_LIB_NAME := sgx_tcrypto
 
-INCLUDE := -I$(SGX_SDK)/include                        \
-           -I$(SGX_SDK)/include/tlibc                  \
-           -I$(SGX_SDK)/include/libcxx                 \
+INCLUDE := -I$(SGX_TRUSTED_INCLUDE_PATH)               \
+           -I$(SGX_TRUSTED_INCLUDE_PATH)/tlibc         \
+           -I$(SGX_TRUSTED_INCLUDE_PATH)/libcxx        \
            -I$(COMMON_DIR)/inc/internal                \
            -I$(COMMON_DIR)/inc/internal/linux          \
            -I$(TOP_DIR)/ae/inc/internal                \

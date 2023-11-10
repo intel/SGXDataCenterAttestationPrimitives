@@ -48,11 +48,38 @@ my-dir = $(call parent-dir,$(lastword $(MAKEFILE_LIST)))
 ROOT_DIR              := $(call my-dir)
 COMMON_DIR            := $(ROOT_DIR)/common
 
-SGX_VER:= $(shell awk '$$2 ~ /STRFILEVER/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
-SGX_MAJOR_VER:= $(shell echo $(SGX_VER) |awk -F. '{print $$1}')
-SPLIT_VERSION=$(word $2,$(subst ., ,$1))
+#--------------------------------------------------------------------------------------
+# Function: get_full_version
+# Arguments: 1: the version name of library
+# Returns: Return the full version.
+#---------------------------------------------------------------------------------------
+get_full_version = $(shell awk '$$2 ~ /$1/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
+
+#--------------------------------------------------------------------------------------
+# Function: get_major_version
+# Arguments: 1: the version name of library
+# Returns: Return the major version.
+#---------------------------------------------------------------------------------------
+get_major_version = $(word 1,$(subst ., ,$(call get_full_version,$1)))
+
+SGX_VER:= $(call get_full_version,STRFILEVER)
+SGX_MAJOR_VER:= $(call get_major_version,STRFILEVER)
+
+# If the value of _FORTIFY_SOURCE is greater than 2, use the value, else use 2.
+FORTIFY_SOURCE_VAL:= $(lastword $(sort $(word 2,$(subst =, ,$(filter -D_FORTIFY_SOURCE=%,$(CFLAGS)))) 2))
+
+# If USE_PREBUILT_OPENSSL not equal 0, link prebuilt openssl, else link system openssl
+USE_PREBUILT_OPENSSL ?= 0
+ifeq ($(USE_PREBUILT_OPENSSL), 0)
+    CRYPTO_LIB = $(shell pkg-config --libs libcrypto 2>/dev/null)
+    CRYPTO_INC = $(shell pkg-config --cflags libcrypto 2>/dev/null)
+else
+    CRYPTO_LIB = -L$(ROOT_DIR)/../prebuilt/openssl/lib/linux64 -lcrypto
+    CRYPTO_INC = -I$(ROOT_DIR)/../prebuilt/openssl/inc
+endif
 
 CP    := cp -f
+LN    := ln -sf
 MKDIR := mkdir -p
 STRIP := strip
 OBJCOPY := objcopy
@@ -122,7 +149,7 @@ ifdef DEBUG
     COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
     COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG -DDEBUG_MODE=1
 else
-    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
+    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=$(FORTIFY_SOURCE_VAL) -UDEBUG -DNDEBUG
 endif
 
 ifdef SE_SIM
