@@ -40,7 +40,7 @@ QVL_PARSER_INC  += -I$(PREBUILD_OPENSSL_PATH)/inc
 QVL_VERIFY_INC	:= -I$(QVE_SRC_PATH)/Include \
 				   -I../inc \
 				   -I$(DCAP_QG_DIR)/quote_wrapper/common/inc \
-                   -I$(SGX_SDK)/include \
+		   		   -I$(SGX_TRUSTED_INCLUDE_PATH) \
 				   -I$(DCAP_QG_DIR)/common/inc/internal \
 				   -I$(DCAP_QG_DIR)/pce_wrapper/inc \
 				   -I$(PREBUILD_OPENSSL_PATH)/inc \
@@ -101,7 +101,7 @@ run: all
 ######## QVL Library Objects ########
 
 qve_u.h: $(SGX_EDGER8R) $(QVE_SRC_PATH)/Enclave/qve.edl
-	@$(SGX_EDGER8R) --untrusted $(QVE_SRC_PATH)/Enclave/qve.edl --search-path $(QVE_SRC_PATH)/Enclave --search-path $(SGX_SDK)/include
+	@$(SGX_EDGER8R) --untrusted $(QVE_SRC_PATH)/Enclave/qve.edl --search-path $(QVE_SRC_PATH)/Enclave --search-path $(SGX_TRUSTED_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 qve_u.c : qve_u.h

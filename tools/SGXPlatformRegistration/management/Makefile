@@ -37,8 +37,8 @@ include ../buildenv.mk
 MPA_UEFI_DIR := ../uefi
 LIBS_DIR := ../build/lib64
 
-INCLUDE += -I$(SGX_SDK)/include
-LIB_SGX_CAPABLE := $(SGX_SDK)/lib64/libsgx_capable.a
+INCLUDE += -I$(SGX_TRUSTED_INCLUDE_PATH)
+LIB_SGX_CAPABLE := $(SGX_LIBRARY_PATH)/libsgx_capable.a
 
 $(TARGET_LIB).a : $(CPP_OBJS)
 	mkdir -p $(LIBS_DIR)/.tmp

@@ -35,18 +35,29 @@ SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 
+ifneq ($(wildcard $(SGX_SDK)),)
+    include $(SGX_SDK)/buildenv.mk
+else
+    include /usr/share/sgxsdk/buildenv.mk
+endif
+
 ifeq ($(shell getconf LONG_BIT), 32)
         SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
         SGX_ARCH := x86
 endif
 
-ifeq ($(SGX_ARCH), x86)
+ifneq ($(wildcard $(SGX_SDK)),)
+    ifeq ($(SGX_ARCH), x86)
         SGX_COMMON_CFLAGS := -m32
         SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
-else
+    else
         SGX_COMMON_CFLAGS := -m64
         SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+    endif
+else
+    SGX_COMMON_CFLAGS := -m64
+    SGX_EDGER8R := $(shell command -v sgx_edger8r)
 endif
 
 ifeq ($(DEBUG), 1)
@@ -99,7 +110,7 @@ CXXFLAGS += -std=c++11
 ######## App Settings ########
 
 App_Cpp_Files := $(wildcard App/linux/*.cpp App/*.cpp)
-App_Include_Paths := -I$(SGX_SDK)/include -I ./App/inc
+App_Include_Paths := -I$(SGX_TRUSTED_INCLUDE_PATH) -I ./App/inc
 App_Include_Paths += -I ../../QuoteGeneration/common/inc/internal 
 App_Include_Paths += -I ../../QuoteGeneration/ae/inc/internal -I ../SGXPlatformRegistration/include
 
