@@ -68,10 +68,12 @@ SGX_DEBUG ?= 0
 
 ifndef SERVTD_ATTEST
     ifneq ($(origin SGX_SDK),file)
-      include $(SGX_SDK)/buildenv.mk
-	  else
-$(info You may need to set environment variables if the SGX SDK is installed.)
-$(info Use a command like 'source /opt/intel/sgxsdk/environment')
+        include $(SGX_SDK)/buildenv.mk
+    else ifneq ($(wildcard /usr/share/sgxsdk/buildenv.mk),)
+        include /usr/share/sgxsdk/buildenv.mk
+    else
+        $(info You may need to set environment variables if the SGX SDK is installed.)
+        $(info Use a command like 'source /opt/intel/sgxsdk/environment')
     endif
 endif
 
@@ -81,16 +83,23 @@ else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
 	SGX_ARCH := x86
 endif
 
-ifeq ($(SGX_ARCH), x86)
-	SGX_COMMON_CFLAGS := -m32
-	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
-	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+ifneq ($(wildcard $(SGX_SDK)),)
+    ifeq ($(ARCH), x86)
+        SGX_COMMON_CFLAGS := -m32
+        SGX_LIBRARY_PATH := $(SGX_SDK)/lib
+        SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
+        SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+    else
+        SGX_COMMON_CFLAGS := -m64
+        SGX_LIBRARY_PATH := $(SGX_TRUSTED_LIBRARY_PATH)
+        SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+        SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+    endif
 else
-	SGX_COMMON_CFLAGS := -m64
-	SGX_LIBRARY_PATH := $(SGX_TRUSTED_LIBRARY_PATH)
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
-	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
+    SGX_COMMON_CFLAGS := -m64
+    SGX_LIBRARY_PATH := $(SGX_TRUSTED_LIBRARY_PATH)
+    SGX_ENCLAVE_SIGNER := $(shell command -v sgx_sign)
+    SGX_EDGER8R := $(shell command -v sgx_edger8r)
 endif
 
 # clean the content of 'INCLUDE' - this variable will be set by vcvars32.bat

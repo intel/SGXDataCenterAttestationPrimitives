@@ -40,7 +40,7 @@ QPL_Lib_Cpp_Files := $(wildcard *.cpp ../*.cpp)
 
 ######## Include path -- Don't forget to update AESM CMakefile ########
 QPL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
-                         -I../inc -I$(SGX_SDK)/include          \
+                         -I../inc -I$(SGX_TRUSTED_INCLUDE_PATH) \
                          -I../../common/inc/internal            \
                          -I../../qcnl/inc                       \
                          -I$(PREBUILD_OPENSSL_PATH)/inc
@@ -52,7 +52,7 @@ LDUFLAGS += -Wl,--version-script=sgx_default_quote_provider.lds -Wl,--gc-section
 
 QPL_Lib_Cpp_Flags := $(QPL_Lib_C_Flags) -std=c++11
 
-QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
+QPL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_LIBRARY_PATH) -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 \
         -lcrypto -lsgx_default_qcnl_wrapper -lpthread -ldl
  
 ifndef DEBUG

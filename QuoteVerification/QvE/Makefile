@@ -177,7 +177,7 @@ $(QVL_PARSER_OBJS): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
 
 ifndef SERVTD_ATTEST
 Enclave/qve_t.h: $(SGX_EDGER8R) Enclave/qve.edl
-	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/qve.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
+	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/qve.edl --search-path ../Enclave --search-path $(SGX_TRUSTED_INCLUDE_PATH)
 	@echo "GEN  =>  $@"
 
 Enclave/qve_t.c: Enclave/qve_t.h
