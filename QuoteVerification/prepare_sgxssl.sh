@@ -34,16 +34,15 @@ ARG1=${1:-build}
 top_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 sgxssl_dir=$top_dir/sgxssl
 openssl_out_dir=$sgxssl_dir/openssl_source
-openssl_ver_name=openssl-3.0.10
+openssl_ver_name=openssl-3.0.12
 sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-sgxssl_file_name=3.0_Rev1
+sgxssl_file_name=canonical_packaging_dev
 build_script=$sgxssl_dir/Linux/build_openssl.sh
 server_url_path=https://www.openssl.org/source/
 full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/3.0/$openssl_ver_name.tar.gz
 
-sgxssl_chksum=6371dbe25acdc5a3bbb2978a0a559ad2eefd713b9bbf5d3a45236229c9cc53b6
-openssl_chksum=1761d4f5b13a1028b9b6f3d4b8e17feb0cedc9370f6afe61d7193d2cdce83323
+sgxssl_chksum=c3fbb5bea70957b40c2f1ef6c931d8c8107bd3818b17485b0ffde118a9e43130
 rm -f check_sum_sgxssl.txt check_sum_openssl.txt
 if [ ! -f $build_script ]; then
 	wget $sgxssl_github_archive/$sgxssl_file_name.zip -P $sgxssl_dir/ || exit 1
@@ -76,8 +75,9 @@ fi
 
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
 	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
-	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
-	grep $openssl_chksum $sgxssl_dir/check_sum_openssl.txt
+	wget $full_openssl_url_old.sha256 -O expected_chksum_openssl.txt || wget $full_openssl_url.sha256 -O expected_chksum_openssl.txt || exit 1
+	openssl_chksum=`sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz | awk '{print $1}'`
+	grep $openssl_chksum expected_chksum_openssl.txt
 	if [ $? -ne 0 ]; then
     	echo "File $openssl_out_dir/$openssl_ver_name.tar.gz checksum failure"
         rm -f $openssl_out_dir/$openssl_ver_name.tar.gz
@@ -94,7 +94,7 @@ pushd $sgxssl_dir/Linux/
 if [[ "$*" == *_TD_MIGRATION* ]];then
 make clean sgxssl_no_mitigation NO_THREADS=1 LINUX_SGX_BUILD=2 _TD_MIGRATION=1
 else
-make clean sgxssl_no_mitigation 
+make clean sgxssl_no_mitigation LINUX_SGX_BUILD=3
 fi
 popd
 
