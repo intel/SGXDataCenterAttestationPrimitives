@@ -41,7 +41,7 @@ CNL_Lib_C_Files := $(wildcard *.c ../*.c) ../../common/src/se_thread.c
 
 ######## Include path -- Don't forget to update AESM CMakefile ########
 CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
-                         -I../inc -I$(SGX_SDK)/include          \
+                         -I../inc -I$(SGX_TRUSTED_INCLUDE_PATH) \
                          -I../../common/inc/internal            \
                          -I../../pce_wrapper/inc                \
                          -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson	\
@@ -59,7 +59,7 @@ ifdef SELF_SIGNED_CERT
 CNL_Lib_Cpp_Flags+= -DSELF_SIGNED_CERT
 endif
 
-CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_SDK)/lib64 \
+CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_LIBRARY_PATH) \
 		-lpthread -ldl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
  
 ifndef DEBUG

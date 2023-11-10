@@ -36,7 +36,7 @@ include $(TOP_DIR)/buildenv.mk
 QGS_SRCS = se_trace.c server_main.cpp qgs_server.cpp qgs_log.cpp qgs_ql_logic.cpp
 QGS_OBJS = $(patsubst %.c,%.o,$(patsubst %.cc,%.o,$(patsubst %.cpp,%.o,$(QGS_SRCS))))
 
-QGS_INC = -I$(SGX_SDK)/include \
+QGS_INC = -I$(SGX_TRUSTED_INCLUDE_PATH) \
 		  -I$(COMMON_DIR)/inc/internal \
 		  -I$(TOP_DIR)/qpl/inc \
 		  -I$(TOP_DIR)/quote_wrapper/tdx_quote/inc \
@@ -52,7 +52,8 @@ DEPENDS = ${QGS_OBJS test_client.o:.o=.d}
 
 # SGX related libraries
 QGS_LFLAGS = -L$(TOP_DIR)/build/linux -lsgx_tdx_logic -lsgx_pce_logic -ldl \
-             -L$(SGX_SDK)/lib64 -lsgx_urts -g
+             -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -g
+
 # add boost_system for link
 QGS_LFLAGS += -lboost_system -lboost_thread -lpthread
 # add qgs_msg_lib for link
