@@ -67,8 +67,11 @@ SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 
 ifndef _TD_MIGRATION
-    ifneq ($(MAKECMDGOALS),clean)
+    ifneq ($(origin SGX_SDK),file)
     include $(SGX_SDK)/buildenv.mk
+    else
+$(info You may need to set environment variables if the SGX SDK is installed.)
+$(info Use a command like 'source /opt/intel/sgxsdk/environment')
     endif
 endif
 
