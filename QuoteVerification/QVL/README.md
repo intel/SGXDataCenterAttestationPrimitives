@@ -4,7 +4,9 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives for Linux*
 ## WARNING!
 -------
 As this branch was dedicated to QVS features we announce that it will be no longer supported here. QVS and QVL were moved to submodules as below: 
+
 QVS: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationService.
+
 QVL: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationLibrary
 
 
