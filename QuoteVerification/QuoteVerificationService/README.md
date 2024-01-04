@@ -1,5 +1,13 @@
 # Intel® Software Guard Extensions and Intel® Trust Domain Extensions Data Center Attestation Primitives (Intel® SGX and Intel® TDX DCAP) Quote Verification Service
 
+## WARNING!
+-------
+As this branch(feature/QVS) was dedicated to QVS features we announce that it will be no longer supported here. QVS and QVL were moved to submodules as below: 
+
+QVS: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationService.
+
+QVL: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationLibrary
+
 ## Introduction
 
 Quote Verification Service is a stateless server endpoint implementation that verifies attestation evidence (quote) of ISV (Independent Software Vendor) enclaves.

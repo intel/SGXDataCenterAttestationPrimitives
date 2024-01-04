@@ -1,6 +1,15 @@
 Intel(R) Software Guard Extensions Data Center Attestation Primitives for Linux* / Windows* OS: Quote Verification Library
 ================================================
 
+## WARNING!
+-------
+As this branch(feature/QVS) was dedicated to QVS features we announce that it will be no longer supported here. QVS and QVL were moved to submodules as below: 
+
+QVS: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationService.
+
+QVL: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationLibrary
+
+
 ## SGX Quote Verification Library (QVL)
 
 Reference implementation of ECDSA-based SGX Quote verification.

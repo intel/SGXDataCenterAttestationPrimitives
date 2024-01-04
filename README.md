@@ -1,6 +1,14 @@
 Intel(R) Software Guard Extensions Data Center Attestation Primitives
 ================================================
 
+WARNING!
+-------
+As this branch(feature/QVS) was dedicated to QVS features we announce that it will be no longer supported here. QVS and QVL were moved to submodules as below: 
+
+QVS: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationService.
+
+QVL: https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationLibrary
+
 Introduction
 -------
 Intel(R) Software Guard Extensions (Intel(R) SGX) Data Center Attestation Primitives (Intel(R) SGX DCAP) provides SGX attestation support targeted for data centers, cloud services providers and enterprises. This attestation model leverages Elliptic Curve Digital Signature algorithm (ECDSA) versus the current client based SGX attestation model which is EPID based (Enhanced Privacy Identification).
