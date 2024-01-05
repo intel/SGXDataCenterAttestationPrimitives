@@ -77,8 +77,6 @@ endif
 SIGNED_QVE_NAME := libsgx_qve.signed.so
 QVE_CONFIG_FILE := Enclave/linux/config.xml
 
-QVE_VER:= $(shell awk '$$2 ~ /QVE_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(DCAP_QG_DIR)/common/inc/internal/se_version.h)
-
 
 ENCLAVE_INC_PATH := $(COMMON_INCLUDE) -IInclude -IEnclave -I$(DCAP_QG_DIR)/quote_wrapper/common/inc -I$(DCAP_QG_DIR)/pce_wrapper/inc
 ifdef _TD_MIGRATION
@@ -215,7 +213,7 @@ $(QVE_NAME): $(QVE_OBJS) $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
 	@$(CXX) $^ -shared -o $(TD_MIGRATION_BUILD_DIR)/$@ $(ENCLAVE_LDFLAGS) $(ENCLAVE_CXXFLAGS)
 else
 $(QVE_NAME): $(QVE_OBJS) Enclave/qve_t.o $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
-	@$(CXX)  $^ -o $@ $(ENCLAVE_LDFLAGS) $(ENCLAVE_CXXFLAGS) -Wl,-soname=${SIGNED_QVE_NAME}.$(call SPLIT_VERSION,$(QVE_VER),1)
+	@$(CXX)  $^ -o $@ $(ENCLAVE_LDFLAGS) $(ENCLAVE_CXXFLAGS) -Wl,-soname=${SIGNED_QVE_NAME}.$(call get_major_version,QVE_VERSION)
 	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 endif
 	@echo "LINK =>  $@"
@@ -224,14 +222,14 @@ $(SIGNED_QVE_NAME): $(QVE_NAME)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $(QVE_NAME) -out $@ -config $(QVE_CONFIG_FILE)
 	@echo "SIGN =>  $@"
 
-print-%  : ; @echo $* = $($*)
+print-% : ; @echo $* = $($*)
 
 .PHONY: clean SGXSSL_clean
 
 clean:
 	@echo "Cleaning objects"
 	@rm -rf $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS)
-	@rm -f .config_* $(QVE_NAME) $(SIGNED_QVE_NAME) Enclave/str_to_time.o Enclave/bionic_localtime.o $(QVE_OBJS)  Enclave/qve_t.* Enclave/*.d
+	@rm -f .config_* $(QVE_NAME) $(SIGNED_QVE_NAME) Enclave/str_to_time.o Enclave/bionic_localtime.o $(QVE_OBJS) Enclave/qve_t.* Enclave/*.d
 	@rm -f *.map
 	@rm -f $(TD_MIGRATION_BUILD_DIR)/$(QVE_NAME)
 

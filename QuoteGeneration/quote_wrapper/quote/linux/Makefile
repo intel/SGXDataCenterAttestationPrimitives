@@ -30,7 +30,7 @@
 #
 
 ######## SGX SDK Settings ########
-TOP_DIR  = ../../..
+TOP_DIR = ../../..
 include $(TOP_DIR)/buildenv.mk
 
 QE3_Dir := ../enclave/linux
@@ -67,7 +67,7 @@ Quote_Cpp_Objects := $(Quote_Cpp_Files:.cpp=.o)
 Quote_Name := libsgx_qe3_logic.so
 
 .PHONY: all
-all:  install_lib
+all: install_lib
 
 install_lib: $(Quote_Name) | $(BUILD_DIR)
 	@$(CP) $(Quote_Name) $|
@@ -112,7 +112,7 @@ force_look:
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(Quote_Name)  $(Quote_C_Objects) $(Quote_Cpp_Objects) qe3_u.* id_enclave_u.*
+	@$(RM) .config_* $(Quote_Name) $(Quote_C_Objects) $(Quote_Cpp_Objects) qe3_u.* id_enclave_u.* $(BUILD_DIR)/$(Quote_Name)
 	@make -C $(QE3_Dir) clean
 	@make -C $(ID_ENCLAVE_Dir) clean
 

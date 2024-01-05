@@ -75,6 +75,8 @@ QVE_CPP_OBJ ?= $(QVE_SRC_PATH)/Enclave/untrusted_qve.o
 
 QVL_VERIFY_LIB_NAME := libsgx_dcap_quoteverify
 QVL_VERIFY_LIB_NAME_Dynamic := $(QVL_VERIFY_LIB_NAME).so
+QVL_VERIFY_LIB_NAME_Dynamic_Full := $(QVL_VERIFY_LIB_NAME_Dynamic).$(SGX_VER)
+QVL_VERIFY_LIB_NAME_Dynamic_Major := $(QVL_VERIFY_LIB_NAME_Dynamic).$(SGX_MAJOR_VER)
 QVL_VERIFY_LIB_NAME_Static := $(QVL_VERIFY_LIB_NAME).a
 
 
@@ -87,8 +89,9 @@ $(BUILD_DIR):
 	@$(MKDIR) $@
 
 install_lib: $(QVL_VERIFY_LIB_NAME_Dynamic) | $(BUILD_DIR)
-	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $|
-	ln -sf $|/$(QVL_VERIFY_LIB_NAME_Dynamic) $|/$(QVL_VERIFY_LIB_NAME_Dynamic).1
+	@$(CP) $(QVL_VERIFY_LIB_NAME_Dynamic) $|/$(QVL_VERIFY_LIB_NAME_Dynamic_Full)
+	@$(LN) $(QVL_VERIFY_LIB_NAME_Dynamic_Full) $|/$(QVL_VERIFY_LIB_NAME_Dynamic_Major)
+	@$(LN) $(QVL_VERIFY_LIB_NAME_Dynamic_Major) $|/$(QVL_VERIFY_LIB_NAME_Dynamic)
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(QVL_VERIFY_LIB_NAME_Static)
@@ -158,8 +161,9 @@ uninstall:
 .PHONY: clean
 
 clean:
-	@rm -f *_u.* $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Static)
-	@rm -f $(QVL_LIB_OBJS) $(QVL_PARSER_OBJS)
-	@rm -f $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
-	@rm -f *.orig *.debug *.1
-	@rm -f $(QVE_CPP_OBJ)
+	@$(RM) *_u.* $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Static)
+	@$(RM) $(addprefix $(BUILD_DIR)/,$(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Dynamic_Full) $(QVL_VERIFY_LIB_NAME_Dynamic_Major))
+	@$(RM) $(QVL_LIB_OBJS) $(QVL_PARSER_OBJS)
+	@$(RM) $(QVL_LIB_NAME) $(QVL_PARSER_NAME)
+	@$(RM) *.1
+	@$(RM) $(QVE_CPP_OBJ)
