@@ -45,6 +45,7 @@ vpath %.c $(COMMON_DIR)/src
 QL_Lib_Cpp_Files := $(wildcard ../*.cpp)
 QL_Lib_C_Files := se_trace.c se_thread.c
 
+
 QL_Lib_Include_Paths := -I../../common/inc -I./ -I$(SGX_TRUSTED_INCLUDE_PATH) -I../../../common/inc/internal 
 QL_Lib_Include_Paths += -I../../quote/inc -I../../../pce_wrapper/inc -I../inc
 

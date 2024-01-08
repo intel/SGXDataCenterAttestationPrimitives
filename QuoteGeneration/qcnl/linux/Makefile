@@ -61,7 +61,7 @@ endif
 
 CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_LIBRARY_PATH) \
 		-lpthread -ldl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
- 
+
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE
 CNL_Lib_Link_Flags += -DDISABLE_TRACE
