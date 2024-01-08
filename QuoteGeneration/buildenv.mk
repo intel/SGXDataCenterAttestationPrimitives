@@ -53,8 +53,8 @@ COMMON_DIR            := $(ROOT_DIR)/common
 # Arguments: 1: the version name of library
 # Returns: Return the full version.
 #---------------------------------------------------------------------------------------
-
 get_full_version = $(shell awk '$$2 ~ /$1/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
+
 #--------------------------------------------------------------------------------------
 # Function: get_major_version
 # Arguments: 1: the version name of library
