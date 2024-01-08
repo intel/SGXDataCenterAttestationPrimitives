@@ -30,9 +30,9 @@
 #
 
 ######## SGX SDK Settings ########
-TOP_DIR  = ../..
+TOP_DIR = ../..
 include $(TOP_DIR)/buildenv.mk
-PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
+PREBUILD_OPENSSL_PATH = ../../../prebuilt/openssl
 
 ######## SGX CNL Library Settings ########
 
@@ -61,7 +61,7 @@ endif
 
 CNL_Lib_Link_Flags := $(SGX_COMMON_FLAGS) -g -L$(TOP_DIR)/build/linux -L$(SGX_LIBRARY_PATH) \
 		-lpthread -ldl ../../../tools/PCKCertSelection/static_out/libPCKCertSelection.a
- 
+
 ifndef DEBUG
 CNL_Lib_Cpp_Flags += -DDISABLE_TRACE
 CNL_Lib_Link_Flags += -DDISABLE_TRACE
@@ -73,7 +73,9 @@ CNL_Lib_Cpp_Deps := $(CNL_Lib_Cpp_Objects:%.o=%.d)
 PCK_Selection_Cpp_Objects := $(wildcard ../../../tools/PCKCertSelection/static_out/*.o)
 
 CNL_Lib_Name := libsgx_default_qcnl_wrapper
-CNL_Lib_Name_Dynamic :=  $(CNL_Lib_Name).so
+CNL_Lib_Name_Dynamic := $(CNL_Lib_Name).so
+CNL_Lib_Name_Dynamic_Full := $(CNL_Lib_Name_Dynamic).$(SGX_VER)
+CNL_Lib_Name_Dynamic_Major := $(CNL_Lib_Name_Dynamic).$(SGX_MAJOR_VER)
 CNL_Lib_Name_Static := $(CNL_Lib_Name).a
 PCK_Selection_Lib_Static := PCKCertSelection
 
@@ -83,7 +85,9 @@ PCK_Selection_Lib_Static := PCKCertSelection
 all: install_lib
 
 install_lib: $(CNL_Lib_Name_Dynamic) | $(BUILD_DIR)
-	@$(CP) $(CNL_Lib_Name_Dynamic) $|
+	@$(CP) $(CNL_Lib_Name_Dynamic) $|/$(CNL_Lib_Name_Dynamic_Full)
+	@$(LN) $(CNL_Lib_Name_Dynamic_Full) $|/$(CNL_Lib_Name_Dynamic_Major)
+	@$(LN) $(CNL_Lib_Name_Dynamic_Major) $|/$(CNL_Lib_Name_Dynamic)
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(CNL_Lib_Name_Static)
@@ -108,7 +112,7 @@ $(CNL_Lib_Name_Dynamic): $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) $(PCK_Selec
 	$(CXX) $(CXXFLAGS) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) $(CNL_Lib_Link_Flags) -o $@
 
 $(CNL_Lib_Name_Static): $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) $(PCK_Selection_Lib_Static)
-	$(AR) rsD  $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects)  $(PCK_Selection_Cpp_Objects)
+	$(AR) rsD $(CNL_Lib_Name_Static) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_C_Objects) $(PCK_Selection_Cpp_Objects)
 
 $(PCK_Selection_Lib_Static):
 	make -C ../../../tools/PCKCertSelection/PCKCertSelectionLib -f Makefile.static_lib
@@ -121,7 +125,8 @@ $(BUILD_DIR):
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic).orig $(CNL_Lib_Name_Dynamic_Debug) $(CNL_Lib_Name_Static)
+	@$(RM) .config_* $(CNL_Lib_Name) $(CNL_Lib_Cpp_Objects) $(CNL_Lib_Cpp_Deps) $(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Static)
+	@$(RM) $(addprefix $(BUILD_DIR)/,$(CNL_Lib_Name_Dynamic) $(CNL_Lib_Name_Dynamic_Full) $(CNL_Lib_Name_Dynamic_Major))
 	make -C ../../../tools/PCKCertSelection/PCKCertSelectionLib -f Makefile.static_lib clean
 
 

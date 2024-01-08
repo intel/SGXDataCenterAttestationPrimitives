@@ -36,8 +36,6 @@ include $(TOP_DIR)/ae/buildenv.mk
 AENAME := tdqe
 SONAME := $(AENAME).so
 
-TDQE_VER := $(shell awk '$$2 ~ /TDQE_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
-
 TCRYPTO_LIB_NAME := sgx_tcrypto
 
 INCLUDE := -I$(SGX_TRUSTED_INCLUDE_PATH)               \
@@ -63,7 +61,7 @@ OBJS := $(sort $(OBJ) version.o)
 all: $(SONAME)
 
 $(SONAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles -Wl,-soname=libsgx_${AENAME}.signed.so.$(call SPLIT_VERSION,$(TDQE_VER),1) $(LDTFLAGS) -fno-exceptions -fno-rtti
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) -nostdlib -nodefaultlibs -nostartfiles -Wl,-soname=libsgx_${AENAME}.signed.so.$(call get_major_version,TDQE_VERSION) $(LDTFLAGS) -fno-exceptions -fno-rtti
 	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 
 quoting_enclave_tdqe.o: $(AENAME)_t.c

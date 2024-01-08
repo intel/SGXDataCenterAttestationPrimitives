@@ -64,18 +64,19 @@ QPL_Lib_Cpp_Objects := $(QPL_Lib_Cpp_Files:.cpp=.o)
 QPL_Lib_Cpp_Deps := $(QPL_Lib_Cpp_Objects:%.o=%.d)
 
 QPL_Lib_Name := libdcap_quoteprov
-QPL_Lib_Name_Dynamic :=  $(QPL_Lib_Name).so
+QPL_Lib_Name_Dynamic := $(QPL_Lib_Name).so
+QPL_Lib_Name_Dynamic_Full := $(QPL_Lib_Name_Dynamic).$(call get_full_version,DEFAULT_QPL_VERSION)
+QPL_Lib_Name_Dynamic_Major := $(QPL_Lib_Name_Dynamic).$(call get_major_version,DEFAULT_QPL_VERSION)
 QPL_Lib_Name_Static := $(QPL_Lib_Name).a
-
-QPL_VERSION:= $(shell awk '$$2 ~ /DEFAULT_QPL_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
-QPL_SO_VERSION:= $(shell echo $(QPL_VERSION) |awk -F. '{print $$1}') 
 
 .PHONY: all run
 
 all: install_lib
 
 install_lib: $(QPL_Lib_Name_Dynamic) | $(BUILD_DIR)
-	@$(CP) $(QPL_Lib_Name_Dynamic) $|
+	@$(CP) $(QPL_Lib_Name_Dynamic) $|/$(QPL_Lib_Name_Dynamic_Full)
+	@$(LN) $(QPL_Lib_Name_Dynamic_Full) $|/$(QPL_Lib_Name_Dynamic_Major)
+	@$(LN) $(QPL_Lib_Name_Dynamic_Major) $|/$(QPL_Lib_Name_Dynamic)
 
 ifeq ($(GEN_STATIC),1)
 	@$(MAKE) $(QPL_Lib_Name_Static)
@@ -93,7 +94,7 @@ $(QPL_Lib_Cpp_Objects): %.o: %.cpp
 	@echo "CXX  <=  $<"
 
 $(QPL_Lib_Name_Dynamic): $(QPL_Lib_Cpp_Objects)
-	$(CXX) $(CXXFLAGS) $(QPL_Lib_Cpp_Objects) -shared -Wl,-soname=$@.$(QPL_SO_VERSION) $(LDUFLAGS) $(QPL_Lib_Link_Flags) -o $@
+	$(CXX) $(CXXFLAGS) $(QPL_Lib_Cpp_Objects) -shared -Wl,-soname=$(QPL_Lib_Name_Dynamic_Major) $(LDUFLAGS) $(QPL_Lib_Link_Flags) -o $@
 
 $(QPL_Lib_Name_Static): $(QPL_Lib_Cpp_Objects)
 	$(AR) rsD $(QPL_Lib_Name_Static) $(QPL_Lib_Cpp_Objects)
@@ -104,6 +105,7 @@ force_look:
 .PHONY: clean
 
 clean:
-	@rm -f .config_* $(QPL_Lib_Name) $(QPL_Lib_Cpp_Objects) $(QPL_Lib_Cpp_Deps) $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic).orig $(QPL_Lib_Name_Dynamic_Debug) $(QPL_Lib_Name_Static)
+	@$(RM) .config_* $(QPL_Lib_Name) $(QPL_Lib_Cpp_Objects) $(QPL_Lib_Cpp_Deps) $(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Static) \
+		$(addprefix $(BUILD_DIR)/,$(QPL_Lib_Name_Dynamic) $(QPL_Lib_Name_Dynamic_Full) $(QPL_Lib_Name_Dynamic_Major))
 
 
