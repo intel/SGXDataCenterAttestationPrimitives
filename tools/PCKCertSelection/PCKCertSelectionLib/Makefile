@@ -132,7 +132,7 @@ DEBUG_FLAGS := -m64 -O0 -g
 RELEASE_FLAGS := -m64 -O2 $(COMMON_FLAGS)
 
 # basic library c build flags
-C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror -Wno-overloaded-virtual -Wno-overloaded-virtual $(LIB_INCLUDE_PATHS)
+C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror -Wno-overloaded-virtual $(LIB_INCLUDE_PATHS)
 C_FLAGS += -UPCK_CERT_SELECTION_WITH_COMPONENT
 
 # link flags, link openssl crypto
@@ -221,4 +221,3 @@ clean:
 
 $(BIN_DIR):
 	$(PCKCERTSEL_VERBOSE)mkdir -p $@
-

@@ -47,12 +47,12 @@ vpath %.cpp .. .
 Quote_C_Files := qe3_u.c id_enclave_u.c se_thread.c se_trace.c
 Quote_Cpp_Files := qe_logic.cpp sgx_ql_core_wrapper.cpp
 
-Quote_Include_Paths := -I$(SGX_SDK)/include -I../inc -I../../common/inc -I./ -I../enclave -I$(TOP_DIR)/pce_wrapper/inc -I$(COMMON_DIR)/inc/internal -I$(COMMON_DIR)/inc/internal/linux
+Quote_Include_Paths := -I$(SGX_TRUSTED_INCLUDE_PATH) -I../inc -I../../common/inc -I./ -I../enclave -I$(TOP_DIR)/pce_wrapper/inc -I$(COMMON_DIR)/inc/internal -I$(COMMON_DIR)/inc/internal/linux
 
 Quote_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(Quote_Include_Paths)
 
 Quote_Cpp_Flags := $(Quote_C_Flags) -std=c++11
-Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
+Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -lpthread -ldl
 
 ifndef DEBUG
 Quote_Cpp_Flags += -DDISABLE_TRACE

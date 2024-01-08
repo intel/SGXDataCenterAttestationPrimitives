@@ -32,8 +32,8 @@
 include ../../buildenv.mk
 
 INCLUDE += -I. -I../inc
-INCLUDE += -I$(SGX_SDK)/include         \
-           -I$(COMMON_DIR)/inc/internal \
+INCLUDE += -I$(SGX_TRUSTED_INCLUDE_PATH) \
+           -I$(COMMON_DIR)/inc/internal  \
            -I$(COMMON_DIR)/inc/internal/linux
 
 INCLUDE += -I$(ROOT_DIR)/ae/common \
@@ -43,7 +43,7 @@ INCLUDE += -I$(ROOT_DIR)/ae/common \
 CXXFLAGS += -fPIC -Werror -g
 
 CFLAGS += -fPIC -Werror -g
-Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -ldl
+Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -lpthread -ldl
 
 vpath %.cpp ..
 vpath %.c $(COMMON_DIR)/src
