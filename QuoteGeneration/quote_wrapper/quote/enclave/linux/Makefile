@@ -37,8 +37,6 @@ include $(TOP_DIR)/ae/buildenv.mk
 AENAME := qe3
 SONAME := $(AENAME).so
 
-QE3_VER:= $(shell awk '$$2 ~ /QE3_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(COMMON_DIR)/inc/internal/se_version.h)
-
 TCRYPTO_LIB_NAME := sgx_tcrypto
 
 INCLUDE := -I$(SGX_TRUSTED_INCLUDE_PATH)               \
@@ -65,12 +63,12 @@ OBJS := $(sort $(OBJ) version.o)
 all: $(SONAME)
 
 $(SONAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles -Wl,-soname=libsgx_${AENAME}.signed.so.$(call SPLIT_VERSION,$(QE3_VER),1)  $(LDTFLAGS) -fno-exceptions -fno-rtti
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) -nostdlib -nodefaultlibs -nostartfiles -Wl,-soname=libsgx_${AENAME}.signed.so.$(call get_major_version,QE3_VERSION) $(LDTFLAGS) -fno-exceptions -fno-rtti
 	$(STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $@
 
 quoting_enclave_3.o: $(AENAME)_t.c
 
-%.o:%.cpp 
+%.o:%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(DEFINES) -fno-exceptions -c $< -o $@
 
 $(AENAME)_t.c: ../$(AENAME).edl
@@ -81,7 +79,7 @@ clean:
 	@$(RM) *.o
 	@$(RM) *.so
 	@$(RM) *.map
-	@$(RM) *_t.* 
+	@$(RM) *_t.*
 
 .PHONY: rebuild
 rebuild:

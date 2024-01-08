@@ -31,9 +31,6 @@
 
 include ../../buildenv.mk
 
-PCE_WRAPPER_VER:= $(shell awk '$$2 ~ /PCE_WRAPPER_VERSION/ { print substr($$3, 2, length($$3) - 2); }'\
-	$(COMMON_DIR)/inc/internal/se_version.h)
-
 INCLUDE += -I. -I../inc
 INCLUDE += -I$(SGX_TRUSTED_INCLUDE_PATH) \
            -I$(COMMON_DIR)/inc/internal  \
@@ -49,11 +46,11 @@ CFLAGS += -fPIC -Werror -g
 Link_Flags := $(SGX_COMMON_CFLAGS) -L$(ROOT_DIR)/build/linux -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -lpthread -ldl
 
 vpath %.cpp ..
-vpath %.c   $(COMMON_DIR)/src
+vpath %.c $(COMMON_DIR)/src
 
 pce_wrapper.o: pce_u.c
 
-pce_u.c:  ${ROOT_DIR}/ae/pce/pce.edl
+pce_u.c: ${ROOT_DIR}/ae/pce/pce.edl
 	@$(SGX_EDGER8R) --untrusted --untrusted-dir . $<
 
 C_SRC := pce_u.c se_trace.c se_thread.c
@@ -65,23 +62,25 @@ OBJ := $(C_SRC:.c=.o) $(SRC:.cpp=.o)
 LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--version-script=pce_wrapper.lds -Wl,--gc-sections
 
-LIBNAME  = libsgx_pce_logic.so
-STATIC_LIBNAME  = libsgx_pce_logic.a
-PCE_WRAPPER_SONAME:= $(LIBNAME).$(call SPLIT_VERSION,$(PCE_WRAPPER_VER),1)
+PCE_WRAPPER := libsgx_pce_logic.so
+PCE_WRAPPER_STATIC := libsgx_pce_logic.a
+PCE_WRAPPER_FULL := $(PCE_WRAPPER).$(call get_full_version,PCE_WRAPPER_VERSION)
+PCE_WRAPPER_MAJOR := $(PCE_WRAPPER).$(call get_major_version,PCE_WRAPPER_VERSION)
 
 .PHONY: all
-all:  install_lib
+all: install_lib
  
 .PHONY: install_lib
-install_lib: $(LIBNAME) $(STATIC_LIBNAME) | $(BUILD_DIR)
-	@$(CP) $(LIBNAME) $|
-	@ln -fs $(LIBNAME) $(BUILD_DIR)/$(PCE_WRAPPER_SONAME)
+install_lib: $(PCE_WRAPPER) $(PCE_WRAPPER_STATIC) | $(BUILD_DIR)
+	@$(CP) $(PCE_WRAPPER) $|/$(PCE_WRAPPER_FULL)
+	@$(LN) $(PCE_WRAPPER_FULL) $|/$(PCE_WRAPPER_MAJOR)
+	@$(LN) $(PCE_WRAPPER_MAJOR) $|/$(PCE_WRAPPER)
 
-$(LIBNAME): $(OBJ)
+$(PCE_WRAPPER): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(Link_Flags) \
-	-Wl,-soname=$(PCE_WRAPPER_SONAME) -o $@
+	-Wl,-soname=$(PCE_WRAPPER_MAJOR) -o $@
 
-$(STATIC_LIBNAME): $(OBJ)
+$(PCE_WRAPPER_STATIC): $(OBJ)
 	$(AR) rcsD $@ $^
 
 %.o :%.cpp
@@ -95,8 +94,8 @@ $(BUILD_DIR):
 .PHONY: clean
 clean:
 	@$(RM) $(OBJ) *_u.h *_u.c
-	@$(RM) $(LIBNAME) $(BUILD_DIR)/$(LIBNAME) 
-	@$(RM) $(STATIC_LIBNAME) $(BUILD_DIR)/$(STATIC_LIBNAME) 
+	@$(RM) $(PCE_WRAPPER) $(PCE_WRAPPER_STATIC) \
+		$(addprefix $(BUILD_DIR)/,$(PCE_WRAPPER) $(PCE_WRAPPER_FULL) $(PCE_WRAPPER_MAJOR))
 
 .PHONY: rebuild
 rebuild:
