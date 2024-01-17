@@ -1,0 +1,12 @@
+Source: tee-appraisal-tool
+Section: utils
+Priority: optional
+Maintainer: <lili.z.zhang@intel.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.4
+Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
+
+Package: tee-appraisal-tool
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Intel(R) Software Guard Extensions Data Center Attestation Primitives Appraisal Tool

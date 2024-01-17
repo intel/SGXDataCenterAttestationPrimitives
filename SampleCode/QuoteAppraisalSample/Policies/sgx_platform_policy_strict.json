@@ -1,0 +1,18 @@
+{
+    "policy_array":[ 
+        {
+            "environment": {
+                "class_id": "3123ec35-8d38-4ea5-87a5-d6c48b567570",
+                "description": "Strict SGX Platform Policy"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own requirements",
+                "allow_dynamic_plaform": true,
+                "accepted_tcb_status": [
+                    "UpToDate"
+		],
+                "collateral_grace_period": 0
+            }
+        }
+    ]
+}

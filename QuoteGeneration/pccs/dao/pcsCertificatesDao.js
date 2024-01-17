@@ -52,7 +52,7 @@ function split_chain(certchain) {
 }
 
 // Update or insert a PCS certificate
-async function upsertPcsCertificatesById(id, cert) {
+export async function upsertPcsCertificatesById(id, cert) {
   return await PcsCertificates.upsert({
     id: id,
     cert: cert,

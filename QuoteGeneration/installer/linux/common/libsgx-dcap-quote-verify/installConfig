@@ -6,3 +6,4 @@ DCAP_QVL_DEV_PACKAGE_NAME=libsgx-dcap-quote-verify-dev
 
 LIB_DIR=lib
 INC_DIR=include
+SHARE_DIR=share/sgx

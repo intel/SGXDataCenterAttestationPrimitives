@@ -293,7 +293,7 @@ uint8_t* WinUefi::readUEFIVar(const char* varName, size_t &dataSize)
 		}
 
 		// not enough size
-		delete var_data;
+		delete[] var_data;
 		var_data = nullptr;
 		
 		var_data_size *= 4;
@@ -310,7 +310,7 @@ uint8_t* WinUefi::readUEFIVar(const char* varName, size_t &dataSize)
 	if (res == false)
 	{
 		if (var_data != nullptr)
-			delete var_data;
+			delete[] var_data;
 		var_data = nullptr;
 	}
 

@@ -35,21 +35,22 @@ include $(TOP_DIR)/buildenv.mk
 
 ######## Tdx_Verify Settings ########
 INCLUDE :=  -I. \
-			-I$(TD_MIGRATION_STD_INC_PATH) \
-			-I$(TD_MIGRATION_STD_INC_PATH)/tlibc \
-			-I$(TOP_DIR)/quote_wrapper/td_migration/inc \
+			-I$(SERVTD_ATTEST_STD_INC_PATH) \
+			-I$(SERVTD_ATTEST_STD_INC_PATH)/tlibc \
+			-I$(TOP_DIR)/quote_wrapper/servtd_attest/inc \
 			-I$(TOP_DIR)/quote_wrapper/common/inc \
 			-I$(TOP_DIR)/../QuoteVerification/dcap_quoteverify/inc \
 			-I$(TOP_DIR)/../QuoteVerification/QvE/Include  \
-			-I../../qgs_msg_lib/inc
+			-I../../qgs_msg_lib/inc \
+			-I../../../pce_wrapper/inc
 
-Tdx_Verify_CFLAGS := $(INCLUDE)	$(TD_MIGRATION_CFLAGS)
+Tdx_Verify_CFLAGS := $(INCLUDE)	$(SERVTD_ATTEST_CFLAGS)
 
-Tdx_Verify_C_Files := ../tdx_verify.c $(TOP_DIR)/quote_wrapper/td_migration/migtd_utils.c
+Tdx_Verify_C_Files := ../tdx_verify.c $(TOP_DIR)/quote_wrapper/servtd_attest/servtd_utils.c
 Tdx_Verify_Objects := $(Tdx_Verify_C_Files:.c=.o)
 
 
-$(TD_MIGRATION_BUILD_DIR):
+$(SERVTD_ATTEST_BUILD_DIR):
 	@$(MKDIR) $@ 
 
 $(Tdx_Verify_Objects): %.o: %.c
@@ -59,8 +60,8 @@ $(Tdx_Verify_Objects): %.o: %.c
 
 all: install_objs
 
-install_objs: $(Tdx_Verify_Objects) | $(TD_MIGRATION_BUILD_DIR)
-	$(CP) $^ $(TD_MIGRATION_BUILD_DIR)
+install_objs: $(Tdx_Verify_Objects) | $(SERVTD_ATTEST_BUILD_DIR)
+	$(CP) $^ $(SERVTD_ATTEST_BUILD_DIR)
 
 .PHONY: clean
 clean:

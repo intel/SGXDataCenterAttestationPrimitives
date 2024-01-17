@@ -29,7 +29,7 @@
  *
  */
 
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
 #include <sys/socket.h>
 #include <linux/vm_sockets.h>
 #include "tdx_attest.h"
@@ -552,8 +552,8 @@ tdx_attest_error_t tdx_att_extend(
 #else
 
 #include "tdx_attest.h"
-#include "migtd_com.h"
-#include "migtd_external.h"
+#include "servtd_com.h"
+#include "servtd_external.h"
 #include "qgs_msg_lib.h"
 
 #include <string.h>
@@ -570,10 +570,10 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
     uint32_t quote_size = 0;
     uint32_t in_msg_size = 0;
     tdx_attest_error_t ret = TDX_ATTEST_ERROR_UNEXPECTED;
-    struct migtd_tdx_quote_hdr *p_get_quote_blob = NULL;
+    struct servtd_tdx_quote_hdr *p_get_quote_blob = NULL;
     uint8_t *p_blob_payload = NULL;
     uint32_t msg_size = 0;
-    int migtd_get_quote_ret = 0;
+    int servtd_get_quote_ret = 0;
     const uint8_t *tmp_p_quote = NULL;
     const uint8_t *p_selected_id = NULL;
     uint32_t id_size = 0;
@@ -591,7 +591,7 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
         goto ret_point;
     }
 
-    p_get_quote_blob = (struct migtd_tdx_quote_hdr *)malloc(MIGTD_REQ_BUF_SIZE);
+    p_get_quote_blob = (struct servtd_tdx_quote_hdr *)malloc(SERVTD_REQ_BUF_SIZE);
     if (!p_get_quote_blob) {
         ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
         goto ret_point;
@@ -604,7 +604,7 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
         goto ret_point;
     }
 
-    if (msg_size > MIGTD_REQ_BUF_SIZE - sizeof(struct migtd_tdx_quote_hdr) - MIGTD_HEADER_SIZE) {
+    if (msg_size > SERVTD_REQ_BUF_SIZE - sizeof(struct servtd_tdx_quote_hdr) - SERVTD_HEADER_SIZE) {
         ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
         goto ret_point;
     }
@@ -616,21 +616,21 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
     p_blob_payload[3] = (uint8_t)(msg_size & 0xFF);
 
     // Serialization
-    memcpy(p_blob_payload + MIGTD_HEADER_SIZE, p_req, msg_size);
+    memcpy(p_blob_payload + SERVTD_HEADER_SIZE, p_req, msg_size);
     
     p_get_quote_blob->version = 1;
     p_get_quote_blob->status = 0;
-    p_get_quote_blob->in_len = MIGTD_HEADER_SIZE + msg_size;
+    p_get_quote_blob->in_len = SERVTD_HEADER_SIZE + msg_size;
     p_get_quote_blob->out_len = 0;
 
-    migtd_get_quote_ret = migtd_get_quote(p_get_quote_blob, MIGTD_REQ_BUF_SIZE);
-    if (migtd_get_quote_ret) {
+    servtd_get_quote_ret = servtd_get_quote(p_get_quote_blob, SERVTD_REQ_BUF_SIZE);
+    if (servtd_get_quote_ret) {
         ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
         goto ret_point;
     }
 
     if (p_get_quote_blob->status
-        || p_get_quote_blob->out_len <= MIGTD_HEADER_SIZE) {
+        || p_get_quote_blob->out_len <= SERVTD_HEADER_SIZE) {
         if (GET_QUOTE_IN_FLIGHT == p_get_quote_blob->status) {
             ret = TDX_ATTEST_ERROR_BUSY;
         } else if (GET_QUOTE_SERVICE_UNAVAILABLE == p_get_quote_blob->status) {
@@ -642,16 +642,16 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
     }
 
     //in_msg_size is the size of serialized response, remove 4bytes header
-    for (unsigned i = 0; i < MIGTD_HEADER_SIZE; ++i) {
+    for (unsigned i = 0; i < SERVTD_HEADER_SIZE; ++i) {
         in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
     }
-    if (in_msg_size != p_get_quote_blob->out_len - MIGTD_HEADER_SIZE) {
+    if (in_msg_size != p_get_quote_blob->out_len - SERVTD_HEADER_SIZE) {
         ret = TDX_ATTEST_ERROR_UNEXPECTED;
         goto ret_point;
     }
 
     qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
-        p_blob_payload + MIGTD_HEADER_SIZE, in_msg_size,
+        p_blob_payload + SERVTD_HEADER_SIZE, in_msg_size,
         &p_selected_id, &id_size,
         (const uint8_t **)&tmp_p_quote, &quote_size);
     if (QGS_MSG_SUCCESS != qgs_msg_ret) {
@@ -660,7 +660,7 @@ __attribute__ ((visibility("default"))) tdx_attest_error_t tdx_att_get_quote_by_
     }
 
     // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
-    p_header = (qgs_msg_header_t *)(p_blob_payload + MIGTD_HEADER_SIZE);
+    p_header = (qgs_msg_header_t *)(p_blob_payload + SERVTD_HEADER_SIZE);
     if (p_header->error_code != 0) {
         ret = TDX_ATTEST_ERROR_UNEXPECTED;
         goto ret_point;

@@ -16,6 +16,8 @@ global:
     sgx_qpl_clear_cache;
     sgx_qpl_global_init;
     sgx_qpl_global_cleanup;
+    tee_get_default_platform_policy;
+    tee_free_platform_policy;
 local:
     *;
 };

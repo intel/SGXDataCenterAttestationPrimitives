@@ -1,0 +1,12 @@
+{
+		"policy_array": [{
+			"environment": {
+				"class_id": "3123ec35-8d38-4ea5-87a5-d6c48b567570",
+				"description": "Strict SGX platform TCB policy"
+			},
+			"reference": {
+				"accepted_tcb_status": ["UpToDate"],
+				"collateral_grace_period": 0
+			}
+		}]
+}

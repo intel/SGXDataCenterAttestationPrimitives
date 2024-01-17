@@ -14,7 +14,7 @@ For Linux version:
         - Please install Intel(R) Software Guard Extensions driver for Intel(R) Software Guard Extensions Data Center Attestation Primitives:
              sudo ./sgx_linux_x64_driver.bin
           or you can use Linux kernel 5.11 or higher version kernel 
-        - Please install these Debian or RPM packages, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
+        - Please install these Debian or RPM packages, you can download it from [download.01.org](https://download.01.org/intel-sgx/latest/linux-latest/distro/)
              a. libsgx-enclave-common_{version}-{revision}_{arch}.deb or libsgx-enclave-common-{version}-{revision}_{arch}.rpm
              b. libsgx-urts_{version}-{revision}_{arch}.deb or libsgx-urts-{version}-{revision}_{arch}.rpm
              c. libsgx-ae-pce_{version}-{revision}_{arch}.deb or libsgx-ae-pce-{version}-{revision}_{arch}.rpm

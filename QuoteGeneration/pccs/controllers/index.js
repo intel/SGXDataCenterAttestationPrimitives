@@ -38,6 +38,7 @@ import * as identityController from './identityController.js';
 import * as rootcacrlController from './rootcacrlController.js';
 import * as refreshController from './refreshController.js';
 import * as crlController from './crlController.js';
+import * as appraisalPolicyController from './appraisalPolicyController.js';
 
 export {
   platformsController,
@@ -49,4 +50,5 @@ export {
   rootcacrlController,
   refreshController,
   crlController,
+  appraisalPolicyController,
 };

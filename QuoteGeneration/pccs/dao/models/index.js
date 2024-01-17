@@ -44,6 +44,7 @@ import PlatformsRegistered from './platforms_registered.js';
 import Platforms from './platforms.js';
 import EnclaveIdentities from './enclave_identities.js';
 import CrlCache from './crl_cache.js';
+import AppraisalPolicy from './appraisal_policy.js';
 import mysqlPromise from 'mysql2/promise.js';
 
 const pccs_namespace = clshooked.createNamespace('pccs-namespace');
@@ -101,6 +102,7 @@ PlatformsRegistered.init(sequelize);
 Platforms.init(sequelize);
 EnclaveIdentities.init(sequelize);
 CrlCache.init(sequelize);
+AppraisalPolicy.init(sequelize);
 
 export {
   Sequelize,
@@ -116,4 +118,5 @@ export {
   Platforms,
   EnclaveIdentities,
   CrlCache,
+  AppraisalPolicy,
 };

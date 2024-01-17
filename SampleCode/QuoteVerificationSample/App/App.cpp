@@ -43,8 +43,13 @@
 #endif
 #include "sgx_ql_quote.h"
 #include "sgx_dcap_quoteverify.h"
-#ifdef SGX_QPL_LOGGING
+
+
+#if SGX_QPL_LOGGING
 #include "sgx_default_quote_provider.h"
+#ifdef _MSC_VER
+typedef quote3_error_t(*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t, sgx_ql_log_level_t);
+#endif
 #endif
 
 #ifndef _MSC_VER
@@ -56,7 +61,7 @@
 
 #define SAMPLE_ISV_ENCLAVE "enclave.signed.dll"
 #define DEFAULT_QUOTE "..\\..\\..\\QuoteGenerationSample\\x64\\Debug\\quote.dat"
-
+#define QPL_LIB_NAME "dcap_quoteprov.dll"
 #define strncpy strncpy_s
 #endif
 #ifndef SGX_CDECL
@@ -127,6 +132,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
     quote3_error_t dcap_ret = SGX_QL_ERROR_UNEXPECTED;
     uint32_t collateral_expiration_status = 1;
     sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
+    
 
     tee_supp_data_descriptor_t supp_data;
 
@@ -484,7 +490,7 @@ void usage()
     log("\t\tDefault quote path is %s when no command line args", DEFAULT_QUOTE);
 }
 
-#ifdef SGX_QPL_LOGGING
+#if SGX_QPL_LOGGING
 void qpl_logger(sgx_ql_log_level_t level, const char *message)
 {
     const string pre_qcnl = "[QCNL]";
@@ -512,7 +518,11 @@ void qpl_logger(sgx_ql_log_level_t level, const char *message)
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
+    int ret = 0;
     vector<uint8_t> quote;
+#if defined(_MSC_VER)
+    HINSTANCE qpl_library_handle = NULL;
+#endif
 
     char quote_path[PATHSIZE] = {'\0'};
 
@@ -545,8 +555,24 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
 
-#ifdef SGX_QPL_LOGGING
-    sgx_ql_set_logging_callback(qpl_logger, SGX_QPL_LOGGING);
+#if SGX_QPL_LOGGING
+#if defined(_MSC_VER)
+    qpl_library_handle = LoadLibrary(TEXT(QPL_LIB_NAME));
+    if (qpl_library_handle != NULL) {
+        sgx_ql_set_logging_callback_t p_sgx_ql_set_logging_callback = (sgx_ql_set_logging_callback_t)GetProcAddress(qpl_library_handle, "sgx_ql_set_logging_callback");
+        if (NULL != p_sgx_ql_set_logging_callback) {
+            p_sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING - 1));
+        }
+        else {
+            log("Warning: Failed to get address of sgx_ql_set_logging_callback: %lu\n", GetLastError());
+        }
+    }
+    else {
+        log("Warning: Your system does not have dcap_quoteprov.dll or sgx_default_qcnl_wrapper.dll: %lu\n", GetLastError());
+    }
+#else
+    sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING - 1));
+#endif   
 #endif
 
     log("Info: ECDSA quote path: %s", quote_path);
@@ -562,7 +588,8 @@ int SGX_CDECL main(int argc, char *argv[])
 #ifndef QVL_ONLY
     // Trusted quote verification, ignore error checking
     log("Trusted quote verification:");
-    ecdsa_quote_verification(quote, true);
+    if (ecdsa_quote_verification(quote, true) != 0)
+      ret = -1;
 
     printf("\n===========================================\n\n");
     // Unrusted quote verification, ignore error checking
@@ -573,7 +600,14 @@ int SGX_CDECL main(int argc, char *argv[])
     log("Quote verification with QVL, support both SGX and TDX quote:");
 #endif
 
-    ecdsa_quote_verification(quote, false);
+    if (ecdsa_quote_verification(quote, false) != 0)
+      ret = -1;
 
-    return 0;
+#if defined(_MSC_VER)
+    if (qpl_library_handle != NULL) {
+        FreeLibrary(qpl_library_handle);
+    }
+#endif
+
+    return ret;
 }

@@ -53,6 +53,7 @@ using namespace std;
 static const char *X509_DELIMITER = "-----BEGIN CERTIFICATE-----";
 static sgx_ql_logging_callback_t logger_callback = nullptr;
 static sgx_ql_log_level_t g_loglevel = SGX_QL_LOG_ERROR;
+static const uint16_t FMSPC_SIZE = 6;
 
 void qpl_log(sgx_ql_log_level_t level, const char *fmt, ...) {
     if (logger_callback != nullptr && level <= g_loglevel) {
@@ -181,7 +182,7 @@ quote3_error_t ql_get_quote_verification_collateral_internal(sgx_prod_type_t pro
                                                              const void* custom_param,
                                                              const uint16_t custom_param_length,
                                                              sgx_ql_qve_collateral_t **pp_quote_collateral) {
-    if (fmspc == NULL || pck_ca == NULL || pp_quote_collateral == NULL ||
+    if (fmspc == NULL || fmspc_size != FMSPC_SIZE || pck_ca == NULL || pp_quote_collateral == NULL ||
         (custom_param != NULL && custom_param_length == 0) ||
         (custom_param == NULL && custom_param_length != 0)) {
         qpl_log(SGX_QL_LOG_ERROR, "[QPL] Invalid parameter.\n");
@@ -559,3 +560,25 @@ quote3_error_t sgx_qpl_global_cleanup()
 {
     return qcnl_error_to_ql_error(sgx_qcnl_global_cleanup());
 }
+
+#ifndef _MSC_VER
+
+quote3_error_t tee_get_default_platform_policy(const uint8_t *fmspc, const uint16_t fmspc_size, uint8_t **pp_platform_policy, uint32_t *p_platform_policy_size)
+{
+    if (fmspc == NULL || fmspc_size != FMSPC_SIZE || pp_platform_policy == NULL || p_platform_policy_size == NULL ) {
+        qpl_log(SGX_QL_LOG_ERROR, "[QPL] Invalid parameter.\n");
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    sgx_qcnl_error_t ret = tee_qcnl_get_default_platform_policy(reinterpret_cast<const char *>(fmspc), fmspc_size, pp_platform_policy, p_platform_policy_size);
+    return qcnl_error_to_ql_error(ret);
+}
+
+quote3_error_t tee_free_platform_policy(uint8_t *p_platform_policy)
+{
+    tee_qcnl_free_platform_policy(p_platform_policy);
+
+    return SGX_QL_SUCCESS;
+}
+
+#endif

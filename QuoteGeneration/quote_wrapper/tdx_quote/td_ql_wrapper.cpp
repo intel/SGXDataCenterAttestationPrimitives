@@ -474,8 +474,10 @@ tee_att_error_t tee_att_get_keyid(const tee_att_config_t* p_context,
         return TEE_ATT_ERROR_INVALID_PARAMETER;
 
     memset(p_att_key_id, 0, sizeof(tee_att_att_key_id_t));
-    memcpy_s(&p_att_key_id->base, sizeof(p_att_key_id->base),
-        &g_default_ecdsa_p256_att_key_id, sizeof(g_default_ecdsa_p256_att_key_id));
+    if (0  !=  memcpy_s(&p_att_key_id->base, sizeof(p_att_key_id->base),
+        &g_default_ecdsa_p256_att_key_id, sizeof(g_default_ecdsa_p256_att_key_id))) {
+        return TEE_ATT_ERROR_UNEXPECTED;
+    }
     return TEE_ATT_SUCCESS;
 }
 

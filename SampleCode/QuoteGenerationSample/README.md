@@ -86,7 +86,10 @@ $ SGX_AESM_ADDR=1 ./app
 *Please refer to [SGX DCAP Windows installation guide](https://software.intel.com/en-us/sgx/sdk) to install above dependencies*
 
 *Note that you need to sign in IDZ first, then download & extract product "Intel(R) Software Guard Extensions Data Center Attestation Primitives"*
+*Note that If you don’t have your own Quote Provider library and would like to use the default Quote Provider library provided by Intel, you need copy dcap_quoteprov.dll and sgx_default_qcnl_wrapper.dll to Windows system directory
 
 ## Build and run QuoteGenerationSample to generate an ECDSA quote
 1. Open VS solution QuoteGenerationSample.sln, build with `Debug/Release | x64` configuration
+If you are using the default Quote Provider library provided by Intel, you can enable logging by setting
+The SGX_QPL_LOGGING in `App`->`Configuration Properties` -> `C/C++` -> `Preprocessor` will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
 2. Run App.exe

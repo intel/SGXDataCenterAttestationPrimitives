@@ -83,6 +83,7 @@ void sgx_proc_log_report(int level, const char *format, ...)
             priority = LOG_INFO;
             break;
         default:
+            va_end(ap);
             return;//ignore
     }
     if (!_nosyslog) {

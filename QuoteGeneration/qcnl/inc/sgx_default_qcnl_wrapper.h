@@ -141,6 +141,12 @@ sgx_qcnl_error_t sgx_qcnl_clear_cache(uint32_t cache_type);
 sgx_qcnl_error_t sgx_qcnl_global_init();
 sgx_qcnl_error_t sgx_qcnl_global_cleanup();
 
+sgx_qcnl_error_t tee_qcnl_get_default_platform_policy(const char *fmspc,
+                                                      const uint16_t fmspc_size,
+                                                      uint8_t **pp_platform_policy,
+                                                      uint32_t *p_platform_policy_size);
+void tee_qcnl_free_platform_policy(uint8_t *p_platform_policy);
+
 #if defined(__cplusplus)
 }
 #endif

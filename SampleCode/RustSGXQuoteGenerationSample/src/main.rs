@@ -100,7 +100,7 @@ fn get_quote(path: std::path::PathBuf) {
     }
     let (result, quote) = sgx_dcap_ql_rs::sgx_qe_get_quote(&sgx_report);
     if result != sgx_dcap_ql_rs::quote3_error_t::SGX_QL_SUCCESS {
-        println!("Failed to get the quote. Error code: {:?}", result);
+        println!("Failed to get the quote.");
         return;
     }
     match quote {

@@ -1,0 +1,38 @@
+{
+    "policy_array": [
+        {
+            "environment": {
+                "class_id": "f708b97f-0fb2-4e6b-8b03-8a5bcd1221d3",
+                "description": "TDX Platform Policy with rejected security advisories"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own requirements",
+                "allow_dynamic_plaform": true,
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "OutOfDate"
+                ],
+                "rejected_advisory_ids": [ 
+                    "INTEL-SA-00617" 
+                ]
+            }
+        },
+        {
+            "environment": {
+                "class_id": "3769258c-75e6-4bc7-8d72-d2b0e224cad2",
+                "description": "Verified TDQE Identity policy with rejected security advisories"
+            },
+            "allow_dynamic_plaform": true,
+            "reference": {
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "OutOfDate"
+                ],
+                "rejected_advisory_ids": [ 
+                    "INTEL-SA-00617" 
+                ]
+            }
+        }
+    ]
+}
+

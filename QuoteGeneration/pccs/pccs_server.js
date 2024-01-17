@@ -57,78 +57,81 @@ process.on('uncaughtException', function (exception) {
 
 // Create ./logs if it doesn't exist
 fs.mkdir('./logs', (err) => {
-  /* do nothing*/
+  /* do nothing */
 });
 
 const app = express();
-const { urlencoded, json } = body_parser;
-const { scheduleJob } = node_schedule;
 
-// Get PCS API version from the config file
-global.PCS_VERSION = appUtil.get_api_version_from_url(Config.get('uri'));
+async function initializeApp() {
+  global.PCS_VERSION = appUtil.get_api_version_from_url(Config.get('uri'));
 
-// startup check
-if (!appUtil.startup_check()) {
-  logger.endAndExitProcess();
-}
+  if (Config.has('OPENSSL_FIPS_MODE') && Config.get('OPENSSL_FIPS_MODE')) {
+    const crypto = await import('node:crypto');
+    crypto.setFips(true);
+  }
 
-appUtil.database_check().then((db_init_ok) => {
+  if (!appUtil.startup_check()) {
+    logger.endAndExitProcess();
+  }
+
+  const db_init_ok = await appUtil.database_check();
   if (!db_init_ok) {
     logger.endAndExitProcess();
   }
 
-  // Change storage file permission if DB is sqlite
-  if (Config.get('DB_CONFIG') == 'sqlite') {
+  if (Config.get('DB_CONFIG') === 'sqlite') {
     fs.chmod(Config.get('sqlite').options.storage, 0o640, () => {});
   }
+}
 
-  // logger
+function configureMiddlewareAndRoutes() {
   app.use(morgan('combined', { stream: logger.stream }));
-
-  // Add Request-ID
   app.use(addRequestId);
-
-  // body parser middleware, this will let us get the data from a POST
-  app.use(urlencoded({ extended: true }));
-  app.use(json({ limit: '200000kb' }));
+  app.use(body_parser.urlencoded({ extended: true }));
+  app.use(body_parser.json({ limit: '200000kb' }));
 
   // authentication middleware for v3
   app.get('/sgx/certification/v3/platforms', auth.validateAdmin);
   app.post('/sgx/certification/v3/platforms', auth.validateUser);
   app.use('/sgx/certification/v3/platformcollateral', auth.validateAdmin);
   app.use('/sgx/certification/v3/refresh', auth.validateAdmin);
-  if (global.PCS_VERSION == 4) {
+  app.put('/sgx/certification/v3/appraisalpolicy', auth.validateAdmin);
+
+  if (global.PCS_VERSION === 4) {
     // authentication middleware for v4
     app.get('/sgx/certification/v4/platforms', auth.validateAdmin);
     app.post('/sgx/certification/v4/platforms', auth.validateUser);
     app.use('/sgx/certification/v4/platformcollateral', auth.validateAdmin);
     app.use('/sgx/certification/v4/refresh', auth.validateAdmin);
+    app.put('/sgx/certification/v4/appraisalpolicy', auth.validateAdmin);
   }
 
   // router
   app.use('/sgx/certification/v3', sgxRouter);
-  if (global.PCS_VERSION == 4) {
+  if (global.PCS_VERSION === 4) {
     app.use('/sgx/certification/v4', sgxRouter);
     app.use('/tdx/certification/v4', tdxRouter);
   }
 
   // error handling middleware
   app.use(error.errorHandling);
+}
 
-  // set caching mode
-  let cacheMode = Config.get('CachingFillMode');
-  if (cacheMode == 'LAZY') {
+function setCachingMode() {
+  const cacheMode = Config.get('CachingFillMode');
+  if (cacheMode === 'LAZY') {
     cachingModeManager.cachingMode = new LazyCachingMode();
-  } else if (cacheMode == 'REQ') {
+  } else if (cacheMode === 'REQ') {
     cachingModeManager.cachingMode = new ReqCachingMode();
-  } else if (cacheMode == 'OFFLINE') {
+  } else if (cacheMode === 'OFFLINE') {
     cachingModeManager.cachingMode = new OfflineCachingMode();
   } else {
     logger.error('Unknown caching mode. Please check your configuration file.');
     logger.endAndExitProcess();
   }
+}
 
-  // Start HTTPS server
+function startHttpsServer() {
   let privateKey;
   let certificate;
   try {
@@ -138,6 +141,7 @@ appUtil.database_check().then((db_init_ok) => {
     logger.error('The private key or certificate for HTTPS server is missing.');
     logger.endAndExitProcess();
   }
+
   const secure_sigalgs = [
     'ecdsa_secp256r1_sha256',
     'ecdsa_secp384r1_sha384',
@@ -154,31 +158,41 @@ appUtil.database_check().then((db_init_ok) => {
     cert: certificate,
     sigalgs: secure_sigalgs.join(':'),
   };
-  const httpsServer = https.createServer(options, app);
-  httpsServer.listen(
-    Config.get('HTTPS_PORT'),
-    Config.get('hosts'),
-    function () {
-      logger.info(
-        'HTTPS Server is running on: https://localhost:' +
-          Config.get('HTTPS_PORT')
-      );
-      app.emit('app_started'); // test app need to wait on this event
-    }
-  );
 
-  // Schedule the refresh job in cron-style
-  // # ┌───────────── minute (0 - 59)
-  // # │ ┌───────────── hour (0 - 23)
-  // # │ │ ┌───────────── day of the month (1 - 31)
-  // # │ │ │ ┌───────────── month (1 - 12)
-  // # │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
-  // # │ │ │ │ │                                   7 is also Sunday on some systems)
-  // # │ │ │ │ │
-  // # │ │ │ │ │
-  // # * * * * * command to execute
-  //
-  scheduleJob(Config.get('RefreshSchedule'), refreshService.scheduledRefresh);
-});
+  try {
+    const httpsServer = https.createServer(options, app);
+    httpsServer.listen(Config.get('HTTPS_PORT'), Config.get('hosts'), () => {
+      logger.info(`HTTPS Server is running on: https://localhost:${Config.get('HTTPS_PORT')}`);
+      app.emit('app_started');
+    });
+  } catch (e) {
+    if (
+      e.code === 'ERR_OSSL_EVP_UNSUPPORTED' &&
+      Config.has('OPENSSL_FIPS_MODE') &&
+      Config.get('OPENSSL_FIPS_MODE')
+    ) {
+      logger.error(
+        'FIPS mode is not working correctly. Please double check your environment.'
+      );
+      process.exit(1);
+    } else {
+      throw e;
+    }
+  }
+}
+
+function scheduleRefreshJob() {
+  node_schedule.scheduleJob(Config.get('RefreshSchedule'), refreshService.scheduledRefresh);
+}
+
+async function main() {
+  await initializeApp();
+  configureMiddlewareAndRoutes();
+  setCachingMode();
+  startHttpsServer();
+  scheduleRefreshJob();
+}
+
+main();
 
 export default app;

@@ -45,45 +45,52 @@
 
 using namespace std;
 
+typedef sgx_qcnl_error_t (*ResponseHandler)(PccsResponseObject *obj, void *args);
+
+enum RequestType {
+    PCK_CERT_CHAIN,
+    PCK_CRL_CHAIN,
+    TCBINFO,
+    QE_IDENTITY,
+    QVE_IDENTITY,
+    ROOT_CA_CRL,
+    APPRAISAL_POLICY,
+};
+
+// Define a request structure
+struct Request {
+    std::string endpoint;
+    http_header_map headers;
+    std::string params;
+};
+
+typedef struct {
+    ResponseHandler handler;
+    void *args;
+} HandlerData;
+
 class CertificationService {
 private:
     string custom_param_;
+    sgx_qcnl_error_t fetch_data(RequestType type, const Request& request, HandlerData *handlerData);
 
 protected:
     string get_custom_param_string();
-    sgx_qcnl_error_t build_pckcert_options(const sgx_ql_pck_cert_id_t *p_pck_cert_id,
-                                           http_header_map &header_map,
-                                           string &query_string);
-    sgx_qcnl_error_t build_pckcrl_options(const char *ca,
-                                          uint16_t ca_size,
-                                          http_header_map &header_map,
-                                          string &query_string);
-    sgx_qcnl_error_t build_tcbinfo_options(const char *fmspc,
-                                           uint16_t fmspc_size,
-                                           http_header_map &header_map,
-                                           string &query_string);
-    sgx_qcnl_error_t build_qeidentity_options(http_header_map &header_map, string &query_string);
-    sgx_qcnl_error_t build_qveidentity_options(http_header_map &header_map, string &query_string);
-    sgx_qcnl_error_t build_root_ca_crl_options(const char *root_ca_cdp_url, http_header_map &header_map, string &query_string);
-    sgx_qcnl_error_t resp_obj_to_pck_certchain(PccsResponseObject *pccs_resp_obj,
-                                               sgx_ql_config_t **pp_quote_config);
-    sgx_qcnl_error_t resp_obj_to_pck_crl(PccsResponseObject *pccs_resp_obj,
-                                         uint8_t **pp_crl_chain,
-                                         uint16_t *p_crl_chain_size);
-    sgx_qcnl_error_t resp_obj_to_tcbinfo(PccsResponseObject *pccs_resp_obj,
-                                         uint8_t **pp_tcbinfo,
-                                         uint16_t *p_tcbinfo_size);
-    sgx_qcnl_error_t resp_obj_to_qe_identity(PccsResponseObject *pccs_resp_obj,
-                                             uint8_t **pp_qe_identity,
-                                             uint16_t *p_qe_identity_size);
-    sgx_qcnl_error_t resp_obj_to_qve_identity(PccsResponseObject *pccs_resp_obj,
-                                              char **pp_qve_identity,
-                                              uint32_t *p_qve_identity_size,
-                                              char **pp_qve_identity_issuer_chain,
-                                              uint32_t *p_qve_identity_issuer_chain_size);
-    sgx_qcnl_error_t resp_obj_to_root_ca_crl(PccsResponseObject *pccs_resp_obj,
-                                             uint8_t **pp_root_ca_crl,
-                                             uint16_t *p_root_ca_crl_size);
+    sgx_qcnl_error_t build_pckcert_options(Request &request, const sgx_ql_pck_cert_id_t *p_pck_cert_id);
+    sgx_qcnl_error_t build_pckcrl_options(Request &request, const char *ca, uint16_t ca_size);
+    sgx_qcnl_error_t build_tcbinfo_options(Request &request, const char *fmspc, uint16_t fmspc_size, sgx_prod_type_t prod_type);
+    sgx_qcnl_error_t build_qeidentity_options(Request &request, sgx_qe_type_t qe_type);
+    sgx_qcnl_error_t build_qveidentity_options(Request &request);
+    sgx_qcnl_error_t build_root_ca_crl_options(Request &request, const char *root_ca_cdp_url);
+    sgx_qcnl_error_t build_appraisalpolicy_options(Request &request, const char *fmspc, uint16_t fmspc_size);
+    
+    static sgx_qcnl_error_t resp_obj_to_pck_certchain(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_pck_crl(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_tcbinfo(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_qe_identity(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_qve_identity(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_root_ca_crl(PccsResponseObject *pccs_resp_obj, void *args);
+    static sgx_qcnl_error_t resp_obj_to_appraisalpolicy(PccsResponseObject *pccs_resp_obj, void *args);
 
 public:
     CertificationService();
@@ -115,5 +122,9 @@ public:
     sgx_qcnl_error_t get_root_ca_crl(const char *root_ca_cdp_url,
                                      uint8_t **pp_root_ca_crl,
                                      uint16_t *p_root_ca_crl_size);
+    sgx_qcnl_error_t get_default_platform_policy(const char *fmspc,
+                                                 const uint16_t fmspc_size,
+                                                 uint8_t **pp_platform_policy,
+                                                 uint32_t *p_platform_policy_size);
 };
 #endif // CERTIFICATIONSERVICE_H_

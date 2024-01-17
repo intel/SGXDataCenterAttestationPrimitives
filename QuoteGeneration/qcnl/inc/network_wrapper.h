@@ -46,7 +46,7 @@ using namespace std;
 typedef std::map<std::string, std::string> http_header_map;
 
 sgx_qcnl_error_t qcnl_https_request(const char *url,
-                                    http_header_map &header_map,
+                                    const http_header_map &header_map,
                                     const char *req_body,
                                     uint32_t req_body_size,
                                     const uint8_t *user_token,

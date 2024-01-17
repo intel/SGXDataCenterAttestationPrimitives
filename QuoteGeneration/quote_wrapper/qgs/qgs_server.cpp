@@ -114,7 +114,7 @@ class QgsConnection : public boost::enable_shared_from_this<QgsConnection> {
         {
             boost::lock_guard<boost::mutex> lock(m_connection_mtx);
             m_connections.erase(shared_from_this());
-            QGS_LOG_INFO("erased a connection, now [%d]\n", m_connections.size());
+            QGS_LOG_INFO("erased a connection, now [%zu]\n", m_connections.size());
         }
     }
 
@@ -182,8 +182,10 @@ class QgsConnection : public boost::enable_shared_from_this<QgsConnection> {
 
             uint32_t resp_size = (uint32_t)resp.size();
             if (!resp_size) {
+                QGS_LOG_ERROR("resp_size is 0");
                 m_timer.cancel();
                 stop();
+                return;
             }
             data_buffer writebuf;
             writebuf.resize(HEADER_SIZE + resp_size);
@@ -193,7 +195,10 @@ class QgsConnection : public boost::enable_shared_from_this<QgsConnection> {
             oss1 << boost::this_thread::get_id();
             QGS_LOG_INFO("About to write response in thread [%s]\n",
                             oss1.str().c_str());
-            asio::write(m_socket, asio::buffer(writebuf), ec);
+            if (asio::write(m_socket, asio::buffer(writebuf), ec) != writebuf.size()) {
+                QGS_LOG_INFO("Failed to write all buffer in thread [%s]\n",
+                    oss1.str().c_str());
+            }
             m_timer.cancel();
             stop();
         });
@@ -252,7 +257,7 @@ class QgsConnection : public boost::enable_shared_from_this<QgsConnection> {
                 {
                     boost::lock_guard<boost::mutex> lock(connection_mtx);
                     connections.insert(connection);
-                    QGS_LOG_INFO("Added a new connection, now [%d]\n", connections.size());
+                    QGS_LOG_INFO("Added a new connection, now [%zu]\n", connections.size());
                 }
                 connection->start();
                 start_accept();

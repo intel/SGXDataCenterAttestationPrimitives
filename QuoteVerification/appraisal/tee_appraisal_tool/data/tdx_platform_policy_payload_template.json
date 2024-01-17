@@ -1,0 +1,28 @@
+{
+    "policy_array": [
+        {
+            "environment": {
+                "class_id": "f708b97f-0fb2-4e6b-8b03-8a5bcd1221d3",
+                "description": "Strict TDX platform TCB policy"
+            },
+            "reference": {
+                "accepted_tcb_status": [
+                    "UpToDate"
+                ],
+                "collateral_grace_period": 0
+            }
+        },
+        {
+            "environment": {
+                "class_id": "3769258c-75e6-4bc7-8d72-d2b0e224cad2",
+                "description": "Strict Verified TDQE Identity policy"
+            },
+            "reference": {
+                "accepted_tcb_status": [
+                    "UpToDate"
+                ],
+                "collateral_grace_period": 0
+            }
+        }
+    ]
+}

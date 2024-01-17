@@ -1,0 +1,10 @@
+{
+global:
+    tee_appraise_verification_token;
+    tee_free_appraisal_token;
+    tee_authenticate_appraisal_result;
+    sgx_trace_loglevel;
+    sgx_trace_logger_callback;
+local:
+    *;
+};

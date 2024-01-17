@@ -114,7 +114,7 @@ static sgx_qcnl_error_t pccs_status_to_qcnl_error(DWORD pccs_status_code) {
 * @return SGX_QCNL_SUCCESS Call https post successfully. Other return codes indicate an error occured.
 */
 sgx_qcnl_error_t qcnl_https_request_once(const char *url,
-                                         http_header_map& header_map,
+                                         const http_header_map& header_map,
                                          const char *req_body,
                                          uint32_t req_body_size,
                                          const uint8_t *user_token,
@@ -217,7 +217,7 @@ sgx_qcnl_error_t qcnl_https_request_once(const char *url,
         }
 
         // add custom headers
-        http_header_map::iterator it = header_map.begin();
+        http_header_map::const_iterator it = header_map.begin();
         while (it != header_map.end()) {
             string key = it->first;
             string value = it->second;
@@ -415,7 +415,7 @@ cleanup:
 }
 
 sgx_qcnl_error_t qcnl_https_request(const char *url,
-                                    http_header_map& header_map,
+                                    const http_header_map& header_map,
                                     const char *req_body,
                                     uint32_t req_body_size,
                                     const uint8_t *user_token,

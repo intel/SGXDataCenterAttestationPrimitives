@@ -85,10 +85,6 @@ export async function getPckCertFromPCS(
 
   // check HTTP status
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    logger.error(
-      'Intel PCS server returns error. Error code : ' +
-        pck_server_res.statusCode
-    );
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 

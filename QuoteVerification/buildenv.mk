@@ -60,18 +60,19 @@ PREBUILD_OPENSSL_PATH	?= $(DCAP_QV_DIR)/../prebuilt/openssl
 SGX_COMMON_CFLAGS := $(COMMON_FLAGS) -m64 -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 SGX_COMMON_CXXFLAGS := $(COMMON_FLAGS) -m64 -Wnon-virtual-dtor -std=c++14
 
+DCAP_EXTERNAL_DIR       := $(DCAP_QG_DIR)/../external
 
 QVL_LIB_PATH := $(QVL_SRC_PATH)/AttestationLibrary
 QVL_PARSER_PATH := $(QVL_SRC_PATH)/AttestationParsers
 QVL_COMMON_PATH := $(QVL_SRC_PATH)/AttestationCommons
 
-ifdef _TD_MIGRATION
+ifdef SERVTD_ATTEST
 COMMON_INCLUDE := -I$(ROOT_DIR)/../../../common/inc/ -I$(ROOT_DIR)/../../../common/inc/tlibc -I$(ROOT_DIR)/../../../sdk/tlibcxx/include -I$(SGXSSL_PACKAGE_PATH)/include
 else
 COMMON_INCLUDE := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I$(SGXSSL_PACKAGE_PATH)/include
 endif
 
-QVL_LIB_INC := -I$(QVL_COMMON_PATH)/include -I$(QVL_COMMON_PATH)/include/Utils -I$(QVL_LIB_PATH)/include -I$(QVL_LIB_PATH)/src -I$(QVL_PARSER_PATH)/include -I$(QVL_SRC_PATH)/ThirdParty/rapidjson/include
+QVL_LIB_INC := -I$(QVL_COMMON_PATH)/include -I$(QVL_COMMON_PATH)/include/Utils -I$(QVL_LIB_PATH)/include -I$(QVL_LIB_PATH)/src -I$(QVL_PARSER_PATH)/include -I$(QVL_SRC_PATH)/ThirdParty/rapidjson/include  -I$(DCAP_EXTERNAL_DIR)/jwt-cpp/include
 
 QVL_PARSER_INC := -I$(QVL_COMMON_PATH)/include -I$(QVL_COMMON_PATH)/include/Utils -I$(QVL_SRC_PATH) -I$(QVL_PARSER_PATH)/include -I$(QVL_PARSER_PATH)/src -I$(QVL_LIB_PATH)/include -I$(QVL_SRC_PATH)/ThirdParty/rapidjson/include
 

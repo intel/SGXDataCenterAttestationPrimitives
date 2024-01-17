@@ -47,6 +47,7 @@ const SGX_DEBUG_FLAG: i32 = 0;
 
 // C library bindings
 
+#[cfg(not(feature = "TD_ENV"))]
 #[link(name = "sgx_urts")]
 extern "C" {
     fn sgx_create_enclave(
@@ -60,6 +61,7 @@ extern "C" {
     fn sgx_destroy_enclave(enclave_id: u64) -> u32;
 }
 
+#[cfg(not(feature = "TD_ENV"))]
 #[link(name = "enclave_untrusted")]
 extern "C" {
     fn ecall_get_target_info(

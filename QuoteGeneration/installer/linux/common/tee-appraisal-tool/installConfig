@@ -1,0 +1,6 @@
+TEE_APPRAISAL_TOOL_VERSION="1.0"
+TARBALL_NAME=tee-appraisal-tool_1.0.orig.tar.gz
+
+TEE_APPRAISAL_TOOL_PACKAGE_NAME=tee-appraisal-tool
+
+BIN_DIR=bin

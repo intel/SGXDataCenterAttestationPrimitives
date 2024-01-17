@@ -1,61 +1,60 @@
-FROM ubuntu:20.04 AS builder
+# Use multi-stage builds to reduce final image size
+FROM ubuntu:23.04 AS builder
 
-# DCAP version (github repo branch, tag or commit hash)
-ARG DCAP_VERSION=DCAP_1.19
+# Define arguments used across multiple stages
+ARG DCAP_VERSION=DCAP_1.20
+ARG NODE_MAJOR=20
 
-# update and install packages
+# update and install packages, nodejs
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get update -yq && \
-    apt-get upgrade -yq && \
-    apt-get install -yq --no-install-recommends \
-            build-essential \
-            ca-certificates \
-            curl \
-            git \
-            zip
+    apt-get update -yq \
+    && apt-get upgrade -yq \
+    && apt-get install -yq --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl \
+        gnupg \
+        git \
+        zip \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update -yq \
+    && apt-get install -yq --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# install node.js
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends nodejs
+# Clone the specific branch or tag 
+RUN git clone --recurse-submodules https://github.com/intel/SGXDataCenterAttestationPrimitives.git # -b ${DCAP_VERSION} --depth 1
 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# clone DCAP repo
-RUN git clone https://github.com/intel/SGXDataCenterAttestationPrimitives.git -b ${DCAP_VERSION} --depth 1
-
-# set PWD to PCKCertSelection dir
+# Build libPCKCertSelection library
 WORKDIR /SGXDataCenterAttestationPrimitives/tools/PCKCertSelection/
+RUN make \
+    && mkdir -p ../../QuoteGeneration/pccs/lib \
+    && cp ./out/libPCKCertSelection.so ../../QuoteGeneration/pccs/lib/ \
+    && make clean
 
-# build libPCKCertSelection library and copy to lib folder
-RUN make && \
-    mkdir -p ../../QuoteGeneration/pccs/lib && \
-    cp ./out/libPCKCertSelection.so ../../QuoteGeneration/pccs/lib/ && \
-    make clean
-
-# set PWD to PCCS dir
+# Build PCCS
 WORKDIR /SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/
+RUN npm config set proxy $http_proxy \
+    && npm config set https-proxy $https_proxy \
+    && npm config set engine-strict true \
+    && npm install
 
-# build pccs
-RUN npm config set proxy $http_proxy && \
-    npm config set http-proxy $http_proxy && \
-    npm config set https-proxy $https_proxy && \
-    npm config set engine-strict true && \
-    npm install
+# Start final image build
+FROM ubuntu:23.04
 
-# build final image
-FROM ubuntu:20.04
-
+# Create user and group before copying files
 ARG USER=pccs
-ARG UID=65333
+RUN useradd -M -U -r ${USER} -s /bin/false
 
-# create user and a group
-RUN useradd -M -U ${USER} --uid=${UID} -s /bin/false
-
+# Copy only necessary files from builder stage
 COPY --from=builder /usr/bin/node /usr/bin/node
 COPY --from=builder --chown=${USER}:${USER} /SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/ /opt/intel/pccs/
 
+# Set the working directory and switch user
 WORKDIR /opt/intel/pccs/
 USER ${USER}
 
-# entrypoint to start pccs
+# Define entrypoint
 ENTRYPOINT ["/usr/bin/node", "pccs_server.js"]
+

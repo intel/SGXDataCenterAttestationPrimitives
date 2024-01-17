@@ -124,7 +124,7 @@ int readFileToBuffer(const char *filename, uint8_t *buffer, size_t &buffSize) {
         goto out;
     }
 
-    writtenSize = fread(buffer, sizeof(uint8_t), fileSize, file);
+    writtenSize = fread(buffer, sizeof(uint8_t), (unsigned long)fileSize, file);
     if (writtenSize != (unsigned long)fileSize) {
         //agent_log_message(MP_REG_LOG_LEVEL_ERROR, "Failed to read data from file: %s\n", filename);
         ret = MP_UNEXPECTED_ERROR;

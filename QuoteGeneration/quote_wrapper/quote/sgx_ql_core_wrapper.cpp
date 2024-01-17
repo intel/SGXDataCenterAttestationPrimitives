@@ -117,7 +117,7 @@ quote3_error_t sgx_ql_set_enclave_load_policy(sgx_ql_request_policy_t policy)
 
     if((SGX_QL_PERSISTENT != policy) &&
        (SGX_QL_EPHEMERAL != policy)) {
-        ret_val = SGX_QL_UNSUPPORTED_LOADING_POLICY;
+        return SGX_QL_UNSUPPORTED_LOADING_POLICY;
     }
 
     ret_val = ecdsa_quote.set_enclave_load_policy(policy);
@@ -718,11 +718,12 @@ extern "C" quote3_error_t sgx_ql_get_keyid(sgx_att_key_id_ext_t *p_att_key_id_ex
         return SGX_QL_ERROR_INVALID_PARAMETER;
 
     memset(p_att_key_id_ext, 0, sizeof(*p_att_key_id_ext));
-    memcpy_s(&p_att_key_id_ext->base, sizeof(p_att_key_id_ext->base),
-        &g_default_ecdsa_p256_att_key_id, sizeof(g_default_ecdsa_p256_att_key_id));
+    if (0 != memcpy_s(&p_att_key_id_ext->base, sizeof(p_att_key_id_ext->base),
+        &g_default_ecdsa_p256_att_key_id, sizeof(g_default_ecdsa_p256_att_key_id))) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
     p_att_key_id_ext->base.algorithm_id = SGX_QL_ALG_ECDSA_P256;
     p_att_key_id_ext->base.prod_id = 1;
     //p_att_key_id_ext.att_key_type and p_att_key_id_ext.reserved should be 0
     return SGX_QL_SUCCESS;
 }
-

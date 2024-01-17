@@ -8,6 +8,7 @@
     "UserTokenHash" : "",
     "AdminTokenHash" : "",
     "CachingFillMode" : "LAZY",
+    "OPENSSL_FIPS_MODE" : false,
     "LogLevel" : "info",
     "DB_CONFIG" : "sqlite",
     "sqlite" : {

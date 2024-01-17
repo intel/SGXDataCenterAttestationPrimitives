@@ -21,7 +21,7 @@ PCCS_SERVICE_URL = 'https://localhost:8081/sgx/certification/v4'
 def main():
     parser = argparse.ArgumentParser(description="Administrator tool for PCCS")
     #parser.add_argument('action', help='Choose your action')
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest="command")
 
     #  subparser for get
     parser_get = subparsers.add_parser('get', formatter_class=argparse.RawTextHelpFormatter)
@@ -35,10 +35,17 @@ def main():
     parser_get.set_defaults(func=pccs_get)
 
     #  subparser for put
-    parser_put = subparsers.add_parser('put')
+    description_put = (
+    "This put command supports the following formats([] means optional):\n"
+    "1. pccsadmin put [-u https://localhost:8081/sgx/certification/v4/platformcollateral] [-i your_collateral_file]\n"
+    "2. pccsamdin put -u https://localhost:8081/sgx/certification/v4/appraisalpolicy [-d] -f fmspc -i your_policy_file"
+    )
+    parser_put = subparsers.add_parser('put', description=description_put, formatter_class=argparse.RawTextHelpFormatter)
     # add optional arguments for put
-    parser_put.add_argument("-u", "--url", help="The URL of the PCCS's PUT collateral API; default: https://localhost:8081/sgx/certification/v4/platformcollateral")
-    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals; default: platform_collaterals.json")
+    parser_put.add_argument("-u", "--url", help="The URL of the PCCS's API; default: https://localhost:8081/sgx/certification/v4/platformcollateral")
+    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals or appraisal policy; default: platform_collaterals.json")
+    parser_put.add_argument("-d", "--default", help="This policy will become the default policy for this FMSPC.", action="store_true")
+    parser_put.add_argument('-f', '--fmspc', type=str, help="FMSPC value")
     parser_put.set_defaults(func=pccs_put)
 
     #  subparser for fetch
@@ -80,6 +87,12 @@ def main():
         # No arguments or subcommands were given.
         parser.print_help()
         parser.exit()
+
+    print(args)
+    # Check mandatory arguments for appraisalpolicy
+    if args.command == 'put' and args.url and args.url.endswith("/appraisalpolicy"):
+        if not args.fmspc or not args.input_file:
+            parser.error("For putting appraisal policy, -f/--fmspc and -i/--input_file are mandatory.")
 
     args.func(args)
 
@@ -173,15 +186,35 @@ class PccsClient:
             fullpath = os.path.join(os.getcwd(), input_file)
             with open(fullpath) as inputfile:
                 data = inputfile.read()
-            response = requests.put(url=url, data=data, headers=headers, params=params, verify=False)
 
-            if response.status_code == 200:
-                print("Collaterals uploaded successfully.")
-            elif response.status_code == 401:  # Authentication error
-                self.credentials.set_admin_token('')
-                print("Authentication failed.")
+            if url.endswith("/platformcollateral"):
+                response = requests.put(url=url, data=data, headers=headers, params=params, verify=False)
+
+                if response.status_code == 200:
+                    print("Collaterals uploaded successfully.")
+                elif response.status_code == 401:  # Authentication error
+                    self.credentials.set_admin_token('')
+                    print("Authentication failed.")
+                else:
+                    self._handle_error(response)
+            elif url.endswith("/appraisalpolicy"):
+                appraisal_policy = {
+                    "policy": data,
+                    "is_default": self.args.default,
+                    "fmspc": self.args.fmspc,
+                }
+                # Convert the dictionary to a JSON string
+                data_str = json.dumps(appraisal_policy)
+                response = requests.put(url=url, data=data_str, headers=headers, params=params, verify=False)
+                if response.status_code == 200:
+                    print("Policy uploaded successfully with policy ID :" + response.text)
+                elif response.status_code == 401:  # Authentication error
+                    self.credentials.set_admin_token('')
+                    print("Authentication failed.")
+                else:
+                    self._handle_error(response)
             else:
-                self._handle_error(response)
+                print("Invalid URL.")
 
         except Exception as e:
             print(e)

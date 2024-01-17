@@ -66,7 +66,7 @@ quote3_error_t sgx_ql_free_quote_config(sgx_ql_config_t *p_quote_config);
 /**
 Parameters
     fmspc [In]
-        Base 16-encoded representation of FMSPC.
+        Pointer to the FMSPC data.
     fmspc_size [In]
         Length of fmspc.
     pck_ca [In]
@@ -90,7 +90,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral( const uint8_t *fmspc, u
 /**
 Parameters
     fmspc [In]
-        Base 16-encoded representation of FMSPC.
+        Pointer to the FMSPC data.
     fmspc_size [In]
         Length of fmspc.
     pck_ca [In]
@@ -114,7 +114,7 @@ quote3_error_t tdx_ql_get_quote_verification_collateral( const uint8_t *fmspc, u
 /**
 Parameters
     fmspc [In]
-        Base 16-encoded representation of FMSPC.
+        Pointer to the FMSPC data.
     fmspc_size [In]
         Length of fmspc.
     pck_ca [In]
@@ -146,7 +146,7 @@ quote3_error_t sgx_ql_get_quote_verification_collateral_with_params(const uint8_
 /**
 Parameters
     fmspc [In]
-        Base 16-encoded representation of FMSPC.
+        Pointer to the FMSPC data.
     fmspc_size [In]
         Length of fmspc.
     pck_ca [In]

@@ -1,0 +1,43 @@
+{
+    "policy_array": [
+        {
+            "environment": {
+                "class_id": "f708b97f-0fb2-4e6b-8b03-8a5bcd1221d3",
+                "description": "Collateral Grace Period Policy for TDX Platform"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own requirements",
+                "allow_dynamic_plaform": true,
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' if 'collateral_grace_period' is defined.",
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded",
+                    "ConfigurationNeeded",
+                    "OutOfDate"
+                ],
+                "#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 90 days (7776000 seconds).",
+                "#NOTE": "If 'collateral_grace_period' is greater than 0, 'platform_grace_period' must not be defined",
+                "collateral_grace_period": 7776000
+            }
+        },
+        {
+            "environment": {
+                "class_id": "3769258c-75e6-4bc7-8d72-d2b0e224cad2",
+                "description": "Collateral Grace Period Policy for Verified TDQE"
+            },
+            "reference": {
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' if 'collateral_grace_period' is defined.",
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded",
+                    "ConfigurationNeeded",
+                    "OutOfDate"
+                ],
+                "#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 60 days (5184000 seconds).",
+                "#NOTE": "If 'collateral_grace_period' is greater than 0, 'platform_grace_period' must not be defined",
+                "collateral_grace_period": 5184000
+            }
+        }
+    ]
+}
+

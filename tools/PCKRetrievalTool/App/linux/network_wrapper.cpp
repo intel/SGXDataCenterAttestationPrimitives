@@ -422,7 +422,8 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
         }
 
         slist = curl_slist_append(slist, user_token.c_str());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+        if (curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist) != CURLE_OK)
+            break;
         if (!g_use_secure_cert) {
             // if not set this option, the below error code will be returned for self signed cert
             // CURLE_SSL_CACERT (60) Peer certificate cannot be authenticated with known CA certificates.
@@ -452,10 +453,14 @@ network_post_error_t network_https_post(const uint8_t* raw_data, const uint32_t 
 
         // proxy setting	
         if (proxy_type.compare("DIRECT") == 0 || proxy_type.compare("direct") == 0) {
-            curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
+            if (curl_easy_setopt(curl, CURLOPT_NOPROXY, "*") != CURLE_OK){
+                printf("Warining: unexpected error occurred while setting network proxy.\n");
+            }
         }
         else if (proxy_type.compare("MANUAL") == 0 || proxy_type.compare("manual") == 0) {
-            curl_easy_setopt(curl, CURLOPT_PROXY, proxy_url.c_str());
+            if (curl_easy_setopt(curl, CURLOPT_PROXY, proxy_url.c_str()) != CURLE_OK) {
+                printf("Warining: unexpected error occurred while setting network proxy.\n");
+            }
         }
 
 

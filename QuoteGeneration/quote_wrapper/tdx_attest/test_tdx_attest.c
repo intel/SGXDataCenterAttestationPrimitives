@@ -89,7 +89,13 @@ int main(int argc, char *argv[])
         fprintf(stderr, "\nFailed to get the report\n");
         return 1;
     }
-    print_hex_dump("\n\t\tTDX report\n", " ", tdx_report.d, sizeof(tdx_report.d));
+    fptr = fopen("report.dat","wb");
+    if( fptr )
+    {
+        fwrite(&tdx_report, sizeof(tdx_report), 1, fptr);
+        fclose(fptr);
+    }
+    fprintf(stdout, "\nWrote TD Report to report.dat\n");
 
     if (TDX_ATTEST_SUCCESS != tdx_att_get_quote(&report_data, NULL, 0, &selected_att_key_id,
         &p_quote_buf, &quote_size, 0)) {

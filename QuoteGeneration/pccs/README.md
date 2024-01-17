@@ -6,7 +6,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Prerequisites**
 
-  Install node.js (Version <ins>16.20</ins> or later)
+  Install node.js (Version <ins>18.17</ins> or later)
 
   - For Debian and Ubuntu based distributions, please refer to https://github.com/nodesource/distributions
   - To download and install, goto https://nodejs.org/en/download/
@@ -110,7 +110,7 @@ When a new server platform is introduced to the data center or the cloud service
 You can run PCCS on localhost for product development or setup it as a public remote service in datacenter.
 Typical setup flow for Local Service mode (Ubuntu 22.04 as example):
 
-    1) Install Node.js via package manager (version 16.20 or later from official Node.js site)
+    1) Install Node.js via package manager (version 18.17 or later from official Node.js site)
     2) Request an API key from Intel's Provisioning Certificate Service
     3) Install PCCS through Debian package
 

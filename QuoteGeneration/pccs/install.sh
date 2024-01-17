@@ -9,16 +9,16 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
-function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+function version_ge() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1" || test "$1" = "$2"; }
 
 # check nodejs version
 function checkDependencies() {
     echo "Checking nodejs version ..."
-    expected_node_v="v16.20.0"
+    expected_node_v="v18.17.0"
     if which node > /dev/null
     then
         cur_node_v=$(node -v)
-        if version_gt $cur_node_v $expected_node_v; then
+        if version_ge $cur_node_v $expected_node_v; then
             echo "nodejs is installed, continue..."
         else
             echo -e "${RED}The minimum node.js version required is ${expected_node_v}. Installation aborted. ${NC} "
