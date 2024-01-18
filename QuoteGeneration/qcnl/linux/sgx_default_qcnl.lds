@@ -19,6 +19,8 @@ global:
     sgx_qcnl_clear_cache;
     sgx_qcnl_global_init;
     sgx_qcnl_global_cleanup;
+    tee_qcnl_get_default_platform_policy;
+    tee_qcnl_free_platform_policy;
 
 local:
     *;

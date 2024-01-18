@@ -174,8 +174,8 @@ tee_att_config_t::get_qpl_handle()
     if (qpl_path[0]) {
         m_qpl_handle = dlopen(qpl_path, RTLD_LAZY);
         if (NULL == m_qpl_handle) {
-                SE_PROD_LOG("Cannot open Quote Provider Library %s\n", qpl_path);
-            }
+            SE_PROD_LOG("Cannot open Quote Provider Library %s\n", qpl_path);
+        }
         return m_qpl_handle;
     }
     else {
@@ -184,6 +184,13 @@ tee_att_config_t::get_qpl_handle()
             SE_PROD_LOG("Cannot open Quote Provider Library %s\n", TEE_ATT_QUOTE_CONFIG_LIB_FILE_NAME);
         }
         else {
+            sgx_ql_set_logging_callback_t ql_set_logging_callback = (sgx_ql_set_logging_callback_t)dlsym(m_qpl_handle, "sgx_ql_set_logging_callback");
+            if (dlerror() == NULL && ql_set_logging_callback) {
+                // Set log level to SGX_QL_LOG_ERROR
+                ql_set_logging_callback(sgx_ql_logging_callback, SGX_QL_LOG_ERROR);
+            } else {
+                SE_PROD_LOG("Failed to set logging callback for the quote provider library.\n");
+            }
             sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(m_qpl_handle, "sgx_qpl_global_init");
             if (dlerror() == NULL && p_sgx_qpl_global_init) {
                 SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_qpl_global_init API.\n");
@@ -193,13 +200,6 @@ tee_att_config_t::get_qpl_handle()
                     dlclose(m_qpl_handle);
                     m_qpl_handle = NULL;
                 }
-            }
-            sgx_ql_set_logging_callback_t ql_set_logging_callback = (sgx_ql_set_logging_callback_t)dlsym(m_qpl_handle, "sgx_ql_set_logging_callback");
-            if (dlerror() == NULL && ql_set_logging_callback) {
-                // Set log level to SGX_QL_LOG_ERROR
-                ql_set_logging_callback(sgx_ql_logging_callback, SGX_QL_LOG_ERROR);
-            } else {
-                SE_PROD_LOG("Failed to set logging callback for the quote provider library.\n");
             }
         }
     }
@@ -218,7 +218,7 @@ tee_att_config_t::get_qpl_handle()
             quote3_error_t ql_ret = p_sgx_qpl_global_init();
             if (ql_ret != SGX_QL_SUCCESS) {
                 SE_PROD_LOG("Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
-                CloseHandle(m_qpl_handle);
+                FreeLibrary(m_qpl_handle);
                 m_qpl_handle = NULL;
             }
         }
@@ -709,7 +709,9 @@ tee_att_error_t tee_att_config_t::getencryptedppid(sgx_target_info_t& pce_target
 
     if (m_pencryptedppid)
     {
-        memcpy_s(p_buf, buf_size, m_pencryptedppid, REF_RSA_OAEP_3072_MOD_SIZE);
+        if (0 != memcpy_s(p_buf, buf_size, m_pencryptedppid, REF_RSA_OAEP_3072_MOD_SIZE)) {
+            return TEE_ATT_ERROR_UNEXPECTED;
+        }
         return TEE_ATT_SUCCESS;
     }
 

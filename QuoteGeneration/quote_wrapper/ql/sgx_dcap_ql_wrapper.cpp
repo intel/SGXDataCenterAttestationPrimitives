@@ -156,7 +156,10 @@ static void __attribute__((constructor)) _sgx_dcap_ql_init()
 
 static void close_sofile(void)
 {
-    se_mutex_lock(&g_dlopen_mutex);
+    int rc = se_mutex_lock(&g_dlopen_mutex);
+    if (rc == 0) {
+        SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+    }
     if (g_dlopen_handle != NULL) {
         dlclose(g_dlopen_handle);
         g_dlopen_handle = NULL;
@@ -173,7 +176,11 @@ static void __attribute__((destructor)) _sgx_dcap_ql_fini(void)
 static func_sgx_init_quote_ex_t init_quote_ex_function(void)
 {
     if (g_init_quote_ex == NULL) {
-        se_mutex_lock(&g_dlopen_mutex);
+        int rc = se_mutex_lock(&g_dlopen_mutex);
+        if (rc == 0) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+            return NULL;
+        }
         if (g_init_quote_ex != NULL)
         {
             se_mutex_unlock(&g_dlopen_mutex);
@@ -198,7 +205,11 @@ static func_sgx_init_quote_ex_t init_quote_ex_function(void)
 static func_sgx_get_quote_size_ex_t get_quote_size_ex_function(void)
 {
     if (g_get_quote_size_ex == NULL) {
-        se_mutex_lock(&g_dlopen_mutex);
+        int rc = se_mutex_lock(&g_dlopen_mutex);
+        if (rc == 0) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+            return NULL;
+        }
         if (g_get_quote_size_ex != NULL)
         {
             se_mutex_unlock(&g_dlopen_mutex);
@@ -223,7 +234,11 @@ static func_sgx_get_quote_size_ex_t get_quote_size_ex_function(void)
 static func_sgx_get_quote_ex_t get_quote_ex_function(void)
 {
     if (g_get_quote_ex == NULL) {
-        se_mutex_lock(&g_dlopen_mutex);
+        int rc = se_mutex_lock(&g_dlopen_mutex);
+        if (rc == 0) {
+            SE_TRACE(SE_TRACE_ERROR, "Failed to lock mutex\n");
+            return NULL;
+        }
         if (g_get_quote_ex != NULL)
         {
             se_mutex_unlock(&g_dlopen_mutex);
@@ -677,4 +692,3 @@ quote3_error_t sgx_ql_set_trace_callback(sgx_ql_logging_callback_t logger, sgx_q
 }
 
 #endif
-

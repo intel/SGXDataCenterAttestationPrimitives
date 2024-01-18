@@ -101,7 +101,7 @@ typedef struct _tdx_rtmr_event_t {
 extern "C" {
 #endif
 
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
 /**
  * @brief Request a Quote of the calling TD.
  *

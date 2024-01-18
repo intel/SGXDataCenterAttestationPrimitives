@@ -6,15 +6,14 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Prerequisites**
 
-  Install node.js (Version <ins>14.20</ins> or later)
+  Install node.js (Version <ins>18.17</ins> or later)
 
-  - For Debian and Ubuntu based distributions, you can use the following command:<br/>
-    $ curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - <br/>
-    $ sudo apt-get install -y nodejs
+  - For Debian and Ubuntu based distributions, please refer to https://github.com/nodesource/distributions
   - To download and install, goto https://nodejs.org/en/download/
 
   Install dependencies (python3, cracklib-runtime) if they are not installed. Also make sure "python" is linked to "python3"
-    $ sudo apt-get install python3 cracklib-runtime
+
+  $ sudo apt-get install python3 cracklib-runtime
 
 - **Install via Linux Debian package installer**
 
@@ -34,17 +33,15 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Linux manual installation**
 
-  1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a
-     web service.
-  2. Install dependencies if they are not already installed. Also make sure "python" is linked to "python3"
+  1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a web service.
+  2. Install dependencies if they are not already installed. Also make sure "python" is linked to "python3"<br/>
      nodejs build-essential(gcc gcc-c++ make) python3 cracklib-runtime
   3. Goto ../../tools/PCKCertSelection/ and build libPCKCertSelection.so, copy it to ./lib/
   4. From the root directory of your installation folder, run ./install.sh
 
 - **Windows manual installation**
 
-  1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a
-     web service.
+  1. Put all the files and sub folders in this directory to your preferred place with right permissions set to launch a web service.
   2. (Optional) If the target machine connects to internet through a proxy server, configure proxy server first
      before continuing. <br/>
      npm config set http-proxy http://your-proxy-server:port <br/>
@@ -68,11 +65,10 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
   7. PCKCertSelection Library
      You need to compile the PCKCertSelection library in ../../tools/PCKCertSelection, then put the binary files
-     (PCKCertSelectionLib.dll and libcrypto-1_1-x64.dll from openSSL) in a folder that is in OS's search path,
-     for example, %SYSTEMROOT%\system32.
+     (PCKCertSelectionLib.dll) in a folder that is in OS's search path, for example, %SYSTEMROOT%\system32.
 
-  **NOTE** : If self-signed insecure key and certificate are used, you need to set USE_SECURE_CERT=FALSE when
-  configuring the default QPL library (see ../qpl/README.md)
+  _**NOTE** : If a self-signed insecure key and certificate are used, you need to set USE_SECURE_CERT=FALSE when
+  configuring the default QPL library (see ../qpl/README.md)_
 
 ## <h3 id="Configuration">Configuration file (config/default.json) </h3>
 
@@ -86,14 +82,15 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 - **UserTokenHash** - Sha512 hash of the user token for the PCCS client user to register a platform. For example, PCK Cert ID retrieval tool will use the user token to send platform information to PCCS.
 - **AdminTokenHash** - Sha512 hash of the administrator token for the PCCS administrator to perform a manual refresh of cached artifacts.
 
-  _NOTE_ : For Windows you need to set the UserTokenHash and AdminTokenHash manually. You can calculate SHA512 hash with the help of openssl:
+  _**NOTE** : For Windows you need to set the UserTokenHash and AdminTokenHash manually. You can calculate SHA512 hash with the help of openssl:_
 
       <nul: set /p password="mytoken" | openssl dgst -sha512
 
 - **CachingFillMode** - The method used to fill the cache DB. Can be one of the following: LAZY/REQ/OFFLINE. For more details see section [Caching Fill Mode](#CachingMode).
 - **LogLevel** - Log level. Use the same levels as npm: error, warn, info, http, verbose, debug, silly. Default is info.
 - **DB_CONFIG** - You can choose sqlite or mysql and many other DBMSes. For sqlite, you don't need to change anything. For other DBMSes, you need to set database connection options correctly. Normally you need to change database, username, password, host and dialect to connect to your DBMS.
-  <br/>**NOTE: It's recommended to delete the cache database first if you have installed a version older than 1.9 because the database is not compatible.**
+  <br/>
+  _**NOTE** : It's recommended to delete the cache database first if you have installed a version older than 1.9 because the database is not compatible._
 
 ## <h3 id="CachingMode">Caching Fill Mode</h3>
 
@@ -111,9 +108,9 @@ When a new server platform is introduced to the data center or the cloud service
 ## <h3>Local service vs Remote service</h3>
 
 You can run PCCS on localhost for product development or setup it as a public remote service in datacenter.
-Typical setup flow for Local Service mode (Ubuntu 18.04 as example):
+Typical setup flow for Local Service mode (Ubuntu 22.04 as example):
 
-    1) Install Node.js via package manager (version 10.20 or later from official Node.js site)
+    1) Install Node.js via package manager (version 18.17 or later from official Node.js site)
     2) Request an API key from Intel's Provisioning Certificate Service
     3) Install PCCS through Debian package
 

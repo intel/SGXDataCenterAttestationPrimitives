@@ -42,15 +42,16 @@ extern LogLevel glog_level;
 #ifndef _WIN32
 
 void management_log_message(LogLevel level, const char *format, ...) {
-	va_list myargs;
-	va_start(myargs, format);
+    va_list myargs;
+    va_start(myargs, format);
 
     if (glog_level < level) {
+        va_end(myargs);
         return;
     }
 
-	if (log_message_aux) {
-		log_message_aux(level, format, myargs);
+    if (log_message_aux) {
+        log_message_aux(level, format, myargs);
     } else {
         switch (level) {
             case MP_REG_LOG_LEVEL_ERROR:
@@ -62,18 +63,19 @@ void management_log_message(LogLevel level, const char *format, ...) {
             default:
                 break;
         }
-		vprintf(format, myargs);
+        vprintf(format, myargs);
     }
-	va_end(myargs);;
+    va_end(myargs);;
 }
 
 #else
 
 void default_management_log_message(LogLevel level, const char *format, ...) {
-	va_list myargs;
-	va_start(myargs, format);
+    va_list myargs;
+    va_start(myargs, format);
 
     if (glog_level < level) {
+        va_end(myargs);;
         return;
     }
 
@@ -87,8 +89,8 @@ void default_management_log_message(LogLevel level, const char *format, ...) {
         default:
             break;
     }
-	vprintf(format, myargs);
-	va_end(myargs);
+    vprintf(format, myargs);
+    va_end(myargs);
 }
 
 #endif

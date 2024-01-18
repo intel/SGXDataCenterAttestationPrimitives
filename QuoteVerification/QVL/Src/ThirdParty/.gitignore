@@ -1,6 +1,0 @@
-openssl
-!openssl/hunter.cmake
-gtest
-hunter/_Base
-toolchain
-cmake.lock

@@ -551,7 +551,7 @@ MpResult MPUefi::getRegistrationStatus(MpRegistrationStatus& status) {
         statusUefi = (RegistrationStatusUEFI*)m_uefi->readUEFIVar(UEFI_VAR_STATUS, varDataSize);
         if (statusUefi == 0 || varDataSize != sizeof(RegistrationStatusUEFI)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus UEFI variable was not found or size not as expected.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus acutal size: %d, expected size: %d\n", varDataSize, sizeof(RegistrationStatusUEFI));
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus acutal size: %zu, expected size: %zu\n", varDataSize, sizeof(RegistrationStatusUEFI));
             res = MP_UEFI_INTERNAL_ERROR;
             break;
         }
@@ -569,7 +569,7 @@ MpResult MPUefi::getRegistrationStatus(MpRegistrationStatus& status) {
         // uefi structure size check
         if (statusUefi->size != sizeof(statusUefi->status) + sizeof(statusUefi->errorCode)) {
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: SgxRegistrationStatus structure size not as expected.\n");
-            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: statusUefi->size: %zu, sizeof(statusUefi->status): %zu, sizeof(statusUefi->errorCode): %zu\n",
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus: statusUefi->size: %d, sizeof(statusUefi->status): %zu, sizeof(statusUefi->errorCode): %zu\n",
                 statusUefi->size, sizeof(statusUefi->status), sizeof(statusUefi->errorCode));
             res = MP_UEFI_INTERNAL_ERROR;
             break;

@@ -86,6 +86,10 @@ typedef int (*pthread_create_ocall_func_t)(unsigned long long self);
 typedef int (*pthread_wait_timeout_ocall_func_t)(unsigned long long waiter, unsigned long long timeout);
 typedef int (*pthread_wakeup_ocall_func_t)(unsigned long long waiter);
 
+extern pthread_create_ocall_func_t p_pthread_create_ocall;
+extern pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall;
+extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
+
 #endif
 
 #define SGX_URTS_API_DESTROY_ENCLAVE "sgx_destroy_enclave"
@@ -114,6 +118,15 @@ typedef int (*sgx_thread_set_multiple_untrusted_events_ocall_func_t)(const void 
 
 
 bool sgx_dcap_load_urts();
+
+extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
+extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
+extern sgx_ecall_func_t p_sgx_urts_ecall;
+extern sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex;
+extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall;
+extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
+extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
+extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
 
 
 #if defined(__cplusplus)

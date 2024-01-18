@@ -43,7 +43,7 @@ Fill other required fields accordingly.
 ```
 cd && \
 docker run \
---user "65333:0" \
+--user "pccs:pccs" \
 -v $PWD/pccs_tls/private.pem:/opt/intel/pccs/ssl_key/private.pem \
 -v $PWD/pccs_tls/file.crt:/opt/intel/pccs/ssl_key/file.crt \
 -v $PWD/config/default.json:/opt/intel/pccs/config/default.json \

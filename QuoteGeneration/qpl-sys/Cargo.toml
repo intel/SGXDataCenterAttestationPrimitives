@@ -1,0 +1,11 @@
+[package]
+name = "qpl-sys"
+version = "0.1.0"
+edition = "2021"
+links = "dcap_quoteprov"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+[build-dependencies]
+bindgen = "0.66.1"

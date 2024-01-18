@@ -36,7 +36,6 @@
  */
 
 #include <dlfcn.h>
-#include "sgx_qve_header.h"
 #include "sgx_dcap_pcs_com.h"
 #include "sgx_urts_wrapper.h"
 #include "se_trace.h"
@@ -59,30 +58,37 @@ se_mutex_t g_urts_mutex;
 void *g_qpl_handle = NULL;
 se_mutex_t g_qpl_mutex;
 
-extern sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral;
-extern sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral;
+sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
+sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
 
-extern sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity;
-extern sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity;
+sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity = NULL;
+sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity = NULL;
 
-extern sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl;
-extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
+sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl = NULL;
+sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
-extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
-extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
+tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
+tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
+
+sgx_qpl_global_init_func_t p_sgx_qpl_global_init = NULL;
+
+tee_get_default_platform_policy_func_t p_tee_get_default_platform_policy = NULL;
+tee_free_platform_policy_func_t p_tee_free_platform_policy = NULL;
+
 #endif
 
-extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
-extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
-extern sgx_ecall_func_t p_sgx_urts_ecall;
-extern sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex;
-extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall;
-extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
-extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
-extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
-extern pthread_create_ocall_func_t p_pthread_create_ocall;
-extern pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall;
-extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
+sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
+sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
+sgx_ecall_func_t p_sgx_urts_ecall = NULL;
+sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex = NULL;
+sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall = NULL;
+sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall = NULL;
+sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall = NULL;
+sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall = NULL;
+pthread_create_ocall_func_t p_pthread_create_ocall = NULL;
+pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall = NULL;
+pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func = NULL;
+
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
@@ -164,7 +170,7 @@ bool sgx_dcap_load_qpl()
         }
 
         // search for sgx_qpl_global_init in dcap_quoteprov library and call it if found
-        sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(g_qpl_handle, "sgx_qpl_global_init");
+        p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(g_qpl_handle, "sgx_qpl_global_init");
         if (dlerror() == NULL && p_sgx_qpl_global_init) {
             quote3_error_t ql_ret = p_sgx_qpl_global_init();
             if (ql_ret != SGX_QL_SUCCESS) {
@@ -243,6 +249,23 @@ bool sgx_dcap_load_qpl()
         if (p_tdx_ql_free_quote_verification_collateral == NULL || err != NULL) {
             // don't return error due to user may use old version QPL
             SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote Provider library %s.\n", TDX_QL_API_FREE_QUOTE_VERIFICATION_COLLATERAL, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        }
+
+        //search for tee_get_default_platform_policy symbol in dcap_quoteprov library
+        //
+        p_tee_get_default_platform_policy = (tee_get_default_platform_policy_func_t)dlsym(g_qpl_handle, QL_API_GET_DEFAULT_PLATFORM_POLICY);
+        err = dlerror();
+        if (p_tee_get_default_platform_policy == NULL || err != NULL) {
+            // don't return error due to user may use old version QPL
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote Provider library %s.\n", QL_API_GET_DEFAULT_PLATFORM_POLICY, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
+        }
+        //search for tee_free_platform_policy symbol in dcap_quoteprov library
+        //
+        p_tee_free_platform_policy = (tee_free_platform_policy_func_t)dlsym(g_qpl_handle, QL_API_FREE_PLATFORM_POLICY);
+        err = dlerror();
+        if (p_tee_free_platform_policy == NULL || err != NULL) {
+            // don't return error due to user may use old version QPL
+            SE_TRACE(SE_TRACE_DEBUG, "Couldn't locate %s in Quote Provider library %s.\n", QL_API_FREE_PLATFORM_POLICY, SGX_QL_QUOTE_CONFIG_LIB_FILE_NAME);
         }
 
         ret = true;
@@ -471,7 +494,13 @@ __attribute__((destructor)) void _qv_global_destructor()
     if (p_tdx_ql_free_quote_verification_collateral)
         p_tdx_ql_free_quote_verification_collateral = NULL;
 
-    if (g_qpl_handle) {
+    if (p_tee_get_default_platform_policy)
+        p_tee_get_default_platform_policy = NULL;
+    if (p_tee_free_platform_policy)
+        p_tee_free_platform_policy = NULL;
+
+    if (g_qpl_handle)
+    {
         dlclose(g_qpl_handle);
         g_qpl_handle = NULL;
     }
@@ -492,17 +521,6 @@ __attribute__((destructor)) void _qv_global_destructor()
         //destroy the mutex before lib is unloaded, even there are some errs here
         se_mutex_destroy(&g_urts_mutex);
         return;
-    }
-
-    //Try to unload QvE only when use legacy PERSISTENT policy
-    //All the threads will share single QvE instance in this mode
-    //
-    if (g_qve_policy == SGX_QL_PERSISTENT) {
-        if (g_qve_eid != 0) {
-            //ignore the return error
-            unload_qve_once(&g_qve_eid);
-            g_qve_eid = 0;
-        }
     }
 
     if (p_sgx_urts_create_enclave)

@@ -33,7 +33,7 @@
  * Quote Verification Enclave (QvE)
  * An architectural enclave for quote verification.
  */
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
 #ifndef SGX_TRUSTED
 #define get_fmspc_ca_from_quote qvl_get_fmspc_ca_from_quote
 #define sgx_qve_verify_quote sgx_qvl_verify_quote
@@ -50,19 +50,22 @@
 #include <sgx_trts.h>
 #include <sgx_utils.h>
 #endif //SGX_TRUSTED
-#else //_TD_MIGRATION
+#else //SERVTD_ATTEST
 #include "sgx_dcap_qv_internal.h"
 #include "sgx_quote_4.h"
 #include "sgx_quote_5.h"
 #define memset_s(a,b,c,d) memset(a,c,d)
 #define memcpy_s(a,b,c,d) (memcpy(a,c,b) && 0)
-#endif //_TD_MIGRATION
+#endif //SERVTD_ATTEST
 
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
+#ifndef SGX_TRUSTED
 #define SGX_TRUSTED
-#include "migtd_utils.h"
-#include "migth_qve_utils.h"
+#endif
+#include "servtd_utils.h"
+#include "servtd_qve_utils.h"
 #include "tdx_verify.h"
+#include "servtd_com.h"
 #define EXPORT_API __attribute__ ((visibility("default")))
 #define SGX_TD_VERIFY_ERROR(x)              (0x000000FF&(x))
 #endif //SGX_TRUSTED
@@ -701,7 +704,9 @@ static time_t getLatestExpirationDate(const CertificateChain* chain) {
 static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_chain_obj, const json::TcbInfo* p_tcb_info_obj,
     const struct _sgx_ql_qve_collateral_t *p_quote_collateral, const char *crls[],
     time_t* p_earliest_issue_date, time_t* p_earliest_expiration_date,
-    time_t* p_latest_issue_date, time_t* p_latest_expiration_date) {
+    time_t* p_latest_issue_date, time_t* p_latest_expiration_date,
+    time_t* p_qe_iden_earliest_issue_date, time_t* p_qe_iden_latest_issue_date,
+    time_t* p_qe_iden_earliest_expiration_date) {
 
     quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
     int version = 0;
@@ -714,6 +719,9 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
             p_earliest_expiration_date == NULL ||
             p_latest_issue_date == NULL ||
             p_latest_expiration_date == NULL ||
+            p_qe_iden_earliest_issue_date == NULL ||
+            p_qe_iden_latest_issue_date == NULL ||
+            p_qe_iden_earliest_expiration_date == NULL ||
             crls == NULL ||
             crls[0] == NULL ||
             crls[1] == NULL) {
@@ -723,6 +731,9 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
         *p_earliest_expiration_date = 0;
         *p_latest_issue_date = 0;
         *p_latest_expiration_date = 0;
+        *p_qe_iden_earliest_issue_date = 0;
+        *p_qe_iden_latest_issue_date = 0;
+        *p_qe_iden_earliest_expiration_date = 0;
 
         CertificateChain qe_identity_issuer_chain;
         if (qe_identity_issuer_chain.parse((reinterpret_cast<const char*>(p_quote_collateral->qe_identity_issuer_chain))) != STATUS_OK) {
@@ -839,8 +850,14 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
         //
         *p_latest_expiration_date = *std::max_element(latest_expiration.begin(), latest_expiration.end());
 
+        *p_qe_iden_earliest_issue_date = earliest_issue[5];
+        *p_qe_iden_latest_issue_date = latest_issue[5];
+        *p_qe_iden_earliest_expiration_date = earliest_expiration[5];
+
         if (*p_earliest_issue_date == 0 || *p_earliest_expiration_date == 0 ||
-            *p_latest_issue_date == 0 || *p_latest_expiration_date == 0) {
+            *p_latest_issue_date == 0 || *p_latest_expiration_date == 0 ||
+            *p_qe_iden_earliest_issue_date == 0 || *p_qe_iden_latest_issue_date == 0 ||
+            *p_qe_iden_earliest_expiration_date == 0) {
             ret = SGX_QL_ERROR_UNEXPECTED;
             break;
         }
@@ -851,7 +868,166 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
 
     return ret;
 }
+#ifdef SERVTD_ATTEST
 
+/**
+    * @brief Get the matching QE TCB level based on ISVSVN.
+    * @param qe_identity The QE identity string.
+    * @param quote The quote object containing ISVSVN information.
+    * @return The matching TCB level object if found, otherwise throws an exception.
+*/
+const TCBLevel getMatchingQETcbLevel(const char* qe_identity, const Quote& quote) {
+    // Parse the QE identity and validate its version.
+    EnclaveIdentityParser parser;
+    std::unique_ptr<EnclaveIdentityV2> qe_identity_obj;
+    try{
+        qe_identity_obj = parser.parse(qe_identity);
+        if (!qe_identity_obj) {
+            throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
+        }
+        auto version = qe_identity_obj->getVersion();
+        if (version != 2 && version != 3) {
+            throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
+        }
+    }
+    catch (...) {
+        throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
+    }
+
+    EnclaveIdentityV2* qe_identity_v2 = dynamic_cast<EnclaveIdentityV2*>(qe_identity_obj.get());
+
+    if (!qe_identity_v2) {
+        throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
+    }
+
+    // Get matching QE identity TCB levels.
+    const auto& qe_identity_tcb_levels = qe_identity_v2->getTcbLevels();
+
+    // Ensure the QE identity has at least one TCBLevel.
+    if (qe_identity_tcb_levels.empty()) {
+        throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
+    }
+
+    const TCBLevel * matchingTCBLevel = NULL;
+
+    // The premise of this code is that the server returns a sequence ordered from top to bottom, and 
+    // we need to find the largest TCB level among the TCB Levels smaller than ours based on ISVSVN.
+    for (const auto& tcbLevel : qe_identity_tcb_levels) {
+        if (tcbLevel.getIsvsvn() <= quote.getQeReport().isvSvn) {
+            matchingTCBLevel = &tcbLevel;
+            break;
+        }
+    }
+    if (matchingTCBLevel){
+        return *matchingTCBLevel;
+    }
+
+    throw SGX_QL_TCBINFO_UNSUPPORTED_FORMAT;
+}
+/**
+ * @brief Return supplemental data for TD Migration
+ *
+ * @param quote [IN]  Pointer to quote buffer
+ * @param pckCert [IN] Pointer to the platform certificate (PCK)
+ * @param tcb_info_obj [IN] Pointer to TcbInfo object that contains the TCB
+ * information for this quote generation request
+ * @param p_fmspc [IN] Pointer to a buffer containing the FMSPC for this quote
+ * generation request
+ * @param p_fmspc_size [IN] Size of fmspc
+ * @param qe_tcb_info [IN]  Pointer to a buffer containing qe tcb info
+ * @param p_servtd_supplemental_data [IN/OUT] Pointer to a data buffer. Must be
+ * allocated by caller
+ * @param p_servtd_supplemental_data_size [IN/OUT] Pointer to size of buffer
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_TCBINFO_UNSUPPORTED_FORMAT
+ */
+static quote3_error_t servtd_set_quote_supplemental_data(
+    const Quote &quote, const x509::PckCertificate &pckCert,
+    const json::TcbInfo *tcb_info_obj, uint8_t *p_fmspc, size_t p_fmspc_size,
+    const TCBLevel &qe_tcb_info, uint8_t *p_servtd_supplemental_data,
+    uint32_t *p_servtd_supplemental_data_size) {
+
+    if (tcb_info_obj == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    if (p_fmspc == NULL || p_fmspc_size != FMSPC_SIZE) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    if (p_servtd_supplemental_data == NULL ||
+        p_servtd_supplemental_data_size == NULL) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    if ((*p_servtd_supplemental_data_size) <
+        sizeof(struct servtd_tdx_quote_suppl_data)) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+    if (quote.getHeader().teeType != constants::TEE_TYPE_TDX) {
+        return status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
+    }
+    struct servtd_tdx_quote_suppl_data *p_servtd_suppl_data =
+        reinterpret_cast<struct servtd_tdx_quote_suppl_data *>(
+            p_servtd_supplemental_data);
+
+    // Hint: Always return sgx_report2_body_t(584 bytes) per design
+    // For V4 quote return sgx_report2_body_t directly, for V5 quote return
+    // report body w/o mr_servicetd & tee_tcb_svn2
+
+    if (memcpy_s(reinterpret_cast<uint8_t *>(p_servtd_suppl_data),
+                 sizeof(sgx_report2_body_t),
+                 reinterpret_cast<const uint8_t *>(&(quote.getTdReport10())),
+                 constants::TD_REPORT10_BYTE_LEN) != 0) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+
+    p_servtd_suppl_data->tcb_version = tcb_info_obj->getVersion();
+    if (memcpy_s(p_servtd_suppl_data->fmspc, FMSPC_SIZE, p_fmspc,
+                 p_fmspc_size) != 0) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+    // get TCB date of TCB level in TCB Info
+    //
+    auto tcb = getMatchingTcbLevel(tcb_info_obj, pckCert, quote);
+    auto tdx_svn = tcb.getTdxTcbComponents();
+    if (tdx_svn.size() == SGX_CPUSVN_SIZE) {
+        for (size_t i = 0; i < SGX_CPUSVN_SIZE; i++) {
+            p_servtd_suppl_data->tdx_tcb_components[i] = tdx_svn[i].getSvn();
+        }
+    }
+    p_servtd_suppl_data->pce_svn = tcb.getPceSvn();
+    auto sgx_svn = tcb.getSgxTcbComponents();
+    if (sgx_svn.size() == SGX_CPUSVN_SIZE) {
+        for (size_t i = 0; i < SGX_CPUSVN_SIZE; i++) {
+            p_servtd_suppl_data->sgx_tcb_components[i] = sgx_svn[i].getSvn();
+        }
+    }
+    auto qe_report = quote.getQeReport();
+    p_servtd_suppl_data->misc_select = qe_report.miscSelect;
+    if (memcpy_s(&(p_servtd_suppl_data->attributes),
+                 sizeof(p_servtd_suppl_data->attributes),
+                 qe_report.attributes.data(),
+                 sizeof(qe_report.attributes)) != 0) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+    if (memcpy_s(p_servtd_suppl_data->mr_enclave.m,
+                 sizeof(p_servtd_suppl_data->mr_enclave.m),
+                 qe_report.mrEnclave.data(),
+                 sizeof(qe_report.mrEnclave)) != 0) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+    if (memcpy_s(p_servtd_suppl_data->mr_signer.m,
+                 sizeof(p_servtd_suppl_data->mr_signer.m),
+                 qe_report.mrSigner.data(), sizeof(qe_report.mrSigner)) != 0) {
+        return SGX_QL_ERROR_UNEXPECTED;
+    }
+    p_servtd_suppl_data->isv_prod_id = qe_report.isvProdID;
+    p_servtd_suppl_data->isv_svn =
+        static_cast<uint16_t>(qe_tcb_info.getIsvsvn());
+    *p_servtd_supplemental_data_size =
+        sizeof(struct servtd_tdx_quote_suppl_data);
+    return SGX_QL_SUCCESS;
+}
+#endif
 /**
  * Setup supplemental data.
  * @param quote[IN] - Pointer to quote buffer.
@@ -862,6 +1038,9 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
  * @param earliest_issue_date[IN] - value of the earliest issue date of all collaterals used in quote verification.
  * @param latest_issue_date[IN] - value of the latest issue date of all collaterals used in quote verification.
  * @param earliest_expiration_date[IN] - value of the earliest expiration date of all collaterals used in quote verification.
+ * @param qe_iden_earliest_issue_date[IN] - value of the earliest issue date of QE Identity used in quote verification.
+ * @param qe_iden_latest_issue_date[IN] - value of the latest issue date of QE Identity used in quote verification.
+ * @param qe_iden_earliest_expiration_date[IN] - value of the earliest expiration date of QE Identity used in quote verification.
  * @param p_supplemental_data[IN/OUT] - Pointer to a supplemental data buffer. Must be allocated by caller (untrusted code).
 
  * @return Status code of the operation, one of:
@@ -881,6 +1060,9 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
                                             time_t earliest_issue_date,
                                             time_t latest_issue_date,
                                             time_t earliest_expiration_date,
+                                            time_t qe_iden_earliest_issue_date,
+                                            time_t qe_iden_latest_issue_date,
+                                            time_t qe_iden_earliest_expiration_date,
                                             uint8_t *p_supplemental_data) {
     if (chain == NULL ||
         tcb_info_obj == NULL ||
@@ -954,6 +1136,10 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
             break;
         }
 
+        Status qe_identity_status = STATUS_UNSUPPORTED_QE_IDENTITY_FORMAT;
+        qe_identity_status = qe_identity_v2->getStatus();
+        supplemental_data->qe_iden_status = status_error_to_ql_qve_result(qe_identity_status);
+
         pckparser::CrlStore root_ca_crl;
         if (root_ca_crl.parse(crls[0]) != true) {
             ret = SGX_QL_ERROR_INVALID_PARAMETER;
@@ -984,7 +1170,11 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
         supplemental_data->earliest_issue_date = earliest_issue_date;
         supplemental_data->latest_issue_date = latest_issue_date;
         supplemental_data->earliest_expiration_date = earliest_expiration_date;
+        supplemental_data->qe_iden_earliest_issue_date = qe_iden_earliest_issue_date;
+        supplemental_data->qe_iden_latest_issue_date = qe_iden_latest_issue_date;
+        supplemental_data->qe_iden_earliest_expiration_date = qe_iden_earliest_expiration_date;
         supplemental_data->tcb_level_date_tag = 0;
+        supplemental_data->qe_iden_tcb_level_date_tag = 0;
 
         //get matching QE identity TCB level
         //
@@ -1064,6 +1254,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
+            supplemental_data->qe_iden_tcb_level_date_tag = qe_identity_date;
             //compare TCB info TCB level date and QE identity TCB level date, return the smaller one
             //
             if (qe_identity_date <= matching_tcb_info_tcb_date) {
@@ -1097,6 +1288,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
         }
 
         supplemental_data->root_ca_crl_num = (uint32_t)tmp_crl_num;
+        supplemental_data->qe_iden_tcb_eval_ref_num = qe_identity_v2->getTcbEvaluationDataNumber();
 
         if (qe_identity_v2->getTcbEvaluationDataNumber() <= tcb_info_obj->getTcbEvaluationDataNumber()) {
             supplemental_data->tcb_eval_ref_num = qe_identity_v2->getTcbEvaluationDataNumber();
@@ -1226,7 +1418,7 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
 }
 
 
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
 /**
  * Get supplemental data required size.
  * @param p_data_size[OUT] - Pointer to hold the size of the buffer in bytes required to contain all of the supplemental data.
@@ -1271,7 +1463,7 @@ quote3_error_t sgx_qve_get_quote_supplemental_data_version(
 
 
 #ifdef SGX_TRUSTED
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
 /**
  * Generate enclave report with:
  * SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data] || 32 - 0x00s)
@@ -1382,7 +1574,7 @@ static quote3_error_t sgx_qve_generate_report(
     }
     return ret;
 }
-#endif //_TD_MIGRATION
+#endif //SERVTD_ATTEST
 #endif //SGX_TRUSTED
 
 #define IS_IN_ENCLAVE_POINTER(p, size) (p && (strnlen(p, size) == size - 1) && sgx_is_within_enclave(p, size))
@@ -1434,7 +1626,7 @@ quote3_error_t sgx_qve_verify_quote(
     sgx_ql_qe_report_info_t *p_qve_report_info,
     uint32_t supplemental_data_size,
     uint8_t *p_supplemental_data
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
     ,const uint8_t* root_pub_key,
     uint32_t root_pub_key_size,
     uint8_t *p_td_report_body,
@@ -1477,13 +1669,15 @@ quote3_error_t sgx_qve_verify_quote(
     if (outputs_set == 0) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
-#ifdef _TD_MIGRATION
-    if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < sizeof(sgx_report2_body_t) || root_pub_key_size < 0)  {
+#ifdef SERVTD_ATTEST
+    if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < sizeof(servtd_tdx_quote_suppl_data) || root_pub_key_size < 0)  {
            return SGX_QL_ERROR_INVALID_PARAMETER;
     }
+    unsigned char fmspc_from_quote[FMSPC_SIZE] = { 0 };
+    unsigned char ca_from_quote[CA_SIZE] = { 0 };
+
     if(p_quote_collateral == NULL) {
-        unsigned char fmspc_from_quote[FMSPC_SIZE] = { 0 };
-        unsigned char ca_from_quote[CA_SIZE] = { 0 };
+
         quote3_error_t retrieve_fmspc_ret;
         retrieve_fmspc_ret = get_fmspc_ca_from_quote(p_quote, quote_size, fmspc_from_quote, FMSPC_SIZE, ca_from_quote, CA_SIZE);
         if(retrieve_fmspc_ret != SGX_QL_SUCCESS)
@@ -1523,7 +1717,7 @@ quote3_error_t sgx_qve_verify_quote(
          p_quote_collateral->version != QVE_COLLATERAL_VERSION3 &&
          p_quote_collateral->version != QVE_COLLATERAL_VERSOIN31 &&
          p_quote_collateral->version != QVE_COLLATERAL_VERSION4) {
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
 		if(p_quote_collateral != NULL) {
 			tdx_att_free_collateral((tdx_ql_qve_collateral_t*)p_quote_collateral);
 			p_quote_collateral = NULL;
@@ -1539,6 +1733,9 @@ quote3_error_t sgx_qve_verify_quote(
     time_t earliest_issue_date = 0;
     time_t latest_expiration_date = 0;
     time_t latest_issue_date = 0;
+    time_t qe_iden_earliest_issue_date = 0;
+    time_t qe_iden_latest_issue_date = 0;
+    time_t qe_iden_earliest_expiration_date = 0;
     Status collateral_verification_res = STATUS_SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH;
     quote3_error_t ret = SGX_QL_ERROR_INVALID_PARAMETER;
     uint32_t pck_cert_chain_size = 0;
@@ -1653,7 +1850,7 @@ quote3_error_t sgx_qve_verify_quote(
         }
 
         auto root_pub_key_from_cert = root_cert_x509.getPubKey();
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
         std::copy(root_pub_key, root_pub_key + root_pub_key_size, std::back_inserter(hardcode_root_pub_key));
 #else
         std::copy(std::begin(INTEL_ROOT_PUB_KEY), std::end(INTEL_ROOT_PUB_KEY), std::back_inserter(hardcode_root_pub_key));
@@ -1677,13 +1874,16 @@ quote3_error_t sgx_qve_verify_quote(
         ret = qve_get_collateral_dates(&chain, &tcb_info_obj,
             p_quote_collateral, crls.data(),
             &earliest_issue_date, &earliest_expiration_date,
-            &latest_issue_date, &latest_expiration_date);
+            &latest_issue_date, &latest_expiration_date,
+            &qe_iden_earliest_issue_date,
+            &qe_iden_latest_issue_date,
+            &qe_iden_earliest_expiration_date);
         if (ret != SGX_QL_SUCCESS) {
             break;
         }
 
 	//set the expiration_check_data to pass validation, since in migration, we don't care time
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
         time_t * _p_expiration_check_date = const_cast<time_t *>(&expiration_check_date);
 	    *_p_expiration_check_date = (latest_issue_date + earliest_expiration_date) / 2;
         set_time = *_p_expiration_check_date;
@@ -1748,9 +1948,10 @@ quote3_error_t sgx_qve_verify_quote(
             ret = status_error_to_quote3_error(collateral_verification_res);
         }
 
-        //collect supplemental data if required, only if verification completed with non-terminal status
+        // collect supplemental data if required, only if verification completed with non-terminal status
         //
-        if (p_supplemental_data && ret == SGX_QL_SUCCESS) {
+        if (ret == SGX_QL_SUCCESS)
+        {
             // We totaly trust user on this, it should be explicitly and clearly
             // mentioned in doc, is there any max quote len other than numeric_limit<uint32_t>::max() ?
             const std::vector<uint8_t> vecQuote(p_quote, std::next(p_quote, quote_size));
@@ -1760,91 +1961,51 @@ quote3_error_t sgx_qve_verify_quote(
             {
                 ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
             }
+            if (p_supplemental_data)
+            {
+                ret = qve_set_quote_supplemental_data(quote,
+                                                      &chain,
+                                                      &tcb_info_obj,
+                                                      p_quote_collateral,
+                                                      crls.data(),
+                                                      earliest_issue_date,
+                                                      latest_issue_date,
+                                                      earliest_expiration_date,
+                                                      qe_iden_earliest_issue_date,
+                                                      qe_iden_latest_issue_date,
+                                                      qe_iden_earliest_expiration_date,
+                                                      p_supplemental_data);
+                if (ret != SGX_QL_SUCCESS)
+                {
+                    break;
+                }
+            }
+#ifdef SERVTD_ATTEST
+            memset(p_td_report_body, 0, *p_td_report_body_size);
+            // Get the TCB level matching the ISVSVN in the quote.
+            try
+            {
+                auto qe_tcb = getMatchingQETcbLevel(
+                    p_quote_collateral->qe_identity, quote);
 
-            ret = qve_set_quote_supplemental_data(quote,
-                                            &chain,
-                                            &tcb_info_obj,
-                                            p_quote_collateral,
-                                            crls.data(),
-                                            earliest_issue_date,
-                                            latest_issue_date,
-                                            earliest_expiration_date,
-                                            p_supplemental_data);
-            if (ret != SGX_QL_SUCCESS) {
+                auto chain_pck_cert = chain.getPckCert();
+                auto p_pckCert = chain_pck_cert.get();
+                ret = servtd_set_quote_supplemental_data(
+                    quote, *p_pckCert, &tcb_info_obj, fmspc_from_quote,
+                    FMSPC_SIZE, qe_tcb, p_td_report_body,
+                    p_td_report_body_size);
+                if (ret != SGX_QL_SUCCESS)
+                {
+                    break;
+                }
+            }
+            catch (const std::exception &e)
+            {
+                ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
-        }
-#ifdef _TD_MIGRATION
-        if (ret == SGX_QL_SUCCESS)
-        {
-            memset(p_td_report_body, 0, *p_td_report_body_size);
-            const uint8_t* p = p_quote;
-            // Extract the version
-            uint16_t _version;
-            memcpy(&_version, p, sizeof(uint16_t));
-            // Skip the version and att_key_type to reach the tee_type field
-            p += sizeof(uint16_t) + sizeof(uint16_t); 
-
-            // Extract the tee_type
-            uint32_t _tee_type;
-            memcpy(&_tee_type, p, sizeof(uint32_t));
-
-            // check if quote is tdx format, if not return error
-            if (_tee_type == TDX_QUOTE_TYPE)
-            {
-                if (_version == constants::QUOTE_VERSION_5)
-                {
-                    sgx_quote5_t *tmp_p_quote5 = (sgx_quote5_t *)p_quote;
-
-                    uint16_t _type = tmp_p_quote5->type;
-                    uint32_t _size = tmp_p_quote5->size;
-
-                    if (_type == constants::BODY_TD_REPORT10_TYPE || _type == constants::BODY_TD_REPORT15_TYPE)
-                    {
-                        int required_size = (_type == constants::BODY_TD_REPORT10_TYPE) ? constants::TD_REPORT10_BYTE_LEN : constants::TD_REPORT15_BYTE_LEN;
-                        if (_size != required_size)
-                        {
-                            ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
-                            break;
-                        }
-                        if ((*p_td_report_body_size) < constants::TD_REPORT10_BYTE_LEN)
-                        {
-                            ret = status_error_to_quote3_error(STATUS_INVALID_PARAMETER);
-                            break;
-                        }
-
-                        // Hint: Always return sgx_report2_body_t(584 bytes) per design
-                        // For V4 quote return sgx_report2_body_t directly, for V5 quote return report body w/o mr_servicetd & tee_tcb_svn2
-                        memcpy(p_td_report_body, (void *)(tmp_p_quote5->body), constants::TD_REPORT10_BYTE_LEN);
-                        *p_td_report_body_size = constants::TD_REPORT10_BYTE_LEN;
-                    }
-                    else
-                    {
-                        ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
-                    }
-                }
-                else if (_version == constants::QUOTE_VERSION_4)
-                {
-                    sgx_quote4_t *tmp_p_quote = (sgx_quote4_t *)p_quote;
-                    if ((*p_td_report_body_size) < constants::TD_REPORT10_BYTE_LEN)
-                    {
-                        ret = status_error_to_quote3_error(STATUS_INVALID_PARAMETER);
-                        break;
-                    }
-                    memcpy(p_td_report_body, (void *)(&(tmp_p_quote->report_body)), constants::TD_REPORT10_BYTE_LEN);
-                    *p_td_report_body_size = TD_REPORT10_BYTE_LEN;
-                }
-                else
-                {
-                    ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
-                }
-            }
-            else
-            {
-                ret = status_error_to_quote3_error(STATUS_UNSUPPORTED_QUOTE_FORMAT);
-            }
-        }
 #endif
+        }
 
     } while (0);
 
@@ -1859,7 +2020,7 @@ quote3_error_t sgx_qve_verify_quote(
 
     //check if report is required
     //
-#ifndef _TD_MIGRATION
+#ifndef SERVTD_ATTEST
     if (p_qve_report_info != NULL && ret == SGX_QL_SUCCESS) {
 
         quote3_error_t generate_report_ret = SGX_QL_ERROR_INVALID_PARAMETER;
@@ -1885,7 +2046,7 @@ quote3_error_t sgx_qve_verify_quote(
 			tdx_att_free_collateral((tdx_ql_qve_collateral_t*)p_quote_collateral);
 			p_quote_collateral = NULL;
 	}
-#endif // _TD_MIGRATION
+#endif // SERVTD_ATTEST
  #endif //SGX_TRUSTED
 
     //clear and free allocated memory
@@ -1904,7 +2065,7 @@ quote3_error_t sgx_qve_verify_quote(
     return ret;
 }
 
-#ifdef _TD_MIGRATION
+#ifdef SERVTD_ATTEST
 extern "C" EXPORT_API
 uint8_t do_verify_quote_integrity(
 		const uint8_t *p_quote,
@@ -1917,8 +2078,8 @@ uint8_t do_verify_quote_integrity(
 	uint32_t collateral_expiration_status;
 	sgx_ql_qv_result_t quote_verification_result;
 
-  // 3 report types supported, minimum size is ENCLAVE_REPORT_BYTE_LEN. The input size should be larger than the minimum size
-	if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < ENCLAVE_REPORT_BYTE_LEN || root_pub_key_size < 0)  {
+  // 3 report types supported, minimum size is TD_REPORT10_BYTE_LEN. The input size should be larger than the minimum size
+	if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < TD_REPORT10_BYTE_LEN || root_pub_key_size < 0)  {
 		return SGX_TD_VERIFY_ERROR(SGX_QL_ERROR_INVALID_PARAMETER);
 	}
 	
@@ -1939,4 +2100,5 @@ uint8_t do_verify_quote_integrity(
 
 			return SGX_TD_VERIFY_ERROR(ret);
 }
+
 #endif

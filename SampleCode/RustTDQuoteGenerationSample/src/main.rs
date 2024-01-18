@@ -61,7 +61,6 @@ fn main() {
     }
     match quote {
         Some(q) => {
-            println!("ATT key id: {:?}", selected_att_key_id);
             println!("TDX quote data: {:?}", q);
             println!("Successfully get the TD Quote.");
             fs::write("quote.dat", q).expect("Unable to write quote file.");

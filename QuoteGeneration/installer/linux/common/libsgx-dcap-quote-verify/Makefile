@@ -36,6 +36,7 @@ PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
 USR_LIB_PATH=/usr/$(notdir $(shell gcc -print-multi-os-directory))/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null)
 USR_INC_PATH=/usr/$(INC_DIR)
+USR_SHARE_PATH=/usr/$(SHARE_DIR)
 
 USR_LIB_VER=1.0.0
 SPLIT_VERSION=$(word $2,$(subst ., ,$1))
@@ -46,6 +47,7 @@ install: $(PACKAGES)
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QVL_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	mv libsgx_dcap_quoteverify.so libsgx_dcap_quoteverify.so.$(USR_LIB_VER) && \
 	ln -fs libsgx_dcap_quoteverify.so.$(USR_LIB_VER) libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1)
+	install -d $(shell readlink -m $(DESTDIR)/$(DCAP_QVL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH))
 	cd $(shell readlink -m $(DESTDIR)/$(DCAP_QVL_DEV_PACKAGE_NAME)/$(USR_LIB_PATH)) && \
 	ln -fs libsgx_dcap_quoteverify.so.$(call SPLIT_VERSION,$(USR_LIB_VER),1) libsgx_dcap_quoteverify.so
 
@@ -56,5 +58,7 @@ $(PACKAGES):
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(LIB_DIR)/*.so $(DESTDIR)/$@/$(USR_LIB_PATH))
 	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/.*), \
 		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_INC_PATH)) && \
-		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_LIB_PATH)) && \
 		mv $(PACKAGE_ROOT_FOLDER)/$@/$(INC_DIR)/* $(DESTDIR)/$@/$(USR_INC_PATH))
+	$(if $(wildcard $(PACKAGE_ROOT_FOLDER)/$@/$(SHARE_DIR)/.*), \
+		install -d $(shell readlink -m $(DESTDIR)/$@/$(USR_SHARE_PATH)) && \
+		mv $(PACKAGE_ROOT_FOLDER)/$@/$(SHARE_DIR)/* $(DESTDIR)/$@/$(USR_SHARE_PATH))

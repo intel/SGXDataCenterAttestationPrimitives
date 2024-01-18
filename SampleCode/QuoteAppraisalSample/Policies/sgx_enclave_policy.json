@@ -1,0 +1,24 @@
+{
+    "policy_array":[ 
+        {
+            "environment": {
+                "class_id": "bef7cb8c-31aa-42c1-854c-10db005d5c41",
+                "description":"Application SGX Enclave Policy"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own enclave",
+                "sgx_miscselect":"00000000",
+                "sgx_miscselect_mask":"FFFFFFFF",
+                "sgx_attributes":"00000000000000030000000000000005",
+                "sgx_attributes_mask":"FFFFFFFFFFFFFF1BFF00FFFFFFFFFFFD",
+                "sgx_isvprodid":0,
+                "sgx_isvsvn_min":0,
+                "sgx_isvfamilyid":"00000000000000000000000000000000",
+                "sgx_isvextprodid":"00000000000000000000000000000000",
+                "#NOTE": "To make the following configurations take effect, modify the value in the following lines, and uncomment the lines by removing '#' from the key",
+                "#sgx_mrenclave":"8845C3F4D658FF5C12DD2868F4D01DFE73471642C7141EF5D80EFF551FFD299B",
+                "#sgx_mrsigner":"258C20C86869C8AE080CD78D3543DD1E6A419DAB1E4A83325D4EEFC018FFE6E1"
+            } 
+        }
+    ]
+}

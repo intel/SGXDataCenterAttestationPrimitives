@@ -35,7 +35,6 @@
  */
 
 #include "sgx_qve_header.h"
-#include "sgx_qve_def.h"
 #include "sgx_dcap_pcs_com.h"
 #include <stdlib.h>
 #include "se_trace.h"
@@ -43,20 +42,6 @@
 
 #ifdef GEN_STATIC
 #include "sgx_default_quote_provider.h"
-#else
-sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
-sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
-
-sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity = NULL;
-sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity = NULL;
-
-sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl = NULL;
-sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
-
-tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
-tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
-
-sgx_qpl_global_init_func_t p_sgx_qpl_global_init = NULL;
 #endif
 
 /**
@@ -332,3 +317,41 @@ quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
     return tdx_ql_free_quote_verification_collateral(p_quote_collateral);
 #endif
 }
+
+#ifndef _MSC_VER
+quote3_error_t tee_dcap_get_default_platform_policy(const uint8_t *fmspc, const uint16_t fmspc_size,
+                                                    uint8_t **pp_platform_policy, uint32_t *p_platform_policy_size)
+{
+    if(fmspc == NULL || pp_platform_policy == NULL || p_platform_policy_size == NULL)
+    {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+#ifndef GEN_STATIC
+    if (!sgx_dcap_load_qpl() || !p_tee_get_default_platform_policy) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_tee_get_default_platform_policy to free allocated memory
+    //
+    return p_tee_get_default_platform_policy(fmspc, fmspc_size, pp_platform_policy, p_platform_policy_size);
+#else
+    return tee_get_default_platform_policy(fmspc, fmspc_size, pp_platform_policy, p_platform_policy_size);
+#endif
+}
+quote3_error_t tee_dcap_free_platform_policy(uint8_t *p_platform_policy)
+{
+    if(p_platform_policy == NULL)
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+#ifndef GEN_STATIC
+    if (!sgx_dcap_load_qpl() || !p_tee_free_platform_policy) {
+        return SGX_QL_PLATFORM_LIB_UNAVAILABLE;
+    }
+
+    //call p_tee_free_platform_policy to free allocated memory
+    //
+    return p_tee_free_platform_policy(p_platform_policy);
+#else
+    return tee_free_platform_policy(p_platform_policy);
+#endif
+}
+#endif

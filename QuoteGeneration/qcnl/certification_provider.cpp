@@ -61,7 +61,7 @@ CertificationProvider::CertificationProvider(const string &base_url) {
 CertificationProvider::~CertificationProvider() {
 }
 
-sgx_qcnl_error_t CertificationProvider::get_certification(http_header_map &header_map,
+sgx_qcnl_error_t CertificationProvider::get_certification(const http_header_map &header_map,
                                                           const string &query_string,
                                                           PccsResponseObject *pccs_resp_obj) {
 

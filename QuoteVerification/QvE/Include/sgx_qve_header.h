@@ -126,7 +126,12 @@ typedef struct _sgx_ql_qv_supplemental_t
     pck_cert_flag_enum_t smt_enabled;           ///< Indicate whether a plat form has SMT (simultaneous multithreading) enabled
 
     char sa_list[MAX_SA_LIST_SIZE];             ///< String of comma separated list of Security Advisory IDs
-
+    time_t qe_iden_earliest_issue_date;           ///< Earliest issue date of QEIdentity (UTC)
+    time_t qe_iden_latest_issue_date;             ///< Latest issue date of QEIdentity (UTC)
+    time_t qe_iden_earliest_expiration_date;      ///< Earliest expiration date of QEIdentity (UTC)
+    time_t qe_iden_tcb_level_date_tag;            ///< The SGX TCB of the platform that generated the quote is not vulnerable
+    uint32_t qe_iden_tcb_eval_ref_num;            ///< Lower number of the QEIdentity
+    sgx_ql_qv_result_t qe_iden_status;            /// QEIdentity status
 } sgx_ql_qv_supplemental_t;
 
 #ifdef _MSC_VER

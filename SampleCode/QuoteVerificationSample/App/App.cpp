@@ -43,8 +43,14 @@
 #endif
 #include "sgx_ql_quote.h"
 #include "sgx_dcap_quoteverify.h"
+
+
 #ifdef SGX_QPL_LOGGING
 #include "sgx_default_quote_provider.h"
+#ifdef _MSC_VER
+// Linking to dcap quote prov lib for logging callback
+#pragma comment(lib, "dcap_quoteprov.lib")
+#endif
 #endif
 
 #ifndef _MSC_VER
@@ -546,7 +552,7 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
 #ifdef SGX_QPL_LOGGING
-    sgx_ql_set_logging_callback(qpl_logger, SGX_QPL_LOGGING);
+    sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING));
 #endif
 
     log("Info: ECDSA quote path: %s", quote_path);

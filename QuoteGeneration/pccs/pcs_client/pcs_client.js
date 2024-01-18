@@ -84,6 +84,10 @@ async function do_request(url, options) {
 
     if (response.statusCode != Constants.HTTP_SUCCESS) {
       logger.error('Intel PCS server returns error(' + response.statusCode + ').' + response.body);
+      if (response.statusCode == 400) {
+        logger.error('Error-Code:' + response.headers['error-code']);
+        logger.error('Error-Message:' + response.headers['error-message']);
+      }
     }
 
     return response;

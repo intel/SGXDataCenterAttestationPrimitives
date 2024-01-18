@@ -98,11 +98,7 @@ App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_dcap_quoteverify -l$(Urts_Library_
 
 ifneq ($(SGX_QPL_LOGGING), 0)
 App_Link_Flags += -ldcap_quoteprov
-ifeq ($(SGX_QPL_LOGGING), 1)
-App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_ERROR
-else ifeq ($(SGX_QPL_LOGGING), 2)
-App_Cpp_Flags += -DSGX_QPL_LOGGING=SGX_QL_LOG_INFO
-endif
+App_Cpp_Flags += -DSGX_QPL_LOGGING=$(SGX_QPL_LOGGING)
 else
 App_Cpp_Flags += -USGX_QPL_LOGGING
 endif

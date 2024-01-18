@@ -39,6 +39,7 @@ import {
   rootcacrlController,
   refreshController,
   crlController,
+  appraisalPolicyController,
 } from '../controllers/index.js';
 
 // express routes for our API
@@ -74,9 +75,16 @@ sgxRouter
   .post(refreshController.refreshCache)
   .get(refreshController.refreshCache);
 
+sgxRouter
+  .route('/appraisalpolicy')
+  .put(appraisalPolicyController.putAppraisalPolicy)
+  .get(appraisalPolicyController.getAppraisalPolicy);
+
 //---------------- Routes for TDX APIs-------------------------------
 tdxRouter.route('/tcb').get(tcbinfoController.getTdxTcbInfo);
 
 tdxRouter.route('/qe/identity').get(identityController.getTdQeIdentity);
+
+
 
 export { sgxRouter, tdxRouter };

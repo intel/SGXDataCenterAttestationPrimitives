@@ -66,9 +66,12 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 0
 
-ifndef _TD_MIGRATION
-    ifneq ($(MAKECMDGOALS),clean)
-    include $(SGX_SDK)/buildenv.mk
+ifndef SERVTD_ATTEST
+    ifneq ($(origin SGX_SDK),file)
+      include $(SGX_SDK)/buildenv.mk
+	  else
+$(info You may need to set environment variables if the SGX SDK is installed.)
+$(info Use a command like 'source /opt/intel/sgxsdk/environment')
     endif
 endif
 
@@ -190,8 +193,8 @@ ifneq ($(MITIGATION-CVE-2020-0551), LOAD)
     endif
 endif
 
-ifdef _TD_MIGRATION
-COMMON_FLAGS += -D_TD_MIGRATION
+ifdef SERVTD_ATTEST
+COMMON_FLAGS += -DSERVTD_ATTEST
 endif
 
 CFLAGS   += $(COMMON_FLAGS)
@@ -217,11 +220,11 @@ ENCLAVE_LDFLAGS  = $(COMMON_LDFLAGS) -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefi
                    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
                    -Wl,--defsym,__ImageBase=0
 
-TD_MIGRATION_LINUX_TRUNK_ROOT_PATH := $(ROOT_DIR)/../../..
-TD_MIGRATION_STD_INC_PATH := $(TD_MIGRATION_LINUX_TRUNK_ROOT_PATH)/common/inc
-TD_MIGRATION_STD_LIB_PATH := $(TD_MIGRATION_LINUX_TRUNK_ROOT_PATH)/build/linux
-TD_MIGRATION_CFLAGS := $(CFLAGS) -ffreestanding -nostdinc -fPIC -fvisibility=hidden -D_TD_MIGRATION
-TD_MIGRATION_CXXFLAGS := $(TD_MIGRATION_CFLAGS) -nostdinc++
-TD_MIGRATION_LDFLAGS := -nostdlib -nodefaultlibs -nostartfiles  \
+SERVTD_ATTEST_LINUX_TRUNK_ROOT_PATH := $(ROOT_DIR)/../../..
+SERVTD_ATTEST_STD_INC_PATH := $(SERVTD_ATTEST_LINUX_TRUNK_ROOT_PATH)/common/inc
+SERVTD_ATTEST_STD_LIB_PATH := $(SERVTD_ATTEST_LINUX_TRUNK_ROOT_PATH)/build/linux
+SERVTD_ATTEST_CFLAGS := $(CFLAGS) -ffreestanding -nostdinc -fPIC -fvisibility=hidden -DSERVTD_ATTEST
+SERVTD_ATTEST_CXXFLAGS := $(SERVTD_ATTEST_CFLAGS) -nostdinc++
+SERVTD_ATTEST_LDFLAGS := -nostdlib -nodefaultlibs -nostartfiles  \
                         -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--export-dynamic -Wl,--gc-sections -g
-TD_MIGRATION_BUILD_DIR := $(BUILD_DIR)/td_migration
+SERVTD_ATTEST_BUILD_DIR := $(BUILD_DIR)/servtd_attest

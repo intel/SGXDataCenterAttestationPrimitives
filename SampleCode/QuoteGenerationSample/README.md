@@ -89,4 +89,5 @@ $ SGX_AESM_ADDR=1 ./app
 
 ## Build and run QuoteGenerationSample to generate an ECDSA quote
 1. Open VS solution QuoteGenerationSample.sln, build with `Debug/Release | x64` configuration
+The SGX_QPL_LOGGING in `App`->`Configuration Properties` -> `C/C++` -> `Preprocessor` will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
 2. Run App.exe

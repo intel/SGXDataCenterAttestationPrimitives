@@ -9,6 +9,6 @@ Homepage: https://github.com/intel/SGXDataCenterAttestationPrimitives
 Package: sgx-pck-id-retrieval-tool
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: libsgx-urts (>= 2.22), libsgx-ae-pce (>= @dep_version@),libsgx-ae-id-enclave (>=@dep_version@), libsgx-ra-uefi (>= @dep_version@)
+Recommends: libsgx-urts (>= 2.23), libsgx-ae-pce (>= @dep_version@),libsgx-ae-id-enclave (>=@dep_version@), libsgx-ra-uefi (>= @dep_version@)
 Description: Intel(R) Software Guard Extensions: this tool is used to collect the platform information to retrieve the PCK certs from PCS(Provisioning Certification Server)
 

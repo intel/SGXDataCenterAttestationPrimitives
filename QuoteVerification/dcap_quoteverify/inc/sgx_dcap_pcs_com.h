@@ -58,6 +58,9 @@ extern "C" {
 
 #define QL_API_QPL_GLOBAL_INIT "sgx_qpl_global_init"
 
+#define QL_API_GET_DEFAULT_PLATFORM_POLICY "tee_get_default_platform_policy"
+#define QL_API_FREE_PLATFORM_POLICY "tee_free_platform_policy"
+
 typedef quote3_error_t(*sgx_get_quote_verification_collateral_func_t)(const char *fmspc,
         uint16_t fmspc_size,
         const char *pck_ca,
@@ -84,6 +87,28 @@ typedef quote3_error_t(*tdx_get_quote_verification_collateral_func_t)(const char
 typedef quote3_error_t(*tdx_free_quote_verification_collateral_func_t)(struct _sgx_ql_qve_collateral_t *p_quote_collateral);
 
 typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
+
+typedef quote3_error_t (*tee_get_default_platform_policy_func_t)(const uint8_t *fmspc, const uint16_t fmspc_size,
+                                                                 uint8_t **pp_platform_policy, uint32_t *p_platform_policy_size);
+
+typedef quote3_error_t (*tee_free_platform_policy_func_t)(uint8_t *p_platform_policy);
+
+
+extern sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral;
+extern sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral;
+
+extern sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity;
+extern sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity;
+
+extern sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl;
+extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
+
+extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
+extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
+
+extern tee_get_default_platform_policy_func_t p_tee_get_default_platform_policy;
+extern tee_free_platform_policy_func_t  p_tee_free_platform_policy;
+
 
 bool sgx_dcap_load_qpl();
 
@@ -120,6 +145,14 @@ quote3_error_t tdx_dcap_free_verification_collateral(struct _sgx_ql_qve_collater
 #ifndef _MSC_VER
 bool sgx_qv_set_qpl_path(const char* p_path);
 bool sgx_qv_set_qve_path(const char* p_path);
+
+// Right now, these two APIs are for Linux only for Appraisal Engine support
+quote3_error_t tee_dcap_get_default_platform_policy(const uint8_t *fmspc, const uint16_t fmspc_size,
+                                                    uint8_t **pp_platform_policy, uint32_t *p_platform_policy_size);
+
+quote3_error_t tee_dcap_free_platform_policy(uint8_t *p_platform_policy);
+
+
 #endif
 
 #if defined(__cplusplus)

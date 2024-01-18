@@ -1,0 +1,3 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/installer/linux/common/tee-appraisal-tool/installConfig	<installdir>/installConfig	0	main	STP
+<deliverydir>/installer/linux/common/tee-appraisal-tool/Makefile	<installdir>/Makefile	0	main	STP

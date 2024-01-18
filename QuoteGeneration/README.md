@@ -39,7 +39,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.19/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.20/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS
@@ -120,7 +120,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
     $ make deb_pkg
   ```
-  You can find the generated installers located under `linux/installer/deb/`.
+  You can find the generated installers located under `installer/linux/deb/`.
   **Note**: On Ubuntu 18.04 and Ubuntu 20.04, the above command also generates another debug symbol package with extension name of `.ddeb` for debug purpose.
   **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
   ```
@@ -130,7 +130,7 @@ A `README.md` is provided in the Intel(R) SGX driver package for Intel(R) SGX DC
   ```
     $ make rpm_pkg
   ```
-  You can find the generated installers located under `linux/installer/rpm/`.
+  You can find the generated installers located under `installer/linux/rpm/`.
   **Note**: The above command builds the installers with default configuration firstly and then generates the target installers. To build the installers without optimization and with full debug information kept in the libraries, enter the following command:
   ```
     $ make rpm_pkg DEBUG=1

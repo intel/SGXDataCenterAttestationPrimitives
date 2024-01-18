@@ -81,7 +81,13 @@ uint8_t* FSUefi::readUEFIVar(const char* varName, size_t &dataSize)
         }
 
         // get uefi file size
-        size_t fileSize = fdGetVarFileSize(fd);
+	long tempSize = fdGetVarFileSize(fd);
+	if(tempSize < 0){
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "readUEFIVar: failed to get variable file size %l \n", tempSize);
+            break;
+        }
+
+        size_t fileSize = tempSize;
         // actual data size without uefi attribute
         dataSize = fileSize - sizeof(attributes);
 
@@ -109,7 +115,7 @@ uint8_t* FSUefi::readUEFIVar(const char* varName, size_t &dataSize)
     } while(0);
 
     if (entire_var) {
-        delete entire_var;
+        delete[] entire_var;
     }
     if (fd != -1) {
         close(fd);
@@ -200,7 +206,7 @@ int FSUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataSi
         bytesWrote = write(fd, buffer, dataSize+sizeof(attributes));
         if(bytesWrote != (ssize_t)(dataSize+sizeof(attributes)))
         {
-            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to write uefi variable %s, wrote %d bytes, error: %s\n", UEFIvarNamePath, bytesWrote, strerror(errno));
+            uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to write uefi variable %s, wrote %zu bytes, error: %s\n", UEFIvarNamePath, bytesWrote, strerror(errno));
             break;
         }
         

@@ -20,3 +20,5 @@ EXPORTS
     sgx_qcnl_clear_cache              @17
     sgx_qcnl_global_init              @18
     sgx_qcnl_global_cleanup           @19
+    tee_qcnl_get_default_platform_policy    @20
+    tee_qcnl_free_platform_policy     @21

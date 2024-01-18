@@ -1,0 +1,14 @@
+[submodule "QuoteVerification/QVL"]
+	path = QuoteVerification/QVL
+	url = https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationLibrary.git
+	branch = DCAP/1.20
+[submodule "QuoteVerification/QuoteVerificationService"]
+	path = QuoteVerification/QuoteVerificationService
+	url = https://github.com/intel/SGX-TDX-DCAP-QuoteVerificationService.git
+	branch = stable
+[submodule "external/wasm-micro-runtime"]
+	path = external/wasm-micro-runtime
+	url = https://github.com/bytecodealliance/wasm-micro-runtime.git
+[submodule "external/jwt-cpp"]
+	path = external/jwt-cpp
+	url = https://github.com/Thalhammer/jwt-cpp.git

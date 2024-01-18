@@ -6,13 +6,13 @@ Intel(R) Software Guard Extensions Data Center Attestation Primitives (Intel(R) 
 
 ## How to build this tool
 For Linux version:
-- Install prebuilt Intel(R) SGX SDK and urts Installer, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
+- Install prebuilt Intel(R) SGX SDK , you can download it from [download.01.org](https://download.01.org/intel-sgx/latest/linux-latest/distro/)
     a. sgx_linux_x64_sdk_${version}.bin
 - Just run the command: make 
 
  
 For Windows version:
-1. Install Intel(R)_SGX_Windows_SDK_2.x.xxx.xxx, you can download it from [01.org](https://01.org/intel-software-guard-extensions/downloads)
+1. Install Intel(R)_SGX_Windows_SDK_2.x.xxx.xxx, you can download it from https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/get-started.html
 2. Build "DCAP.sln" with Microsoft Visual Studio 
 3. Open the solution "PCKIDRetrievalTool.sln" with Microsoft Visual Studio
 4. Build it directly with the correct configuration

@@ -82,6 +82,7 @@ You need to follow [QuoteGenerationSample](../QuoteGenerationSample) to generate
 
 ## Build and run QuoteVerificationSample to verify a given quote
 1. Open VS solution QuoteVerificationSample.sln, butil with `Debug/Release | x64` configuration. Note that Release mode need to sign ISV enclave with your own key.
+The SGX_QPL_LOGGING in `App`->`Configuration Properties` -> `C/C++` -> `Preprocessor` will be set to 1 by default, enabling error level logging for for QCNL&QPL. SGX_QPL_LOGGING can be set to 2 for info log level, 0 for no QCNL&QPL log.
 2. Run App.exe
 ```
 > App.exe -quote </path/to/quote.dat [default=..\..\..\QuoteGenerationSample\x64\Debug\quote.dat]>

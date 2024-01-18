@@ -13,8 +13,14 @@ global:
     tee_get_supplemental_data_version_and_size;
     tee_verify_quote;
     tee_get_fmspc_from_quote;
+    tee_verify_quote_qvt;
+    tee_free_verify_quote_qvt;
     sgx_trace_logger_callback;
     sgx_trace_loglevel;
+
+    tee_appraise_verification_token;
+    tee_free_appraisal_token;
+    tee_authenticate_appraisal_result;
 local:
     *;
 };

@@ -65,7 +65,11 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
         uint32_t resp_size = 0;
         uint32_t resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
 
-        QGS_LOG_INFO("enter prepare_response\n");
+        uint32_t req_type = QGS_MSG_TYPE_MAX;
+        if (QGS_MSG_SUCCESS != qgs_msg_get_type(p_req, req_size, &req_type)) {
+            QGS_LOG_ERROR("Cannot get msg type\n");
+            return {};
+        }
         if (ptr.get() == 0) {
             tee_att_error_t ret = TEE_ATT_SUCCESS;
             tee_att_config_t *p_ctx = NULL;
@@ -77,17 +81,19 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 QGS_LOG_INFO("create context in thread[%s]\n",
                             oss.str().c_str());
                 ptr.reset(p_ctx);
-                sgx_target_info_t qe_target_info;
-                uint8_t hash[32] = {0};
-                size_t hash_size = sizeof(hash);
-                  tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
-                                                 &hash_size,
-                                                 hash);
-                if (TEE_ATT_SUCCESS != tee_att_ret) {
-                    QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
-                    return {};
-                } else {
-                    QGS_LOG_INFO("tee_att_init_quote return success\n");
+                if (req_type != GET_PLATFORM_INFO_REQ) {
+                    sgx_target_info_t qe_target_info;
+                    uint8_t hash[32] = {0};
+                    size_t hash_size = sizeof(hash);
+                    tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
+                            &hash_size,
+                            hash);
+                    if (TEE_ATT_SUCCESS != tee_att_ret) {
+                        QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                        return {};
+                    } else {
+                        QGS_LOG_INFO("tee_att_init_quote return success\n");
+                    }
                 }
             } else {
                 QGS_LOG_ERROR("Cannot create context\n");
@@ -95,11 +101,6 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
             }
         }
 
-        uint32_t req_type = QGS_MSG_TYPE_MAX;
-        if (QGS_MSG_SUCCESS != qgs_msg_get_type(p_req, req_size, &req_type)) {
-            QGS_LOG_ERROR("Cannot get msg type\n");
-            return {};
-        }
         switch (req_type) {
         case GET_QUOTE_REQ: {
             uint32_t size = 0;
@@ -253,7 +254,7 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
                 resp_error_code = QGS_MSG_ERROR_UNEXPECTED;
                 QGS_LOG_ERROR("qgs_msg_inflate_get_platform_info_req return error\n");
             } else {
-                QGS_LOG_INFO("call tee_att_init_quote\n");
+                QGS_LOG_INFO("call tee_att_get_platform_info\n");
                 tee_att_ret = tee_att_get_platform_info(ptr.get(), &platform_info);
                 if (TEE_ATT_SUCCESS != tee_att_ret) {
                     resp_error_code = QGS_MSG_ERROR_UNEXPECTED;

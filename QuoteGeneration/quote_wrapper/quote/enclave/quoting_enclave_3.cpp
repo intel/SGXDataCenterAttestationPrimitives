@@ -822,58 +822,9 @@ uint32_t get_pce_encrypt_key(const sgx_target_info_t* p_pce_target_info,
     }
 #endif
 
-    // PPID_CLEARTEXT not supported.  Input check will not allow it to get here.
-    if (PPID_CLEARTEXT == cert_key_type) {
-#ifdef ALLOW_CLEARTEXT_PPID
-        g_rsa_key.e[0] = 0x10001;
-        p_rsa_pub_key = (pce_rsaoaep_3072_encrypt_pub_key_t*)p_public_key;
-        //todo: Currenlty, the private key is stored temporarily in enclave global memory long enough
-        // to last between get_pce_encrypt_key() and store_cert_data().  These calls surround the call to the PCE
-        // get_pce_info() API.  There is a risk that if the enclave is unloaded directly or indirectly (by power state
-        // change) the private key will be lost.  There should be more documentation about this situation w/r/t
-        // detection and recovery.  Or, if that is not sufficient, then provide a way to store the key in the ECDSA
-        // blob.  Since PPID_CLEARTEXT cert_key_type is not supported at this time, we can push the solution for later.
-        sgx_status_t ret_code = sgx_create_rsa_key_pair(REF_RSA_OAEP_3072_MOD_SIZE,
-            REF_RSA_OAEP_3072_EXP_SIZE,
-            (unsigned char*)g_rsa_key.n,
-            (unsigned char*)g_rsa_key.d,
-            (unsigned char*)g_rsa_key.e,
-            (unsigned char*)g_rsa_key.p,
-            (unsigned char*)g_rsa_key.q,
-            (unsigned char*)g_rsa_key.dmp1,
-            (unsigned char*)g_rsa_key.dmq1,
-            (unsigned char*)g_rsa_key.iqmp);
-        if (ret_code != SGX_SUCCESS) {
-            ret = REFQE3_ERROR_CRYPTO;
-            goto ret_point;
-        }
-
-        // PCE wants the key in big endian
-        size_t i;
-        uint8_t* p_temp;
-        p_temp = (uint8_t*)g_rsa_key.e;
-        for (i = 0; i < REF_RSA_OAEP_3072_EXP_SIZE; i++) {
-            p_rsa_pub_key->e[i] = *(p_temp + REF_RSA_OAEP_3072_EXP_SIZE - 1 - i); //create big endian e
-        }
-        p_temp = (uint8_t*)g_rsa_key.n;
-        for (i = 0; i < REF_RSA_OAEP_3072_MOD_SIZE; i++) {
-            p_rsa_pub_key->n[i] = *(p_temp + REF_RSA_OAEP_3072_MOD_SIZE - 1 - i); //create big endian n
-        }
-#else
-        //Shouldn't get here based on cert_key_type input parameter check
-        ret = REFQE3_ERROR_UNEXPECTED;
-        goto ret_point;
-#endif
-    }
-    else if (PPID_RSA3072_ENCRYPTED == cert_key_type) {
-        p_rsa_pub_key = (pce_rsaoaep_3072_encrypt_pub_key_t*)p_public_key;
-        memcpy(p_rsa_pub_key->e, g_ref_pubkey_e_be, sizeof(p_rsa_pub_key->e));
-        memcpy(p_rsa_pub_key->n, g_ref_pubkey_n_be, sizeof(p_rsa_pub_key->n));
-    }
-    else {
-        ret = REFQE3_ERROR_INVALID_PARAMETER;
-        goto ret_point;
-    }
+    p_rsa_pub_key = (pce_rsaoaep_3072_encrypt_pub_key_t*)p_public_key;
+    memcpy(p_rsa_pub_key->e, g_ref_pubkey_e_be, sizeof(p_rsa_pub_key->e));
+    memcpy(p_rsa_pub_key->n, g_ref_pubkey_n_be, sizeof(p_rsa_pub_key->n));
 
     // report_data = SHA256(crypto_suite||rsa_pub_key)||0-padding
     do {
@@ -1346,62 +1297,11 @@ uint32_t store_cert_data(ref_plaintext_ecdsa_data_sdk_t *p_plaintext_data,
     // unchanged from the previous certification.
     // PPID_CLEARTEXT is not supported.  Parameter check above will not allow this cert_key_type.
     if (NULL != p_encrypted_ppid) {
-        if (PPID_CLEARTEXT == cert_key_type) {
-#ifdef ALLOW_CLEARTEXT_PPID
-            // Decrypt the PPID with the RSA private key generated with the new key and store it in the blob
-            // Create a private key context
-            /// todo: add a check to see if the private key was lost due to enlave unload or power loss.
-            if (SGX_SUCCESS != sgx_create_rsa_priv2_key(REF_RSA_OAEP_3072_MOD_SIZE,
-                REF_E_SIZE_IN_BYTES,
-                (const unsigned char*)g_rsa_key.e,
-                (const unsigned char*)g_rsa_key.p,
-                (const unsigned char*)g_rsa_key.q,
-                (const unsigned char*)g_rsa_key.dmp1,
-                (const unsigned char*)g_rsa_key.dmq1,
-                (const unsigned char*)g_rsa_key.iqmp,
-                &rsa_key)) {
-                ret = REFQE3_ERROR_CRYPTO;
-                goto ret_point;
-            }
-            if (SGX_SUCCESS != sgx_rsa_priv_decrypt_sha256(rsa_key,
-                NULL,
-                (&ppid_size),
-                p_encrypted_ppid,
-                REF_RSA_OAEP_3072_MOD_SIZE)) {
-                ret = REFQE3_ERROR_CRYPTO;
-                goto ret_point;
-            }
-            //if (sizeof(ciphertext_data.ppid) < ppid_size) {
-            //    ret = REFQE3_ERROR_CRYPTO;
-            //    goto ret_point;
-            //}
-            if (!(dec_dat = (unsigned char*)malloc(ppid_size))) {
-                ret = REFQE3_ERROR_CRYPTO;
-                goto ret_point;
-            }
-            if (SGX_SUCCESS != sgx_rsa_priv_decrypt_sha256(rsa_key,
-                dec_dat,
-                (&ppid_size),
-                p_encrypted_ppid,
-                REF_RSA_OAEP_3072_MOD_SIZE)) {
-                ret = REFQE3_ERROR_CRYPTO;
-                goto ret_point;
-            }
-            // Copy in the decrypted PPID
-            pciphertext_data->is_clear_ppid = 1;   // Specifies that ciphertext part of the blob contains the cleartext PPID instead of the encrypted PPID
-            memcpy(pciphertext_data->ppid, dec_dat, sizeof(pciphertext_data->ppid));
-#else
-            //Shouldn't get here based on cert_key_type input parameter check
-            ret = REFQE3_ERROR_UNEXPECTED;
-            goto ret_point;
-#endif
-        }
-        else {
-            pciphertext_data->is_clear_ppid = 0;   // Specifies that ciphertext part of the blob contains the ciphertext PPID instead of the cleartext PPID
-            pciphertext_data->encrypted_ppid_data.crypto_suite = PCE_ALG_RSA_OAEP_3072;
-            pciphertext_data->encrypted_ppid_data.encrypted_ppid_buf_size = encrypted_ppid_size;
-            memcpy(pciphertext_data->encrypted_ppid_data.encrypted_ppid, p_encrypted_ppid, encrypted_ppid_size); //encrypted_ppid_size checked above.
-        }
+        pciphertext_data->is_clear_ppid = 0;   // Specifies that ciphertext part of the blob contains the ciphertext PPID instead of the cleartext PPID
+        pciphertext_data->encrypted_ppid_data.crypto_suite = PCE_ALG_RSA_OAEP_3072;
+        pciphertext_data->encrypted_ppid_data.encrypted_ppid_buf_size = encrypted_ppid_size;
+        memcpy(pciphertext_data->encrypted_ppid_data.encrypted_ppid, p_encrypted_ppid, encrypted_ppid_size); //encrypted_ppid_size checked above.
+
     }
 
     local_plaintext_data.cert_qe_isv_svn = report.body.isv_svn;
@@ -1902,4 +1802,3 @@ ret_point:
 
     return(ret);
 }
-

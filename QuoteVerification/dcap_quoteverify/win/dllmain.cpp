@@ -56,29 +56,31 @@ se_mutex_t g_qpl_mutex;
 HINSTANCE g_urts_handle = NULL;
 se_mutex_t g_urts_mutex;
 
-extern sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral;
-extern sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral;
+sgx_get_quote_verification_collateral_func_t p_sgx_ql_get_quote_verification_collateral = NULL;
+sgx_free_quote_verification_collateral_func_t p_sgx_ql_free_quote_verification_collateral = NULL;
 
-extern sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity;
-extern sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity;
+sgx_ql_get_qve_identity_func_t p_sgx_ql_get_qve_identity = NULL;
+sgx_ql_free_qve_identity_func_t p_sgx_ql_free_qve_identity = NULL;
 
-extern sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl;
-extern sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl;
+sgx_ql_get_root_ca_crl_func_t p_sgx_ql_get_root_ca_crl = NULL;
+sgx_ql_free_root_ca_crl_func_t p_sgx_ql_free_root_ca_crl = NULL;
 
-extern tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral;
-extern tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral;
+tdx_get_quote_verification_collateral_func_t p_tdx_ql_get_quote_verification_collateral = NULL;
+tdx_free_quote_verification_collateral_func_t p_tdx_ql_free_quote_verification_collateral = NULL;
 
-extern sgx_qpl_global_init_func_t p_sgx_qpl_global_init;
+sgx_qpl_global_init_func_t p_sgx_qpl_global_init = NULL;
 
-extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
-extern sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave;
-extern sgx_ecall_func_t p_sgx_urts_ecall;
-extern sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex;
-extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall;
-extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
-extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
-extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
+tee_get_default_platform_policy_func_t p_tee_get_default_platform_policy = NULL;
+tee_free_platform_policy_func_t p_tee_free_platform_policy = NULL;
 
+sgx_create_enclave_func_t p_sgx_urts_create_enclave = NULL;
+sgx_destroy_enclave_func_t p_sgx_urts_destroy_enclave = NULL;
+sgx_ecall_func_t p_sgx_urts_ecall = NULL;
+sgx_oc_cpuidex_func_t p_sgx_oc_cpuidex = NULL;
+sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_event_ocall = NULL;
+sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall = NULL;
+sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall = NULL;
+sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall = NULL;
 
 bool sgx_dcap_load_qpl()
 {
@@ -387,17 +389,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
                se_mutex_destroy(&g_urts_mutex);
                break;
            }
-
-            //Try to unload QvE only when use legacy PERSISTENT policy
-            //All the threads will share single QvE instance in this mode
-            //
-            if (g_qve_policy == SGX_QL_PERSISTENT) {
-                if (g_qve_eid != 0) {
-                    //ignore the return error
-                    unload_qve_once(&g_qve_eid);
-                    g_qve_eid = 0;
-                }
-            }
 
            if (p_sgx_urts_create_enclave)
                p_sgx_urts_create_enclave = NULL;

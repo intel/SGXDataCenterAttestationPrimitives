@@ -1,0 +1,23 @@
+{
+    "policy_array":[
+        {
+            "environment": {
+                "class_id": "3123ec35-8d38-4ea5-87a5-d6c48b567570",
+                "description": "Grace Period Policy for SGX Platform"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own requirements",
+                "allow_dynamic_platform": true,
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded",
+                    "ConfigurationNeeded",
+                    "OutOfDate"
+                ],
+		"#NOTE": "'platform_grace_period' allows you to pass appraisal verification even if the platform has expired within 90 days (7776000 seconds).",
+                    "platform_grace_period": 7776000,
+                    "collateral_grace_period": 0
+            }
+        }
+    ]
+}

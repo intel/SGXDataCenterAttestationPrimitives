@@ -891,3 +891,23 @@ export const PLATFORM_COLLATERAL_SCHEMA_V4 = {
   },
   "required": ["platforms", "collaterals"]
 };
+
+export const APPRAISAL_POLICY_REG_SCHEMA = {
+  "title": "Appraisal Policy Registration",
+  "description": "Appraisal Policy Registration Data Format",
+  "type": "object",
+  "properties": {
+    "is_default": {
+      "type": "boolean"
+    },
+    "fmspc": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{12}$"
+    },
+    "policy": {
+      "type": "string",
+      "nullable": false
+    },
+  },
+  "required": ["is_default", "fmspc", "policy"]
+};

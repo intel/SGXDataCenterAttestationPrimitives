@@ -31,8 +31,8 @@
 import logger from './Logger.js';
 import Config from 'config';
 import Constants from '../constants/index.js';
-import { sequelize, PcsVersion } from '../dao/models/index.js';
-import Umzug from 'umzug';
+import { sequelize } from '../dao/models/index.js';
+import { Umzug, SequelizeStorage } from 'umzug';
 import * as fs from 'fs';
 import url from 'url';
 
@@ -84,52 +84,56 @@ async function test_db_status() {
 }
 
 async function db_migration() {
-  const umzug = new Umzug({
-    storage: 'sequelize',
-    storageOptions: {
-      sequelize: sequelize,
-      tableName: 'umzug',
-    },
-    migrations: {
-      pattern: /\.js|\.up\.sql$/,
-      customResolver: (path) => {
-        return {
-          up: async (sequelize) => {
-            if (path.endsWith('.up.sql')) {
-              const sqls = fs.readFileSync(path, 'utf-8').split(';');
-              let queries = [];
-              for (const sql of sqls) {
-                queries.push(sequelize.query(sql));
-              }
-              return Promise.all(queries);
-            } else {
-              const migration = await import(url.pathToFileURL(path));
-              return migration.default.up(sequelize);
-            }
-          },
-          down: async (sequelize) => {
-            if (path.endsWith('.up.sql')) {
-              const downPath = path.replace('.up.sql', '.down.sql');
-              if (fs.existsSync(downPath)) {
-                const sqls = fs.readFileSync(downPath, 'utf-8').split(';');
-                let queries = [];
-                for (const sql of sqls) {
-                  queries.push(sequelize.query(sql));
-                }
-                return Promise.all(queries);
-              }
-            } else {
-              const migration = await import(url.pathToFileURL(path));
-              return migration.default.down(sequelize);
-            }
-          },
-        };
+  const migrations = fs.readdirSync('./migrations').map(name => {
+    const path = `./migrations/${name}`;
+
+    return {
+      name,
+      up: async () => {
+        if (name.endsWith('.up.sql')) {
+          const sqls = fs.readFileSync(path, 'utf-8').split(';');
+          let queries = [];
+          for (const sql of sqls) {
+            queries.push(sequelize.query(sql));
+          }
+          return Promise.all(queries);
+        } else if (name.endsWith('.js')){
+          const migration = await import(url.pathToFileURL(path));
+          return migration.default.up(sequelize);
+        }
       },
-      params: [sequelize],
-    },
-    logger: console,
+      down: async () => {
+        if (name.endsWith('.up.sql')) {
+          const downPath = path.replace('.up.sql', '.down.sql');
+          if (fs.existsSync(downPath)) {
+            const sqls = fs.readFileSync(downPath, 'utf-8').split(';');
+            let queries = [];
+            for (const sql of sqls) {
+              queries.push(sequelize.query(sql));
+            }
+            return Promise.all(queries);
+          }
+        } else if (name.endsWith('.js')) {
+          const migration = await import(url.pathToFileURL(path));
+          return migration.default.down(sequelize);
+        }
+      },
+    };
   });
-  // Auto migration from previous databases
+
+  const umzug = new Umzug({
+    migrations: {
+      glob: './migrations/*.{js,up.sql}',
+      resolve: ({name}) => migrations.find(migration => migration.name === name),
+    },
+    context: sequelize,
+    logger: undefined,
+    storage: new SequelizeStorage({
+      sequelize,
+      tableName: 'umzug'
+    }),
+  });
+
   await umzug.up();
 }
 
@@ -145,13 +149,6 @@ export async function database_check() {
     if (!db_initialized) {
       // auto-migration
       await db_migration();
-      // update pcs_version
-      await PcsVersion.upsert({
-        id: 1,
-        api_version: Constants.API_VERSION,
-        server_addr: url.hostname,
-        db_version: Constants.DB_VERSION,
-      });
       return true;
     } else {
       // For an existing database, we need to check its API version and server address

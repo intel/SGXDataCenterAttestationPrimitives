@@ -29,6 +29,8 @@
  *
  */
 import logger from '../utils/Logger.js';
+import Config from 'config';
+import { PcsVersion } from '../dao/models/index.js';
 
 async function up(sequelize) {
   await sequelize.transaction(async (t) => {
@@ -38,6 +40,15 @@ async function up(sequelize) {
     logger.debug('DB Migration -- Update pcs_version table');
     let sql = 'ALTER TABLE pcs_version ADD COLUMN db_version INT DEFAULT 1';
     await sequelize.query(sql);
+
+    let url = new URL(Config.get('uri'));
+    // initialize pcs_version
+    await PcsVersion.upsert({
+      id: 1,
+      api_version: 2,
+      server_addr: url.hostname,
+      db_version: 1,
+    });
 
     // update pck_crl.pck_crl from HEX string to BINARY
     logger.debug('DB Migration -- update pck_crl.pck_crl from HEX string to BINARY');

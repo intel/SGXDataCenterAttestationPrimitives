@@ -391,3 +391,18 @@ sgx_qcnl_error_t sgx_qcnl_global_init() {
 sgx_qcnl_error_t sgx_qcnl_global_cleanup() {
     return SGX_QCNL_SUCCESS;
 }
+
+sgx_qcnl_error_t tee_qcnl_get_default_platform_policy(const char *fmspc,
+                                                      const uint16_t fmspc_size,
+                                                      uint8_t **pp_platform_policy,
+                                                      uint32_t *p_platform_policy_size) {
+    CertificationService certificationService;
+    return certificationService.get_default_platform_policy(fmspc, fmspc_size, pp_platform_policy, p_platform_policy_size);
+}
+
+void tee_qcnl_free_platform_policy(uint8_t *p_platform_policy) {
+    if (p_platform_policy) {
+        free(p_platform_policy);
+        p_platform_policy = NULL;
+    }
+}
