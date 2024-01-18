@@ -11,7 +11,7 @@ This project is BSD license. See [License.txt](License.txt)
 
 But Linux driver code is dual licensed under BSD/GPL v2. See [License.txt](driver/linux/License.txt) 
 
-Third-party code is also used in this project. See [ThirdPartyLicenses.txt](QuoteGeneration/ThirdPartyLicenses.txt), [ThirdPartyLicenses.txt](QuoteVerification/QVL/ThirdPartyLicenses.txt) and [ThirdPartyLicenses.txt](driver/win/ThirdPartyLicenses.txt) for details.
+Third-party code is also used in this project. See [ThirdPartyLicenses.txt](QuoteGeneration/ThirdPartyLicenses.txt) and [ThirdPartyLicenses.txt](driver/win/ThirdPartyLicenses.txt) for details.
 
 Contributing
 -------
