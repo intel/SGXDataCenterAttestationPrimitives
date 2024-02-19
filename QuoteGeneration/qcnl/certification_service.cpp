@@ -594,15 +594,15 @@ sgx_qcnl_error_t CertificationService::get_pck_cert_chain(const sgx_ql_pck_cert_
     }
 
     // 2. Try the local service provider
+    void *args[] = {pp_quote_config};
     CertificationProvider localProvider(QcnlConfig::Instance()->getLocalPckUrl());
     if ((ret = localProvider.get_certification(request.headers, request.params, &pccs_resp_obj)) == SGX_QCNL_SUCCESS) {
         qcnl_log(SGX_QL_LOG_INFO,
                  "[QCNL] Successfully fetched certificate from primary URL: '%s'. \n",
                  QcnlConfig::Instance()->getLocalPckUrl().c_str());
-        return resp_obj_to_pck_certchain(&pccs_resp_obj, pp_quote_config);
+        return resp_obj_to_pck_certchain(&pccs_resp_obj, args);
     }
 
-    void *args[] = {pp_quote_config};
     HandlerData handlerData = {resp_obj_to_pck_certchain, args};
 
     return fetch_data(PCK_CERT_CHAIN, request, &handlerData);
