@@ -37,8 +37,11 @@ SGX_ARCH ?= x64
 
 ifneq ($(wildcard $(SGX_SDK)),)
     include $(SGX_SDK)/buildenv.mk
-else
+else ifneq ($(wildcard /usr/share/sgxsdk/buildenv.mk),)
     include /usr/share/sgxsdk/buildenv.mk
+else
+    $(info You may need to set environment variables if the SGX SDK is installed.)
+    $(info Use a command like 'source /opt/intel/sgxsdk/environment')
 endif
 
 ifeq ($(shell getconf LONG_BIT), 32)
