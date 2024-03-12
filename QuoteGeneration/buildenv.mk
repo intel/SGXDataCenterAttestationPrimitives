@@ -65,6 +65,9 @@ get_major_version = $(word 1,$(subst ., ,$(call get_full_version,$1)))
 SGX_VER:= $(call get_full_version,STRFILEVER)
 SGX_MAJOR_VER:= $(call get_major_version,STRFILEVER)
 
+# If the value of _FORTIFY_SOURCE is greater than 2, use the value, else use 2.
+FORTIFY_SOURCE_VAL:= $(lastword $(sort $(word 2,$(subst =, ,$(filter -D_FORTIFY_SOURCE=%,$(CFLAGS)))) 2))
+
 CP    := cp -f
 LN    := ln -sf
 MKDIR := mkdir -p
@@ -143,7 +146,7 @@ ifdef DEBUG
     COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
     COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG -DDEBUG_MODE=1
 else
-    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
+    COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=$(FORTIFY_SOURCE_VAL) -UDEBUG -DNDEBUG
 endif
 
 ifdef SE_SIM
