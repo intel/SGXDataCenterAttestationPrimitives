@@ -73,13 +73,17 @@ Tdx_Attest_C_Objects := $(Tdx_Attest_C_Files:.c=.o)
 Tdx_Attest_C_Depends := $(Tdx_Attest_C_Files:.c=.d)
 
 Tdx_Attest_Name := libtdx_attest.so
+Tdx_Attest_Name_Full := $(Tdx_Attest_Name).$(SGX_VER)
+Tdx_Attest_Name_Major := $(Tdx_Attest_Name).$(SGX_MAJOR_VER)
 -include $(Tdx_Attest_C_Depends)
 
 .PHONY: all test_app
 all:  install_lib
 
 install_lib: $(Tdx_Attest_Name) | $(BUILD_DIR)
-	$(CP) $(Tdx_Attest_Name) $|
+	@$(CP) $(Tdx_Attest_Name) $|/$(Tdx_Attest_Name_Full)
+	@$(LN) $(Tdx_Attest_Name_Full) $|/$(Tdx_Attest_Name_Major)
+	@$(LN) $(Tdx_Attest_Name_Major) $|/$(Tdx_Attest_Name)
 
 ######## Tdx_Attest Objects ########
 $(Tdx_Attest_Name): $(Tdx_Attest_C_Objects)
@@ -100,5 +104,5 @@ $(BUILD_DIR):
 
 clean:
 	make -C ../../qgs_msg_lib/linux clean
-	@rm -rf $(Tdx_Attest_Name) $(Tdx_Attest_C_Objects) $(Tdx_Attest_C_Depends) \
-		$(BUILD_DIR)/$(Tdx_Attest_Name) ./qgs test_app
+	@$(RM) $(Tdx_Attest_Name) $(Tdx_Attest_C_Objects) $(Tdx_Attest_C_Depends) ./qgs test_app
+	@$(RM) $(addprefix $(BUILD_DIR)/,$(Tdx_Attest_Name) $(Tdx_Attest_Name_Full) $(Tdx_Attest_Name_Major))
