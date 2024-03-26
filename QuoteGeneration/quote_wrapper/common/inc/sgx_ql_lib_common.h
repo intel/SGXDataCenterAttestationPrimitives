@@ -143,7 +143,7 @@ typedef enum _quote3_error_t {
     SGX_QL_TCB_NOT_SUPPORTED = SGX_QL_MK_ERROR(0x0066),              ///< Current TCB level cannot be found in platform/enclave TCB info
 
     SGX_QL_CONFIG_INVALID_JSON = SGX_QL_MK_ERROR(0x0067),            ///< The QPL's config file is in JSON format but has a format error
-    
+
     SGX_QL_RESULT_INVALID_SIGNATURE = SGX_QL_MK_ERROR(0x0068),    ///< Invalid signature during quote verification
 
     SGX_QL_ERROR_MAX = SGX_QL_MK_ERROR(0x00FF),                      ///< Indicate max error to allow better translation.
