@@ -52,7 +52,7 @@ DEPENDS = ${QGS_OBJS test_client.o:.o=.d}
 
 # SGX related libraries
 QGS_LFLAGS = -L$(TOP_DIR)/build/linux -lsgx_tdx_logic -lsgx_pce_logic -ldl \
-             -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -g
+             -L$(SGX_LIBRARY_PATH) -lsgx_urts -g
 
 # add boost_system for link
 QGS_LFLAGS += -lboost_system -lboost_thread -lpthread

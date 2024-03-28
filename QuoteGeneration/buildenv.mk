@@ -68,6 +68,16 @@ SGX_MAJOR_VER:= $(call get_major_version,STRFILEVER)
 # If the value of _FORTIFY_SOURCE is greater than 2, use the value, else use 2.
 FORTIFY_SOURCE_VAL:= $(lastword $(sort $(word 2,$(subst =, ,$(filter -D_FORTIFY_SOURCE=%,$(CFLAGS)))) 2))
 
+# If USE_PREBUILT_OPENSSL not equal 0, link prebuilt openssl, else link system openssl
+USE_PREBUILT_OPENSSL ?= 0
+ifeq ($(USE_PREBUILT_OPENSSL), 0)
+    CRYPTO_LIB = $(shell pkg-config --libs libcrypto 2>/dev/null)
+    CRYPTO_INC = $(shell pkg-config --cflags libcrypto 2>/dev/null)
+else
+    CRYPTO_LIB = -L$(ROOT_DIR)/../prebuilt/openssl/lib/linux64 -lcrypto
+    CRYPTO_INC = -I$(ROOT_DIR)/../prebuilt/openssl/inc
+endif
+
 CP    := cp -f
 LN    := ln -sf
 MKDIR := mkdir -p

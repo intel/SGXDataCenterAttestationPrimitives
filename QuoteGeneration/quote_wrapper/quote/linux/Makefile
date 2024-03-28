@@ -52,7 +52,7 @@ Quote_Include_Paths := -I$(SGX_TRUSTED_INCLUDE_PATH) -I../inc -I../../common/inc
 Quote_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(Quote_Include_Paths)
 
 Quote_Cpp_Flags := $(Quote_C_Flags) -std=c++11
-Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(ROOT_DIR)/../../../build/linux -lsgx_urts -lpthread -ldl
+Quote_Link_Flags := $(COMMON_FLAGS) -g -L$(ROOT_DIR)/build/linux -L$(SGX_LIBRARY_PATH) -lsgx_urts -lpthread -ldl
 
 ifndef DEBUG
 Quote_Cpp_Flags += -DDISABLE_TRACE

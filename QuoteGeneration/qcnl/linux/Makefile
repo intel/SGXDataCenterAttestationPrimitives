@@ -32,7 +32,6 @@
 ######## SGX SDK Settings ########
 TOP_DIR = ../..
 include $(TOP_DIR)/buildenv.mk
-PREBUILD_OPENSSL_PATH = ../../../prebuilt/openssl
 
 ######## SGX CNL Library Settings ########
 
@@ -46,7 +45,7 @@ CNL_Lib_Include_Paths := -I../../quote_wrapper/common/inc       \
                          -I../../pce_wrapper/inc                \
                          -I../../../QuoteVerification/QVL/Src/ThirdParty/rapidjson/include/rapidjson	\
                          -I../../../tools/PCKCertSelection/include \
-                         -I$(PREBUILD_OPENSSL_PATH)/inc
+                         $(CRYPTO_INC)
 
 CNL_Lib_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(CNL_Lib_Include_Paths)
 

@@ -33,14 +33,13 @@
 DCAP_TOPDIR = ../../..
 include $(DCAP_TOPDIR)/QuoteGeneration/buildenv.mk
 
-PREBUILD_OPENSSL_PATH  = $(DCAP_TOPDIR)/prebuilt/openssl
 FLAGS += -fpie -g -I./ \
 		-I$(SGX_SDK)/include \
 		-I$(DCAP_TOPDIR)/external/jwt-cpp/include \
 		-I../../QVL/Src/ThirdParty/rapidjson/include \
 		-I$(DCAP_TOPDIR)/QuoteGeneration/common/inc/internal/ \
 		-I$(DCAP_TOPDIR)/QuoteGeneration/common/inc/internal/linux/ \
-		-I$(PREBUILD_OPENSSL_PATH)/inc
+		$(CRYPTO_INC)
 
 ifdef DEBUG
 FLAGS +=  -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
@@ -54,7 +53,7 @@ Cpp_Files = $(wildcard *.cpp)
 C_Obj_Files = se_trace.o
 
 Obj_Files = $(Cpp_Files:.cpp=.o) $(C_Obj_Files)
-LDFLAGS += -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto -lpthread
+LDFLAGS += $(CRYPTO_LIB) -lpthread
 
 TARGET_NAME = tee_appraisal_tool
 
