@@ -4,6 +4,9 @@ FROM ubuntu:23.04 AS builder
 # Define arguments used across multiple stages
 ARG DCAP_VERSION=DCAP_1.20
 ARG NODE_MAJOR=20
+ARG NODE_MINOR=11
+ARG NODE_PATCH=1
+ARG NODE_REVISION=1nodesource1
 
 # update and install packages, nodejs
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -19,7 +22,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update -yq \
-    && apt-get install -yq --no-install-recommends nodejs \
+    && apt-get install -yq --no-install-recommends nodejs=${NODE_MAJOR}.${NODE_MINOR}.${NODE_PATCH}-${NODE_REVISION} \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
