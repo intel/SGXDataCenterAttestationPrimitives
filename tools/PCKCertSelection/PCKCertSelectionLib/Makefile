@@ -62,12 +62,6 @@ ifndef QG_DIR
 	QG_DIR     := $(PROJ_ROOT_DIR)/../../QuoteGeneration
 endif
 
-# openssl include dir
-OPENSSL_INC 		:= $(PROJ_ROOT_DIR)/../../prebuilt/openssl/inc
-
-# openssl lib dir
-OPENSSL_LIB 		:= $(PROJ_ROOT_DIR)/../../prebuilt/openssl/lib/linux64
-
 # JSON parser include dir
 JSON_INC		:= $(QVL_DIR)/ThirdParty/rapidjson/include
 
@@ -116,7 +110,7 @@ LIB_CPP_OBJECTS 	:= \
 	$(UTILS_CPP_FILES:.cpp=.o)
 
 # include paths, local, parser and openssl
-LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include -I$(OPENSSL_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_COMM_INC) -I$(PARSERS_DIR) -I$(VER_DIR) -I$(PARSERS_UTIL_INC)
+LIB_INCLUDE_PATHS	:= -I. -I$(PROJ_ROOT_DIR)/include $(CRYPTO_INC) -I$(JSON_INC) -I$(PARSERS_INC) -I$(PARSERS_COMM_INC) -I$(PARSERS_DIR) -I$(VER_DIR) -I$(PARSERS_UTIL_INC)
 
 # the library shared object name
 LIB_NAME		:= libPCKCertSelection.so
@@ -136,7 +130,7 @@ C_FLAGS	:= -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Werror -Wno-ov
 C_FLAGS += -UPCK_CERT_SELECTION_WITH_COMPONENT
 
 # link flags, link openssl crypto
-LINK_FLAGS := -shared -L$(OPENSSL_LIB) -lcrypto -lpthread -ldl
+LINK_FLAGS := -shared $(CRYPTO_LIB) -lpthread -ldl
 LINK_FLAGS += -Wl,--version-script=pck_cert_selection.lds -Wl,--gc-sections
 
 # debug/release switch
