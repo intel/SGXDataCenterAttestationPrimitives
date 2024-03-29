@@ -58,7 +58,7 @@ Quote_C_Flags := $(CFLAGS) -g -MMD -fPIC -Wno-attributes $(Quote_Include_Paths)
 
 Quote_Cpp_Flags := $(CXXFLAGS) -g -MMD -fPIC -Wno-attributes $(Quote_Include_Paths)
 Quote_Link_Flags := $(COMMON_LDFLAGS) -g -L$(ROOT_DIR)/build/linux \
-                    -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(ROOT_DIR)/../../../build/linux \
+                    -L$(PCE_Library_Dir) -lsgx_pce_logic -L$(SGX_LIBRARY_PATH) \
 					-lsgx_urts -lpthread -ldl
 
 Quote_Link_Flags += -Wl,--version-script=td_ql_logic.lds -Wl,--gc-sections

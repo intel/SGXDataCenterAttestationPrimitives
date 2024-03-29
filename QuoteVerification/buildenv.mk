@@ -55,7 +55,6 @@ DCAP_QG_DIR				:= $(ROOT_DIR)
 DCAP_QV_DIR				:= $(DCAP_QG_DIR)/../QuoteVerification
 QVL_SRC_PATH 			?= $(DCAP_QV_DIR)/QVL/Src
 SGXSSL_PACKAGE_PATH 	?= $(DCAP_QV_DIR)/sgxssl/Linux/package
-PREBUILD_OPENSSL_PATH	?= $(DCAP_QV_DIR)/../prebuilt/openssl
 
 SGX_COMMON_CFLAGS := $(COMMON_FLAGS) -m64 -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 SGX_COMMON_CXXFLAGS := $(COMMON_FLAGS) -m64 -Wnon-virtual-dtor -std=c++17
