@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../intel_tee_quote_verification_rs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="intel_tee_quote_verification_rs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.1 (7cf61ebde 2024-03-27)" data-channel="1.77.1" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../intel_tee_quote_verification_rs/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -512,7 +514,28 @@
 <a href="#512" id="512">512</a>
 <a href="#513" id="513">513</a>
 <a href="#514" id="514">514</a>
-</pre><pre class="rust"><code><span class="comment">/*
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+</pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -530,7 +553,7 @@
  *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
  * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
  * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
@@ -548,17 +571,116 @@
 //!
 //! This is a safe wrapper for **sgx-dcap-quoteverify-sys**.
 
-</span><span class="kw">use </span>intel_tee_quote_verification_sys <span class="kw">as </span>qvl_sys;
+</span><span class="kw">use </span>std::ffi::CString;
+<span class="kw">use </span>std::marker::PhantomData;
+<span class="kw">use </span>std::mem;
+<span class="kw">use </span>std::ops::Deref;
+<span class="kw">use </span>std::os::raw::c_char;
+<span class="kw">use </span>std::ptr;
+<span class="kw">use </span>std::slice;
+
+<span class="kw">use </span>intel_tee_quote_verification_sys <span class="kw">as </span>qvl_sys;
+<span class="kw">use </span>qvl_sys::sgx_ql_qve_collateral_t;
 
 <span class="kw">pub use </span>qvl_sys::quote3_error_t;
-<span class="kw">pub use </span>qvl_sys::sgx_ql_request_policy_t;
-<span class="kw">pub use </span>qvl_sys::sgx_ql_qv_supplemental_t;
-<span class="kw">pub use </span>qvl_sys::sgx_ql_qve_collateral_t;
-<span class="kw">pub use </span>qvl_sys::tdx_ql_qv_collateral_t;
-<span class="kw">pub use </span>qvl_sys::sgx_ql_qv_result_t;
 <span class="kw">pub use </span>qvl_sys::sgx_ql_qe_report_info_t;
+<span class="kw">pub use </span>qvl_sys::sgx_ql_qv_result_t;
+<span class="kw">pub use </span>qvl_sys::sgx_ql_qv_supplemental_t;
+<span class="kw">pub use </span>qvl_sys::sgx_ql_request_policy_t;
 <span class="kw">pub use </span>qvl_sys::sgx_qv_path_type_t;
 <span class="kw">pub use </span>qvl_sys::tee_supp_data_descriptor_t;
+
+<span class="doccomment">/// Quote Certification Collateral Structure
+///
+</span><span class="attr">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>QuoteCollateral {
+    <span class="kw">pub </span>major_version: u16,
+    <span class="kw">pub </span>minor_version: u16,
+    <span class="kw">pub </span>tee_type: u32,
+    <span class="kw">pub </span>pck_crl_issuer_chain: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>root_ca_crl: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>pck_crl: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>tcb_info_issuer_chain: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>tcb_info: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>qe_identity_issuer_chain: Vec&lt;c_char&gt;,
+    <span class="kw">pub </span>qe_identity: Vec&lt;c_char&gt;,
+}
+
+<span class="kw">impl </span>From&lt;sgx_ql_qve_collateral_t&gt; <span class="kw">for </span>QuoteCollateral {
+    <span class="kw">fn </span>from(collateral: sgx_ql_qve_collateral_t) -&gt; <span class="self">Self </span>{
+        <span class="kw">fn </span>raw_ptr_to_vec(data: <span class="kw-2">*mut </span>c_char, len: u32) -&gt; Vec&lt;c_char&gt; {
+            <span class="macro">assert!</span>(!data.is_null());
+            <span class="kw">unsafe </span>{ slice::from_raw_parts(data, len <span class="kw">as _</span>) }.to_vec()
+        }
+
+        QuoteCollateral {
+            major_version: <span class="kw">unsafe </span>{ collateral.__bindgen_anon_1.__bindgen_anon_1.major_version },
+            minor_version: <span class="kw">unsafe </span>{ collateral.__bindgen_anon_1.__bindgen_anon_1.minor_version },
+            tee_type: collateral.tee_type,
+            pck_crl_issuer_chain: raw_ptr_to_vec(
+                collateral.pck_crl_issuer_chain,
+                collateral.pck_crl_issuer_chain_size,
+            ),
+            root_ca_crl: raw_ptr_to_vec(collateral.root_ca_crl, collateral.root_ca_crl_size),
+            pck_crl: raw_ptr_to_vec(collateral.pck_crl, collateral.pck_crl_size),
+            tcb_info_issuer_chain: raw_ptr_to_vec(
+                collateral.tcb_info_issuer_chain,
+                collateral.tcb_info_issuer_chain_size,
+            ),
+            tcb_info: raw_ptr_to_vec(collateral.tcb_info, collateral.tcb_info_size),
+            qe_identity_issuer_chain: raw_ptr_to_vec(
+                collateral.qe_identity_issuer_chain,
+                collateral.qe_identity_issuer_chain_size,
+            ),
+            qe_identity: raw_ptr_to_vec(collateral.qe_identity, collateral.qe_identity_size),
+        }
+    }
+}
+
+<span class="kw">struct </span>PhantomCollateral&lt;<span class="lifetime">'a</span>&gt; {
+    inner: sgx_ql_qve_collateral_t,
+    phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>()&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>QuoteCollateral&gt; <span class="kw">for </span>PhantomCollateral&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from(collateral: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>QuoteCollateral) -&gt; <span class="self">Self </span>{
+        PhantomCollateral {
+            inner: sgx_ql_qve_collateral_t {
+                __bindgen_anon_1: qvl_sys::_sgx_ql_qve_collateral_t__bindgen_ty_1 {
+                    __bindgen_anon_1:
+                        qvl_sys::_sgx_ql_qve_collateral_t__bindgen_ty_1__bindgen_ty_1 {
+                            major_version: collateral.major_version,
+                            minor_version: collateral.minor_version,
+                        },
+                },
+                tee_type: collateral.tee_type,
+                pck_crl_issuer_chain: collateral.pck_crl_issuer_chain.as_ptr() <span class="kw">as _</span>,
+                pck_crl_issuer_chain_size: collateral.pck_crl_issuer_chain.len() <span class="kw">as _</span>,
+                root_ca_crl: collateral.root_ca_crl.as_ptr() <span class="kw">as _</span>,
+                root_ca_crl_size: collateral.root_ca_crl.len() <span class="kw">as _</span>,
+                pck_crl: collateral.pck_crl.as_ptr() <span class="kw">as _</span>,
+                pck_crl_size: collateral.pck_crl.len() <span class="kw">as _</span>,
+                tcb_info_issuer_chain: collateral.tcb_info_issuer_chain.as_ptr() <span class="kw">as _</span>,
+                tcb_info_issuer_chain_size: collateral.tcb_info_issuer_chain.len() <span class="kw">as _</span>,
+                tcb_info: collateral.tcb_info.as_ptr() <span class="kw">as _</span>,
+                tcb_info_size: collateral.tcb_info.len() <span class="kw">as _</span>,
+                qe_identity_issuer_chain: collateral.qe_identity_issuer_chain.as_ptr() <span class="kw">as _</span>,
+                qe_identity_issuer_chain_size: collateral.qe_identity_issuer_chain.len() <span class="kw">as _</span>,
+                qe_identity: collateral.qe_identity.as_ptr() <span class="kw">as _</span>,
+                qe_identity_size: collateral.qe_identity.len() <span class="kw">as _</span>,
+            },
+            phantom: PhantomData,
+        }
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Deref <span class="kw">for </span>PhantomCollateral&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Target = sgx_ql_qve_collateral_t;
+
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    }
+}
 
 <span class="doccomment">/// When the Quoting Verification Library is linked to a process, it needs to know the proper enclave loading policy.
 /// The library may be linked with a long lived process, such as a service, where it can load the enclaves and leave
@@ -576,7 +698,7 @@
 ///
 /// # Return
 /// - ***SGX_QL_SUCCESS***\
-/// Successfully set the enclave loading policy for the quoting library&#39;s enclaves.\
+/// Successfully set the enclave loading policy for the quoting library's enclaves.\
 /// - ***SGX_QL_UNSUPPORTED_LOADING_POLICY***\
 /// The selected policy is not support by the quoting library.\
 /// - ***SGX_QL_ERROR_UNEXPECTED***\
@@ -615,11 +737,9 @@
 /// ```
 </span><span class="kw">pub fn </span>sgx_qv_get_quote_supplemental_data_size() -&gt; <span class="prelude-ty">Result</span>&lt;u32, quote3_error_t&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>data_size = <span class="number">0u32</span>;
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::sgx_qv_get_quote_supplemental_data_size(<span class="kw-2">&amp;mut </span>data_size) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(data_size),
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
-        }
+    <span class="kw">match unsafe </span>{ qvl_sys::sgx_qv_get_quote_supplemental_data_size(<span class="kw-2">&amp;mut </span>data_size) } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(data_size),
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -654,31 +774,22 @@
 ///
 </span><span class="kw">pub fn </span>sgx_qv_verify_quote(
     quote: <span class="kw-2">&amp;</span>[u8],
-    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>sgx_ql_qve_collateral_t&gt;,
+    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>QuoteCollateral&gt;,
     expiration_check_date: i64,
     qve_report_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>sgx_ql_qe_report_info_t&gt;,
     supplemental_data_size: u32,
     supplemental_data: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>sgx_ql_qv_supplemental_t&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(u32, sgx_ql_qv_result_t), quote3_error_t&gt; {
-
     <span class="kw">let </span><span class="kw-2">mut </span>collateral_expiration_status = <span class="number">1u32</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    <span class="kw">let </span>p_quote_collateral = <span class="kw">match </span>quote_collateral {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null(),
-    };
-    <span class="kw">let </span>p_qve_report_info = <span class="kw">match </span>qve_report_info {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
-    <span class="kw">let </span>p_supplemental_data = <span class="kw">match </span>supplemental_data {
-        <span class="prelude-val">Some</span>(p) =&gt; p <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qv_supplemental_t <span class="kw">as </span><span class="kw-2">*mut </span>u8,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
+    <span class="kw">let </span>quote_collateral = quote_collateral.map(PhantomCollateral::from);
+    <span class="kw">let </span>p_quote_collateral = quote_collateral.as_deref().map_or(ptr::null(), |p| p);
+    <span class="kw">let </span>p_qve_report_info = qve_report_info.map_or(ptr::null_mut(), |p| p);
+    <span class="kw">let </span>p_supplemental_data = supplemental_data.map_or(ptr::null_mut(), |p| p);
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::sgx_qv_verify_quote(
+    <span class="kw">match unsafe </span>{
+        qvl_sys::sgx_qv_verify_quote(
             quote.as_ptr(),
             quote.len() <span class="kw">as </span>u32,
             p_quote_collateral,
@@ -687,13 +798,13 @@
             <span class="kw-2">&amp;mut </span>quote_verification_result,
             p_qve_report_info,
             supplemental_data_size,
-            p_supplemental_data,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; {
-                <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
-            }
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
+            p_supplemental_data <span class="kw">as _</span>,
+        )
+    } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; {
+            <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
         }
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -717,11 +828,9 @@
 /// ```
 </span><span class="kw">pub fn </span>tdx_qv_get_quote_supplemental_data_size() -&gt; <span class="prelude-ty">Result</span>&lt;u32, quote3_error_t&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>data_size = <span class="number">0u32</span>;
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::tdx_qv_get_quote_supplemental_data_size(<span class="kw-2">&amp;mut </span>data_size) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(data_size),
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
-        }
+    <span class="kw">match unsafe </span>{ qvl_sys::tdx_qv_get_quote_supplemental_data_size(<span class="kw-2">&amp;mut </span>data_size) } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(data_size),
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -756,31 +865,22 @@
 ///
 </span><span class="kw">pub fn </span>tdx_qv_verify_quote(
     quote: <span class="kw-2">&amp;</span>[u8],
-    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>tdx_ql_qv_collateral_t&gt;,
+    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>QuoteCollateral&gt;,
     expiration_check_date: i64,
     qve_report_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>sgx_ql_qe_report_info_t&gt;,
     supplemental_data_size: u32,
     supplemental_data: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>sgx_ql_qv_supplemental_t&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(u32, sgx_ql_qv_result_t), quote3_error_t&gt; {
-
     <span class="kw">let </span><span class="kw-2">mut </span>collateral_expiration_status = <span class="number">1u32</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    <span class="kw">let </span>p_quote_collateral = <span class="kw">match </span>quote_collateral {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null(),
-    };
-    <span class="kw">let </span>p_qve_report_info = <span class="kw">match </span>qve_report_info {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
-    <span class="kw">let </span>p_supplemental_data = <span class="kw">match </span>supplemental_data {
-        <span class="prelude-val">Some</span>(p) =&gt; p <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qv_supplemental_t <span class="kw">as </span><span class="kw-2">*mut </span>u8,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
+    <span class="kw">let </span>quote_collateral = quote_collateral.map(PhantomCollateral::from);
+    <span class="kw">let </span>p_quote_collateral = quote_collateral.as_deref().map_or(ptr::null(), |p| p);
+    <span class="kw">let </span>p_qve_report_info = qve_report_info.map_or(ptr::null_mut(), |p| p);
+    <span class="kw">let </span>p_supplemental_data = supplemental_data.map_or(ptr::null_mut(), |p| p);
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::tdx_qv_verify_quote(
+    <span class="kw">match unsafe </span>{
+        qvl_sys::tdx_qv_verify_quote(
             quote.as_ptr(),
             quote.len() <span class="kw">as </span>u32,
             p_quote_collateral,
@@ -789,13 +889,13 @@
             <span class="kw-2">&amp;mut </span>quote_verification_result,
             p_qve_report_info,
             supplemental_data_size,
-            p_supplemental_data,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; {
-                <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
-            }
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
+            p_supplemental_data <span class="kw">as _</span>,
+        )
+    } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; {
+            <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
         }
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -814,10 +914,10 @@
 /// - ***SGX_QL_ERROR_INVALID_PARAMETER***\
 /// Path is not a valid full path or the path is too long.
 ///
-</span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
+</span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
 </span><span class="kw">pub fn </span>sgx_qv_set_path(path_type: sgx_qv_path_type_t, path: <span class="kw-2">&amp;</span>str) -&gt; quote3_error_t {
-    <span class="kw">match </span>std::ffi::CString::new(path) {
-        <span class="prelude-val">Ok</span>(path) =&gt; <span class="kw">unsafe </span>{ qvl_sys::sgx_qv_set_path(path_type, path.as_ptr()) }
+    <span class="kw">match </span>CString::new(path) {
+        <span class="prelude-val">Ok</span>(path) =&gt; <span class="kw">unsafe </span>{ qvl_sys::sgx_qv_set_path(path_type, path.as_ptr()) },
         <span class="kw">_ </span>=&gt; quote3_error_t::SGX_QL_ERROR_INVALID_PARAMETER,
     }
 }
@@ -844,77 +944,30 @@
 /// - *SGX_QL_NO_QUOTE_COLLATERAL_DATA*
 /// - *SGX_QL_ERROR_UNEXPECTED*
 ///
-</span><span class="kw">pub fn </span>tee_qv_get_collateral(quote: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, quote3_error_t&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>buf = std::ptr::null_mut();
+</span><span class="kw">pub fn </span>tee_qv_get_collateral(quote: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;QuoteCollateral, quote3_error_t&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>buf = ptr::null_mut();
     <span class="kw">let </span><span class="kw-2">mut </span>buf_len = <span class="number">0u32</span>;
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::tee_qv_get_collateral(
-            quote.as_ptr(),
-            quote.len() <span class="kw">as </span>u32,
-            <span class="kw-2">&amp;mut </span>buf,
-            <span class="kw-2">&amp;mut </span>buf_len,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; {
-                <span class="macro">assert!</span>(!buf.is_null());
-                <span class="macro">assert!</span>(buf_len &gt; <span class="number">0</span>);
-                <span class="kw">let </span><span class="kw-2">mut </span>collateral = <span class="macro">vec!</span>[<span class="number">0u8</span>; buf_len <span class="kw">as </span>usize];
-                <span class="kw">let </span>orig_collateral = <span class="kw-2">&amp;*</span>(buf <span class="kw">as </span><span class="kw-2">*const </span>sgx_ql_qve_collateral_t);
+    <span class="kw">match unsafe </span>{
+        qvl_sys::tee_qv_get_collateral(quote.as_ptr(), quote.len() <span class="kw">as </span>u32, <span class="kw-2">&amp;mut </span>buf, <span class="kw-2">&amp;mut </span>buf_len)
+    } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; {
+            <span class="macro">assert!</span>(!buf.is_null());
+            <span class="macro">assert!</span>(buf_len &gt; <span class="number">0</span>);
+            <span class="macro">assert_eq!</span>(
+                buf.align_offset(mem::align_of::&lt;sgx_ql_qve_collateral_t&gt;()),
+                <span class="number">0
+            </span>);
 
-                <span class="comment">// copy the original collateral
-                </span><span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0usize</span>;
-                collateral[..std::mem::size_of::&lt;sgx_ql_qve_collateral_t&gt;()]
-                    .copy_from_slice(std::slice::from_raw_parts(buf, std::mem::size_of::&lt;sgx_ql_qve_collateral_t&gt;()));
+            <span class="kw">let </span>collateral =
+                QuoteCollateral::from(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>(buf <span class="kw">as </span><span class="kw-2">*const </span>sgx_ql_qve_collateral_t) });
 
-                <span class="comment">// copy pck_crl_issuer_chain field
-                </span>index += std::mem::size_of::&lt;sgx_ql_qve_collateral_t&gt;();
-                collateral[index..(index + orig_collateral.pck_crl_issuer_chain_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl_issuer_chain <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.pck_crl_issuer_chain_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).pck_crl_issuer_chain = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy root_ca_crl field
-                </span>index += orig_collateral.pck_crl_issuer_chain_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.root_ca_crl_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.root_ca_crl <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.root_ca_crl_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).root_ca_crl = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy pck_crl field
-                </span>index += orig_collateral.root_ca_crl_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.pck_crl_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.pck_crl <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.pck_crl_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).pck_crl = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy tcb_info_issuer_chain field
-                </span>index += orig_collateral.pck_crl_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.tcb_info_issuer_chain_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info_issuer_chain <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.tcb_info_issuer_chain_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).tcb_info_issuer_chain = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy tcb_info field
-                </span>index += orig_collateral.tcb_info_issuer_chain_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.tcb_info_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.tcb_info <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.tcb_info_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).tcb_info = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy qe_identity_issuer_chain field
-                </span>index += orig_collateral.tcb_info_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.qe_identity_issuer_chain_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity_issuer_chain <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.qe_identity_issuer_chain_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).qe_identity_issuer_chain = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="comment">// copy qe_identity field
-                </span>index += orig_collateral.qe_identity_issuer_chain_size <span class="kw">as </span>usize;
-                collateral[index..(index + orig_collateral.qe_identity_size <span class="kw">as </span>usize)]
-                    .copy_from_slice(std::slice::from_raw_parts(orig_collateral.qe_identity <span class="kw">as </span><span class="kw-2">*const </span>u8, orig_collateral.qe_identity_size <span class="kw">as </span>usize));
-                (<span class="kw-2">*</span>(collateral.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>sgx_ql_qve_collateral_t)).qe_identity = <span class="kw-2">&amp;mut </span>collateral[index] <span class="kw">as </span><span class="kw-2">*mut </span>u8 <span class="kw">as </span><span class="kw-2">*mut </span>i8;
-
-                <span class="kw">match </span>qvl_sys::tee_qv_free_collateral(buf) {
-                    quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(collateral),
-                    error_code =&gt; <span class="prelude-val">Err</span>(error_code),
-                }
+            <span class="kw">match unsafe </span>{ qvl_sys::tee_qv_free_collateral(buf) } {
+                quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>(collateral),
+                error_code =&gt; <span class="prelude-val">Err</span>(error_code),
             }
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
         }
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -938,16 +991,16 @@
     <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="number">0u32</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>data_size = <span class="number">0u32</span>;
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::tee_get_supplemental_data_version_and_size(
+    <span class="kw">match unsafe </span>{
+        qvl_sys::tee_get_supplemental_data_version_and_size(
             quote.as_ptr(),
             quote.len() <span class="kw">as </span>u32,
             <span class="kw-2">&amp;mut </span>version,
             <span class="kw-2">&amp;mut </span>data_size,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>((version, data_size)),
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
-        }
+        )
+    } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; <span class="prelude-val">Ok</span>((version, data_size)),
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
 
@@ -986,45 +1039,35 @@
 ///
 </span><span class="kw">pub fn </span>tee_verify_quote(
     quote: <span class="kw-2">&amp;</span>[u8],
-    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
+    quote_collateral: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>QuoteCollateral&gt;,
     expiration_check_date: i64,
     qve_report_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>sgx_ql_qe_report_info_t&gt;,
     supp_data_descriptor: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>tee_supp_data_descriptor_t&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(u32, sgx_ql_qv_result_t), quote3_error_t&gt; {
-
     <span class="kw">let </span><span class="kw-2">mut </span>collateral_expiration_status = <span class="number">1u32</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    <span class="kw">let </span>p_quote_collateral = <span class="kw">match </span>quote_collateral {
-        <span class="prelude-val">Some</span>(p) =&gt; p.as_ptr(),
-        <span class="prelude-val">None </span>=&gt; std::ptr::null(),
-    };
-    <span class="kw">let </span>p_qve_report_info = <span class="kw">match </span>qve_report_info {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
-    <span class="kw">let </span>p_supp_data_descriptor = <span class="kw">match </span>supp_data_descriptor {
-        <span class="prelude-val">Some</span>(p) =&gt; p,
-        <span class="prelude-val">None </span>=&gt; std::ptr::null_mut(),
-    };
+    <span class="kw">let </span>quote_collateral = quote_collateral.map(PhantomCollateral::from);
+    <span class="kw">let </span>p_quote_collateral = quote_collateral.as_deref().map_or(ptr::null(), |p| p);
+    <span class="kw">let </span>p_qve_report_info = qve_report_info.map_or(ptr::null_mut(), |p| p);
+    <span class="kw">let </span>p_supp_data_descriptor = supp_data_descriptor.map_or(ptr::null_mut(), |p| p);
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">match </span>qvl_sys::tee_verify_quote(
+    <span class="kw">match unsafe </span>{
+        qvl_sys::tee_verify_quote(
             quote.as_ptr(),
             quote.len() <span class="kw">as </span>u32,
-            p_quote_collateral,
+            p_quote_collateral <span class="kw">as _</span>,
             expiration_check_date,
             <span class="kw-2">&amp;mut </span>collateral_expiration_status,
             <span class="kw-2">&amp;mut </span>quote_verification_result,
             p_qve_report_info,
             p_supp_data_descriptor,
-        ) {
-            quote3_error_t::SGX_QL_SUCCESS =&gt; {
-                <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
-            }
-            error_code =&gt; <span class="prelude-val">Err</span>(error_code),
+        )
+    } {
+        quote3_error_t::SGX_QL_SUCCESS =&gt; {
+            <span class="prelude-val">Ok</span>((collateral_expiration_status, quote_verification_result))
         }
+        error_code =&gt; <span class="prelude-val">Err</span>(error_code),
     }
 }
-</code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="intel_tee_quote_verification_rs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</code></pre></div></section></main></body></html>
