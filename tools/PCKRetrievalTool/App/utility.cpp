@@ -82,7 +82,7 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name,
 #else
 #define PCE_ENCLAVE_NAME  "libsgx_pce.signed.so.1"
 #define ID_ENCLAVE_NAME   "libsgx_id_enclave.signed.so.1"
-#define SGX_URTS_LIBRARY "libsgx_urts.so"             
+#define SGX_URTS_LIBRARY "libsgx_urts.so.2"             
 #define SGX_MULTI_PACKAGE_AGENT_UEFI_LIBRARY "libmpa_uefi.so.1"
 #define FINDFUNCTIONSYM   dlsym
 #define CLOSELIBRARYHANDLE  dlclose
@@ -213,7 +213,8 @@ bool get_urts_library_handle()
 
 void close_urts_library_handle()
 {
-    CLOSELIBRARYHANDLE(sgx_urts_handle);
+    if(sgx_urts_handle != NULL) 
+        CLOSELIBRARYHANDLE(sgx_urts_handle);
 }
 
 extern "C"
@@ -268,6 +269,21 @@ bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
         p_eid,
         NULL);
     if (SGX_SUCCESS != sgx_status) {
+#if defined(__GNUC__)
+        if(SGX_ERROR_ENCLAVE_FILE_ACCESS == sgx_status) {
+           std::string enclave_path_for_ubuntu("/usr/lib/x86_64-linux-gnu/");
+           enclave_path_for_ubuntu += enclave_name;
+            sgx_status = p_sgx_create_enclave(enclave_path_for_ubuntu.c_str(),
+                0,
+                &launch_token,
+                &launch_token_updated,
+                p_eid,
+                NULL);
+            if(SGX_SUCCESS == sgx_status)
+                return ret;
+        }
+#endif
+
         printf("Error, call sgx_create_enclave: fail [%s], SGXError:%04x.\n",__FUNCTION__, sgx_status);
         ret = false;
     }
