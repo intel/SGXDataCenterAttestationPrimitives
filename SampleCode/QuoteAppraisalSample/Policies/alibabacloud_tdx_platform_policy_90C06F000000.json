@@ -1,0 +1,29 @@
+{
+  "policy_array": [
+    {
+      "environment": {
+        "class_id": "f708b97f-0fb2-4e6b-8b03-8a5bcd1221d3",
+        "description": "Alibaba Cloud Evaluation Num Policy for TDX Platform"
+      },
+      "reference": {
+        "allow_dynamic_plaform": true,
+        "accepted_tcb_status": [
+          "UpToDate"
+        ],
+        "min_eval_num": 16
+      }
+    },
+    {
+      "environment": {
+        "class_id": "3769258c-75e6-4bc7-8d72-d2b0e224cad2",
+        "description": "Alibaba Cloud Num Policy for Verified TDQE"
+      },
+      "reference": {
+        "accepted_tcb_status": [
+          "UpToDate"
+        ],
+        "min_eval_num": 16
+      }
+    }
+  ]
+}
