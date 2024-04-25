@@ -36,11 +36,18 @@ import * as appUtil from '../utils/apputil.js';
 
 async function getEnclaveIdentity(req, res, next, enclave_id) {
   try {
+    const update_type = req.query.update? req.query.update.toUpperCase():Constants.UPDATE_TYPE_STANDARD;
+
+    if (update_type !== Constants.UPDATE_TYPE_STANDARD && update_type !== Constants.UPDATE_TYPE_EARLY) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
+
     // call service
     let version = appUtil.get_api_version_from_url(req.originalUrl);
     let enclaveIdentityJson = await identityService.getEnclaveIdentity(
       enclave_id,
-      version
+      version,
+      update_type
     );
 
     // send response

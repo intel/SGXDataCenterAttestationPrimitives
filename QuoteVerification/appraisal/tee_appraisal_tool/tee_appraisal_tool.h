@@ -47,7 +47,7 @@
     "   verify_policy:      Verify the JWT policy file.\n"                                                                             \
     "Options:\n"                                                                                                                       \
     "   -in                 Specify the input file path\n"                                                                             \
-    "   -key                Specify the  key file. The key file must be EC private key with 384 bytes\n"                               \
+    "   -key                Specify the  key file. The key file must be a PEM-formatted, 384-byte EC private key\n"                               \
     "                       It is a required option for \"sign_policy\"\n"                                                             \
     "   -out                Speicify the output file path\n"                                                                           \
     "   -v                  Enable showing the extra dump message for each command\n\n"                                                \

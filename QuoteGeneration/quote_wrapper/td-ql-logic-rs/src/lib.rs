@@ -43,6 +43,14 @@ pub use td_ql_logic_sys::tee_att_config_t;
 pub use td_ql_logic_sys::tee_att_error_t;
 pub use td_ql_logic_sys::tee_platform_info_t;
 
+pub use qpl_rs::tee_qpl_log_level;
+pub use qpl_rs::tee_qpl_logging_callback;
+
+type sgx_ql_set_logging_callback_t = unsafe extern "C" fn(
+    logger: qpl_rs::tee_qpl_logging_callback,
+    loglevel: qpl_rs::tee_qpl_log_level,
+) -> qpl_rs::quote3_error_t;
+
 /// Creates a TEE attestation context.
 ///
 /// # Arguments
@@ -249,9 +257,55 @@ pub fn tee_att_set_path(
     }
 }
 
+/// # Parameters
+///
+/// * `context`: A mutable pointer to a `tee_att_config_t` object.
+/// * `cb` - The logging callback to set.
+/// * `loglevel` - The log level to set for the callback.
+///
+/// # Panics
+///
+/// This function does not have any scenarios in which it could panic.
+///
+pub fn tee_att_set_logging_callback(
+    context: *mut tee_att_config_t,
+    cb: qpl_rs::tee_qpl_logging_callback,
+    loglevel: qpl_rs::tee_qpl_log_level,
+) -> tee_att_error_t {
+    let mut qpl_handle: *mut std::ffi::c_void = std::ptr::null_mut();
+    unsafe {
+        let result = td_ql_logic_sys::tee_att_get_qpl_handle(context, &mut qpl_handle);
+        match result {
+            tee_att_error_t::TEE_ATT_SUCCESS => {
+                let name = std::ffi::CString::new("sgx_ql_set_logging_callback").unwrap();
+                let func = libc::dlsym(qpl_handle, name.as_ptr() as *const i8);
+                if func.is_null() {
+                    tee_att_error_t::TEE_ATT_PLATFORM_LIB_UNAVAILABLE
+                } else {
+                    let set_callback_handle: sgx_ql_set_logging_callback_t =
+                        std::mem::transmute(func);
+                    let ret = set_callback_handle(cb, loglevel);
+                    match ret {
+                        qpl_rs::quote3_error_t::SGX_QL_SUCCESS => tee_att_error_t::TEE_ATT_SUCCESS,
+                        _ => tee_att_error_t::TEE_ATT_PLATFORM_LIB_UNAVAILABLE,
+                    }
+                }
+            }
+            _ => result,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    unsafe extern "C" fn my_logging_callback(
+        level: tee_qpl_log_level,
+        message: *const ::std::os::raw::c_char,
+    ) {
+        let msg_str = std::ffi::CStr::from_ptr(message).to_str().unwrap();
+        println!("level {level}: {:?}", msg_str);
+    }
 
     #[test]
     fn it_works() {
@@ -276,6 +330,12 @@ mod tests {
             tee_att_error_t::TEE_ATT_SUCCESS => println!("tee_att_set_path Success"),
             _ => println!("tee_att_set_path failed"),
         }
+        let cb: tee_qpl_logging_callback = Some(my_logging_callback);
+        let result = tee_att_set_logging_callback(context, cb, 1);
+        match result {
+            tee_att_error_t::TEE_ATT_SUCCESS => println!("tee_att_set_logging_callback Success"),
+            _ => println!("tee_att_set_logging_callback failed"),
+        };
         let result = tee_att_init_quote(context, false);
         let (_pub_key, _qe_target_info) = match result {
             Ok((p, t)) => {

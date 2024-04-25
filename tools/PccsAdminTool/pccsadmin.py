@@ -37,13 +37,15 @@ def main():
     #  subparser for put
     description_put = (
     "This put command supports the following formats([] means optional):\n"
-    "1. pccsadmin put [-u https://localhost:8081/sgx/certification/v4/platformcollateral] [-i your_collateral_file]\n"
-    "2. pccsamdin put -u https://localhost:8081/sgx/certification/v4/appraisalpolicy [-d] -f fmspc -i your_policy_file"
+    "1. pccsadmin put [-u https://localhost:8081/sgx/certification/v4/platformcollateral] [-i collateral_file(*.json)]\n"
+    "2. pccsamdin put -u https://localhost:8081/sgx/certification/v4/appraisalpolicy [-d] -f fmspc -i policy_file(*.jwt)"
     )
     parser_put = subparsers.add_parser('put', description=description_put, formatter_class=argparse.RawTextHelpFormatter)
     # add optional arguments for put
     parser_put.add_argument("-u", "--url", help="The URL of the PCCS's API; default: https://localhost:8081/sgx/certification/v4/platformcollateral")
-    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals or appraisal policy; default: platform_collaterals.json")
+    parser_put.add_argument("-i", "--input_file", help="The input file name for platform collaterals or appraisal policy;\
+                            \nFor /platformcollateral API, default is platform_collaterals.json;\
+                            \nFor /appraisalpolicy API, the filename of the jwt file must be provided explicitly.")
     parser_put.add_argument("-d", "--default", help="This policy will become the default policy for this FMSPC.", action="store_true")
     parser_put.add_argument('-f', '--fmspc', type=str, help="FMSPC value")
     parser_put.set_defaults(func=pccs_put)
@@ -55,6 +57,7 @@ def main():
     parser_fetch.add_argument("-i", "--input_file", help="The input file name for platform list; default: platform_list.json")
     parser_fetch.add_argument("-o", "--output_file", help="The output file name for platform collaterals; default: platform_collaterals.json")
     parser_fetch.add_argument("-p", "--platform", help="Specify what kind of platform you want to fetch FMSPCs and tcbinfos for; default: all", choices=['all','client','E3','E5'])
+    parser_fetch.add_argument("-t", "--tcb_update_type", help="Type of update to TCB info and enclave identities; default: standard", choices=['standard','early','all'])
     parser_fetch.add_argument("-c", "--crl", help="Retrieve only the certificate revocation list (CRL). If an input file is provided, this option will be ignored.", action="store_true")
     parser_fetch.set_defaults(func=pcs_fetch)
 
@@ -308,6 +311,7 @@ class CollateralFetcher:
         self.input_file = args.input_file or 'platform_list.json'
         self.output_file = args.output_file or 'platform_collaterals.json'
         self.fmspc_platform = args.platform or 'all'
+        self.tcb_update_type = args.tcb_update_type or 'standard'
         self.crl_only = bool(args.crl and not args.input_file)
         self.apikey = ""
         if not self.crl_only:
@@ -331,12 +335,12 @@ class CollateralFetcher:
                 return
             if not self._fetch_tcbinfos():
                 return
-            if not self._fetch_qeidentity():
+            if not self._fetch_identity('qe'):
                 return
             if self.ApiVersion >= 4:
-                if not self._fetch_tdqeidentity():
+                if not self._fetch_identity('tdqe'):
                     return
-            if not self._fetch_qveidentity():
+            if not self._fetch_identity('qve'):
                 return
             self._write_output_json()
         except Exception as e:
@@ -464,52 +468,55 @@ class CollateralFetcher:
             for fmspc in fmspcs:
                 self.fmspc_set.add(fmspc['fmspc'])
 
+        updates = ['standard', 'early'] if self.tcb_update_type == 'all' else [self.tcb_update_type]
         # output.collaterals.tcbinfos
         for fmspc in self.fmspc_set:
-            # tcbinfo : [tcbinfo, chain]
-            sgx_tcbinfo = self.pcsclient.get_tcb_info(fmspc, 'sgx', 'ascii')
             tcbinfoJson = {"fmspc" : fmspc}
-            if sgx_tcbinfo != None:
-                if self.ApiVersion >= 4:    
-                    tcbinfoJson['sgx_tcbinfo'] = json.loads(sgx_tcbinfo[0])
+            for update in updates:
+                # tcbinfo : [tcbinfo, chain]
+                sgx_tcbinfo = self.pcsclient.get_tcb_info(fmspc, 'sgx', update, 'ascii')
+
+                if sgx_tcbinfo is None:
+                    if update == 'standard':
+                        print(f"Failed to get SGXtcbinfo for FMSPC:{fmspc}")
+                        return False
+                    continue
+
+                # Handling different keys based on update type and ApiVersion
+                key_suffix = '_early' if update == 'early' else ''
+                if self.ApiVersion >= 4:
+                    tcbinfo_key = f'sgx_tcbinfo{key_suffix}'
                 else:
-                    tcbinfoJson['tcbinfo'] = json.loads(sgx_tcbinfo[0])
-            else:
-                print("Failed to get SGXtcbinfo for FMSPC:%s" %(fmspc))
-                return False
-            # TDX tcbinfo is optional
-            if self.ApiVersion >= 4:
-                tdx_tcbinfo = self.pcsclient.get_tcb_info(fmspc, 'tdx', 'ascii')
-                if tdx_tcbinfo != None:
-                    tcbinfoJson['tdx_tcbinfo'] = json.loads(tdx_tcbinfo[0])
+                    tcbinfo_key = f'tcbinfo{key_suffix}'
+
+                tcbinfoJson[tcbinfo_key] = json.loads(sgx_tcbinfo[0])
+
+                # TDX tcbinfo is optional
+                if self.ApiVersion >= 4:
+                    tdx_tcbinfo = self.pcsclient.get_tcb_info(fmspc, 'tdx', update, 'ascii')
+                    if tdx_tcbinfo is not None:
+                        tdx_tcbinfo_key = f'tdx_tcbinfo{key_suffix}'
+                        tcbinfoJson[tdx_tcbinfo_key] = json.loads(tdx_tcbinfo[0])
+                # End loop
+
             self.output_json["collaterals"]["tcbinfos"].append(tcbinfoJson)
-            if self.output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] == '':
+            if not self.output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN]:
                 self.output_json["collaterals"]["certificates"][PCS.HDR_TCB_INFO_ISSUER_CHAIN] = sgx_tcbinfo[1]
         return True
 
-    def _fetch_qeidentity(self):
-        qe_identity = self.pcsclient.get_enclave_identity('qe', 'ascii')
-        if qe_identity == None:
-            print("Failed to get QE identity")
-            return False
-        self.output_json["collaterals"]["qeidentity"] = qe_identity[0]
-        self.output_json["collaterals"]["certificates"][PCS.HDR_Enclave_Identity_Issuer_Chain] = qe_identity[1]
-        return True
-
-    def _fetch_tdqeidentity(self):
-        tdqe_identity = self.pcsclient.get_enclave_identity('tdqe', 'ascii')
-        if tdqe_identity == None:
-            print("Failed to get TDQE identity")
-            return False
-        self.output_json["collaterals"]["tdqeidentity"] = tdqe_identity[0]
-        return True
-
-    def _fetch_qveidentity(self):
-        qve_identity = self.pcsclient.get_enclave_identity('qve', 'ascii')
-        if qve_identity == None:
-            print("Failed to get QvE identity")
-            return False
-        self.output_json["collaterals"]["qveidentity"] = qve_identity[0]
+    def _fetch_identity(self, identity_type):
+        updates = ['standard', 'early'] if self.tcb_update_type == 'all' else [self.tcb_update_type]
+        for update in updates:
+            identity = self.pcsclient.get_enclave_identity(identity_type, update, 'ascii')
+            if identity is None:
+                if update == 'standard':
+                    print(f"Failed to get {identity_type.upper()} identity")
+                    return False
+            else:
+                key_suffix = '_early' if update == 'early' else ''
+                self.output_json["collaterals"][f"{identity_type}identity{key_suffix}"] = identity[0]
+                if identity_type == 'qe':
+                    self.output_json["collaterals"]["certificates"][PCS.HDR_Enclave_Identity_Issuer_Chain] = identity[1]
         return True
 
     def _write_output_json(self):

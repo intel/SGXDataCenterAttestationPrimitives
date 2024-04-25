@@ -75,8 +75,11 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
             }
             if (match->has_arg != no_argument) {
                 if (optarg == NULL) {
-                    optarg = argv[optind];
                     optind++;
+                    optarg = argv[optind];
+                    if (optarg == NULL) {
+                        return 0;
+                    }
                 }
             }
             else {

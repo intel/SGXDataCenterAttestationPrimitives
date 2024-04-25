@@ -498,26 +498,31 @@ std::tuple<std::string, std::string> CAppraisalUtil::parse_ec_key()
     {
         // Read the private key and calculate the public key
         bio = BIO_new_file(m_keyfile, "r");
+        if(bio == NULL)
+        {
+            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. It must be a PEM-formatted, 384-byte EC private key.\n", m_keyfile);
+            break;
+        }
         pkey = NULL;
         if (!PEM_read_bio_PrivateKey(bio, &pkey, 0, 0))
         {
-            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. Must be EC private key 384bit.\n", m_keyfile);
+            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. It must be a PEM-formatted, 384-byte EC private key.\n", m_keyfile);
             break;
         }
         if (EVP_PKEY_bits(pkey) != 384)
         {
-            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. Must be EC private key 384bit.\n", m_keyfile);
+            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. It must be a PEM-formatted, 384-byte EC private key.\n", m_keyfile);
             break;
         }
         id = EVP_PKEY_get_id(pkey);
         if(id != NID_X9_62_id_ecPublicKey)
         {
-            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. Must be EC private key 384bit.\n", m_keyfile);
+            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. It must be a PEM-formatted, 384-byte EC private key.\n", m_keyfile);
             break;
         }
         if(!EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, &bn_r))
         {
-            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. Must be EC private key 384bit.\n", m_keyfile);
+            se_trace(SE_TRACE_ERROR, "The input key file %s is not correct. It must be a PEM-formatted, 384-byte EC private key.\n", m_keyfile);
             break;
         }
         ec_group = EC_GROUP_new_by_curve_name(NID_secp384r1);

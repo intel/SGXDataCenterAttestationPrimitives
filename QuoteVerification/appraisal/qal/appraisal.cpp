@@ -62,11 +62,6 @@ quote3_error_t tee_appraise_verification_token(
     {
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
-    if(g_global_full_init == false)
-    {
-        se_trace(SE_TRACE_ERROR, "Failed to initialize the wasm global environment.\n");
-        return SGX_QL_ERROR_UNEXPECTED;
-    }
     quote3_error_t ret = SGX_QL_ERROR_UNEXPECTED;
 
     std::string json_str = "";
@@ -84,7 +79,6 @@ quote3_error_t tee_appraise_verification_token(
         ret = SGX_QL_ERROR_INVALID_PARAMETER;
         return ret;
     }
-
     OPAEvaluateEngine instance;
     if((ret = instance.prepare_wasm()) != SGX_QL_SUCCESS)
     {

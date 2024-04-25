@@ -60,7 +60,10 @@ export async function pckCertSelection(
   }
 
   // Always use SGX tcb info for PCK cert selection
-  let tcbinfo = await fmspcTcbDao.getTcbInfo(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION);
+  let tcbinfo = await fmspcTcbDao.getTcbInfo(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_EARLY);
+  if (tcbinfo == null) {
+    tcbinfo = await fmspcTcbDao.getTcbInfo(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_STANDARD);
+  }
   if (tcbinfo == null || tcbinfo.tcbinfo == null)
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
 

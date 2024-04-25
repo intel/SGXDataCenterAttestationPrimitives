@@ -385,15 +385,15 @@ export const PLATFORM_COLLATERAL_SCHEMA_V3 = {
                         }
                       }
                     },
-                    "signature": {
-                      "type": "string"
-                    }
                   },
-                  "required": ["tcbInfo", "signature"]
-                }
+                  "signature": {
+                    "type": "string"
+                  },
+                },
+                "required": ["tcbInfo","signature"]
               }
             },
-            "required": ["fmspc", "tcbinfo"]
+            "required": ["fmspc"]
           }
         },
         "pckcacrl": {

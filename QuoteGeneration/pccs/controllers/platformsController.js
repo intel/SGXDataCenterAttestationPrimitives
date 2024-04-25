@@ -36,8 +36,20 @@ import Constants from '../constants/index.js';
 
 export async function postPlatforms(req, res, next) {
   try {
+    // validate request parameters
+    let update = req.query.update;
+    if (update) {
+      update = update.toUpperCase();
+      if (![Constants.UPDATE_TYPE_STANDARD, Constants.UPDATE_TYPE_EARLY, Constants.UPDATE_TYPE_ALL].includes(update)) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+      }
+    }
+    else {
+      update = Constants.UPDATE_TYPE_STANDARD;
+    }
+
     // call registration service
-    await platformsRegService.registerPlatforms(req.body);
+    await platformsRegService.registerPlatforms(req.body, update);
 
     // send response
     res

@@ -144,7 +144,7 @@ int main(int argc, const char* argv[])
                     exit(1);
                 }
                 char value[256] = {};
-                strncpy(value, line.substr(delimiterPos + 1).c_str(), sizeof(value));
+                strncpy(value, line.substr(delimiterPos + 1).c_str(), sizeof(value) - 1);
                 value[255] = '\0';
                 if (!port && name.compare("port") == 0) {
                     errno = 0;

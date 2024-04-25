@@ -72,15 +72,19 @@ endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -l$(DCAP_Library_Name) -l$(Urts_Library_Name) -ldl -lpthread
+#
+# Check if SGX_QPL_LOGGING is either 0 , 1 or 2
+ifeq ($(filter $(SGX_QPL_LOGGING),0 1 2),)
+    $(error SGX_QPL_LOGGING must be set to either 0 , 1 or 2.\
+      0 means disable QPL logging.\
+      1 means QPL logging error level.\
+      2 means QPL logging info level.)
+endif
 
 ifneq ($(SGX_QPL_LOGGING), 0)
 App_Link_Flags += -ldcap_quoteprov
-ifneq ($(SGX_QPL_LOGGING), 0)
+endif
 App_Cpp_Flags += -DSGX_QPL_LOGGING=$(SGX_QPL_LOGGING)
-endif
-else
-App_Cpp_Flags += -USGX_QPL_LOGGING
-endif
 
 ifneq ($(SGX_TRACE_LOGGING), 0)
 App_Cpp_Flags += -DSGX_TRACE_LOGGING=$(SGX_TRACE_LOGGING)

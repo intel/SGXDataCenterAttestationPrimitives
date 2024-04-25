@@ -8,15 +8,17 @@
             "reference": {
                 "#NOTE": "Replace the following configurations based on your own requirements",
                 "allow_dynamic_plaform": true,
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' if 'collateral_grace_period' is defined.",
                 "accepted_tcb_status": [
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
-                    "OutOfDate"
-		],
-		"#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 90 days (7776000 seconds).",
-                "#NOTE": "This is for platform.",
-		"collateral_grace_period": 7776000
+                    "OutOfDate",
+                    "TDRelaunchAdvised"
+                ],
+                "#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 90 days (7776000 seconds).",
+                "#NOTE": "If 'collateral_grace_period' is greater than 0, 'platform_grace_period' must not be defined",
+                "collateral_grace_period": 7776000
             }
         },
         {
@@ -25,15 +27,16 @@
                 "description": "Collateral Grace Period Policy for Verified TDQE"
             },
             "reference": {
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' if 'collateral_grace_period' is defined.",
                 "accepted_tcb_status": [
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
                     "OutOfDate"
-		],
-		"#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 60 days (5184000 seconds).",
-                "#NOTE": "This is for TDQE.",
-		"collateral_grace_period": 5184000
+                ],
+                "#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 60 days (5184000 seconds).",
+                "#NOTE": "If 'collateral_grace_period' is greater than 0, 'platform_grace_period' must not be defined",
+                "collateral_grace_period": 5184000
             }
         }
     ]

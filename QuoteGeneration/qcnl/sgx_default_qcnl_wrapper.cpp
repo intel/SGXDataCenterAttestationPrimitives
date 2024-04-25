@@ -382,8 +382,9 @@ sgx_qcnl_error_t sgx_qcnl_clear_cache(uint32_t cache_type) {
 sgx_qcnl_error_t sgx_qcnl_global_init() {
     sgx_qcnl_error_t ret = SGX_QCNL_SUCCESS;
     QcnlConfigJson *pConfigJson = new QcnlConfigJson();
-    if (pConfigJson->load_config() == SGX_QCNL_CONFIG_INVALID_JSON)
-        ret = SGX_QCNL_CONFIG_INVALID_JSON;
+    ret = pConfigJson->load_config();
+    if (ret == SGX_QCNL_CONFIG_NOT_JSON)
+        ret = SGX_QCNL_SUCCESS; // Ignore SGX_QCNL_CONFIG_NOT_JSON for legacy config file
     delete pConfigJson;
     return ret;
 }

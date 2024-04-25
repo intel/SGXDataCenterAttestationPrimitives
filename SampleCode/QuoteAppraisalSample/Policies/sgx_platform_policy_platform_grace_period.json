@@ -8,15 +8,17 @@
             "reference": {
                 "#NOTE": "Replace the following configurations based on your own requirements",
                 "allow_dynamic_platform": true,
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' and 'OutOfDate' if 'platform_grace_period' is defined",
                 "accepted_tcb_status": [
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
                     "OutOfDate"
                 ],
-		"#NOTE": "'platform_grace_period' allows you to pass appraisal verification even if the platform has expired within 90 days (7776000 seconds).",
-                    "platform_grace_period": 7776000,
-                    "collateral_grace_period": 0
+                "#NOTE": "'platform_grace_period' allows you to pass appraisal verification even if the platform has expired within 90 days (7776000 seconds).",
+                "platform_grace_period": 7776000,
+                "#NOTE": "'collateral_grace_period' must be defined as 0  if 'platform_grace_period' is defined",
+                "collateral_grace_period": 0
             }
         }
     ]

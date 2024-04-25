@@ -38,7 +38,8 @@ SGX_QPL_LOGGING ?= 1
 QVL_ONLY ?= 0
 
 
-# Don't support 32bit in this sample
+# Don't support 32bit in this sample 
+
 SGX_COMMON_FLAGS := -m64
 SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
@@ -94,14 +95,24 @@ ifeq ($(QVL_ONLY), 1)
 endif
 
 App_Cpp_Flags := $(App_C_Flags)
+ifeq ($(QVL_ONLY), 1)
+App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_dcap_quoteverify -lpthread -ldl
+else
 App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_dcap_quoteverify -l$(Urts_Library_Name) -lpthread -ldl
+endif
+
+# Check if SGX_QPL_LOGGING is either 0 or 1 or 2
+ifeq ($(filter $(SGX_QPL_LOGGING),0 1 2),)
+    $(error SGX_QPL_LOGGING must be set to either 0 , 1 or 2.\
+			0 means disable QPL logging.\
+			1 means QPL logging error level.\
+			2 means QPL logging info level.)
+endif
 
 ifneq ($(SGX_QPL_LOGGING), 0)
 App_Link_Flags += -ldcap_quoteprov
-App_Cpp_Flags += -DSGX_QPL_LOGGING=$(SGX_QPL_LOGGING)
-else
-App_Cpp_Flags += -USGX_QPL_LOGGING
 endif
+App_Cpp_Flags += -DSGX_QPL_LOGGING=$(SGX_QPL_LOGGING)
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 

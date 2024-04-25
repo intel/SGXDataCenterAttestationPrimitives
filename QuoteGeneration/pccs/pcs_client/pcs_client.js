@@ -162,14 +162,20 @@ export async function getPckCrl(ca) {
   return do_request(Config.get('uri') + 'pckcrl', options);
 }
 
-export async function getTcb(type, fmspc, version) {
+export async function getTcb(type, fmspc, version, update_type) {
   if (type != Constants.PROD_TYPE_SGX && type != Constants.PROD_TYPE_TDX) {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
 
+  if (update_type != Constants.UPDATE_TYPE_STANDARD && update_type != Constants.UPDATE_TYPE_EARLY) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+  let update = update_type === Constants.UPDATE_TYPE_EARLY ? 'early' : 'standard';
+
   const options = {
     searchParams: {
       fmspc: fmspc,
+      update: update
     },
     method: 'GET',
   };
@@ -187,7 +193,7 @@ export async function getTcb(type, fmspc, version) {
   return do_request(uri, options);
 }
 
-export async function getEnclaveIdentity(enclave_id, version) {
+export async function getEnclaveIdentity(enclave_id, version, update_type) {
   if (
     enclave_id != Constants.QE_IDENTITY_ID &&
     enclave_id != Constants.QVE_IDENTITY_ID &&
@@ -195,9 +201,15 @@ export async function getEnclaveIdentity(enclave_id, version) {
   ) {
     throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
   }
+  if (update_type != Constants.UPDATE_TYPE_STANDARD && update_type != Constants.UPDATE_TYPE_EARLY) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+  let update = update_type === Constants.UPDATE_TYPE_EARLY ? 'early' : 'standard';
 
   const options = {
-    searchParams: {},
+    searchParams: {
+      update: update
+    },
     method: 'GET',
   };
 

@@ -13,6 +13,7 @@ Prerequisite:
 * Intel(R) SGX DCAP Quote Verification Packages
 * Intel(R) SGX DCAP PCCS (Provisioning Certificate Caching Service)
 * Intel(R) TEE Apraisal Tool
+  - install tee-appraisal-tool package on the development machine
 
 *Please refer to SGX DCAP Linux installation guide "https://download.01.org/intel-sgx/sgx-dcap/#version#/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf" to install above dependencies*<br/>
 *Note that you need to change **\#version\#** to actual version number in URL, such as 1.20.*

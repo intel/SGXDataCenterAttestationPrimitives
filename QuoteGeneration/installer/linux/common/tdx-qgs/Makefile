@@ -34,6 +34,7 @@ include installConfig
 PACKAGE_ROOT_FOLDER=pkgroot
 PACKAGES=$(notdir $(wildcard $(PACKAGE_ROOT_FOLDER)/*))
 
+VAR_OPT_PATH=/var/opt/qgsd
 QGSD_CONF_NAME=$(if $(wildcard /run/systemd/system/.*),qgsd.service,$(if $(wildcard /etc/init/.*),qgsd.conf,))
 QGSD_CONF_DEL=$(if $(wildcard /run/systemd/system/.*),qgsd.conf,$(if $(wildcard /etc/init/.*),qgsd.service,))
 QGSD_CONF_PATH=$(if $(wildcard /run/systemd/system/.*),$(if $(wildcard /lib/systemd/system/.*),/lib/systemd/system,/usr/lib/systemd/system),$(if $(wildcard /etc/init/.*),/etc/init/))
@@ -52,6 +53,7 @@ endif
 default:
 
 install: $(PACKAGES)
+	install -d $(shell readlink -m $(DESTDIR)/$(VAR_OPT_PATH))
 	install -d $(shell readlink -m $(DESTDIR)/$(QGSD_CONF_PATH))
 	sed -e "s:@qgs_folder@:$(TDX_QGS_PACKAGE_PATH)/$(TDX_QGS_PACKAGE_NAME):" \
 		$(DESTDIR)/$(TDX_QGS_PACKAGE_PATH)/$(TDX_QGS_PACKAGE_NAME)/$(QGSD_CONF_NAME) \

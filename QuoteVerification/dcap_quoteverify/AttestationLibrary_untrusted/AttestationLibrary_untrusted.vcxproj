@@ -91,6 +91,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DisableSpecificWarnings>4101;4244</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib</AdditionalDependencies>
@@ -166,6 +167,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <DisableSpecificWarnings>4101;4244</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sgx_trts.lib;sgx_tstdc.lib;sgx_tservice.lib;sgx_tcxx.lib;sgx_tcrypto.lib</AdditionalDependencies>
@@ -186,6 +188,9 @@
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\SignatureVerification.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\OpensslHelpers\DigestUtils.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\QuoteVerification\QuoteStructures.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\Checks\TcbLevelCheck.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\Checks\TDRelaunchCheck.cpp" />
+    <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\Checks\TdxModuleCheck.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\TCBSigningChain.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\PckCertVerifier.cpp" />
     <ClCompile Include="..\..\QVL\Src\AttestationLibrary\src\Verifiers\CommonVerifier.cpp" />

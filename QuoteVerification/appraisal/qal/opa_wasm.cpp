@@ -42,13 +42,27 @@
 #include "opa_wasm.h"
 #include "se_memcpy.h"
 #include "se_trace.h"
+#include "file_util.h"
 
 
 std::map<int, std::string> g_builtins;
 std::map<std::string, void *> g_builtin_func_map;
 
 static bool g_builtin_prepared = false;
-static pthread_mutex_t g_builtin_mutex;
+static pthread_mutex_t g_wasm_mutex;
+static int g_wasm_init = 0;
+static uint8_t *g_wasm_buf = NULL;
+static size_t g_wasm_size = 0;
+static wasm_module_t g_wasm_module = NULL;
+
+#ifdef USE_LOCAL_WASM
+#define WASM_FILE "./policy.wasm"
+#else
+#define WASM_FILE "/usr/share/sgx/tee_appraisal_policy.wasm"
+#endif
+
+#define CHECK_OPA_RET(val) if(val == 0) {return SGX_QL_ERROR_UNEXPECTED;}
+
 static NativeSymbol native_symbols[6] = {
     {"opa_builtin0", (void *)opa_builtin0, "(i*)i", NULL},
     {"opa_builtin1", (void *)opa_builtin1, "(i**)i", NULL},
@@ -57,34 +71,83 @@ static NativeSymbol native_symbols[6] = {
     {"opa_builtin4", (void *)opa_builtin4, "(i*****)i", NULL},
     {"opa_abort", (void *)opa_abort, "($)", NULL}};
 
-bool g_global_full_init = false;
 static void __attribute__((constructor)) _sgx_qal_init()
 {
-    pthread_mutex_init(&g_builtin_mutex, NULL);
-
-    RuntimeInitArgs init_args;
-    memset(&init_args, 0, sizeof(RuntimeInitArgs));
-    init_args.mem_alloc_type = Alloc_With_Allocator;
-    init_args.mem_alloc_option.allocator.malloc_func = (void *)malloc;
-    init_args.mem_alloc_option.allocator.realloc_func = (void *)realloc;
-    init_args.mem_alloc_option.allocator.free_func = (void *)free;
-    // Native symbols need below registration phase
-    init_args.n_native_symbols = sizeof(native_symbols) / sizeof(NativeSymbol);
-    init_args.native_module_name = "env";
-    init_args.native_symbols = native_symbols;
-
-    /* initialize runtime environment */
-    if (!wasm_runtime_full_init(&init_args)) {
-        printf("Init runtime environment failed.\n");
-        return;
-    }
-    g_global_full_init = true;
+    pthread_mutex_init(&g_wasm_mutex, NULL);
 }
 
 static void __attribute__((destructor)) _sgx_qal_fini()
 {
-    pthread_mutex_destroy(&g_builtin_mutex);
-    wasm_runtime_destroy();
+    pthread_mutex_destroy(&g_wasm_mutex);
+    if (g_wasm_init == 1)
+    {
+        wasm_runtime_unload(g_wasm_module);
+        wasm_runtime_destroy();
+        free(g_wasm_buf);
+    }
+}
+
+static int init_wasm_runtime_once()
+{
+    if (g_wasm_init != 0)
+    {
+        return g_wasm_init;
+    }
+    else
+    {
+        pthread_mutex_lock(&g_wasm_mutex);
+        if (g_wasm_init == 0)
+        {
+            do
+            {
+                RuntimeInitArgs init_args;
+                memset(&init_args, 0, sizeof(RuntimeInitArgs));
+                init_args.mem_alloc_type = Alloc_With_Allocator;
+                init_args.mem_alloc_option.allocator.malloc_func = (void *)malloc;
+                init_args.mem_alloc_option.allocator.realloc_func = (void *)realloc;
+                init_args.mem_alloc_option.allocator.free_func = (void *)free;
+
+                init_args.n_native_symbols = sizeof(native_symbols) / sizeof(NativeSymbol);
+                init_args.native_module_name = "env";
+                init_args.native_symbols = native_symbols;
+                char error_buf[128] = {0};
+                // Initialize runtime environment
+                if (!wasm_runtime_full_init(&init_args))
+                {
+                    se_trace(SE_TRACE_ERROR, "Init runtime environment failed.\n");
+                    g_wasm_init = -1;
+                    break;
+                }
+                g_wasm_buf = read_file_to_buffer(WASM_FILE, &g_wasm_size);
+                if(g_wasm_buf == NULL)
+                {
+                    se_trace(SE_TRACE_ERROR, "Read WASM file failed.\n");
+                    wasm_runtime_destroy();
+                    g_wasm_init = -1;
+                    break;
+
+                }
+                // Load WASM module from the WASM file buf
+                if (!(g_wasm_module = wasm_runtime_load(g_wasm_buf, (uint32_t)g_wasm_size,
+                                                        error_buf, sizeof(error_buf))))
+                {
+                    se_trace(SE_TRACE_ERROR, "Read WASM file failed.\n");
+                    wasm_runtime_destroy();
+                    free(g_wasm_buf);
+                    g_wasm_buf = NULL;
+                    g_wasm_init = -1;
+                    break;
+                }
+                else
+                {
+                    SE_TRACE(SE_TRACE_DEBUG, "Init runtime environment successfully.\n");
+                    g_wasm_init = 1;
+                }
+            } while (0);
+        }
+        pthread_mutex_unlock(&g_wasm_mutex);
+        return g_wasm_init;
+    }
 }
 
 static int prepare_builtin_once(const char *json_buffer_builtins)
@@ -96,7 +159,7 @@ static int prepare_builtin_once(const char *json_buffer_builtins)
     }
     else
     {
-        pthread_mutex_lock(&g_builtin_mutex);
+        pthread_mutex_lock(&g_wasm_mutex);
         if (g_builtin_prepared == false)
         {
             // Prepare g_builtins
@@ -106,13 +169,13 @@ static int prepare_builtin_once(const char *json_buffer_builtins)
             if (!err.empty())
             {
                 SE_TRACE(SE_TRACE_DEBUG, "%s\n", err.c_str());
-                pthread_mutex_unlock(&g_builtin_mutex);
+                pthread_mutex_unlock(&g_wasm_mutex);
                 return -1;
             }
             if (!v.is<picojson::object>())
             {
                 SE_TRACE(SE_TRACE_DEBUG, "JSON is not an object\n");
-                pthread_mutex_unlock(&g_builtin_mutex);
+                pthread_mutex_unlock(&g_wasm_mutex);
                 return -1;
             }
             const picojson::value::object &obj = v.get<picojson::object>();
@@ -132,29 +195,16 @@ static int prepare_builtin_once(const char *json_buffer_builtins)
             }
             g_builtin_prepared = true;
         }
-        pthread_mutex_unlock(&g_builtin_mutex);
+        pthread_mutex_unlock(&g_wasm_mutex);
         return 0;
     }
 }
 
-#ifdef USE_LOCAL_WASM
-#define WASM_FILE "./policy.wasm"
-#else
-#define WASM_FILE "/usr/share/sgx/tee_appraisal_policy.wasm"
-#endif
-
-#define CHECK_OPA_RET(val) if(val == 0) {return SGX_QL_ERROR_UNEXPECTED;}
-
-
-
 OPAEvaluateEngine::OPAEvaluateEngine()
 : m_stack_size(DEFAULT_STACK_SIZE)
 , m_heap_size(DEFAULT_HEAP_SIZE)
-, m_exec_env(NULL)
-, m_wasm_module(NULL)
 , m_wasm_module_inst(NULL)
-, m_wasm_file_buf(NULL)
-, m_wasm_file_size(0)
+, m_exec_env(NULL)
 {
 }
 
@@ -167,62 +217,6 @@ OPAEvaluateEngine::~OPAEvaluateEngine()
         wasm_runtime_deinstantiate(m_wasm_module_inst);
     }
     wasm_runtime_destroy_thread_env();
-    if (m_wasm_module)
-        wasm_runtime_unload(m_wasm_module);
-     if (m_wasm_file_buf)
-         free(m_wasm_file_buf);
-}
-
-int OPAEvaluateEngine::read_wasm_file()
-{
-    // Looks we cannot read wasm file once and share among multi-threads.
-    // Read the wasm into memory for each OPAEvaluateEngine instance
-    unsigned char *buffer;
-    FILE *file;
-    long file_size, read_size;
-
-    if (!(file = fopen(WASM_FILE, "rb")))
-    {
-        SE_TRACE(SE_TRACE_DEBUG, "Read file to buffer failed: open file %s failed.\n", WASM_FILE);
-        return -1;
-    }
-
-    if (fseek(file, 0, SEEK_END))
-    {
-        fclose(file);
-        return -1;
-    }
-    if ((file_size = ftell(file)) == -1)
-    {
-        fclose(file);
-        return -1;
-    }
-    if (fseek(file, 0, SEEK_SET))
-    {
-        fclose(file);
-        return -1;
-    }
-
-    if (!(buffer = (unsigned char *)malloc(file_size)))
-    {
-        SE_TRACE(SE_TRACE_DEBUG, "Alloc memory failed.\n");
-        fclose(file);
-        return 1;
-    }
-
-    read_size = fread(buffer, 1, file_size, file);
-    fclose(file);
-
-    if (read_size < file_size)
-    {
-        SE_TRACE(SE_TRACE_DEBUG, "Read file to buffer failed: read file content failed.\n");
-        free(buffer);
-        return -1;
-    }
-
-    m_wasm_file_size = file_size;
-    m_wasm_file_buf = buffer;
-    return 0;
 }
 
 quote3_error_t OPAEvaluateEngine::prepare_wasm(uint32_t stack_size, uint32_t heap_size)
@@ -232,26 +226,20 @@ quote3_error_t OPAEvaluateEngine::prepare_wasm(uint32_t stack_size, uint32_t hea
     m_stack_size = stack_size;
     m_heap_size = heap_size;
 
-    // /* Load WASM byte buffer from WASM bin file */
-    int ret = read_wasm_file();
-    if (ret != 0)
+    if(init_wasm_runtime_once() != 1)
     {
-        if(ret == 1)
-            return SGX_QL_ERROR_OUT_OF_MEMORY;
+        se_trace(SE_TRACE_ERROR, "Failed to initialize the wasm global environment.\n");
         return SGX_QL_ERROR_UNEXPECTED;
     }
 
-    /* Load WASM module */
-    if (!(m_wasm_module = wasm_runtime_load(m_wasm_file_buf, (uint32_t)m_wasm_file_size,
-                                            error_buf, sizeof(error_buf))))
+    if (wasm_runtime_init_thread_env() == false)
     {
-        SE_TRACE(SE_TRACE_DEBUG, "%s\n", error_buf);
+        SE_TRACE(SE_TRACE_DEBUG, "Failed to initialize the wasm thread environment.\n");
         return SGX_QL_ERROR_UNEXPECTED;
     }
-    wasm_runtime_init_thread_env();
-    /* Instantiate the module */
-    if (!(m_wasm_module_inst =
-              wasm_runtime_instantiate(m_wasm_module, m_stack_size, m_heap_size,
+
+    // Instantiate the module
+    if (!(m_wasm_module_inst = wasm_runtime_instantiate(g_wasm_module, m_stack_size, m_heap_size,
                                        error_buf, sizeof(error_buf))))
     {
         SE_TRACE(SE_TRACE_DEBUG, "%s\n", error_buf);
@@ -259,7 +247,7 @@ quote3_error_t OPAEvaluateEngine::prepare_wasm(uint32_t stack_size, uint32_t hea
     }
     if (!(m_exec_env = wasm_runtime_create_exec_env(m_wasm_module_inst, m_stack_size)))
     {
-        SE_TRACE(SE_TRACE_DEBUG, "Create wasm execution environment failed.\n");
+        SE_TRACE(SE_TRACE_DEBUG, "Failed to create wasm execution environment.\n");
         return SGX_QL_ERROR_UNEXPECTED;
     }
     int builtins = opa_builtins(m_wasm_module_inst, m_exec_env);
@@ -269,7 +257,7 @@ quote3_error_t OPAEvaluateEngine::prepare_wasm(uint32_t stack_size, uint32_t hea
     CHECK_OPA_RET(json_builtins);
 
     char *json_buffer_builtins = (char *)wasm_runtime_addr_app_to_native(m_wasm_module_inst, json_builtins);
-    ret = prepare_builtin_once(json_buffer_builtins);
+    int ret = prepare_builtin_once(json_buffer_builtins);
     if(ret != 0)
         return SGX_QL_ERROR_UNEXPECTED;
     return SGX_QL_SUCCESS;

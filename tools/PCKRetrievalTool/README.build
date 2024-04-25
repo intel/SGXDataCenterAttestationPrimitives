@@ -27,7 +27,8 @@ Options:
   -user_token token_string             - user token to access the cache server
   -proxy_type proxy_type               - proxy setting when access the cache server
   -proxy_url  proxy_server_address     - proxy server's address
-  -use_secure_cert [true | false]      - accept secure/insecure https cert,default value is true
+  -use_secure_cert {true | false}      - accept secure/insecure https cert,default value is true
+  -tcb_update_type {stardard, early,all}  - update type for tcb material,default value is stardard
   -platform_id \"platform_id_string\"  - in this mode, enclave is not needed to load, but platform id need to input
   -?                                   - show command help
   -h                                   - show command help

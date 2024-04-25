@@ -9,4 +9,4 @@ links = "sgx_dcap_ql"
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.59.1"
+bindgen = "0.69.1"

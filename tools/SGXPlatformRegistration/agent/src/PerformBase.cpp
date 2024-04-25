@@ -53,7 +53,7 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
     if (MP_SUCCESS != res) {
         agent_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationStatus failed, error: %d\n", res);
         status.errorCode = MPA_AG_BIOS_PROTOCOL_ERROR;
-        goto error;
+        return false;
     }
 
     do
@@ -151,9 +151,17 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
 
 error:
     res = m_uefi->setRegistrationStatus(status);
-    if (MP_SUCCESS != res) {
-        agent_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationStatus failed, error: %d\n", res);
-        return false;
+    if (MP_SUCCESS != res) 
+    {        
+        if (MP_INSUFFICIENT_PRIVILEGES == res) 
+        {
+            agent_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: The UEFI variable is in read-only mode, so the registration status could NOT be set.\n");
+        }
+        else 
+        {
+            agent_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationStatus failed, error: %d\n", res);
+            return false;
+        }
     }
     
     if ((MPA_SUCCESS == status.errorCode) && (MP_TASK_COMPLETED == status.registrationStatus)) {

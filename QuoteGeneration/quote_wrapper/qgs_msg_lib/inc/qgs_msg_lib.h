@@ -168,7 +168,8 @@ qgs_msg_error_t qgs_msg_gen_get_collateral_resp(
     const uint8_t *p_tcb_info, uint32_t tcb_info_size,
     const uint8_t *p_qe_identity_issuer_chain, uint32_t qe_identity_issuer_chain_size,
     const uint8_t *p_qe_identity, uint32_t qe_identity_size,
-    uint8_t **pp_resp, uint32_t *p_resp_size);
+    uint8_t **pp_resp, uint32_t *p_resp_size,
+    const qgs_msg_header_t *p_req_header);
 
 qgs_msg_error_t qgs_msg_inflate_get_quote_resp(
     const uint8_t *p_serialized_resp, uint32_t size,

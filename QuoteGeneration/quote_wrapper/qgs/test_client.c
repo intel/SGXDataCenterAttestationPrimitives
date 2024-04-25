@@ -65,12 +65,63 @@ static void print_hex_dump(const char *title, const char *prefix_str,
     fprintf(stdout, "\n");
 }
 
+int test_raw_request(void)
+{
+
+    int s = socket(AF_VSOCK, SOCK_STREAM, 0);
+    if (-1 == s)
+    {
+        fprintf(stderr, "\nsocket return 0x%x\n", s);
+        return 1;
+    }
+    struct sockaddr_vm vm_addr;
+    memset(&vm_addr, 0, sizeof(vm_addr));
+    vm_addr.svm_family = AF_VSOCK;
+    vm_addr.svm_reserved1 = 0;
+    vm_addr.svm_port = 4050;
+    vm_addr.svm_cid = VMADDR_CID_HOST;
+    if (connect(s, (struct sockaddr *)&vm_addr, sizeof(vm_addr)))
+    {
+        fprintf(stderr, "\nconnect error\n");
+        return 1;
+    }
+
+    uint8_t report[1024] = {0};
+    report[0] = 0x81;
+    ssize_t ret;
+    // Write to socket
+    ret = send(s, &report, sizeof(report), 0);
+    if (ret != sizeof(report))
+    {
+        perror(NULL);
+        fprintf(stderr, "\nraw request send error %ld\n", ret);
+        return 1;
+    }
+
+    uint8_t buf[8 * 1024] = {0};
+    // Read the response
+    ret = recv(s, buf, 8 * 1024, 0);
+    // No data excepted
+    if (ret != 0) {
+        perror(NULL);
+        fprintf(stderr, "\nraw request recv error %ld\n", ret);
+        return 1;
+    }
+    return 0;
+}
+
+
 int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
     int s = -1;
     int ret = 0;
+
+    ret = test_raw_request();
+    if (0 == ret) {
+        fprintf(stderr, "\nraw request success\n");
+    }
 
     uint8_t buf[4 * 1024] = {0};
     uint32_t msg_size = 0;
@@ -105,7 +156,7 @@ int main(int argc, char *argv[])
 
     s = socket(AF_VSOCK, SOCK_STREAM, 0);
     if (-1 == s) {
-        fprintf(stderr, "\nsocket return 0x%x\n", qgs_msg_ret);
+        fprintf(stderr, "\nsocket return 0x%x\n", s);
         ret = 1;
         goto ret_point;
     }
@@ -130,6 +181,7 @@ int main(int argc, char *argv[])
 
     // Read the response size header
     if (HEADER_SIZE != recv(s, buf, HEADER_SIZE, 0)) {
+        perror(NULL);
         fprintf(stderr, "\nrecv error\n");
         ret = 1;
         goto ret_point;
@@ -165,8 +217,13 @@ int main(int argc, char *argv[])
         goto ret_point;
     }
 
-    // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
+    // We've called qgs_msg_inflate_get_platform_info_resp, the message type should be GET_PLATFORM_INFO_RESP
     p_header = (qgs_msg_header_t *)(buf + HEADER_SIZE);
+    if (p_header->type != GET_PLATFORM_INFO_RESP) {
+        fprintf(stderr, "\ntype in resp msg is 0x%d", p_header->type);
+        ret = 1;
+        goto ret_point;
+    }
     if (p_header->error_code != 0) {
         fprintf(stderr, "\nerror code in resp msg is 0x%x", p_header->error_code);
         ret = 1;

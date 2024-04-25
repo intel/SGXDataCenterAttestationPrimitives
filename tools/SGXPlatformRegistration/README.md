@@ -22,16 +22,15 @@ See [license.txt](license.txt) for details.
 
 Documentation
 -------------
-See [doc/README](doc/README) for details.
+See [config/README](config/README) for details.
 
 Build the Intel(R) SGX Multi-package Registration Agent and Libraries
 ------------------------
 ### Prerequisites
 - Ensure that you have one of the following operating systems:  
-  * Red Hat Enterprise Linux Server release 7.6 64bits
-  * Red Hat Enterprise Linux Server release 8.0 64bits
-  * Ubuntu Server 16.04
-  * Ubuntu Server 18.04
+  * Red Hat Enterprise Linux Server release 9.2 64bits
+  * Ubuntu Server 20.04
+  * Ubuntu Server 22.04
   * Microsoft Windows Server 2019 RS5
 
 - Linux Prerequisites list:
@@ -67,21 +66,17 @@ You can find the tools and libraries generated in the `build` directory.
   $ make clean
 ```
 - To build the Intel(R) SGX Multi-package Registration Agent installer, enter the following command:
-  * On Ubuntu 16.04 and Ubuntu 18.04:
+  * On Ubuntu 20.04 and Ubuntu 22.04:
    ```
   $ make deb_pkg
   ```
   You can find the generated Intel(R) SGX Multi-package Registration Agent installers located under `build/installer`.
 
-  **Note**: On Ubuntu 18.04, besides the Intel(R) SGX Multi-package Registration Agent installer, the above command generates another debug symbol package named ``package-name-dbgsym_${version}-${revision}_amd64.ddeb`` for debug purpose. On Ubuntu 16.04, if you want to keep debug symbols in the Intel(R) SGX Multi-package Registration Agent installer, before building the Intel(R) SGX Multi-package Registration Agent installer, you need to export an environment variable to ensure the debug symbols not stripped:
-   ```
-   $ export DEB_BUILD_OPTIONS="nostrip"
-   ```
   **Note**: The above command builds the Intel(R) SGX Multi-package Registration Agent with default configuration firstly and then generates the target Multi-package Registration Agent Installer. To build the Intel(R) SGX Multi-package Registration Agent Installer without optimization and with full debug information kept in the tools and libraries, enter the following command:
   ```
   $ make deb_pkg DEBUG=1
   ```
-  * On Red Hat Enterprise Linux 7.4, Red Hat Enterprise Linux 8.0:
+  * On Red Hat Enterprise Linux 9.2:
   ```
   $ make rpm_pkg
   ```

@@ -173,9 +173,15 @@ sgx_qcnl_error_t CacheProvider::get_certification(const string &query_string,
 }
 
 sgx_qcnl_error_t CacheProvider::set_certification(sgx_qpl_cache_type_t cache_type,
-                                                  uint32_t default_expiry_seconds,
                                                   const string &query_string,
                                                   PccsResponseObject *pccs_resp_obj) {
+    uint32_t default_expiry_seconds;
+    if (cache_type == SGX_QPL_CACHE_CERTIFICATE) {
+        default_expiry_seconds = (uint32_t)(QcnlConfig::Instance()->getCacheExpireHour() * 3600);
+    } else {
+        default_expiry_seconds = (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600);
+    }
+
     // Cache-Control:max-age has higher priority over config file
     uint32_t cache_max_age = pccs_resp_obj->get_cache_max_age();
     uint32_t expiry_seconds = (cache_max_age > 0) ? cache_max_age : default_expiry_seconds;

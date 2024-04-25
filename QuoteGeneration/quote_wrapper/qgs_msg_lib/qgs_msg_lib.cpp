@@ -35,7 +35,7 @@
 #include <string.h>
 
 const uint32_t QGS_MSG_LIB_MAJOR_VER = 1;
-const uint32_t QGS_MSG_LIB_MINOR_VER = 0;
+const uint32_t QGS_MSG_LIB_MINOR_VER = 1;
 
 void qgs_msg_free(void *p_buf) {
     free(p_buf);
@@ -459,7 +459,8 @@ qgs_msg_error_t qgs_msg_gen_get_collateral_resp(
     const uint8_t *p_tcb_info, uint32_t tcb_info_size,
     const uint8_t *p_qe_identity_issuer_chain, uint32_t qe_identity_issuer_chain_size,
     const uint8_t *p_qe_identity, uint32_t qe_identity_size,
-    uint8_t **pp_resp, uint32_t *p_resp_size) {
+    uint8_t **pp_resp, uint32_t *p_resp_size,
+    const qgs_msg_header_t *p_req_header) {
     qgs_msg_error_t ret = QGS_MSG_SUCCESS;
     qgs_msg_get_collateral_resp_t *p_resp = NULL;
     uint8_t *p_ptr = NULL;
@@ -483,7 +484,15 @@ qgs_msg_error_t qgs_msg_gen_get_collateral_resp(
         goto ret_point;
     }
 
-    temp = sizeof(major_version) + sizeof(minor_version) + sizeof(*p_resp);
+    if (p_req_header->major_version != QGS_MSG_LIB_MAJOR_VER) {
+        ret = QGS_MSG_ERROR_INVALID_VERSION;
+        goto ret_point;
+    }
+    if (p_req_header->minor_version == 0) {
+        temp = sizeof(major_version) + sizeof(minor_version) + sizeof(*p_resp);
+    } else {
+        temp = sizeof(*p_resp);
+    }
     temp += pck_crl_issuer_chain_size;
     temp += root_ca_crl_size;
     temp += pck_crl_size;
@@ -708,7 +717,11 @@ qgs_msg_error_t qgs_msg_inflate_get_collateral_resp(
         goto ret_point;
     }
 
-    temp = sizeof(p_resp->major_version) + sizeof(p_resp->minor_version) + sizeof(*p_resp);
+    if (p_resp->header.minor_version == 0) {
+        temp = sizeof(*p_resp) + sizeof(p_resp->major_version) + sizeof(p_resp->minor_version);
+    } else {
+        temp = sizeof(*p_resp);
+    }
     temp += p_resp->pck_crl_issuer_chain_size;
     temp += p_resp->root_ca_crl_size;
     temp += p_resp->pck_crl_size;

@@ -6,7 +6,7 @@ This is a lightweight Provisioning Certificate Caching Service implemented in no
 
 - **Prerequisites**
 
-  Install node.js (Version <ins>18.17</ins> or later)
+  Install node.js (Supported versions are 18.17.0 to 18.19.1, 20.0.0 to 20.11.1, or 21.0.0 to 21.5.0.)
 
   - For Debian and Ubuntu based distributions, please refer to https://github.com/nodesource/distributions
   - To download and install, goto https://nodejs.org/en/download/

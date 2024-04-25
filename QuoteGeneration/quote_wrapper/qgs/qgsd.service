@@ -1,5 +1,5 @@
 [Unit]
-Description=Intel(R) TD Quoting Generation Service 
+Description=Intel(R) TD Quoting Generation Service
 After=syslog.target network.target auditd.service
 After=remount-dev-exec.service
 Wants=remount-dev-exec.service
@@ -11,6 +11,8 @@ Environment=NAME=qgsd
 Environment=LD_LIBRARY_PATH=@qgs_folder@
 WorkingDirectory=@qgs_folder@
 PermissionsStartOnly=true
+ExecStartPre=/bin/chown -R qgsd:qgsd /var/opt/qgsd/
+ExecStartPre=/bin/chmod 0750 /var/opt/qgsd/
 ExecStart=@qgs_folder@/qgs
 ExecStartPre=@qgs_folder@/linksgx.sh
 InaccessibleDirectories=/home

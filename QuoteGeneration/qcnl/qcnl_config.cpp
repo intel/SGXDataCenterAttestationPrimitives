@@ -41,6 +41,7 @@
 #include <fstream>
 #include <istreamwrapper.h>
 #include <mutex>
+#include <algorithm>
 
 using namespace std;
 
@@ -110,6 +111,22 @@ sgx_qcnl_error_t QcnlConfig::load_config_json(const TCHAR *json_file) {
         Value &val = config["collateral_service"];
         if (val.IsString()) {
             this->collateral_service_url_ = val.GetString();
+        }
+    }
+
+    if (config.HasMember("tcb_update_type")) {
+        Value &val = config["tcb_update_type"];
+        if (val.IsString()) {
+            string tcb_update_type = val.GetString();
+            // Convert to lowercase
+            std::transform(tcb_update_type.begin(), tcb_update_type.end(), tcb_update_type.begin(), 
+                        [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+            if (tcb_update_type != "early" && tcb_update_type != "standard") {
+                qcnl_log(SGX_QL_LOG_ERROR, "[QCNL] Wrong tcb_update_type configured. \n");
+                return SGX_QCNL_INVALID_CONFIG;
+            }
+
+            this->tcb_update_type_ = tcb_update_type;
         }
     }
 

@@ -81,9 +81,10 @@ QVL_VERIFY_LIB_NAME_Static := $(QVL_VERIFY_LIB_NAME).a
 
 QAL_APPRAISAL_DIR := $(DCAP_QV_DIR)/appraisal/qal
 QAL_APPRAISAL_CPP_SRCS :=$(wildcard $(QAL_APPRAISAL_DIR)/*.cpp)
+QAL_APPRAISAL_CPP_SRCS += $(QAL_APPRAISAL_DIR)/../common/file_util.cpp
 QAL_CPP_OBJS := $(QAL_APPRAISAL_CPP_SRCS:.cpp=.o)
-QAL_Static_Lib_Name = libdcap_qal.a
-WARM_Lib_Path = $(DCAP_EXTERNAL_DIR)/wasm-micro-runtime/product-mini/platforms/linux/build/
+QAL_Static_Lib_Name := libdcap_qal.a
+WARM_Lib_Path := $(DCAP_EXTERNAL_DIR)/wasm-micro-runtime/product-mini/platforms/linux/build/
 LDUFLAGS += -L$(WARM_Lib_Path) -lvmlib
 ifeq ($(DEBUG), 1)
 LDUFLAGS += -fsanitize=undefined

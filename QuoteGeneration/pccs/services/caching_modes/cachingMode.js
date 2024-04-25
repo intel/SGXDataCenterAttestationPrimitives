@@ -72,7 +72,7 @@ class CachingMode {
     throw new PccsError(PccsStatus.PCCS_STATUS_PLATFORM_UNKNOWN);
   }
 
-  async getEnclaveIdentityFromPCS(enclave_id, version) {
+  async getEnclaveIdentityFromPCS(enclave_id, version, update_type) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
@@ -84,7 +84,7 @@ class CachingMode {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
-  async getTcbInfoFromPCS(type, fmspc, version) {
+  async getTcbInfoFromPCS(type, fmspc, version, update_type) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
@@ -92,7 +92,7 @@ class CachingMode {
     return false;
   }
 
-  async registerPlatforms(regDataJson) {}
+  async registerPlatforms(isCached, regDataJson, update) {}
 
   async processNotAvailableTcbs(
     qeid,
@@ -133,8 +133,8 @@ export class LazyCachingMode extends CachingMode {
     );
   }
 
-  async getEnclaveIdentityFromPCS(enclave_id, version) {
-    return await CommonCacheLogic.getEnclaveIdentityFromPCS(enclave_id, version);
+  async getEnclaveIdentityFromPCS(enclave_id, version, update_type) {
+    return await CommonCacheLogic.getEnclaveIdentityFromPCS(enclave_id, version, update_type);
   }
 
   async getPckCrlFromPCS(ca) {
@@ -149,15 +149,15 @@ export class LazyCachingMode extends CachingMode {
     return await CommonCacheLogic.getCrlFromPCS(uri);
   }
 
-  async getTcbInfoFromPCS(type, fmspc, version) {
-    return await CommonCacheLogic.getTcbInfoFromPCS(type, fmspc, version);
+  async getTcbInfoFromPCS(type, fmspc, version, update_type) {
+    return await CommonCacheLogic.getTcbInfoFromPCS(type, fmspc, version, update_type);
   }
 
   isRefreshable() {
     return true;
   }
 
-  async registerPlatforms(isCached, regDataJson) {
+  async registerPlatforms(isCached, regDataJson, update) {
     if (!isCached) {
       // Get PCK certs from Intel PCS if not cached
       await CommonCacheLogic.getPckCertFromPCS(
@@ -170,7 +170,7 @@ export class LazyCachingMode extends CachingMode {
       );
     }
     // Get other collaterals if not cached
-    await checkQuoteVerificationCollateral();
+    await checkQuoteVerificationCollateral(update);
   }
 
   async processNotAvailableTcbs(
@@ -193,7 +193,7 @@ export class ReqCachingMode extends CachingMode {
     return true;
   }
 
-  async registerPlatforms(isCached, regDataJson) {
+  async registerPlatforms(isCached, regDataJson, update) {
     if (!isCached) {
       // For REQ mode, add registration entry first, and delete it after the collaterals are retrieved
       await platformsRegDao.registerPlatform(
@@ -218,7 +218,7 @@ export class ReqCachingMode extends CachingMode {
       );
     }
     // Get other collaterals if not cached
-    await checkQuoteVerificationCollateral();
+    await checkQuoteVerificationCollateral(update);
   }
 
   async processNotAvailableTcbs(
@@ -251,7 +251,7 @@ export class ReqCachingMode extends CachingMode {
 
 //////////////////////////////////////////////////////////////////////
 export class OfflineCachingMode extends CachingMode {
-  async registerPlatforms(isCached, regDataJson) {
+  async registerPlatforms(isCached, regDataJson, update) {
     if (!isCached) {
       // add to registration table
       await platformsRegDao.registerPlatform(

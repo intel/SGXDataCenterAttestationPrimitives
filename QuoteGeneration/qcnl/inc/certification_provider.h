@@ -89,7 +89,6 @@ public:
     sgx_qcnl_error_t get_certification(const string &query_string,
                                        PccsResponseObject *pccs_resp_obj);
     sgx_qcnl_error_t set_certification(sgx_qpl_cache_type_t cache_type,
-                                       uint32_t default_expiry_seconds,
                                        const string &query_string,
                                        PccsResponseObject *pccs_resp_obj);
     sgx_qcnl_error_t get_local_certification(const sgx_ql_pck_cert_id_t *p_pck_cert_id,

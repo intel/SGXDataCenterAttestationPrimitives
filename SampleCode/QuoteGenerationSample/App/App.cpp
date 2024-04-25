@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #if defined(_MSC_VER)
 #include <Windows.h>
+#include <winnt.h>
 #include <tchar.h>
 #endif
 
@@ -62,11 +63,10 @@
 #include "sgx_pce.h"
 #include "sgx_error.h"
 #include "sgx_quote_3.h"
-#ifdef SGX_QPL_LOGGING
+#if SGX_QPL_LOGGING
 #include "sgx_default_quote_provider.h"
 #ifdef _MSC_VER
- // Linking to dcap quote prov lib for logging callback
-#pragma comment(lib, "dcap_quoteprov.lib")
+typedef quote3_error_t (*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t , sgx_ql_log_level_t );
 #endif
 #endif
 
@@ -76,6 +76,7 @@
 #if defined(_MSC_VER)
 #define ENCLAVE_PATH _T("enclave.signed.dll")
 #define strcasecmp _stricmp
+#define QPL_LIB_NAME "dcap_quoteprov.dll"
 #else
 #define ENCLAVE_PATH "enclave.signed.so"
 typedef quote3_error_t (*sgx_qpl_clear_cache_func_t)(uint32_t);
@@ -197,8 +198,8 @@ vector<uint8_t> readBinaryContent(const string& filePath)
 void usage() {
     printf("Usage: app [options]\n");
     printf("Options:\n");
-    printf("  --target-info <path/to/target_info>    Use target_info in the file instead of generating it by `sgx_qe_get_target_info` fucntion.\n");
-    printf("  --clear-cache TYPE    Clear QPL's cache of TYPE (cert|collateral|all)\n");
+    printf("  -t, --target-info <path/to/target_info>    Use target_info in the file instead of generating it by `sgx_qe_get_target_info` fucntion.\n");
+    printf("  -c, --clear-cache TYPE    Clear QPL's cache of TYPE (cert|collateral|all)\n");
 }
 
 int main(int argc, char* argv[])
@@ -220,6 +221,9 @@ int main(int argc, char* argv[])
     int c = 0;
     bool target_info_provided = false;
     string qpl_library_path = "";
+#if defined(_MSC_VER)
+    HINSTANCE qpl_library_handle = NULL;
+#endif
 
     char *out_of_proc = getenv(SGX_AESM_ADDR);
     if(out_of_proc)
@@ -231,8 +235,24 @@ int main(int argc, char* argv[])
         {0, 0, 0, 0}
     };
 
-#ifdef SGX_QPL_LOGGING
-    sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING));
+#if SGX_QPL_LOGGING
+#if defined(_MSC_VER)
+    qpl_library_handle = LoadLibrary(TEXT(QPL_LIB_NAME));
+    if (qpl_library_handle != NULL) {
+        sgx_ql_set_logging_callback_t p_sgx_ql_set_logging_callback = (sgx_ql_set_logging_callback_t)GetProcAddress(qpl_library_handle, "sgx_ql_set_logging_callback");
+        if (NULL != p_sgx_ql_set_logging_callback) {
+            p_sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING - 1));
+        }
+        else {
+            log("Warning: Failed to get address of sgx_ql_set_logging_callback: %lu\n", GetLastError());
+        }
+    }
+    else {
+        log("Warning: Your system does not have dcap_quoteprov.dll or sgx_default_qcnl_wrapper.dll: %lu\n", GetLastError());
+    }
+#else
+    sgx_ql_set_logging_callback(qpl_logger, static_cast<sgx_ql_log_level_t>(SGX_QPL_LOGGING - 1));
+#endif   
 #endif
 
 #ifdef SGX_TRACE_LOGGING
@@ -345,21 +365,23 @@ int main(int argc, char* argv[])
                     dlclose(handle);
                 }
 #else
-                HMODULE hLib = LoadLibrary(TEXT("dcap_quoteprov.dll"));
-                if (hLib == NULL) {
-                    printf("Error loading dcap_quoteprov.dll: %lu\n", GetLastError());
-                    return 1;
+                if (qpl_library_handle == NULL) {
+                    qpl_library_handle = LoadLibrary(TEXT(QPL_LIB_NAME));
+                    if (qpl_library_handle == NULL) {
+                        printf("Error loading dcap_quoteprov.dll: %lu\n", GetLastError());
+                        return 1;
+                    }
                 }
+
                 quote3_error_t(*sgx_qpl_clear_cache)(uint32_t cache_type) = NULL;
-                sgx_qpl_clear_cache = (quote3_error_t(*)(uint32_t))GetProcAddress(hLib, "sgx_qpl_clear_cache");
+                sgx_qpl_clear_cache = (quote3_error_t(*)(uint32_t))GetProcAddress(qpl_library_handle, "sgx_qpl_clear_cache");
                 if (sgx_qpl_clear_cache == NULL) {
                     printf("Error finding sgx_qpl_clear_cache function: %lu\n", GetLastError());
-                    FreeLibrary(hLib);
+                    FreeLibrary(qpl_library_handle);
                     return 1;
                 }
                 quote3_error_t result = sgx_qpl_clear_cache(clear_cache_type);
-                printf("sgx_qpl_clear_cache result: %u\n", result);
-                FreeLibrary(hLib);
+                printf("sgx_qpl_clear_cache type %u result: %u\n", clear_cache_type, result);
 #endif
                 break;
             }
@@ -459,5 +481,10 @@ CLEANUP:
     if (NULL != p_quote_buffer) {
         free(p_quote_buffer);
     }
+#if defined(_MSC_VER)
+    if (qpl_library_handle != NULL) {
+        FreeLibrary(qpl_library_handle);
+    }
+#endif
     return ret;
 }

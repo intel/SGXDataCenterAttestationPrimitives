@@ -34,7 +34,7 @@ ARG1=${1:-build}
 top_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 sgxssl_dir=$top_dir/sgxssl
 openssl_out_dir=$sgxssl_dir/openssl_source
-openssl_ver_name=openssl-3.0.12
+openssl_ver_name=openssl-3.0.13
 sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
 sgxssl_file_name=3.0_Rev2
 build_script=$sgxssl_dir/Linux/build_openssl.sh
@@ -43,6 +43,7 @@ full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/3.0/$openssl_ver_name.tar.gz
 
 sgxssl_chksum=269e1171f566ac6630d83c3b6cf9669e254b08a7f208cc8cf59f471f3d8a579b
+openssl_chksum=88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313
 rm -f check_sum_sgxssl.txt check_sum_openssl.txt
 if [ ! -f $build_script ]; then
 	wget $sgxssl_github_archive/$sgxssl_file_name.zip -P $sgxssl_dir/ || exit 1
@@ -75,9 +76,8 @@ fi
 
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
 	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
-	wget $server_url_path/$openssl_ver_name.tar.gz.sha256 -O expected_chksum_openssl.txt || wget $full_openssl_url.sha256 -O expected_chksum_openssl.txt || exit 1
-	openssl_chksum=`sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz | awk '{print $1}'`
-	grep $openssl_chksum expected_chksum_openssl.txt
+	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
+	grep $openssl_chksum $sgxssl_dir/check_sum_openssl.txt
 	if [ $? -ne 0 ]; then
     	echo "File $openssl_out_dir/$openssl_ver_name.tar.gz checksum failure"
         rm -f $openssl_out_dir/$openssl_ver_name.tar.gz
@@ -91,7 +91,6 @@ if [ "$1" = "nobuild" ]; then
 fi
 
 pushd $sgxssl_dir/Linux/
-sed -i '141a patch --merge -p1 < ../../../../prebuilt/openssl/openssl.CVE-2023-5678.patch || exit 1' build_openssl.sh
 if [[ "$*" == *SERVTD_ATTEST* ]];then
 make clean sgxssl_no_mitigation NO_THREADS=1 LINUX_SGX_BUILD=2 SERVTD_ATTEST=1
 else

@@ -1,0 +1,25 @@
+{
+    "policy_array":[
+        {
+            "environment": {
+                "class_id": "3123ec35-8d38-4ea5-87a5-d6c48b567570",
+                "description": "Mininum Evaluation Num Policy for SGX Platform"
+            },
+            "reference": {
+                "#NOTE": "Replace the following configurations based on your own requirements",
+                "allow_dynamic_platform": true,
+                "#NOTE": "'accepted_tcb_status' must include 'UpToDate' if 'min_eval_num' is defined.",
+                "accepted_tcb_status": [
+                    "UpToDate",
+                    "SWHardeningNeeded",
+                    "ConfigurationNeeded",
+                    "OutOfDate"
+                ],
+                "#NOTE": "'min_eval_num' indicates that Platform TCB Reports with higher tcb_eval_num are not required.",
+                "#NOTE": "The Policy fails if the Platform TCB Report includes an tcb_eval_num which is lower than the value defined in 'min_eval_num'.",
+                "#NOTE": "If 'min_eval_num' is defined, 'platform_grace_period' and 'collateral_grace_period' must not be defined",
+                "min_eval_num": 1
+            }
+        }
+    ]
+}

@@ -127,6 +127,8 @@ static bool is_nonterminal_error(Status status_err) {
     case STATUS_TCB_CONFIGURATION_NEEDED:
     case STATUS_TCB_SW_HARDENING_NEEDED:
     case STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED:
+    case STATUS_TCB_TD_RELAUNCH_ADVISED:
+    case STATUS_TCB_TD_RELAUNCH_ADVISED_CONFIGURATION_NEEDED:
         return true;
     default:
         return false;
@@ -169,6 +171,8 @@ static quote3_error_t status_error_to_quote3_error(Status status_err) {
     switch (status_err)
     {
     case STATUS_OK:
+    case STATUS_TCB_TD_RELAUNCH_ADVISED:
+    case STATUS_TCB_TD_RELAUNCH_ADVISED_CONFIGURATION_NEEDED:
         return SGX_QL_SUCCESS;
     case STATUS_MISSING_PARAMETERS:
         return SGX_QL_ERROR_INVALID_PARAMETER;
@@ -299,6 +303,10 @@ static sgx_ql_qv_result_t status_error_to_ql_qve_result(Status status_err) {
         return SGX_QL_QV_RESULT_SW_HARDENING_NEEDED;
     case STATUS_TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED:
         return SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED;
+    case STATUS_TCB_TD_RELAUNCH_ADVISED:
+        return TEE_QV_RESULT_TD_RELAUNCH_ADVISED;
+    case STATUS_TCB_TD_RELAUNCH_ADVISED_CONFIGURATION_NEEDED:
+        return TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED;
     default:
         return SGX_QL_QV_RESULT_UNSPECIFIED;
     }
@@ -435,6 +443,49 @@ const json::TcbLevel& getMatchingTcbLevel(const json::TcbInfo *tcbInfo,
 
     throw SGX_QL_TCBINFO_UNSUPPORTED_FORMAT;
 }
+
+#ifdef SERVTD_ATTEST
+
+int getTdxModuleTcblevel(const json::TcbInfo* tcbInfo,
+    const Quote& quote, uint8_t& tcbLevel)
+{
+    const auto& tdxModuleVersion = quote.getTeeTcbSvn()[1];
+    const auto& tdxModuleIsvSvn = quote.getTeeTcbSvn()[0];
+    tcbLevel = 0;
+
+    if (quote.getHeader().version > constants::QUOTE_VERSION_3 && tdxModuleVersion == 0)
+    {
+        return 0;
+    }
+
+    const std::string tdxModuleIdentityId = "TDX_" + bytesToHexString({ tdxModuleVersion });
+
+    const auto& found = std::find_if(tcbInfo->getTdxModuleIdentities().begin(),
+        tcbInfo->getTdxModuleIdentities().end(),
+        [&](const auto& tdxModuleIdentity)
+        {
+            std::string id = tdxModuleIdentity.getId();
+            std::transform(id.begin(), id.end(), id.begin(),
+                ::toupper); // convert to uppercase
+            return (id == tdxModuleIdentityId);
+        });
+    if (found == std::end(tcbInfo->getTdxModuleIdentities())) {
+        return -1;
+    }
+    const auto& foundTdxModuleTcbLevel = std::find_if(found->getTcbLevels().begin(),
+        found->getTcbLevels().end(),
+        [&](const auto& tdxModuleTcbLevel)
+        {
+            return tdxModuleIsvSvn >= tdxModuleTcbLevel.getTcb().getIsvSvn();
+        });
+    if (foundTdxModuleTcbLevel == std::end(found->getTcbLevels()))
+    {
+        return -1;
+    }
+    tcbLevel = static_cast<uint8_t>(foundTdxModuleTcbLevel->getTcb().getIsvSvn());
+    return 0;
+}
+#endif
 
 /**
  * Given a quote with cert type 5, extract PCK Cert chain and return it.
@@ -871,37 +922,15 @@ static quote3_error_t qve_get_collateral_dates(const CertificateChain* p_cert_ch
 #ifdef SERVTD_ATTEST
 
 /**
-    * @brief Get the matching QE TCB level based on ISVSVN.
-    * @param qe_identity The QE identity string.
-    * @param quote The quote object containing ISVSVN information.
-    * @return The matching TCB level object if found, otherwise throws an exception.
+    * @brief Get the matching QE TCB level based on ISVSVN
+    * @param enclaveIdentity The QE identity
+    * @param quote The quote object containing ISVSVN information
+    * @return The matching TCB level object if found, otherwise throws an exception
 */
-const TCBLevel getMatchingQETcbLevel(const char* qe_identity, const Quote& quote) {
-    // Parse the QE identity and validate its version.
-    EnclaveIdentityParser parser;
-    std::unique_ptr<EnclaveIdentityV2> qe_identity_obj;
-    try{
-        qe_identity_obj = parser.parse(qe_identity);
-        if (!qe_identity_obj) {
-            throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
-        }
-        auto version = qe_identity_obj->getVersion();
-        if (version != 2 && version != 3) {
-            throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
-        }
-    }
-    catch (...) {
-        throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
-    }
-
-    EnclaveIdentityV2* qe_identity_v2 = dynamic_cast<EnclaveIdentityV2*>(qe_identity_obj.get());
-
-    if (!qe_identity_v2) {
-        throw SGX_QL_QEIDENTITY_UNSUPPORTED_FORMAT;
-    }
+const TCBLevel getMatchingQETcbLevel(std::unique_ptr<EnclaveIdentityV2>& enclaveIdentity, const Quote& quote) {
 
     // Get matching QE identity TCB levels.
-    const auto& qe_identity_tcb_levels = qe_identity_v2->getTcbLevels();
+    const auto& qe_identity_tcb_levels = enclaveIdentity->getTcbLevels();
 
     // Ensure the QE identity has at least one TCBLevel.
     if (qe_identity_tcb_levels.empty()) {
@@ -935,6 +964,7 @@ const TCBLevel getMatchingQETcbLevel(const char* qe_identity, const Quote& quote
  * generation request
  * @param p_fmspc_size [IN] Size of fmspc
  * @param qe_tcb_info [IN]  Pointer to a buffer containing qe tcb info
+ * @param enclaveIdentity The QE identity
  * @param p_servtd_supplemental_data [IN/OUT] Pointer to a data buffer. Must be
  * allocated by caller
  * @param p_servtd_supplemental_data_size [IN/OUT] Pointer to size of buffer
@@ -945,7 +975,7 @@ const TCBLevel getMatchingQETcbLevel(const char* qe_identity, const Quote& quote
 static quote3_error_t servtd_set_quote_supplemental_data(
     const Quote &quote, const x509::PckCertificate &pckCert,
     const json::TcbInfo *tcb_info_obj, uint8_t *p_fmspc, size_t p_fmspc_size,
-    const TCBLevel &qe_tcb_info, uint8_t *p_servtd_supplemental_data,
+    const TCBLevel &qe_tcb_info, std::unique_ptr<EnclaveIdentityV2>& enclaveIdentity, uint8_t *p_servtd_supplemental_data,
     uint32_t *p_servtd_supplemental_data_size) {
 
     if (tcb_info_obj == NULL) {
@@ -980,7 +1010,6 @@ static quote3_error_t servtd_set_quote_supplemental_data(
         return SGX_QL_ERROR_UNEXPECTED;
     }
 
-    p_servtd_suppl_data->tcb_version = tcb_info_obj->getVersion();
     if (memcpy_s(p_servtd_suppl_data->fmspc, FMSPC_SIZE, p_fmspc,
                  p_fmspc_size) != 0) {
         return SGX_QL_ERROR_UNEXPECTED;
@@ -994,21 +1023,42 @@ static quote3_error_t servtd_set_quote_supplemental_data(
             p_servtd_suppl_data->tdx_tcb_components[i] = tdx_svn[i].getSvn();
         }
     }
-    p_servtd_suppl_data->pce_svn = tcb.getPceSvn();
+    p_servtd_suppl_data->pce_svn = static_cast<uint16_t>(tcb.getPceSvn());
     auto sgx_svn = tcb.getSgxTcbComponents();
     if (sgx_svn.size() == SGX_CPUSVN_SIZE) {
         for (size_t i = 0; i < SGX_CPUSVN_SIZE; i++) {
             p_servtd_suppl_data->sgx_tcb_components[i] = sgx_svn[i].getSvn();
         }
     }
+    // Get Tdx Module major version 
+    p_servtd_suppl_data->tdx_module_major_ver = quote.getTeeTcbSvn()[1];
+    uint8_t matchedTcbLevel = 0;
+    auto ret = getTdxModuleTcblevel(tcb_info_obj, quote, matchedTcbLevel);
+    // For the quote with TDX module major is 0, fill svn with 0 
+    if (ret == 0) {
+        p_servtd_suppl_data->tdx_module_svn = matchedTcbLevel;
+    }
+    else {
+        return SGX_QL_TDX_MODULE_MISMATCH;
+    }
     auto qe_report = quote.getQeReport();
     p_servtd_suppl_data->misc_select = qe_report.miscSelect;
+    auto misc_mask = enclaveIdentity->getMiscselectMask();
+    if(misc_mask.size() == MISCSELECTMASK_LEN) {
+        std::copy(misc_mask.begin(), misc_mask.end(), p_servtd_suppl_data->misc_select_mask);
+    }
     if (memcpy_s(&(p_servtd_suppl_data->attributes),
                  sizeof(p_servtd_suppl_data->attributes),
                  qe_report.attributes.data(),
                  sizeof(qe_report.attributes)) != 0) {
         return SGX_QL_ERROR_UNEXPECTED;
     }
+    
+    auto attr_mask = enclaveIdentity->getAttributesMask();
+    if(attr_mask.size() == ATTRIBUTESELECTMASK_LEN) {
+        std::copy(attr_mask.begin(), attr_mask.end(), p_servtd_suppl_data->attributes_mask);
+    }
+
     if (memcpy_s(p_servtd_suppl_data->mr_enclave.m,
                  sizeof(p_servtd_suppl_data->mr_enclave.m),
                  qe_report.mrEnclave.data(),
@@ -1254,15 +1304,11 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
                 ret = SGX_QL_ERROR_UNEXPECTED;
                 break;
             }
+            //QE identity TCB level date
             supplemental_data->qe_iden_tcb_level_date_tag = qe_identity_date;
-            //compare TCB info TCB level date and QE identity TCB level date, return the smaller one
-            //
-            if (qe_identity_date <= matching_tcb_info_tcb_date) {
-                supplemental_data->tcb_level_date_tag = qe_identity_date;
-            }
-            else {
-                supplemental_data->tcb_level_date_tag = matching_tcb_info_tcb_date;
-            }
+            //TCB info TCB level date
+            supplemental_data->tcb_level_date_tag = matching_tcb_info_tcb_date;
+
         }
 
         catch(...) {
@@ -1982,20 +2028,23 @@ quote3_error_t sgx_qve_verify_quote(
             }
 #ifdef SERVTD_ATTEST
             memset(p_td_report_body, 0, *p_td_report_body_size);
-            // Get the TCB level matching the ISVSVN in the quote.
+            intel::sgx::dcap::EnclaveIdentityParser parser;
+            std::unique_ptr<EnclaveIdentityV2> enclaveIdentity;
             try
             {
-                auto qe_tcb = getMatchingQETcbLevel(
-                    p_quote_collateral->qe_identity, quote);
+                enclaveIdentity = parser.parse(p_quote_collateral->qe_identity);
+                // Get the TCB level matching the ISVSVN in the quote.
+                auto qe_tcb = getMatchingQETcbLevel(enclaveIdentity, quote);
 
                 auto chain_pck_cert = chain.getPckCert();
                 auto p_pckCert = chain_pck_cert.get();
                 ret = servtd_set_quote_supplemental_data(
                     quote, *p_pckCert, &tcb_info_obj, fmspc_from_quote,
-                    FMSPC_SIZE, qe_tcb, p_td_report_body,
+                    FMSPC_SIZE, qe_tcb, enclaveIdentity, p_td_report_body,
                     p_td_report_body_size);
                 if (ret != SGX_QL_SUCCESS)
                 {
+                    memset(p_td_report_body, 0, *p_td_report_body_size);
                     break;
                 }
             }

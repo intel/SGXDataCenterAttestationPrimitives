@@ -77,16 +77,6 @@ typedef quote3_error_t (*sgx_read_persistent_data_func_t)(const uint8_t *p_buf,
                                                           const char *p_label);
 typedef quote3_error_t (*sgx_qpl_global_init_func_t)();
 
-typedef quote3_error_t (*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t logger,
-                                                        sgx_ql_log_level_t loglevel);
-
-void sgx_ql_logging_callback(sgx_ql_log_level_t level, const char *message) {
-    if (level == SGX_QL_LOG_ERROR) {
-        sgx_proc_log_report(1, message);
-    } else if (level == SGX_QL_LOG_INFO) {
-        sgx_proc_log_report(3, message);
-    }
-}
 
 #ifndef _MSC_VER
 inline errno_t memcpy_s(void *dest, size_t numberOfElements, const void *src, size_t count)
@@ -184,13 +174,6 @@ tee_att_config_t::get_qpl_handle()
             SE_PROD_LOG("Cannot open Quote Provider Library %s\n", TEE_ATT_QUOTE_CONFIG_LIB_FILE_NAME);
         }
         else {
-            sgx_ql_set_logging_callback_t ql_set_logging_callback = (sgx_ql_set_logging_callback_t)dlsym(m_qpl_handle, "sgx_ql_set_logging_callback");
-            if (dlerror() == NULL && ql_set_logging_callback) {
-                // Set log level to SGX_QL_LOG_ERROR
-                ql_set_logging_callback(sgx_ql_logging_callback, SGX_QL_LOG_ERROR);
-            } else {
-                SE_PROD_LOG("Failed to set logging callback for the quote provider library.\n");
-            }
             sgx_qpl_global_init_func_t p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(m_qpl_handle, "sgx_qpl_global_init");
             if (dlerror() == NULL && p_sgx_qpl_global_init) {
                 SE_TRACE(SE_TRACE_NOTICE, "Found the sgx_qpl_global_init API.\n");

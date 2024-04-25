@@ -337,9 +337,9 @@ int opa_builtin0(wasm_exec_env_t exec_env, int builtin_id, void *ctx)
             }
 
             void *json_buffer = wasm_runtime_addr_app_to_native(wasm_inst, input_buffer);
-            memset(json_buffer, 0, sizeof(uint64_t));
+            memset(json_buffer, 0, s.length()+1);
             memcpy_s((void *)json_buffer, s.length(), s.c_str(), s.length());
-            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, sizeof(uint64_t));
+            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, (uint32_t)s.length());
             if(memory == 0)
             {
                 abort();
@@ -384,9 +384,9 @@ int opa_builtin1(wasm_exec_env_t exec_env, int builtin_id, void *ctx, opa_value*
             }
 
             void *json_buffer = wasm_runtime_addr_app_to_native(wasm_inst, input_buffer);
-            memset(json_buffer, 0, sizeof(uint64_t));
+            memset(json_buffer, 0, s.length()+1);
             memcpy_s((void *)json_buffer, s.length(), s.c_str(), s.length());
-            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, sizeof(uint64_t));
+            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, (uint32_t)s.length());
             if(memory == 0)
             {
                 abort();
@@ -435,9 +435,9 @@ int opa_builtin2(wasm_exec_env_t exec_env, int builtin_id, void *ctx, opa_value 
             }
 
             void *json_buffer = wasm_runtime_addr_app_to_native(wasm_inst, input_buffer);
-            memset(json_buffer, 0, sizeof(uint64_t));
+            memset(json_buffer, 0, s.length()+1);
             memcpy_s((void *)json_buffer, s.length(), s.c_str(), s.length());
-            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, sizeof(uint64_t));
+            int memory = opa_json_parse(wasm_inst, exec_env, input_buffer, (uint32_t)s.length());
             if (memory == 0)
             {
                 abort();

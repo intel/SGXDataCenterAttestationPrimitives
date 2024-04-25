@@ -446,7 +446,10 @@ uefi_status_t set_registration_status()
     status.registrationStatus = MP_TASK_COMPLETED;
     status.errorCode = MPA_SUCCESS;
     mpResult = p_mp_uefi_set_registration_status(&status);
-    if (mpResult != MP_SUCCESS) {
+    if (mpResult == MP_INSUFFICIENT_PRIVILEGES) {
+        printf("Warning: the UEFI variable was in read-only mode, could NOT write it. \n");
+    }
+    else if (mpResult != MP_SUCCESS) {
         printf("Warning: error occurred while setting registration status, the error code is: %d \n", mpResult);
     }
     else {
@@ -651,4 +654,155 @@ bool is_valid_use_secure_cert(std::string& use_secure_cert) {
     else {
         return false;
     }  
+}
+
+bool is_valid_tcb_update_type(std::string& tcb_update_type) {
+    if (tcb_update_type.compare("STANDARD") == 0 ||
+        tcb_update_type.compare("EARLY")  == 0 ||
+        tcb_update_type.compare("ALL")  == 0 ) { 
+        return true;
+    }
+    else {
+        return false;
+    }                
+}
+
+
+/**
+* Method converts byte containing value from 0x00-0x0F into its corresponding ASCII code,
+* e.g. converts 0x00 to '0', 0x0A to 'A'.
+* Note: This is mainly a helper method for internal use in byte_array_to_hex_string().
+*
+* @param in byte to be converted (allowed values: 0x00-0x0F)
+*
+* @return ASCII code representation of the byte or 0 if method failed (e.g input value was not in provided range).
+*/
+uint8_t convert_value_to_ascii(uint8_t in)
+{
+	if (in <= 0x09)
+	{
+		return (uint8_t)(in + '0');
+	}
+	else if (in <= 0x0F)
+	{
+		return (uint8_t)(in - 10 + 'A');
+	}
+
+	return 0;
+}
+
+//Function to do HEX encoding of array of bytes
+//@param in_buf, bytes array whose length is in_size
+//       out_buf, output the HEX encoding of in_buf on success.
+//@return true on success and false on error
+//The out_size must always be 2*in_size since each byte into encoded by 2 characters
+bool byte_array_to_hex_string(const uint8_t *in_buf, uint32_t in_size, uint8_t *out_buf, uint32_t out_size)
+{
+	if (in_size>UINT32_MAX / 2)return false;
+	if (in_buf == NULL || out_buf == NULL || out_size != in_size * 2)return false;
+
+	for (uint32_t i = 0; i< in_size; i++)
+	{
+		*out_buf++ = convert_value_to_ascii(static_cast<uint8_t>(*in_buf >> 4));
+		*out_buf++ = convert_value_to_ascii(static_cast<uint8_t>(*in_buf & 0xf));
+		in_buf++;
+	}
+	return true;
+}
+                     
+
+/**
+* This function appends request parameters of byte array type to the UR in HEX string format
+*
+* @param url Request UR
+* @param request  Request parameter in byte array
+* @param request_size Size of byte array
+*
+* @return true If the byte array was appended to the UR successfully
+*/
+network_post_error_t append_body_context(string& url, const uint8_t* request, const uint32_t request_size)
+{
+	if (request_size >= UINT32_MAX / 2)
+		return POST_INVALID_PARAMETER_ERROR;
+
+	uint8_t* hex = (uint8_t*)malloc(request_size * 2);
+	if (!hex)
+		return POST_OUT_OF_MEMORY_ERROR;
+	if (!byte_array_to_hex_string(request, request_size, hex, request_size * 2)) {
+		free(hex);
+		return POST_UNEXPECTED_ERROR;
+	}
+	url.append(reinterpret_cast<const char*>(hex), request_size * 2);
+	free(hex);
+	return POST_SUCCESS;
+}
+
+network_post_error_t generate_json_message_body(const uint8_t *raw_data, 
+                                                const uint32_t raw_data_size,
+                                                const uint16_t platform_id_length,
+                                                const bool non_enclave_mode, 
+                                                string &jsonString)
+{
+    network_post_error_t ret = POST_SUCCESS;
+    const uint8_t *position = raw_data;
+
+    jsonString = "{";
+    if (true == non_enclave_mode) {
+        jsonString += "\"pce_id\": \"";
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        position = position + platform_id_length;
+        if ((ret = append_body_context(jsonString, position, raw_data_size - PCE_ID_LENGTH - platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+    }
+    else {
+        uint32_t left_size = raw_data_size - platform_id_length - CPU_SVN_LENGTH - ISV_SVN_LENGTH - PCE_ID_LENGTH - ENCRYPTED_PPID_LENGTH;
+        jsonString += "\"enc_ppid\": \"";
+        if ((ret = append_body_context(jsonString, position, ENCRYPTED_PPID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_id\": \"";
+        position = position + ENCRYPTED_PPID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, PCE_ID_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+        jsonString += "\" ,\"cpu_svn\": \"";
+        position = position + PCE_ID_LENGTH;
+        if ((ret = append_body_context(jsonString, position, CPU_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"pce_svn\": \"";
+        position = position + CPU_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, ISV_SVN_LENGTH)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"qe_id\": \"";
+        position = position + ISV_SVN_LENGTH;
+        if ((ret = append_body_context(jsonString, position, platform_id_length)) != POST_SUCCESS) {
+            return ret;
+        }
+
+        jsonString += "\" ,\"platform_manifest\": \"";
+        if (left_size != 0) {
+            position = position + platform_id_length;
+            if ((ret = append_body_context(jsonString, position, left_size)) != POST_SUCCESS) {
+                return ret;
+            }
+        }
+
+    }
+    jsonString += "\" }";
+    return ret;
 }

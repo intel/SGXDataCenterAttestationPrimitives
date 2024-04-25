@@ -104,7 +104,7 @@ else
 	ENCLAVE_CFLAGS += -fstack-protector-strong
 endif
 
-ENCLAVE_CXXFLAGS += $(ENCLAVE_CFLAGS) -std=c++14 -DSGX_TRUSTED
+ENCLAVE_CXXFLAGS += $(ENCLAVE_CFLAGS) -std=c++17 -DSGX_TRUSTED
 
 
 ifdef SERVTD_ATTEST

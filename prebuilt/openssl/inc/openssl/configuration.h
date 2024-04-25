@@ -34,9 +34,6 @@ extern "C" {
 # ifndef OPENSSL_THREADS
 #  define OPENSSL_THREADS
 # endif
-# ifndef OPENSSL_NO_ACVP_TESTS
-#  define OPENSSL_NO_ACVP_TESTS
-# endif
 # ifndef OPENSSL_NO_AFALGENG
 #  define OPENSSL_NO_AFALGENG
 # endif
@@ -85,9 +82,6 @@ extern "C" {
 # ifndef OPENSSL_NO_DEVCRYPTOENG
 #  define OPENSSL_NO_DEVCRYPTOENG
 # endif
-# ifndef OPENSSL_NO_DSO
-#  define OPENSSL_NO_DSO
-# endif
 # ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
 #  define OPENSSL_NO_EC_NISTP_64_GCC_128
 # endif
@@ -99,9 +93,6 @@ extern "C" {
 # endif
 # ifndef OPENSSL_NO_FILENAMES
 #  define OPENSSL_NO_FILENAMES
-# endif
-# ifndef OPENSSL_NO_FIPS_SECURITYCHECKS
-#  define OPENSSL_NO_FIPS_SECURITYCHECKS
 # endif
 # ifndef OPENSSL_NO_FUZZ_AFL
 #  define OPENSSL_NO_FUZZ_AFL

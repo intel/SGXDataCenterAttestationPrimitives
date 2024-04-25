@@ -67,28 +67,33 @@ async function refresh_enclave_identities() {
   }
   let issuer_chain_updated = false;  // Update issuer chain only once
   for (const enclave_id of enclave_id_list) {
-    const pck_server_res = await pcsClient.getEnclaveIdentity(
-      enclave_id[0],
-      enclave_id[1]
-    );
-    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-      // Then refresh cache DB
-      await enclaveIdentityDao.upsertEnclaveIdentity(
+    for (const update_type of [Constants.UPDATE_TYPE_STANDARD, Constants.UPDATE_TYPE_EARLY]) {
+      const pck_server_res = await pcsClient.getEnclaveIdentity(
         enclave_id[0],
-        pck_server_res.rawBody,
-        enclave_id[1]
+        enclave_id[1],
+        update_type
       );
-      if (!issuer_chain_updated) {
-        await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
-          pcsClient.getHeaderValue(
-            pck_server_res.headers,
-            Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
-          )
+      if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
+        // Then refresh cache DB
+        await enclaveIdentityDao.upsertEnclaveIdentity(
+          enclave_id[0],
+          pck_server_res.rawBody,
+          enclave_id[1],
+          update_type
         );
-        issuer_chain_updated = true;
-      }
-    } else {
-      throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
+        if (!issuer_chain_updated) {
+          await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
+            pcsClient.getHeaderValue(
+              pck_server_res.headers,
+              Constants.SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN
+            )
+          );
+          issuer_chain_updated = true;
+        }
+      } else {
+        // Let it continue even though the collateral doesn't exist
+        logger.debug("Couldn't get enclave identity for (id:%d,version:%d,type:%s)", enclave_id[0], enclave_id[1], update_type);
+      }  
     }
   }
 }
@@ -170,7 +175,7 @@ async function refresh_all_pckcerts(fmspc_array) {
       }
 
       // get tcbinfo for this fmspc
-      pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc);
+      pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_EARLY);
       if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
         throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
       }
@@ -285,14 +290,15 @@ async function refresh_cached_crls() {
 }
 
 // Refresh the TCB info for the specified fmspc value
-async function refresh_one_tcb(fmspc, type, version) {
-  const pck_server_res = await pcsClient.getTcb(type, fmspc, version);
+async function refresh_one_tcb(fmspc, type, version, update_type) {
+  const pck_server_res = await pcsClient.getTcb(type, fmspc, version, update_type);
   if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
     // Then refresh cache DB
     await fmspcTcbDao.upsertFmspcTcb({
       type: type,
       fmspc: fmspc,
       version: version,
+      update_type: update_type,
       tcbinfo: pck_server_res.rawBody,
     });
     // update or insert certificate chain
@@ -303,6 +309,7 @@ async function refresh_one_tcb(fmspc, type, version) {
       )
     );
   } else {
+    logger.error("Failed to get tcbinfo for fmspc:" + fmspc)
     throw new PccsError(PccsStatus.PCCS_STATUS_SERVICE_UNAVAILABLE);
   }
 }
@@ -315,7 +322,7 @@ async function refresh_all_tcbs() {
   const tcbs = await fmspcTcbDao.getAllTcbs();
   for (let tcb of tcbs) {
     // refresh each tcb
-    await refresh_one_tcb(tcb.fmspc, tcb.type, tcb.version);
+    await refresh_one_tcb(tcb.fmspc, tcb.type, tcb.version, tcb.update_type);
   }
 }
 

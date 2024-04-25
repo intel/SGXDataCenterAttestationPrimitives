@@ -38,7 +38,8 @@
 namespace intel { namespace sgx { namespace dcap { namespace qgs {
 
   using data_buffer = std::vector<uint8_t>;
-  data_buffer get_resp(uint8_t *p_req, uint32_t req_size);
+  data_buffer get_resp(const uint8_t *p_req, uint32_t req_size);
+  data_buffer get_raw_resp(const uint8_t *p_req, uint32_t req_size);
 }
 }
 }

@@ -1,9 +1,14 @@
+# Copyright (c) 2024 Intel Corporation
+
+# Declare nodejs version you want to use
+ARG NODE_VERSION=20.11.1
+
 # Use multi-stage builds to reduce final image size
-FROM ubuntu:23.04 AS builder
+FROM docker.io/library/debian AS builder
 
 # Define arguments used across multiple stages
-ARG DCAP_VERSION=DCAP_1.20
-ARG NODE_MAJOR=20
+ARG DCAP_VERSION=DCAP_1.21
+ARG NODE_VERSION
 
 # update and install packages, nodejs
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -16,15 +21,25 @@ RUN DEBIAN_FRONTEND=noninteractive \
         gnupg \
         git \
         zip \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update -yq \
-    && apt-get install -yq --no-install-recommends nodejs \
+        python3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install nvm (Node Version Manager)
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Set NVM_DIR so we can use it in subsequent commands
+ENV NVM_DIR /root/.nvm
+
+# Install specific version of Node using nvm
+# Source nvm in each RUN command to ensure it's available
+RUN . "$NVM_DIR/nvm.sh" && nvm install $NODE_VERSION && nvm use $NODE_VERSION
+
+# Set PATH to include the node and npm binaries
+ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
 # Clone the specific branch or tag 
-RUN git clone --recurse-submodules https://github.com/intel/SGXDataCenterAttestationPrimitives.git # -b ${DCAP_VERSION} --depth 1
+RUN git clone --recurse-submodules https://github.com/intel/SGXDataCenterAttestationPrimitives.git -b ${DCAP_VERSION} --depth 1
 
 # Build libPCKCertSelection library
 WORKDIR /SGXDataCenterAttestationPrimitives/tools/PCKCertSelection/
@@ -41,14 +56,16 @@ RUN npm config set proxy $http_proxy \
     && npm install
 
 # Start final image build
-FROM ubuntu:23.04
+FROM docker.io/library/debian:12-slim
+
+ARG NODE_VERSION
 
 # Create user and group before copying files
 ARG USER=pccs
 RUN useradd -M -U -r ${USER} -s /bin/false
 
 # Copy only necessary files from builder stage
-COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=builder /root/.nvm/versions/node/v$NODE_VERSION/bin/node /usr/bin/node
 COPY --from=builder --chown=${USER}:${USER} /SGXDataCenterAttestationPrimitives/QuoteGeneration/pccs/ /opt/intel/pccs/
 
 # Set the working directory and switch user

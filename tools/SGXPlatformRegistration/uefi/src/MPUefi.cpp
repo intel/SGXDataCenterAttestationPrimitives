@@ -385,7 +385,7 @@ MpResult MPUefi::setServerResponse(const uint8_t *response, const uint16_t &size
         responseUefi->version = MP_BIOS_UEFI_VARIABLE_VERSION_1;
         responseUefi->size = size;
 
-        // copy cets to uefi structure
+        // copy certs to uefi structure
         memcpy(&(responseUefi->header), response, size);
 
 #if MP_VERIFY_INTERNAL_DATA_STRUCT_WRITE == 1
@@ -617,6 +617,11 @@ MpResult MPUefi::setRegistrationStatus(const MpRegistrationStatus& status) {
         // write registration status to uefi
         int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_STATUS, (const uint8_t*)(&statusUefi), sizeof(statusUefi), false);
         if (numOfBytes != sizeof(statusUefi)) {
+            if(numOfBytes == -1) {
+                uefi_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: fail to write regsitration status uefi variable, maybe it is in read-only mode.\n");
+                res = MP_INSUFFICIENT_PRIVILEGES;
+                break;
+            }
             uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationStatus: failed to write uefi variable.\n");
             res = MP_UEFI_INTERNAL_ERROR;
             break;
@@ -897,10 +902,10 @@ MpResult MPUefi::setRegistrationServerInfo(const uint16_t &flags, const string &
         int numOfBytes = m_uefi->writeUEFIVar(UEFI_VAR_CONFIGURATION, (const uint8_t*)configurationUefi, sizeof(ConfigurationUEFI) + serverIdSize - 
             sizeof(configurationUefi->headerId), false);
         if (numOfBytes != (int)(sizeof(ConfigurationUEFI) + serverIdSize - sizeof(configurationUefi->headerId))) {
-	    if(numOfBytes == -1) {
+            if(numOfBytes == -1) {
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: Can't write Registration Configuration UEFI variable, please check whether the SGX has been disabled.\n");
                 res = MP_INSUFFICIENT_PRIVILEGES;
-	    } 
+            } 
             else {
                 uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "setRegistrationServerInfo: failed to write uefi variable.\n");
                 res = MP_UNEXPECTED_ERROR;

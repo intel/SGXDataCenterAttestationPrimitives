@@ -58,7 +58,7 @@ SGXSSL_PACKAGE_PATH 	?= $(DCAP_QV_DIR)/sgxssl/Linux/package
 PREBUILD_OPENSSL_PATH	?= $(DCAP_QV_DIR)/../prebuilt/openssl
 
 SGX_COMMON_CFLAGS := $(COMMON_FLAGS) -m64 -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
-SGX_COMMON_CXXFLAGS := $(COMMON_FLAGS) -m64 -Wnon-virtual-dtor -std=c++14
+SGX_COMMON_CXXFLAGS := $(COMMON_FLAGS) -m64 -Wnon-virtual-dtor -std=c++17
 
 DCAP_EXTERNAL_DIR       := $(DCAP_QG_DIR)/../external
 
@@ -76,5 +76,5 @@ QVL_LIB_INC := -I$(QVL_COMMON_PATH)/include -I$(QVL_COMMON_PATH)/include/Utils -
 
 QVL_PARSER_INC := -I$(QVL_COMMON_PATH)/include -I$(QVL_COMMON_PATH)/include/Utils -I$(QVL_SRC_PATH) -I$(QVL_PARSER_PATH)/include -I$(QVL_PARSER_PATH)/src -I$(QVL_LIB_PATH)/include -I$(QVL_SRC_PATH)/ThirdParty/rapidjson/include
 
-QVL_LIB_FILES := $(sort $(wildcard $(QVL_LIB_PATH)/src/*.cpp) $(wildcard $(QVL_LIB_PATH)/src/*/*.cpp) $(wildcard $(QVL_COMMON_PATH)/src/Utils/*.cpp))
+QVL_LIB_FILES := $(sort $(wildcard $(QVL_LIB_PATH)/src/*.cpp) $(wildcard $(QVL_LIB_PATH)/src/*/*.cpp) $(wildcard $(QVL_LIB_PATH)/src/*/*/*.cpp) $(wildcard $(QVL_COMMON_PATH)/src/Utils/*.cpp))
 QVL_PARSER_FILES := $(sort $(wildcard $(QVL_PARSER_PATH)/src/*.cpp) $(wildcard $(QVL_PARSER_PATH)/src/*/*.cpp))

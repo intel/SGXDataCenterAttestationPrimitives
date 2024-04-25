@@ -74,13 +74,16 @@ final_appraisal_result := {
 default final_ret := 0
 
 final_ret := 1 if {
+	count(appraisal_result) > 0
 	every output in appraisal_result {
 		output.appraisal_result == 1
 	}
 } else := 0 if {
+	count(appraisal_result) > 0
 	some output in appraisal_result
 	output.appraisal_result == 0
 } else := -1 if {
+	count(appraisal_result) > 0
 	every output in appraisal_result {
 		output.appraisal_result != 0
 	}
@@ -258,12 +261,35 @@ tcb_status_present(bundle) if {
 	is_array(bundle.report.measurement.tcb_status)
 }
 
+default tcb_uptodate_check(_) := false
+
+tcb_uptodate_check(bundle) if {
+	is_array(bundle.policy.reference.accepted_tcb_status)
+
+	# tcb status must have UpToDate
+	basic_status := "UPTODATE"
+	upper_accepted_tcb := [val |
+		some status in bundle.policy.reference.accepted_tcb_status
+		val := upper(status)
+	]
+	basic_status in upper_accepted_tcb
+}
+
+tcb_uptodate_check(bundle) if {
+	is_string(bundle.policy.reference.accepted_tcb_status)
+
+	# tcb status must have UpToDate
+	basic_status := "UPTODATE"
+	basic_status == upper(bundle.policy.reference.accepted_tcb_status)
+}
+
 # Appraise required tcb_status - this must not contain any strings that are not in the policy
 default tcb_status_ok(_) := false
 
 # tcb status is OK if none of the individual status are rejected and the input contains a tcb_status
 tcb_status_ok(bundle) if {
 	tcb_status_present(bundle)
+	tcb_uptodate_check(bundle)
 	not unaccepted_tcb_status_present(bundle)
 }
 
@@ -276,9 +302,13 @@ expiration_date_check_ok(bundle) if {
 	not bundle.policy.reference.collateral_grace_period
 }
 
+# If user defines collateral_grace_period
+# min_eval_num must not be present
 expiration_date_check_ok(bundle) if {
-	# Convert grace period from seconds to ns
 	is_number(bundle.policy.reference.collateral_grace_period)
+	not bundle.policy.reference.min_eval_num
+
+	# Convert grace period from seconds to ns
 	grace_period := bundle.policy.reference.collateral_grace_period * 1000000000
 	expiration_date := time.parse_rfc3339_ns(bundle.report.measurement.earliest_expiration_date)
 	expiration_date != uint64_max
@@ -290,26 +320,42 @@ expiration_date_check_ok(bundle) if {
 #  the platform_tcb.tcb_level_date_tag must be within the grace period
 default earliest_accepted_tcb_level_date_tag_ok(_) := false
 
+tcb_level_date_tag_basic_check(bundle) if {
+	is_number(bundle.policy.reference.platform_grace_period)
+	is_number(bundle.policy.reference.collateral_grace_period)
+	bundle.policy.reference.collateral_grace_period == 0
+	not bundle.policy.reference.min_eval_num
+	basic_status := ["UPTODATE", "OUTOFDATE"]
+	is_array(bundle.policy.reference.accepted_tcb_status)
+	upper_accepted_tcb := [val |
+		some status in bundle.policy.reference.accepted_tcb_status
+		val := upper(status)
+	]
+	every status in basic_status {
+		status in upper_accepted_tcb
+	}
+}
+
 earliest_accepted_tcb_level_date_tag_ok(bundle) if {
 	not bundle.policy.reference.platform_grace_period
 }
 
-# If current TCB status is one of UpToDate, ConfigurationNeeded and SWHardeningNeeded
-# Then we will skip TCB level date tag check if user provides platform grace period
+# If current TCB status in report is one of "UpToDate", "ConfigurationNeeded", "SWHardeningNeeded" or "TDRelaunchAdvised"
+# and collateral has no expiry, then ignore the check
 earliest_accepted_tcb_level_date_tag_ok(bundle) if {
-	is_number(bundle.policy.reference.platform_grace_period)
-	ignored_status := ["UPTODATE", "CONFIGURATIONNEEDED", "SWHARDENINGNEEDED"]
-	some status in bundle.report.measurement.tcb_status
-	is_string(status)
-	upper(status) in ignored_status
+	tcb_level_date_tag_basic_check(bundle)
+	expiration_date_check_ok(bundle)
+	ignored_status := ["UPTODATE", "CONFIGURATIONNEEDED", "SWHARDENINGNEEDED", "TDRELAUNCHADVISED"]
+	every status in bundle.report.measurement.tcb_status {
+		upper(status) in ignored_status
+	}
 }
 
+# If user defines platform_grace_period, then collateral_grace_period must be 0
+# accepted_tcb_status must include UpToDate and OutOfDate
+# min_eval_num must not be present
 earliest_accepted_tcb_level_date_tag_ok(bundle) if {
-	is_number(bundle.policy.reference.platform_grace_period)
-	ignored_status := ["UPTODATE", "CONFIGURATIONNEEDED", "SWHARDENINGNEEDED"]
-	some status in bundle.report.measurement.tcb_status
-	is_string(status)
-	not upper(status) in ignored_status
+	tcb_level_date_tag_basic_check(bundle)
 	grace_period := bundle.policy.reference.platform_grace_period * 1000000000
 	expiration_date := time.parse_rfc3339_ns(bundle.report.measurement.tcb_level_date_tag)
 	expiration_date != uint64_max
@@ -342,9 +388,14 @@ tcb_eval_num_ok(bundle) if {
 	not bundle.policy.reference.min_eval_num
 }
 
+# If user defines min_eval_num, then platform_grace_period must not be present
+# collateral_grace_period also must not be present
+# accepted_tcb_status must include UpToDate
 tcb_eval_num_ok(bundle) if {
 	is_number(bundle.report.measurement.tcb_eval_num)
 	is_number(bundle.policy.reference.min_eval_num)
+	not bundle.policy.reference.platform_grace_period
+	not bundle.policy.reference.collateral_grace_period
 	bundle.report.measurement.tcb_eval_num >= bundle.policy.reference.min_eval_num
 }
 

@@ -31,31 +31,32 @@
 
 include ../../../QuoteGeneration/buildenv.mk
 
-WARM_Top_Path =../../../external/wasm-micro-runtime/
+WARM_Top_Path :=../../../external/wasm-micro-runtime/
 
-WARM_Lib_Path = $(WARM_Top_Path)/product-mini/platforms/linux/build/
-JWT_CPP_Path = ../../../external/jwt-cpp/
-RAPIDJSON_DIR =  ../../QVL/Src/ThirdParty/rapidjson/include
-PREBUILD_OPENSSL_PATH  = ../../../prebuilt/openssl
-QAL_Include_Path = -I./ \
+WARM_Lib_Path := $(WARM_Top_Path)/product-mini/platforms/linux/build/
+JWT_CPP_Path := ../../../external/jwt-cpp/
+RAPIDJSON_DIR :=  ../../QVL/Src/ThirdParty/rapidjson/include
+PREBUILD_OPENSSL_PATH := ../../../prebuilt/openssl
+QAL_Include_Path := -I./ \
 				-I$(SGX_SDK)/include \
 				-I$(PREBUILD_OPENSSL_PATH)/inc \
 				-I$(WARM_Top_Path)/core/iwasm/include \
 				-I$(JWT_CPP_Path)/include   \
 				-I$(COMMON_DIR)/inc/internal \
 				-I../../dcap_quoteverify/inc \
+				-I../common/ \
 				-I$(RAPIDJSON_DIR)/
 
-QAL_Cpp_Flags = $(CXXFLAGS) -g -fPIC $(QAL_Include_Path)
-QAL_C_Flags = $(CFLAGS) -g -fPIC $(QAL_Include_Path)
+QAL_Cpp_Flags := $(CXXFLAGS) -g -fPIC $(QAL_Include_Path)
+QAL_C_Flags := $(CFLAGS) -g -fPIC $(QAL_Include_Path)
 
 QAL_Link_Flags := $(COMMON_LDFLAGS) -L$(WARM_Lib_Path) -lvmlib  -ldl -lm -lpthread \
 				-L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto \
 				-Wl,--gc-sections -Wl,--version-script=sgx_dcap_qal.lds
 
-WASM_CONFIG = -DCMAKE_BUILD_TYPE=Release
+WASM_CONFIG ?= -DCMAKE_BUILD_TYPE=Release
 ifeq ($(DEBUG), 1)
-	WASM_CONFIG = -DCMAKE_BUILD_TYPE=Debug
+	WASM_CONFIG := -DCMAKE_BUILD_TYPE=Debug
 	QAL_Link_Flags += -fsanitize=undefined
 endif
 
@@ -63,19 +64,19 @@ ifeq ($(USE_LOCAL_WASM), 1)
 	QAL_Cpp_Flags += -DUSE_LOCAL_WASM
 endif
 
-QAL_Cpp_Files := $(wildcard *.cpp)
-QAL_CXX_Obj_Files = $(QAL_Cpp_Files:.cpp=.o)
+QAL_Cpp_Files := $(wildcard *.cpp) ../common/file_util.cpp
+QAL_CXX_Obj_Files := $(QAL_Cpp_Files:.cpp=.o)
 
-QAL_C_Obj_Files = se_thread.o se_trace.o
+QAL_C_Obj_Files := se_thread.o se_trace.o
 ifdef QAL_BUILD
-QAL_Obj_Files = $(QAL_CXX_Obj_Files) $(QAL_C_Obj_Files)
+QAL_Obj_Files := $(sort $(QAL_CXX_Obj_Files) $(QAL_C_Obj_Files))
 else
-QVL_Cpp_Obj_Files = sgx_dcap_pcs_com.o config.o
-QAL_Obj_Files = $(QAL_CXX_Obj_Files) $(QAL_C_Obj_Files)
+QVL_Cpp_Obj_Files := sgx_dcap_pcs_com.o config.o
+QAL_Obj_Files := $(sort $(QAL_CXX_Obj_Files) $(QAL_C_Obj_Files))
 endif
-Target_Lib_Name = libsgx_dcap_qal.so
+Target_Lib_Name := libsgx_dcap_qal.so
 
-Target_Static_Lib_Name = libdcap_qal.a
+Target_Static_Lib_Name := libdcap_qal.a
 
 .PHONY: all clean rebuild wasm_lib
 

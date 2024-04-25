@@ -33,14 +33,15 @@
 DCAP_TOPDIR = ../../..
 include $(DCAP_TOPDIR)/QuoteGeneration/buildenv.mk
 
-PREBUILD_OPENSSL_PATH  = $(DCAP_TOPDIR)/prebuilt/openssl
-FLAGS += -fpie -g -I./ \
+PREBUILD_OPENSSL_PATH := $(DCAP_TOPDIR)/prebuilt/openssl
+FLAGS := -fpie -g -I./ \
 		-I$(SGX_SDK)/include \
 		-I$(DCAP_TOPDIR)/external/jwt-cpp/include \
 		-I../../QVL/Src/ThirdParty/rapidjson/include \
 		-I$(DCAP_TOPDIR)/QuoteGeneration/common/inc/internal/ \
 		-I$(DCAP_TOPDIR)/QuoteGeneration/common/inc/internal/linux/ \
-		-I$(PREBUILD_OPENSSL_PATH)/inc
+		-I$(PREBUILD_OPENSSL_PATH)/inc \
+		-I../common
 
 ifdef DEBUG
 FLAGS +=  -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
@@ -50,13 +51,15 @@ endif
 
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
-Cpp_Files = $(wildcard *.cpp)
-C_Obj_Files = se_trace.o
+Cpp_Files := $(wildcard *.cpp)
+Cpp_Common_Obj_Files := file_util.o format_util.o
+C_Obj_Files := se_trace.o
 
-Obj_Files = $(Cpp_Files:.cpp=.o) $(C_Obj_Files)
-LDFLAGS += -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto -lpthread
+Obj_Files := $(Cpp_Files:.cpp=.o) $(C_Obj_Files) $(Cpp_Common_Obj_Files)
+LDFLAGS += -L$(PREBUILD_OPENSSL_PATH)/lib/linux64 -lcrypto -lpthread -ldl
 
-TARGET_NAME = tee_appraisal_tool
+
+TARGET_NAME := tee_appraisal_tool
 
 .PHONY: all clean rebuild gen_key
 
@@ -71,6 +74,9 @@ $(TARGET_NAME): $(Obj_Files)
 
 $(C_Obj_Files): %.o:$(DCAP_TOPDIR)/QuoteGeneration/common/src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(Cpp_Common_Obj_Files): %.o:../common/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 gen_key:
 	@openssl ecparam -name secp384r1 -genkey -noout -out ec_private.pem

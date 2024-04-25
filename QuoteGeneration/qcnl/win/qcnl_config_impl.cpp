@@ -195,6 +195,6 @@ sgx_qcnl_error_t QcnlConfigJson::load_config() {
         return this->load_config_json(config_path);
     }
     else {
-        return SGX_QCNL_INVALID_CONFIG;
+        return SGX_QCNL_CONFIG_NOT_JSON;
     }
 }

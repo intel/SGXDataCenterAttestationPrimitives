@@ -31,12 +31,16 @@
 
 import { refreshService } from '../services/index.js';
 import PccsStatus from '../constants/pccs_status_code.js';
+import PccsError from '../utils/PccsError.js';
 
 export async function refreshCache(req, res, next) {
   try {
     const type = req.query.type;
     const fmspc = req.query.fmspc;
 
+    if (type && type !== "certs") {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
     // call service
     await refreshService.refreshCache(type, fmspc);
 

@@ -48,8 +48,8 @@
 #define GET_QUOTE_IN_FLIGHT 0xffffffffffffffff
 #define GET_QUOTE_ERROR 0x8000000000000000
 #define GET_QUOTE_SERVICE_UNAVAILABLE 0x8000000000000001
-#define SVN_COMPONENT_LEN 16
-#define TD_REPORT10_ONLY_LEN 584
+#define MISCSELECTMASK_LEN 4
+#define ATTRIBUTESELECTMASK_LEN 16
 
 struct servtd_tdx_quote_hdr {
     /* Quote version, filled by TD */
@@ -65,19 +65,23 @@ struct servtd_tdx_quote_hdr {
 };
 
 struct servtd_tdx_quote_suppl_data {
-    sgx_report2_body_t quote_body;                 /*   0     584 */
-    uint32_t tcb_version;                          /*   584     4 */
-    uint8_t fmspc[FMSPC_SIZE];                     /*   588     6 */
-    uint8_t tdx_tcb_components[SVN_COMPONENT_LEN]; /*   594    16 */
-    uint32_t pce_svn;                              /*   610     4 */
-    uint8_t sgx_tcb_components[SVN_COMPONENT_LEN]; /*   614    16 */
-    sgx_misc_select_t misc_select;                 /*   630     4 */
-    sgx_attributes_t attributes;                   /*   634    16 */
-    sgx_measurement_t mr_enclave;                  /*   650    32 */
-    sgx_measurement_t mr_signer;                   /*   682    32 */
-    sgx_prod_id_t isv_prod_id;                     /*   714     2 */
-    sgx_isv_svn_t isv_svn;                         /*   716     2 */
+        sgx_report2_body_t         quote_body;           /*     0   584 */
+        uint8_t                    fmspc[FMSPC_SIZE];             /*   584     6 */
+        uint8_t                    tdx_tcb_components[TEE_TCB_SVN_SIZE]; /*   590    16 */
+        uint16_t                   pce_svn;              /*   606     2 */
+        uint8_t                    sgx_tcb_components[TEE_TCB_SVN_SIZE]; /*   608    16 */
+        uint8_t                    tdx_module_major_ver; /*   624     1 */
+        uint8_t                    tdx_module_svn;       /*   625     1 */
+        sgx_misc_select_t          misc_select;          /*   626     4 */
+        uint8_t                    misc_select_mask[MISCSELECTMASK_LEN];     /*   630     4 */
+        sgx_attributes_t           attributes;           /*   634    16 */
+        uint8_t                    attributes_mask[ATTRIBUTESELECTMASK_LEN];  /*   650    16 */
+        sgx_measurement_t          mr_enclave;           /*   666    32 */
+        sgx_measurement_t          mr_signer;            /*   698    32 */
+        sgx_prod_id_t              isv_prod_id;          /*   730     2 */
+        sgx_isv_svn_t              isv_svn;              /*   732     2 */
 };
+
 static const unsigned SERVTD_HEADER_SIZE = 4;
 static const uint32_t SERVTD_REQ_BUF_SIZE = 16 * 4 * 1024; // 16 pages
 
