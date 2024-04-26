@@ -38,8 +38,6 @@ function define(name, value) {
   });
 }
 
-define('DB_VERSION', 2);
-
 define('PLATF_REG_NEW', 0);
 define('PLATF_REG_NOT_AVAILABLE', 1);
 define('PLATF_REG_DELETED', 9);
@@ -76,5 +74,10 @@ define('TCB_INFO_ISSUER_CHAIN', 'TCB-Info-Issuer-Chain');
 define('SGX_TCB_INFO_ISSUER_CHAIN', 'SGX-TCB-Info-Issuer-Chain');
 define('SGX_ENCLAVE_IDENTITY_ISSUER_CHAIN', 'SGX-Enclave-Identity-Issuer-Chain');
 define('SGX_PCK_CRL_ISSUER_CHAIN', 'SGX-PCK-CRL-Issuer-Chain');
+
+//Update type
+define('UPDATE_TYPE_STANDARD', 'STANDARD');
+define('UPDATE_TYPE_EARLY', 'EARLY');
+define('UPDATE_TYPE_ALL', 'ALL');
 
 export default Constants;

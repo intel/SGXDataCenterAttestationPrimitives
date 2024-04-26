@@ -23,11 +23,11 @@ Linux:
           libsgx-ra-uefi-dev_{version}-{revision}_{arch}.deb-------uefi library headers
           sgx-ra-service_{version}-{revision}_{arch}.deb-----------multi-package registration agent service and management tool
         For Redhat:
-          libsgx-ra-network-<version>-1.el8.x86_64.rpm-------------network library
-          libsgx-ra-network-devel-<version>-1.el8.x86_64.rpm-------network library headers
-          libsgx-ra-uefi-<version>-1.el8.x86_64.rpm----------------uefi library
-          libsgx-ra-uefi-devel-<version>-1.el8.x86_64.rpm----------uefi library headers
-          sgx-ra-service-<version>-1.el8.x86_64.rpm----------------multi-package registration agent service and management tool
+          libsgx-ra-network-<version>-1.el9.x86_64.rpm-------------network library
+          libsgx-ra-network-devel-<version>-1.el9.x86_64.rpm-------network library headers
+          libsgx-ra-uefi-<version>-1.el9.x86_64.rpm----------------uefi library
+          libsgx-ra-uefi-devel-<version>-1.el9.x86_64.rpm----------uefi library headers
+          sgx-ra-service-<version>-1.el9.x86_64.rpm----------------multi-package registration agent service and management tool
         
         mpa_registration.conf - Sample configuration file
         README - This file
@@ -36,9 +36,9 @@ Linux:
         /opt/intel/sgx-ra-service
 
     RHEL Installation instructions:
-        sudo yum install libsgx-ra-network-<version>-1.el8.x86_64.rpm
-        sudo yum install libsgx-ra-uefi-<version>-1.el8.x86_64.rpm
-        sudo yum install sgx-ra-service-<version>-1.el8.x86_64.rpm
+        sudo yum install libsgx-ra-network-<version>-1.el9.x86_64.rpm
+        sudo yum install libsgx-ra-uefi-<version>-1.el9.x86_64.rpm
+        sudo yum install sgx-ra-service-<version>-1.el9.x86_64.rpm
 
     RHEL Uninstallation instructions:
         sudo yum remove sgx-ra-service.x86_64

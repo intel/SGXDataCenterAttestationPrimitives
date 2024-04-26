@@ -42,6 +42,7 @@ import * as https from 'https';
 import * as auth from './middleware/auth.js';
 import * as error from './middleware/error.js';
 import addRequestId from './middleware/addRequestId.js';
+import filterDuplicatedParams from './middleware/filterDuplicatedParams.js';
 import * as refreshService from './services/refreshService.js';
 import * as appUtil from './utils/apputil.js';
 import { cachingModeManager } from './services/caching_modes/cachingModeManager.js';
@@ -87,6 +88,7 @@ async function initializeApp() {
 function configureMiddlewareAndRoutes() {
   app.use(morgan('combined', { stream: logger.stream }));
   app.use(addRequestId);
+  app.use(filterDuplicatedParams);
   app.use(body_parser.urlencoded({ extended: true }));
   app.use(body_parser.json({ limit: '200000kb' }));
 

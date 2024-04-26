@@ -49,8 +49,14 @@ async function getTcbInfo(req, res, next, type) {
     // normalize request parameters
     fmspc = fmspc.toUpperCase();
 
+    const update_type = req.query.update? req.query.update.toUpperCase():Constants.UPDATE_TYPE_STANDARD;
+
+    if (update_type !== Constants.UPDATE_TYPE_STANDARD && update_type !== Constants.UPDATE_TYPE_EARLY) {
+        throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+    }
+
     // call service
-    let tcbinfoJson = await tcbinfoService.getTcbInfo(type, fmspc, version);
+    let tcbinfoJson = await tcbinfoService.getTcbInfo(type, fmspc, version, update_type);
     let issuerChainName = appUtil.getTcbInfoIssuerChainName(version);
 
     // send response

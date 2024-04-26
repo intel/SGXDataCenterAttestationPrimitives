@@ -404,6 +404,20 @@ tee_att_error_t tee_att_get_platform_info(const tee_att_config_t* p_context,
 tee_att_error_t tee_att_set_path(const tee_att_config_t* p_context,
     tee_att_ae_type_t type,
     const char* p_path);
+
+/**
+ * This API can be used to get QPL library handle that returned by dlopen().
+ *
+ * @param p_context The context that contains information during quote generation flow.
+ * @param pp_qpl_handle It should be a valid pointer.
+ * @return TEE_ATT_SUCCESS  Handle returned.
+ * @return TEE_ATT_UNSUPPORTED_MODE This function is called on Windows.
+ * @return TEE_ATT_PLATFORM_LIB_UNAVAILABLE Unable to find the platform library.
+ * @return TEE_ATT_ERROR_INVALID_PARAMETER One of the parameters is not valid.
+ *
+ */
+tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context, void **pp_qpl_handle);
+
 #endif
 #if defined(__cplusplus)
 }

@@ -34,72 +34,56 @@ import * as enclaveIdentityDao from '../../dao/enclaveIdentityDao.js';
 import * as pckcrlDao from '../../dao/pckcrlDao.js';
 import * as CommonCacheLogic from './commonCacheLogic.js';
 
-export async function checkQuoteVerificationCollateral() {
-  // pck crl
-  let pckcrl = await pckcrlDao.getPckCrl(Constants.CA_PROCESSOR);
-  if (pckcrl == null) {
-    await CommonCacheLogic.getPckCrlFromPCS(Constants.CA_PROCESSOR);
+async function fetchWithFallback(daoMethod, pcsMethod, ...args) {
+  let result = await daoMethod(...args);
+  if (result == null) {
+    await pcsMethod(...args);
   }
-  pckcrl = await pckcrlDao.getPckCrl(Constants.CA_PLATFORM);
-  if (pckcrl == null) {
-    await CommonCacheLogic.getPckCrlFromPCS(Constants.CA_PLATFORM);
+}
+
+export async function checkQuoteVerificationCollateral(update) {
+  await fetchWithFallback(pckcrlDao.getPckCrl, CommonCacheLogic.getPckCrlFromPCS, Constants.CA_PROCESSOR);
+  await fetchWithFallback(pckcrlDao.getPckCrl, CommonCacheLogic.getPckCrlFromPCS, Constants.CA_PLATFORM);
+
+  const pcsVersion = global.PCS_VERSION;
+  const identityTypes = [Constants.QE_IDENTITY_ID, Constants.QVE_IDENTITY_ID];
+  let updateTypes = [];
+
+  if (update === Constants.UPDATE_TYPE_STANDARD) {
+      updateTypes = [Constants.UPDATE_TYPE_STANDARD];
+  } else if (update === Constants.UPDATE_TYPE_EARLY) {
+      updateTypes = [Constants.UPDATE_TYPE_EARLY];
+  } else if (update === Constants.UPDATE_TYPE_ALL) {
+      updateTypes = [Constants.UPDATE_TYPE_EARLY, Constants.UPDATE_TYPE_STANDARD];
+  } else {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
+  }
+  // Fetching for both versions 3 and 4 if PCS_VERSION is 4
+  const versionsToFetch = pcsVersion === 4 ? [3, 4] : [pcsVersion];
+
+  for (const id of identityTypes) {
+    for (const version of versionsToFetch) {
+      for (const updateType of updateTypes) {
+        await fetchWithFallback(
+          enclaveIdentityDao.getEnclaveIdentity, 
+          CommonCacheLogic.getEnclaveIdentityFromPCS, 
+          id, 
+          version,
+          updateType
+        );
+      }
+    }
   }
 
-  // QE identity
-  const qeid = await enclaveIdentityDao.getEnclaveIdentity(
-    Constants.QE_IDENTITY_ID,
-    global.PCS_VERSION
-  );
-  if (qeid == null) {
-    await CommonCacheLogic.getEnclaveIdentityFromPCS(
-      Constants.QE_IDENTITY_ID,
-      global.PCS_VERSION
-    );
-  }
-  // QVE identity
-  const qveid = await enclaveIdentityDao.getEnclaveIdentity(
-    Constants.QVE_IDENTITY_ID,
-    global.PCS_VERSION
-  );
-  if (qveid == null) {
-    await CommonCacheLogic.getEnclaveIdentityFromPCS(
-      Constants.QVE_IDENTITY_ID,
-      global.PCS_VERSION
-    );
-  }
-
-  if (global.PCS_VERSION == 4) {
-    // QE identity v3
-    const qeid = await enclaveIdentityDao.getEnclaveIdentity(
-      Constants.QE_IDENTITY_ID,
-      3
-    );
-    if (qeid == null) {
-      await CommonCacheLogic.getEnclaveIdentityFromPCS(
-        Constants.QE_IDENTITY_ID,
-        3
-      );
-    }
-    // QVE identity v3
-    const qveid = await enclaveIdentityDao.getEnclaveIdentity(
-      Constants.QVE_IDENTITY_ID,
-      3
-    );
-    if (qveid == null) {
-      await CommonCacheLogic.getEnclaveIdentityFromPCS(
-        Constants.QVE_IDENTITY_ID,
-        3
-      );
-    }
-    // TD QE identity v4
-    const tdqeid = await enclaveIdentityDao.getEnclaveIdentity(
-      Constants.TDQE_IDENTITY_ID,
-      4
-    );
-    if (tdqeid == null) {
-      await CommonCacheLogic.getEnclaveIdentityFromPCS(
-        Constants.TDQE_IDENTITY_ID,
-        4
+  // Additional identity type to fetch if PCS_VERSION is 4
+  if (pcsVersion === 4) {
+    for (const updateType of updateTypes) {
+      await fetchWithFallback(
+        enclaveIdentityDao.getEnclaveIdentity, 
+        CommonCacheLogic.getEnclaveIdentityFromPCS, 
+        Constants.TDQE_IDENTITY_ID, 
+        4,
+        updateType
       );
     }
   }

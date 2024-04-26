@@ -45,7 +45,17 @@ typedef quote3_error_t (*get_collateral_func)(const uint8_t *fmspc,
                                               uint16_t fmspc_size, const char *pck_ca,
                                               tdx_ql_qv_collateral_t **pp_quote_collateral);
 typedef quote3_error_t (*free_collateral_func)(tdx_ql_qv_collateral_t *p_quote_collateral);
-extern "C" tee_att_error_t tee_att_get_qpl_handle(const tee_att_config_t *p_context, void **pp_qpl_handle);
+typedef quote3_error_t (*sgx_ql_set_logging_callback_t)(sgx_ql_logging_callback_t logger,
+                                                        sgx_ql_log_level_t loglevel);
+
+void sgx_ql_logging_callback(sgx_ql_log_level_t level, const char *message) {
+    if (level == SGX_QL_LOG_ERROR) {
+        sgx_proc_log_report(1, message);
+
+    } else if (level == SGX_QL_LOG_INFO) {
+        sgx_proc_log_report(3, message);
+    }
+}
 
 void cleanup(tee_att_config_t *p_ctx) {
     QGS_LOG_INFO("About to delete ctx in cleanup\n");
@@ -57,7 +67,15 @@ boost::thread_specific_ptr<tee_att_config_t> ptr(cleanup);
 
 namespace intel { namespace sgx { namespace dcap { namespace qgs {
 
-    data_buffer get_resp(uint8_t *p_req, uint32_t req_size) {
+    // Function to check if any byte within [start, end) in a vector is non-zero
+    bool is_any_byte_none_zero(const uint8_t* p, size_t size) {
+        // Use std::any_of to check if any element in the specified range is non-zero
+        return std::any_of(p, p + size,
+                           [](uint8_t value)
+                           { return value != 0; });
+    }
+
+    data_buffer get_resp(const uint8_t *p_req, uint32_t req_size) {
 
         tee_att_error_t tee_att_ret = TEE_ATT_SUCCESS;
         qgs_msg_error_t qgs_msg_error_ret = QGS_MSG_SUCCESS;
@@ -75,29 +93,44 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
             tee_att_config_t *p_ctx = NULL;
             QGS_LOG_INFO("call tee_att_create_context\n");
             ret = tee_att_create_context(NULL, NULL, &p_ctx);
-            if (TEE_ATT_SUCCESS == ret) {
-                std::ostringstream oss;
-                oss << boost::this_thread::get_id();
-                QGS_LOG_INFO("create context in thread[%s]\n",
-                            oss.str().c_str());
-                ptr.reset(p_ctx);
-                if (req_type != GET_PLATFORM_INFO_REQ) {
-                    sgx_target_info_t qe_target_info;
-                    uint8_t hash[32] = {0};
-                    size_t hash_size = sizeof(hash);
-                    tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
-                            &hash_size,
-                            hash);
-                    if (TEE_ATT_SUCCESS != tee_att_ret) {
-                        QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
-                        return {};
-                    } else {
-                        QGS_LOG_INFO("tee_att_init_quote return success\n");
-                    }
-                }
-            } else {
+            if (TEE_ATT_SUCCESS != ret) {
                 QGS_LOG_ERROR("Cannot create context\n");
                 return {};
+            }
+            std::ostringstream oss;
+            oss << boost::this_thread::get_id();
+            QGS_LOG_INFO("create context in thread[%s]\n", oss.str().c_str());
+            ptr.reset(p_ctx);
+
+            do {
+                void *p_handle = NULL;
+                tee_att_ret = ::tee_att_get_qpl_handle(ptr.get(), &p_handle);
+                if (TEE_ATT_SUCCESS != tee_att_ret || NULL == p_handle) {
+                    QGS_LOG_WARN("tee_att_get_qpl_handle return 0x%x\n", tee_att_ret);
+                    break;
+                }
+
+                sgx_ql_set_logging_callback_t ql_set_logging_callback =
+                    (sgx_ql_set_logging_callback_t)dlsym(p_handle, "sgx_ql_set_logging_callback");
+                if (dlerror() == NULL && ql_set_logging_callback) {
+                    // Set log level to SGX_QL_LOG_ERROR
+                    ql_set_logging_callback(sgx_ql_logging_callback, SGX_QL_LOG_ERROR);
+                } else {
+                    QGS_LOG_WARN("Failed to set logging callback for the quote provider library.\n");
+                }
+            } while(0);
+
+            if (req_type != GET_PLATFORM_INFO_REQ) {
+                sgx_target_info_t qe_target_info;
+                uint8_t hash[32] = {0};
+                size_t hash_size = sizeof(hash);
+                tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false, &hash_size, hash);
+                if (TEE_ATT_SUCCESS != tee_att_ret) {
+                    QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                    return {};
+                } else {
+                    QGS_LOG_INFO("tee_att_init_quote return success\n");
+                }
             }
         }
 
@@ -227,14 +260,15 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
             }
             if (resp_error_code == QGS_MSG_SUCCESS) {
                 qgs_msg_error_ret = qgs_msg_gen_get_collateral_resp(p_collateral->major_version, p_collateral->minor_version,
-                                                                 (const uint8_t *)p_collateral->pck_crl_issuer_chain, p_collateral->pck_crl_issuer_chain_size,
-                                                                 (const uint8_t *)p_collateral->root_ca_crl, p_collateral->root_ca_crl_size,
-                                                                 (const uint8_t *)p_collateral->pck_crl, p_collateral->pck_crl_size,
-                                                                 (const uint8_t *)p_collateral->tcb_info_issuer_chain, p_collateral->tcb_info_issuer_chain_size,
-                                                                 (const uint8_t *)p_collateral->tcb_info, p_collateral->tcb_info_size,
-                                                                 (const uint8_t *)p_collateral->qe_identity_issuer_chain, p_collateral->qe_identity_issuer_chain_size,
-                                                                 (const uint8_t *)p_collateral->qe_identity, p_collateral->qe_identity_size,
-                                                                 &p_resp, &resp_size);
+                                                                    (const uint8_t *)p_collateral->pck_crl_issuer_chain, p_collateral->pck_crl_issuer_chain_size,
+                                                                    (const uint8_t *)p_collateral->root_ca_crl, p_collateral->root_ca_crl_size,
+                                                                    (const uint8_t *)p_collateral->pck_crl, p_collateral->pck_crl_size,
+                                                                    (const uint8_t *)p_collateral->tcb_info_issuer_chain, p_collateral->tcb_info_issuer_chain_size,
+                                                                    (const uint8_t *)p_collateral->tcb_info, p_collateral->tcb_info_size,
+                                                                    (const uint8_t *)p_collateral->qe_identity_issuer_chain, p_collateral->qe_identity_issuer_chain_size,
+                                                                    (const uint8_t *)p_collateral->qe_identity, p_collateral->qe_identity_size,
+                                                                    &p_resp, &resp_size,
+                                                                    (qgs_msg_header_t *)p_req);
                 free_func(p_collateral);
             } else {
                 qgs_msg_error_ret = qgs_msg_gen_error_resp(resp_error_code, GET_COLLATERAL_RESP, &p_resp, &resp_size);
@@ -289,6 +323,117 @@ namespace intel { namespace sgx { namespace dcap { namespace qgs {
         data_buffer resp(p_resp, p_resp + resp_size);
         qgs_msg_free(p_resp);
         return resp;
+    }
+
+    data_buffer get_raw_resp(const uint8_t *req, uint32_t req_size) {
+        tee_att_error_t tee_att_ret = TEE_ATT_SUCCESS;
+        data_buffer resp;
+
+        if (ptr.get() == 0) {
+            tee_att_error_t ret = TEE_ATT_SUCCESS;
+            tee_att_config_t *p_ctx = NULL;
+            QGS_LOG_INFO("call tee_att_create_context\n");
+            ret = tee_att_create_context(NULL, NULL, &p_ctx);
+            if (TEE_ATT_SUCCESS != ret) {
+                QGS_LOG_ERROR("Cannot create context\n");
+                return {};
+            }
+
+            std::ostringstream oss;
+            oss << boost::this_thread::get_id();
+            QGS_LOG_INFO("create context in thread[%s]\n", oss.str().c_str());
+            ptr.reset(p_ctx);
+
+            do {
+                void *p_handle = NULL;
+                tee_att_ret = ::tee_att_get_qpl_handle(ptr.get(), &p_handle);
+                if (TEE_ATT_SUCCESS != tee_att_ret || NULL == p_handle) {
+                    QGS_LOG_WARN("tee_att_get_qpl_handle return 0x%x\n", tee_att_ret);
+                    break;
+                }
+
+                sgx_ql_set_logging_callback_t ql_set_logging_callback =
+                    (sgx_ql_set_logging_callback_t)dlsym(p_handle, "sgx_ql_set_logging_callback");
+                if (dlerror() == NULL && ql_set_logging_callback) {
+                    // Set log level to SGX_QL_LOG_ERROR
+                    ql_set_logging_callback(sgx_ql_logging_callback, SGX_QL_LOG_ERROR);
+                } else {
+                    QGS_LOG_WARN("Failed to set logging callback for the quote provider library.\n");
+                }
+            } while(0);
+
+            sgx_target_info_t qe_target_info;
+            uint8_t hash[32] = {0};
+            size_t hash_size = sizeof(hash);
+            tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, false,
+                    &hash_size,
+                    hash);
+            if (TEE_ATT_SUCCESS != tee_att_ret) {
+                QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                //ingnore failure
+            } else {
+                QGS_LOG_INFO("tee_att_init_quote return success\n");
+            }
+        }
+
+        if (req_size == sizeof(sgx_report2_t)) {
+            sgx_report2_t * p_report = (sgx_report2_t *)req;
+            if (p_report->report_mac_struct.report_type.type != TEE_REPORT2_TYPE
+                || p_report->report_mac_struct.report_type.subtype != TEE_REPORT2_SUBTYPE
+                || (p_report->report_mac_struct.report_type.version != TEE_REPORT2_VERSION
+                    && p_report->report_mac_struct.report_type.version != TEE_REPORT2_VERSION_SERVICETD)
+                || p_report->report_mac_struct.report_type.reserved != 0
+                || is_any_byte_none_zero(p_report->report_mac_struct.reserved1, SGX_REPORT2_MAC_STRUCT_RESERVED1_BYTES)
+                || is_any_byte_none_zero(p_report->report_mac_struct.reserved2, SGX_REPORT2_MAC_STRUCT_RESERVED2_BYTES)
+                || is_any_byte_none_zero(p_report->reserved, SGX_REPORT2_RESERVED_BYTES)
+                ) {
+                QGS_LOG_ERROR("Not a legimit TD report, stop\n");
+                return {};
+            }
+
+            int retry = 1;
+            do {
+                uint32_t size = 0;
+                if (retry == 0) {
+                    sgx_target_info_t qe_target_info;
+                    uint8_t hash[32] = {0};
+                    size_t hash_size = sizeof(hash);
+                    QGS_LOG_INFO("call tee_att_init_quote\n");
+                    tee_att_ret = tee_att_init_quote(ptr.get(), &qe_target_info, true,
+                                                     &hash_size,
+                                                     hash);
+                    if (TEE_ATT_SUCCESS != tee_att_ret) {
+                        QGS_LOG_ERROR("tee_att_init_quote return 0x%x\n", tee_att_ret);
+                    } else {
+                        QGS_LOG_INFO("tee_att_init_quote return Success\n");
+                    }
+                }
+                if (TEE_ATT_SUCCESS != (tee_att_ret = tee_att_get_quote_size(ptr.get(), &size))) {
+                    QGS_LOG_ERROR("tee_att_get_quote_size return 0x%x\n", tee_att_ret);
+                } else {
+                    QGS_LOG_INFO("tee_att_get_quote_size return Success\n");
+                    resp.resize(size);
+                    tee_att_ret = tee_att_get_quote(ptr.get(),
+                                                    req,
+                                                    req_size,
+                                                    NULL,
+                                                    resp.data(),
+                                                    size);
+                    if (TEE_ATT_SUCCESS != tee_att_ret) {
+                        resp.resize(0);
+                        QGS_LOG_ERROR("tee_att_get_quote return 0x%x\n", tee_att_ret);
+                    } else {
+                        QGS_LOG_INFO("tee_att_get_quote return Success\n");
+                    }
+                }
+                // Only retry once when the return code is TEE_ATT_ATT_KEY_NOT_INITIALIZED
+            } while (TEE_ATT_ATT_KEY_NOT_INITIALIZED == tee_att_ret && retry--);
+
+            return resp;
+        } else {
+            QGS_LOG_INFO("Not a legimit raw request, stop\n");
+            return {};
+        }
     }
 }
 } // namespace dcap

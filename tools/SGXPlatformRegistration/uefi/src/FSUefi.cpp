@@ -176,6 +176,32 @@ int FSUefi::writeUEFIVar(const char* varName, const uint8_t* data, size_t dataSi
                 }
                 break;
             }
+        } else {
+            // get uefi file size
+            long tempSize = fdGetVarFileSize(fd);
+            if (tempSize < 0) {
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to get variable file size %l \n", tempSize);
+                break;
+            }
+
+            uint8_t uefiAttributes[4];
+            errno = 0;
+            ssize_t bytesRead = read(fd, uefiAttributes, 4);
+            if (bytesRead != 4) {
+                uefi_log_message(MP_REG_LOG_LEVEL_ERROR, "writeUEFIVar: failed to read uefi variable %s attributes ,error: %s\n", UEFIvarNamePath, strerror(errno));
+                break;
+            }
+            ///
+            /// Attributes of variable.
+            ///
+            /// #define EFI_VARIABLE_NON_VOLATILE        0x00000001
+            /// #define EFI_VARIABLE_BOOTSERVICE_ACCESS  0x00000002
+            /// #define EFI_VARIABLE_RUNTIME_ACCESS      0x00000004
+            if((uefiAttributes[0] & 0x01) == 0) {
+                close(fd);
+                delete[] buffer;
+                return -1;
+            }
         }
         
         // remove immutable flag

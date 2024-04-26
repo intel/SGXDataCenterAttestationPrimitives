@@ -79,6 +79,8 @@ protected:
     Document custom_request_options_;
     // Local cache only mode
     bool local_cache_only_;
+    // TCB update type, "early" or "standard"
+    string tcb_update_type_;
 
     QcnlConfig() : server_url_("https://localhost:8081/sgx/certification/v4/"),
                    use_secure_cert_(true),
@@ -89,7 +91,8 @@ protected:
                    local_pck_url_(""),
                    pck_cache_expire_hours_(0),
                    verify_collateral_expire_hours_(0),
-                   local_cache_only_(false) {}
+                   local_cache_only_(false),
+                   tcb_update_type_("standard") {}
     virtual ~QcnlConfig(){};
 
 public:
@@ -143,6 +146,10 @@ public:
 
     bool is_local_cache_only() {
         return local_cache_only_;
+    }
+
+    string getTcbUpdateType() {
+        return tcb_update_type_;
     }
 
     sgx_qcnl_error_t load_config_json(const TCHAR *json_file);

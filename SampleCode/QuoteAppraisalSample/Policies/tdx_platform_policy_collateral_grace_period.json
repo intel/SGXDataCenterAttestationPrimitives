@@ -13,7 +13,8 @@
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
-                    "OutOfDate"
+                    "OutOfDate",
+                    "TDRelaunchAdvised"
                 ],
                 "#NOTE": "'collateral_grace_period' allows you to pass appraisal verification even if the collateral has expired within 90 days (7776000 seconds).",
                 "#NOTE": "If 'collateral_grace_period' is greater than 0, 'platform_grace_period' must not be defined",

@@ -541,6 +541,7 @@ quote3_error_t construct_complete_json(const uint8_t *p_verification_result_toke
     std::string signature[qaps_count];
     std::string jwk[qaps_count];
     uint8_t fmspc[FMSPC_SIZE] = {0};
+    bool fmspc_parsed = false;
     std::vector<std::string> desired_id_vec = {TENANT_ENCLAVE_CLASS_ID, TENANT_TDX10_CLASS_ID, TENANT_TDX15_CLASS_ID, SGX_PLATFORM_CLASS_ID,
                                               TDX15_PLATFORM_CLASS_ID, TDX10_PLATFORM_CLASS_ID, TDX_TDQE_CLASS_ID};
     for (uint32_t i = 0; i < qaps_count; i++)
@@ -601,25 +602,30 @@ quote3_error_t construct_complete_json(const uint8_t *p_verification_result_toke
                 return SGX_QL_ERROR_INVALID_PARAMETER;
             }
             std::string class_id = report_array[j]["environment"]["class_id"].GetString();
-            // Try to retrieve fmpsc from platform tcb result
-            auto it = s_default_policy_map.find(class_id);
-            if (it != s_default_policy_map.end() && class_id != TDX_TDQE_CLASS_ID)
+
+            if (fmspc_parsed == false)
             {
-                if (report_array[j].HasMember("measurement") == true &&
-                    report_array[j]["measurement"].HasMember("fmspc") == true &&
-                    report_array[j]["measurement"]["fmspc"].IsString() == true)
+                // Try to retrieve fmpsc from platform tcb result
+                auto it = s_default_policy_map.find(class_id);
+                if (it != s_default_policy_map.end() && class_id != TDX_TDQE_CLASS_ID)
                 {
-                    const char *tmp_str = report_array[j]["measurement"]["fmspc"].GetString();
-                    if (strlen(tmp_str) != FMSPC_SIZE*2)
+                    if (report_array[j].HasMember("measurement") == true &&
+                        report_array[j]["measurement"].HasMember("fmspc") == true &&
+                        report_array[j]["measurement"]["fmspc"].IsString() == true)
                     {
-                        se_trace(SE_TRACE_ERROR, "The input QVL result is not correct.\n");
-                        return SGX_QL_ERROR_INVALID_PARAMETER;
-                    }
-                    for (uint32_t z = 0; z < strlen(tmp_str) / 2; z++)
-                    {
-                        char a[3] = {0};
-                        strncpy(a, tmp_str + z * 2, 2);
-                        fmspc[z] = (uint8_t)strtoul(a, NULL, 16);
+                        const char *tmp_str = report_array[j]["measurement"]["fmspc"].GetString();
+                        if (strlen(tmp_str) != FMSPC_SIZE * 2)
+                        {
+                            se_trace(SE_TRACE_ERROR, "The input QVL result is not correct.\n");
+                            return SGX_QL_ERROR_INVALID_PARAMETER;
+                        }
+                        for (uint32_t z = 0; z < strlen(tmp_str) / 2; z++)
+                        {
+                            char a[3] = {0};
+                            strncpy(a, tmp_str + z * 2, 2);
+                            fmspc[z] = (uint8_t)strtoul(a, NULL, 16);
+                        }
+                        fmspc_parsed = true;
                     }
                 }
             }
@@ -639,31 +645,39 @@ quote3_error_t construct_complete_json(const uint8_t *p_verification_result_toke
                     se_trace(SE_TRACE_ERROR, "The policy format is not correct. Item: %d, policy:\n%s\n", i, p_qaps[i]);
                     return SGX_QL_ERROR_INVALID_PARAMETER;
                 }
-                if (class_id_p == class_id && id_map.count(class_id) == 0)
+                if (class_id_p == class_id)
                 {
-                    rapidjson::Document jwk_doc;
-                    jwk_doc.Parse<rapidjson::kParseStopWhenDoneFlag | rapidjson::kParseCommentsFlag>(jwk[i].c_str());
-                    if (jwk_doc.HasParseError())
+                    if (id_map.count(class_id) == 0)
                     {
+                        rapidjson::Document jwk_doc;
+                        jwk_doc.Parse<rapidjson::kParseStopWhenDoneFlag | rapidjson::kParseCommentsFlag>(jwk[i].c_str());
+                        if (jwk_doc.HasParseError())
+                        {
+                            return SGX_QL_ERROR_INVALID_PARAMETER;
+                        }
+                        std::string v;
+                        {
+                            rapidjson::Document d;
+                            d.SetObject();
+                            rapidjson::Value &p = policy_array[z];
+                            d.CopyFrom(p, d.GetAllocator());
+                            rapidjson::Value str_v(rapidjson::kStringType);
+                            str_v.SetString(signature[i].c_str(), (unsigned int)signature[i].length());
+                            d.AddMember("signature", str_v, d.GetAllocator());
+                            d.AddMember("signing_key", jwk_doc, jwk_doc.GetAllocator());
+                            rapidjson::StringBuffer buffer;
+                            rapidjson::Writer<rapidjson::StringBuffer, rapidjson::Document::EncodingType, rapidjson::ASCII<>> writer(buffer);
+                            d.Accept(writer);
+                            v = buffer.GetString();
+                        }
+                        id_map[class_id] = v;
+                        break;
+                    }
+                    else
+                    {
+                        se_trace(SE_TRACE_ERROR, "The input policies are not correct. Repeatedly entering numerous policies with the same class_id is prohibited.\n");
                         return SGX_QL_ERROR_INVALID_PARAMETER;
                     }
-                    std::string v;
-                    {
-                        rapidjson::Document d;
-                        d.SetObject();
-                        rapidjson::Value &p = policy_array[z];
-                        d.CopyFrom(p, d.GetAllocator());
-                        rapidjson::Value str_v(rapidjson::kStringType);
-                        str_v.SetString(signature[i].c_str(), (unsigned int)signature[i].length());
-                        d.AddMember("signature", str_v, d.GetAllocator());
-                        d.AddMember("signing_key", jwk_doc, jwk_doc.GetAllocator());
-                        rapidjson::StringBuffer buffer;
-                        rapidjson::Writer<rapidjson::StringBuffer, rapidjson::Document::EncodingType, rapidjson::ASCII<>> writer(buffer);
-                        d.Accept(writer);
-                        v = buffer.GetString();
-                    }
-                    id_map[class_id] = v;
-                    break;
                 }
             }
         }
@@ -769,6 +783,12 @@ static quote3_error_t authenticate_one_policy(rapidjson::Value &report_array, co
             return SGX_QL_ERROR_INVALID_PARAMETER;
         }
         std::string class_id_p = policy_array[i]["environment"]["class_id"].GetString();
+        if(result_map.find(class_id_p) == result_map.end())
+        {
+            // The policy file contains some unrecognized policy
+            se_trace(SE_TRACE_ERROR, "The input policy is not correct:\n%s\n", policy);
+            return SGX_QL_ERROR_INVALID_PARAMETER;
+        }
         uint32_t j = 0;
         for (; j < report_array.Size(); j++)
         {
@@ -841,7 +861,6 @@ static quote3_error_t authenticate_one_policy(rapidjson::Value &report_array, co
             se_trace(SE_TRACE_ERROR, "\033[0;31mERROR:\033[0m The appraisal result token doesn't utilize the policy with class_id %s:\n%s\n", 
                                     class_id_p.c_str(), policy);
             result_map[class_id_p].result = POLICY_NOT_IN_RESULT;
-            break;
         }
     }
     return SGX_QL_SUCCESS;

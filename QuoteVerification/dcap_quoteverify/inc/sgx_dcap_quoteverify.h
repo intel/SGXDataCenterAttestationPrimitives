@@ -166,9 +166,9 @@ quote3_error_t sgx_qv_set_path(sgx_qv_path_type_t path_type,
                                    const char *p_path);
 
 /**
- * Get quote verification result token.
+ * Perform ECDSA quote verification and get quote verification result token.
  *
- * @param p_quote[IN] - Pointer to SGX Quote.
+ * @param p_quote[IN] - Pointer to SGX or TDX Quote.
  * @param quote_size[IN] - Size of the buffer pointed to by p_quote (in bytes).
  * @param p_quote_collateral[IN] - The parameter is optional. This is a pointer to the Quote Certification Collateral provided by the caller.
  * @param p_qve_report_info[IN/OUT] - This parameter can be used in 2 ways.

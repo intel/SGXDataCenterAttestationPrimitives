@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
+import * as fs from 'fs';
 import Config from 'config';
 import Sequelize from 'sequelize';
 import logger from '../../utils/Logger.js';
@@ -50,59 +50,85 @@ import mysqlPromise from 'mysql2/promise.js';
 const pccs_namespace = clshooked.createNamespace('pccs-namespace');
 Sequelize.useCLS(pccs_namespace);
 
-// initialize sequelize instance
-let db_conf = Config.get(Config.get('DB_CONFIG'));
-let db_opt = JSON.parse(JSON.stringify(db_conf.options));
-if (db_opt.logging == true) {
-  // Enable sequelize logging through logger.info
-  db_opt.logging = (msg) => logger.info(msg);
+// get config options for ssl
+function getSSLConfig(sslConfig) {
+  if (sslConfig && sslConfig.required && fs.existsSync(sslConfig.ca)) {
+    return { ssl: { ca: fs.readFileSync(sslConfig.ca) } };
+  }
+  return null;
 }
-const sequelize = new Sequelize(
-  db_conf.database,
-  db_conf.username,
-  db_conf.password,
-  db_opt
-);
 
-try {
-  // Test connection
-  await sequelize.authenticate();
-} catch (err) {
-  if (Config.get('DB_CONFIG') == 'mysql') {
-    logger.error('Failed to connect DB. Try to create it ...');
-    try {
-      // For MySQL, maybe the database doesn't exist. Try to create it
-      const connection = await mysqlPromise.createConnection({
-        host: db_opt.host,
-        port: db_opt.port,
-        user: db_conf.username,
-        password: db_conf.password,
-      });
-      await connection.query(
-        `CREATE DATABASE IF NOT EXISTS \`${db_conf.database}\` CHARACTER SET utf8 COLLATE utf8_general_ci;`
-      );
-    } catch (err2) {
-      logger.error(err2);
+function initModels(sequelize) {
+  FmspcTcbs.init(sequelize);
+  PckCert.init(sequelize);
+  PckCertchain.init(sequelize);
+  PckCrl.init(sequelize);
+  PcsCertificates.init(sequelize);
+  PcsVersion.init(sequelize);
+  PlatformTcbs.init(sequelize);
+  PlatformsRegistered.init(sequelize);
+  Platforms.init(sequelize);
+  EnclaveIdentities.init(sequelize);
+  CrlCache.init(sequelize);
+  AppraisalPolicy.init(sequelize);
+}
+
+async function initializeDatabase() {
+  let dbConfig = Config.get(Config.get('DB_CONFIG'));
+  let dbOptions = { ...dbConfig.options };
+  if (dbOptions.logging === true) {
+    dbOptions.logging = (msg) => logger.info(msg);
+  }
+  
+  const sslOptions = getSSLConfig(dbConfig.ssl);
+  if (sslOptions) {
+    dbOptions.dialectOptions = sslOptions;
+  }
+
+  const sequelize = new Sequelize(
+    dbConfig.database,
+    dbConfig.username,
+    dbConfig.password,
+    dbOptions
+  );
+
+  try {
+    await sequelize.authenticate();
+  } catch (err) {
+    if (Config.get('DB_CONFIG') === 'mysql') {
+      // Handle MySQL specific error
+      await handleMySQLError(dbConfig, dbOptions, err);
+    } else {
+      logger.error(err);
       process.exit(1);
     }
-  } else {
-    logger.error(err);
+  }
+
+  return sequelize;
+}
+
+async function handleMySQLError(dbConfig, dbOptions, err) {
+  logger.error('Failed to connect DB. Try to create it ...');
+  try {
+    const connOptions = {
+      host: dbOptions.host,
+      port: dbOptions.port,
+      user: dbConfig.username,
+      password: dbConfig.password,
+      ...getSSLConfig(dbConfig.ssl)
+    };
+    const connection = await mysqlPromise.createConnection(connOptions);
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8 COLLATE utf8_general_ci;`
+    );
+  } catch (err2) {
+    logger.error(err2);
     process.exit(1);
   }
 }
 
-FmspcTcbs.init(sequelize);
-PckCert.init(sequelize);
-PckCertchain.init(sequelize);
-PckCrl.init(sequelize);
-PcsCertificates.init(sequelize);
-PcsVersion.init(sequelize);
-PlatformTcbs.init(sequelize);
-PlatformsRegistered.init(sequelize);
-Platforms.init(sequelize);
-EnclaveIdentities.init(sequelize);
-CrlCache.init(sequelize);
-AppraisalPolicy.init(sequelize);
+const sequelize = await initializeDatabase();
+initModels(sequelize); // Initialize all models
 
 export {
   Sequelize,

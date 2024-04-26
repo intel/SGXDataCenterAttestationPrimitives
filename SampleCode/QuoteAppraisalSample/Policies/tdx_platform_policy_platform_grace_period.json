@@ -13,7 +13,8 @@
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
-                    "OutOfDate"
+                    "OutOfDate",
+                    "TDRelaunchAdvised"
                 ],
                 "#NOTE": "'platform_grace_period' allows you to pass appraisal verification even if the platform has expired within 90 days (7776000 seconds).",
                 "platform_grace_period": 7776000,

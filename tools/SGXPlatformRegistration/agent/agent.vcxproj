@@ -51,6 +51,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal;..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -66,6 +67,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal;..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

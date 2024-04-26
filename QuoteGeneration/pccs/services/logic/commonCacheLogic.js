@@ -48,6 +48,93 @@ import * as appUtil from '../../utils/apputil.js';
 import { sequelize } from '../../dao/models/index.js';
 import { cachingModeManager } from '../caching_modes/cachingModeManager.js';
 
+async function getPckServerResponse(platform_manifest, enc_ppid, pceid) {
+  if (platform_manifest) {
+    return pcsClient.getCertsWithManifest(platform_manifest, pceid);
+  } else if (enc_ppid && enc_ppid.match(/^0+$/)) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  } else {
+    return pcsClient.getCerts(enc_ppid, pceid);
+  }
+}
+
+function filterPckCerts(pckcerts) {
+  const pckcerts_not_available = pckcerts.filter(pckCert => pckCert.cert === 'Not available');
+  const pckcerts_valid = pckcerts.filter(pckCert => pckCert.cert !== 'Not available');
+  return { pckcerts_valid, pckcerts_not_available };
+}
+
+function getFmspcAndCaType(pck_server_res) {
+  let fmspc = pcsClient.getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC);
+  let ca_type = pcsClient.getHeaderValue(pck_server_res.headers, Constants.SGX_PCK_CERTIFICATE_CA_TYPE);
+  if (!fmspc || !ca_type) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+  fmspc = fmspc.toUpperCase();
+  ca_type = ca_type.toUpperCase()
+  return { fmspc, ca_type };
+}
+
+async function getTcbInfo(type, fmspc, version, update_type) {
+  const pckServerRes = await pcsClient.getTcb(type, fmspc, version, update_type);
+  if (pckServerRes.statusCode == Constants.HTTP_SUCCESS) {
+    return {
+      tcbinfo: pckServerRes.rawBody,
+      tcbinfo_str: pckServerRes.body,
+      tcbinfo_issuer_chain: pcsClient.getHeaderValue(
+        pckServerRes.headers,
+        appUtil.getTcbInfoIssuerChainName(version)
+      )
+    };
+  }
+  else {
+    return null;
+  }
+}
+
+function parsePckServerResponseBody(body) {
+  if (typeof body === 'object') {
+      return body;
+  } else if (typeof body === 'string') {
+      return JSON.parse(body);
+  } else {
+      throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
+  }
+}
+
+async function fetchTcbInfo(fmspc) {
+  const tcbInfos = {};
+  // Fetch SGX TCB info
+  tcbInfos.sgx_early = await getTcbInfo(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_EARLY);
+  tcbInfos.sgx_standard = await getTcbInfo(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_STANDARD);
+  
+  if (!tcbInfos.sgx_standard) {
+    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
+  }
+
+  // Fetch TDX TCB info if applicable
+  if (global.PCS_VERSION >= 4) {
+    tcbInfos.tdx_early = await getTcbInfo(Constants.PROD_TYPE_TDX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_EARLY);
+    tcbInfos.tdx_standard = await getTcbInfo(Constants.PROD_TYPE_TDX, fmspc, global.PCS_VERSION, Constants.UPDATE_TYPE_STANDARD);
+  }
+
+  return tcbInfos;
+}
+
+async function upsertTcbInfos(tcbInfos, fmspc, {transaction}) {
+  for (const [key, tcbInfo] of Object.entries(tcbInfos)) {
+    if (tcbInfo) {
+      await fmspcTcbDao.upsertFmspcTcb({
+        type: key.includes('sgx') ? Constants.PROD_TYPE_SGX : Constants.PROD_TYPE_TDX,
+        fmspc: tcbInfo.fmspc || fmspc,
+        version: global.PCS_VERSION,
+        tcbinfo: tcbInfo.tcbinfo,
+        update_type: key.includes('early') ? Constants.UPDATE_TYPE_EARLY : Constants.UPDATE_TYPE_STANDARD
+      }, {transaction});
+    }
+  }
+}
+
 // Try to get PCK certs from Intel PCS for the platform with {pce_id, platform_manifest},
 // and if platform manifest is not provided, then use {pce_id, enc_ppid} instead.
 // Refresh the cache DB after a successful PCK certs retrieval.
@@ -66,23 +153,7 @@ export async function getPckCertFromPCS(
     throw new PccsError(PccsStatus.PCCS_STATUS_INVALID_REQ);
   }
 
-  let pck_server_res;
-  if (platform_manifest) {
-    // if platform manifest is provided, will call Intel PCS API with platform manifest
-    pck_server_res = await pcsClient.getCertsWithManifest(
-      platform_manifest,
-      pceid
-    );
-  } else {
-    // if enc_ppid is all zero, return NO_CACHE_DATA
-    if (enc_ppid.match(/^0+$/)) {
-      throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-    }
-
-    // Call Intel PCS API with encrypted PPID
-    pck_server_res = await pcsClient.getCerts(enc_ppid, pceid);
-  }
-
+  let pck_server_res = await getPckServerResponse(platform_manifest, enc_ppid, pceid);
   // check HTTP status
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
@@ -95,19 +166,10 @@ export async function getPckCertFromPCS(
   );
 
   // Parse the response body
-  let pckcerts = null;
-  if (typeof pck_server_res.body === 'object') {
-    pckcerts = pck_server_res.body;
-  } else if (typeof pck_server_res.body === 'string') {
-    pckcerts = JSON.parse(pck_server_res.body);
-  } else {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
+  let pckcerts = parsePckServerResponseBody(pck_server_res.body);
 
   // The latest PCS service may return 'Not available' in the certs array, need to filter them out
-  let pckcerts_not_available = pckcerts.filter((pckcert) => {
-    return pckcert.cert == 'Not available';
-  });
+  const { pckcerts_valid, pckcerts_not_available } = filterPckCerts(pckcerts);
   await cachingModeManager.processNotAvailableTcbs(
     qeid,
     pceid,
@@ -116,130 +178,64 @@ export async function getPckCertFromPCS(
     pckcerts_not_available
   );
 
-  // Certificates that are valid
-  let pckcerts_valid = pckcerts.filter((pckcert) => {
-    return pckcert.cert != 'Not available';
-  });
   if (pckcerts_valid.length == 0) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
   }
 
   // Make PEM certificates array
   let pem_certs = pckcerts_valid.map((o) => decodeURIComponent(o.cert));
+  const { fmspc, ca_type } = getFmspcAndCaType(pck_server_res);
 
-  // Get fmspc and ca type from response header
-  const fmspc = pcsClient
-    .getHeaderValue(pck_server_res.headers, Constants.SGX_FMSPC)
-    .toUpperCase();
-  const ca_type = pcsClient
-    .getHeaderValue(
-      pck_server_res.headers,
-      Constants.SGX_PCK_CERTIFICATE_CA_TYPE
-    )
-    .toUpperCase();
-
-  if (fmspc == null || ca_type == null) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_INTERNAL_ERROR);
-  }
-
-  // get SGX tcbinfo for this fmspc
-  pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_SGX, fmspc, global.PCS_VERSION);
-  if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
-    throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
-  }
-  const tcbinfo = pck_server_res.rawBody;
-  const tcbinfo_str = pck_server_res.body;
-  const tcbinfo_issuer_chain = pcsClient.getHeaderValue(
-    pck_server_res.headers,
-    appUtil.getTcbInfoIssuerChainName(global.PCS_VERSION)
-  );
-
-  // also get TDX tcbinfo for this fmspc if it exists
-  let tcbinfo_tdx = null;
-  if (global.PCS_VERSION >= 4) {
-    pck_server_res = await pcsClient.getTcb(Constants.PROD_TYPE_TDX, fmspc, global.PCS_VERSION);
-    if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
-      tcbinfo_tdx = pck_server_res.rawBody;
-    }
-  }
+  // get tcbInfos for this fmspc
+  const tcb_infos = await fetchTcbInfo(fmspc);
+  let tcb_info_str = tcb_infos.sgx_early ? tcb_infos.sgx_early.tcbinfo_str : tcb_infos.sgx_standard.tcbinfo_str;
 
   // Before we flush the caching database, get current raw TCBs that are already cached
   // We need to re-run PCK cert selection tool for existing raw TCB levels due to certs change
-  let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(
-    qeid,
-    pceid
-  );
+  let cached_platform_tcbs = await platformTcbsDao.getPlatformTcbsById(qeid, pceid);
 
+  // Database operations
   await sequelize.transaction(async (t) => {
-    // Update the platform entry in the cache
-    await platformsDao.upsertPlatform(
-      qeid,
-      pceid,
-      platform_manifest,
-      enc_ppid,
-      fmspc,
-      ca_type
-    );
+    await platformsDao.upsertPlatform(qeid, pceid, platform_manifest, enc_ppid, fmspc, ca_type, {transaction: t});
 
-    // flush pck_cert
-    await pckcertDao.deleteCerts(qeid, pceid);
-    for (const pckcert of pckcerts_valid) {
-      await pckcertDao.upsertPckCert(
-        qeid,
-        pceid,
-        pckcert.tcbm,
-        decodeURIComponent(pckcert.cert)
-      );
-    }
+    await pckcertDao.deleteCerts(qeid, pceid, {transaction: t});
+    await Promise.all(pckcerts_valid.map(pckcert => 
+      pckcertDao.upsertPckCert(qeid, pceid, pckcert.tcbm, decodeURIComponent(pckcert.cert), {transaction: t})
+    ));
 
-    // delete old TCB mappings
-    await platformTcbsDao.deletePlatformTcbsById(qeid, pceid);
+    await platformTcbsDao.deletePlatformTcbsById(qeid, pceid, {transaction: t});
 
-    // Update or insert fmspc_tcbs
-    await fmspcTcbDao.upsertFmspcTcb({
-      type: Constants.PROD_TYPE_SGX,
-      fmspc: fmspc,
-      version: global.PCS_VERSION,
-      tcbinfo: tcbinfo,
-    });
-    if (tcbinfo_tdx) {
-      await fmspcTcbDao.upsertFmspcTcb({
-        type: Constants.PROD_TYPE_TDX,
-        fmspc: fmspc,
-        version: global.PCS_VERSION,
-        tcbinfo: tcbinfo_tdx,
-      });
-    }
-    // Update or insert PCK Certchain
-    await pckCertchainDao.upsertPckCertchain(ca_type);
-    // Update or insert PCS certificates
-    await pcsCertificatesDao.upsertPckCertificateIssuerChain(
-      ca_type,
-      pck_certchain
-    );
-    await pcsCertificatesDao.upsertTcbInfoIssuerChain(tcbinfo_issuer_chain);
+    // Upsert TCB infos
+    await upsertTcbInfos(tcb_infos, fmspc, {transaction: t});
 
-    // For all cached TCB levels, re-run PCK cert selection tool
+    await pckCertchainDao.upsertPckCertchain(ca_type, {transaction: t});
+    await pcsCertificatesDao.upsertPckCertificateIssuerChain(ca_type, pck_certchain, {transaction: t});
+    await pcsCertificatesDao.upsertTcbInfoIssuerChain(tcb_infos.sgx_standard.tcbinfo_issuer_chain, {transaction: t});
+
+    // Re-run PCK cert selection tool for all cached TCB levels
     for (const platform_tcb of cached_platform_tcbs) {
       let cert_index = pckLibWrapper.pck_cert_select(
         platform_tcb.cpu_svn,
         platform_tcb.pce_svn,
         platform_tcb.pce_id,
-        tcbinfo_str,
+        tcb_info_str,
         pem_certs,
         pem_certs.length
       );
+
       if (cert_index == -1) {
         throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
       }
+
       await platformTcbsDao.upsertPlatformTcbs(
         platform_tcb.qe_id,
         platform_tcb.pce_id,
         platform_tcb.cpu_svn,
         platform_tcb.pce_svn,
-        pckcerts_valid[cert_index].tcbm
+        pckcerts_valid[cert_index].tcbm,
+        { transaction: t }
       );
-    }
+    }  
   });
 
   if (!cpusvn || !pcesvn) return {}; // end here if raw TCB not provided
@@ -248,7 +244,7 @@ export async function getPckCertFromPCS(
     cpusvn,
     pcesvn,
     pceid,
-    tcbinfo_str,
+    tcb_info_str,
     pem_certs,
     pem_certs.length
   );
@@ -308,8 +304,8 @@ export async function getPckCrlFromPCS(ca) {
   return result;
 }
 
-export async function getTcbInfoFromPCS(type, fmspc, version) {
-  const pck_server_res = await pcsClient.getTcb(type, fmspc, version);
+export async function getTcbInfoFromPCS(type, fmspc, version, update_type) {
+  const pck_server_res = await pcsClient.getTcb(type, fmspc, version, update_type);
 
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
@@ -329,6 +325,7 @@ export async function getTcbInfoFromPCS(type, fmspc, version) {
       type: type,
       fmspc: fmspc,
       version: version,
+      update_type: update_type,
       tcbinfo: result['tcbinfo'],
     });
     // update or insert certificate chain
@@ -338,8 +335,8 @@ export async function getTcbInfoFromPCS(type, fmspc, version) {
   return result;
 }
 
-export async function getEnclaveIdentityFromPCS(enclave_id, version) {
-  const pck_server_res = await pcsClient.getEnclaveIdentity(enclave_id, version);
+export async function getEnclaveIdentityFromPCS(enclave_id, version, update_type) {
+  const pck_server_res = await pcsClient.getEnclaveIdentity(enclave_id, version, update_type);
 
   if (pck_server_res.statusCode != Constants.HTTP_SUCCESS) {
     throw new PccsError(PccsStatus.PCCS_STATUS_NO_CACHE_DATA);
@@ -358,7 +355,8 @@ export async function getEnclaveIdentityFromPCS(enclave_id, version) {
     await enclaveIdentityDao.upsertEnclaveIdentity(
       enclave_id,
       pck_server_res.rawBody,
-      version
+      version,
+      update_type
     );
     // update or insert certificate chain
     await pcsCertificatesDao.upsertEnclaveIdentityIssuerChain(
@@ -378,7 +376,8 @@ export async function getRootCACrlFromPCS(rootca) {
       // Root Cert not cached
       const pck_server_res = await pcsClient.getEnclaveIdentity(
         Constants.QE_IDENTITY_ID,
-        global.PCS_VERSION
+        global.PCS_VERSION,
+        Constants.UPDATE_TYPE_STANDARD
       );
       if (pck_server_res.statusCode == Constants.HTTP_SUCCESS) {
         // update certificates

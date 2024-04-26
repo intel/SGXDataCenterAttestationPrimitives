@@ -13,7 +13,8 @@
                     "UpToDate",
                     "SWHardeningNeeded",
                     "ConfigurationNeeded",
-                    "OutOfDate"
+                    "OutOfDate",
+                    "TDRelaunchAdvised"
                 ],
                 "#NOTE": "'min_eval_num' indicates that Platform TCB Reports with higher tcb_eval_num are not required.",
                 "#NOTE": "The Policy fails if the Platform TCB Report includes an tcb_eval_num which is lower than the value defined in 'min_eval_num'.",

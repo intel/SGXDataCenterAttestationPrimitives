@@ -142,6 +142,9 @@ int performGetPlatformManifest(const char *fileName) {
     
     res = manage->getPlatformManifest(buffer, buffSize);
     if (MP_SUCCESS != res) {
+        if(MP_INSUFFICIENT_PRIVILEGES == res)  {
+            management_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: The registration complete flag could NOT be set, maybe the UEFI variable is in read-only mode.\n");
+        }
         ret = (int)res;
         goto out;
     }
@@ -170,7 +173,10 @@ int performGetKeyBlob(const char *fileName) {
     }
     
     res = manage->getPackageInfoKeyBlobs(buffer, buffSize);
-    if (MP_SUCCESS != res) {
+    if (MP_SUCCESS != res ) {
+        if(MP_INSUFFICIENT_PRIVILEGES == res) {
+            management_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: The package info complete flag could NOT be set, maybe the UEFI variable is in read-only mode.\n");
+        }
         ret = (int)res;
         goto out;
     }
@@ -255,6 +261,9 @@ int performSetServerInfo(const char *fileName) {
 
     res = manage->setRegistrationServerInfo(flags, string(param2, strnlen(param2, MAX_PATH_SIZE)), (uint8_t*)&serverId, (uint16_t)buffSize);
     if (MP_SUCCESS != res) {
+        if(MP_INSUFFICIENT_PRIVILEGES == res) {
+            management_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: The registration server information could NOT be set, maybe the UEFI variable is in read-only mode.\n");
+        }
         ret = (int)res;
         goto out;
     }
@@ -279,6 +288,7 @@ int performGetRegErrorCode() {
     }
     
     management_log_message(MP_REG_LOG_LEVEL_FUNC, "Last reported registration error code: %x\n", (int)err);
+    management_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: Maybe the whole SGX UEFI variables are in read-only mode, so this error code is not accurate.\n");
     ret = (int)err;
 out:
     return ret;
@@ -301,6 +311,7 @@ int performGetRegStatus() {
         management_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration process completed successfully.\n");
     } else {
         management_log_message(MP_REG_LOG_LEVEL_FUNC, "Registration is in progress.\n");
+        management_log_message(MP_REG_LOG_LEVEL_INFO, "Warning: Maybe the whole SGX UEFI variables are in read-only mode, so the registration status is not accurate.\n");
     }
     
     ret = (int)status;

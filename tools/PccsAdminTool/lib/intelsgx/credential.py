@@ -9,6 +9,7 @@ class Credentials:
     def get_admin_token(self):
         admin_token = ""
         try:
+            print("Please note: A prompt may appear asking for your keyring password to access stored credentials.")
             admin_token = keyring.get_password(self.APPNAME, self.KEY_ADMINTOKEN)
         except keyring.errors.KeyringError as ke:
             admin_token = ""
@@ -25,6 +26,7 @@ class Credentials:
 
     def set_admin_token(self, token):
         try:
+            print("Please note: A prompt may appear asking for your keyring password to access stored credentials.")
             keyring.set_password(self.APPNAME, self.KEY_ADMINTOKEN, token)
         except keyring.errors.PasswordSetError as ke:
             print("Failed to store admin token.")
@@ -34,6 +36,7 @@ class Credentials:
     def get_pcs_api_key(self):
         pcs_api_key = ""
         try:
+            print("Please note: A prompt may appear asking for your keyring password to access stored credentials.")
             pcs_api_key = keyring.get_password(self.APPNAME, self.KEY_PCS_APIKEY)
         except keyring.errors.KeyringError as ke:
             pcs_api_key = ""
@@ -50,6 +53,7 @@ class Credentials:
 
     def set_pcs_api_key(self, apikey):
         try:
+            print("Please note: A prompt may appear asking for your keyring password to access stored credentials.")
             keyring.set_password(self.APPNAME, self.KEY_PCS_APIKEY, apikey)
         except keyring.errors.PasswordSetError as ke:
             print("Failed to store PCS API key.")

@@ -74,7 +74,8 @@ void PrintHelp() {
     printf( " -user_token token_string             - user token to access the cache server \n");
     printf( " -proxy_type proxy_type               - proxy setting when access the cache server \n");
     printf( " -proxy_url  proxy_server_address     - proxy server's address \n");
-    printf( " -use_secure_cert [true | false]      - accept secure/insecure https cert, default value is true \n");
+    printf( " -use_secure_cert {true | false}      - accept secure/insecure https cert, default value is true \n");
+    printf( " -tcb_update_type {standard, early, all}  - update type for tcb material, default value is standard \n");
     printf( " -platform_id \"platform_id_string\"  - in this mode, enclave is not needed to load, but platform id need to input\n");
     printf( " -?                                   - show command help\n");
     printf( " -h                                   - show command help\n");
@@ -134,6 +135,7 @@ std::string user_token_string = "";
 std::string use_secure_cert_string = "";
 std::string output_filename = "";
 std::string platform_id_string = "";
+std::string tcb_update_type_string = "";
 bool non_enclave_mode = false;
 // Use secure HTTPS certificate or not
 bool g_use_secure_cert = true;
@@ -247,6 +249,22 @@ int parse_arg(int argc, const char *argv[])
                 platform_id_string = argv[i+1];
                 if (platform_id_string.length() > MAX_PATH) {
                     fprintf(stderr, "Error: the platform ID's length should not be more than 260 bytes.\n");
+                    return -1;
+                }
+                i++;
+                continue;
+            }
+        }
+        else if (strncmp(argv[i], "-tcb_update_type",16) == 0) {
+            if (i == argc - 1 || argv[i+1][0] == '-') {
+                fprintf(stderr, "No tcb update type was provided for -tcb_update_type\n");
+                return -1;
+            }
+            else {
+                tcb_update_type_string = argv[i + 1];
+                std::transform(tcb_update_type_string.begin(), tcb_update_type_string.end(), tcb_update_type_string.begin(), toUpper);
+                if (!is_valid_tcb_update_type(tcb_update_type_string)) {
+                    fprintf(stderr, "Invalid tcb_update_type: %s\n", tcb_update_type_string.c_str());
                     return -1;
                 }
                 i++;

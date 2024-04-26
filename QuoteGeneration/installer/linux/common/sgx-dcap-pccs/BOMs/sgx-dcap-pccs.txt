@@ -43,11 +43,13 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/pccs/middleware/auth.js	<installdir>/middleware/auth.js	0	main	STP
 <deliverydir>/pccs/middleware/error.js	<installdir>/middleware/error.js	0	main	STP
 <deliverydir>/pccs/middleware/addRequestId.js	<installdir>/middleware/addRequestId.js	0	main	STP
+<deliverydir>/pccs/middleware/filterDuplicatedParams.js	<installdir>/middleware/filterDuplicatedParams.js	0	main	STP
 <deliverydir>/pccs/migrations/00_db_initialize.up.sql	<installdir>/migrations/00_db_initialize.up.sql	0	main	STP
 <deliverydir>/pccs/migrations/01_db_version_1.js	<installdir>/migrations/01_db_version_1.js	0	main	STP
 <deliverydir>/pccs/migrations/02_db_version_2.js	<installdir>/migrations/02_db_version_2.js	0	main	STP
 <deliverydir>/pccs/migrations/03_db_version_3.js	<installdir>/migrations/03_db_version_3.js	0	main	STP
 <deliverydir>/pccs/migrations/04_db_version_4.js	<installdir>/migrations/04_db_version_4.js	0	main	STP
+<deliverydir>/pccs/migrations/05_db_version_5.js	<installdir>/migrations/05_db_version_5.js	0	main	STP
 <deliverydir>/pccs/pcs_client/pcs_client.js	<installdir>/pcs_client/pcs_client.js	0	main	STP
 <deliverydir>/pccs/routes/index.js	<installdir>/routes/index.js	0	main	STP
 <deliverydir>/pccs/services/identityService.js	<installdir>/services/identityService.js	0	main	STP

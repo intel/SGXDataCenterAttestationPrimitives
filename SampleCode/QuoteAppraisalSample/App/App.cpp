@@ -57,7 +57,6 @@ vector<string> tdx_platform_policy = {
     "Policies/tdx_platform_policy_platform_grace_period.jwt",
     "Policies/tdx_platform_policy_collateral_grace_period.jwt",
     "Policies/tdx_platform_policy_rejected_id.jwt",
-
     // Alibaba Cloud predefined TDX platform policy with FMSPC 90C06F000000
     "Policies/alibabacloud_tdx_platform_policy_90C06F000000.jwt",
 };

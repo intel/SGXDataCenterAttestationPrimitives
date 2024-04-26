@@ -91,7 +91,7 @@ function normalizeRegData(regDataJson) {
   }
 }
 
-export async function registerPlatforms(regDataJson) {
+export async function registerPlatforms(regDataJson, update) {
   //check parameters
   let valid = ajv.validate(PLATFORM_REG_SCHEMA, regDataJson);
   if (!valid) {
@@ -104,7 +104,7 @@ export async function registerPlatforms(regDataJson) {
   // Get cache status
   let isCached = await checkPCKCertCacheStatus(regDataJson);
 
-  await cachingModeManager.registerPlatforms(isCached, regDataJson);
+  await cachingModeManager.registerPlatforms(isCached, regDataJson, update);
 }
 
 export async function getRegisteredPlatforms() {

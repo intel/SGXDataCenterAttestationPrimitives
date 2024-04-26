@@ -61,8 +61,8 @@ class CachingModeManager {
     );
   }
 
-  async getEnclaveIdentityFromPCS(enclave_id, version) {
-    return this._mode.getEnclaveIdentityFromPCS(enclave_id, version);
+  async getEnclaveIdentityFromPCS(enclave_id, version, update_type) {
+    return this._mode.getEnclaveIdentityFromPCS(enclave_id, version, update_type);
   }
 
   async getPckCrlFromPCS(ca) {
@@ -73,16 +73,16 @@ class CachingModeManager {
     return this._mode.getRootCACrlFromPCS(rootca);
   }
 
-  async getTcbInfoFromPCS(type, fmspc, version) {
-    return this._mode.getTcbInfoFromPCS(type, fmspc, version);
+  async getTcbInfoFromPCS(type, fmspc, version, update_type) {
+    return this._mode.getTcbInfoFromPCS(type, fmspc, version, update_type);
   }
 
   isRefreshable() {
     return this._mode.isRefreshable();
   }
 
-  async registerPlatforms(isCached, regDataJson) {
-    return this._mode.registerPlatforms(isCached, regDataJson);
+  async registerPlatforms(isCached, regDataJson, update) {
+    return this._mode.registerPlatforms(isCached, regDataJson, update);
   }
 
   async processNotAvailableTcbs(

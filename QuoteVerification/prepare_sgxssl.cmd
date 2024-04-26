@@ -39,7 +39,7 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-3.0.12
+set openssl_ver_name=openssl-3.0.13
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
 set sgxssl_ver_name=3.0_Rev2
 set sgxssl_ver=%sgxssl_ver_name%
@@ -49,7 +49,7 @@ set server_url_path=https://www.openssl.org/source/
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
 set sgxssl_chksum=269e1171f566ac6630d83c3b6cf9669e254b08a7f208cc8cf59f471f3d8a579b
-set openssl_chksum=f93c9e8edde5e9166119de31755fc87b4aa34863662f67ddfcba14d0b6b69b61
+set openssl_chksum=88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -83,7 +83,6 @@ if !errorlevel! NEQ 0  (
 
 if not exist %sgxssl_dir%\Windows\package\lib\%PFM%\%CFG%\libsgx_tsgxssl.lib (
 	cd %sgxssl_dir%\Windows\
-	call powershell -Command "$content = Get-Content build_package.cmd; $content[152] = \"xcopy /y /s ..\..\..\..\prebuilt\openssl\openssl-3.0.13_files\* .`n\" + $content[152]; Set-Content build_package.cmd $content"
 	start /WAIT cmd /C call %build_script% %PFM%_%CFG% %openssl_ver_name% no-clean SIM || exit /b 1
     xcopy /E /H /y %sgxssl_dir%\Windows\package %top_dir%\package\
 

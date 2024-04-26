@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 "td-ql-logic-sys" = { version = "0.1.0", path = "../td-ql-logic-sys" }
+"qpl-rs" = { version = "0.1.0", path = "../../qpl-rs" }
+"libc" = { version = "0.2" }
+

@@ -49,6 +49,10 @@
                 "freezeTableName": true
             },
             "logging" : false
+        },
+        "ssl":{
+            "required": false,
+            "ca":"/if_required/path/to/your_ssl_ca"
         }
     }
 }

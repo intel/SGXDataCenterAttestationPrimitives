@@ -121,7 +121,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
     int updated = 0;
     sgx_launch_token_t token = {0};
     unsigned char rand_nonce[16] = "59jslk201fgjmm;";
-    quote3_error_t verify_qveid_ret = SGX_QL_ERROR_UNEXPECTED;
+    quote3_error_t verify_qveid_ret = TEE_ERROR_UNEXPECTED;
     sgx_enclave_id_t eid = 0;
 #else
     (void)use_qve;
@@ -129,9 +129,9 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
     int ret = 0;
     time_t current_time = 0;
-    quote3_error_t dcap_ret = SGX_QL_ERROR_UNEXPECTED;
+    quote3_error_t dcap_ret = TEE_ERROR_UNEXPECTED;
     uint32_t collateral_expiration_status = 1;
-    sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
+    sgx_ql_qv_result_t quote_verification_result = TEE_QV_RESULT_UNSPECIFIED;
     
 
     tee_supp_data_descriptor_t supp_data;
@@ -174,7 +174,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         // call DCAP quote verify library to set QvE loading policy
         //
         dcap_ret = sgx_qv_set_enclave_load_policy(SGX_QL_DEFAULT);
-        if (dcap_ret == SGX_QL_SUCCESS)
+        if (dcap_ret == TEE_SUCCESS)
         {
             log("Info: sgx_qv_set_enclave_load_policy successfully returned.");
         }
@@ -194,7 +194,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                                                               &latest_ver.version,
                                                               &supp_data.data_size);
 
-        if (dcap_ret == SGX_QL_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t))
+        if (dcap_ret == TEE_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t))
         {
             log("Info: tee_get_quote_supplemental_data_version_and_size successfully returned.");
             log("Info: latest supplemental data major version: %d, minor version: %d, size: %d", latest_ver.major_version, latest_ver.minor_version, supp_data.data_size);
@@ -214,7 +214,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         }
         else
         {
-            if (dcap_ret != SGX_QL_SUCCESS)
+            if (dcap_ret != TEE_SUCCESS)
                 log("Error: tee_get_quote_supplemental_data_size failed: 0x%04x", dcap_ret);
 
             if (supp_data.data_size != sizeof(sgx_ql_qv_supplemental_t))
@@ -239,7 +239,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             &quote_verification_result,
             &qve_report_info,
             &supp_data);
-        if (dcap_ret == SGX_QL_SUCCESS)
+        if (dcap_ret == TEE_SUCCESS)
         {
             log("Info: App: tee_verify_quote successfully returned.");
         }
@@ -274,7 +274,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                                                          supp_data.data_size,
                                                          qve_isvsvn_threshold);
 
-        if (sgx_ret != SGX_SUCCESS || verify_qveid_ret != SGX_QL_SUCCESS)
+        if (sgx_ret != SGX_SUCCESS || verify_qveid_ret != TEE_SUCCESS)
         {
             log("Error: Ecall: Verify QvE report and identity failed. 0x%04x", verify_qveid_ret);
             ret = -1;
@@ -289,7 +289,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         //
         switch (quote_verification_result)
         {
-        case SGX_QL_QV_RESULT_OK:
+        case TEE_QV_RESULT_OK:
             // check verification collateral expiration status
             // this value should be considered in your own attestation/verification policy
             //
@@ -305,17 +305,19 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             }
 
             break;
-        case SGX_QL_QV_RESULT_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
-        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_NEEDED:
+        case TEE_QV_RESULT_OUT_OF_DATE:
+        case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case TEE_QV_RESULT_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
             log("Warning: App: Verification completed with Non-terminal result: %x", quote_verification_result);
             ret = 1;
             break;
-        case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
-        case SGX_QL_QV_RESULT_REVOKED:
-        case SGX_QL_QV_RESULT_UNSPECIFIED:
+        case TEE_QV_RESULT_INVALID_SIGNATURE:
+        case TEE_QV_RESULT_REVOKED:
+        case TEE_QV_RESULT_UNSPECIFIED:
         default:
             log("Error: App: Verification completed with Terminal result: %x", quote_verification_result);
             ret = -1;
@@ -324,7 +326,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
         // check supplemental data if necessary
         //
-        if (dcap_ret == SGX_QL_SUCCESS && supp_data.p_data != NULL && supp_data.data_size > 0)
+        if (dcap_ret == TEE_SUCCESS && supp_data.p_data != NULL && supp_data.data_size > 0)
         {
             sgx_ql_qv_supplemental_t *p = (sgx_ql_qv_supplemental_t *)supp_data.p_data;
 
@@ -355,7 +357,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                                                               &latest_ver.version,
                                                               &supp_data.data_size);
 
-        if (dcap_ret == SGX_QL_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t))
+        if (dcap_ret == TEE_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t))
         {
             log("Info: tee_get_quote_supplemental_data_version_and_size successfully returned.");
             log("Info: latest supplemental data major version: %d, minor version: %d, size: %d", latest_ver.major_version, latest_ver.minor_version, supp_data.data_size);
@@ -375,7 +377,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         }
         else
         {
-            if (dcap_ret != SGX_QL_SUCCESS)
+            if (dcap_ret != TEE_SUCCESS)
                 log("Error: tee_get_quote_supplemental_data_size failed: 0x%04x", dcap_ret);
 
             if (supp_data.data_size != sizeof(sgx_ql_qv_supplemental_t))
@@ -400,7 +402,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
             &quote_verification_result,
             NULL,
             &supp_data);
-        if (dcap_ret == SGX_QL_SUCCESS)
+        if (dcap_ret == TEE_SUCCESS)
         {
             log("Info: App: tee_verify_quote successfully returned.");
         }
@@ -414,7 +416,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
         //
         switch (quote_verification_result)
         {
-        case SGX_QL_QV_RESULT_OK:
+        case TEE_QV_RESULT_OK:
             // check verification collateral expiration status
             // this value should be considered in your own attestation/verification policy
             //
@@ -429,17 +431,19 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
                 ret = 1;
             }
             break;
-        case SGX_QL_QV_RESULT_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
-        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_NEEDED:
+        case TEE_QV_RESULT_OUT_OF_DATE:
+        case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case TEE_QV_RESULT_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
             log("Warning: App: Verification completed with Non-terminal result: %x", quote_verification_result);
             ret = 1;
             break;
-        case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
-        case SGX_QL_QV_RESULT_REVOKED:
-        case SGX_QL_QV_RESULT_UNSPECIFIED:
+        case TEE_QV_RESULT_INVALID_SIGNATURE:
+        case TEE_QV_RESULT_REVOKED:
+        case TEE_QV_RESULT_UNSPECIFIED:
         default:
             log("Error: App: Verification completed with Terminal result: %x", quote_verification_result);
             ret = -1;
@@ -448,7 +452,7 @@ int ecdsa_quote_verification(vector<uint8_t> quote, bool use_qve)
 
         // check supplemental data if necessary
         //
-        if (dcap_ret == SGX_QL_SUCCESS && supp_data.p_data != NULL && supp_data.data_size > 0)
+        if (dcap_ret == TEE_SUCCESS && supp_data.p_data != NULL && supp_data.data_size > 0)
         {
             sgx_ql_qv_supplemental_t *p = (sgx_ql_qv_supplemental_t *)supp_data.p_data;
 

@@ -1063,35 +1063,42 @@ quote3_error_t sgx_qv_set_path(
 
 static void qv_result_tcb_status_map(std::vector<std::string>& tcb_status, sgx_ql_qv_result_t qv_result){
     switch (qv_result){
-    case SGX_QL_QV_RESULT_OK:
+    case TEE_QV_RESULT_OK:
         tcb_status.push_back("UpToDate");
         break;
-    case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
-        tcb_status.push_back("UpToDate");
-        tcb_status.push_back("SWHardeningNeeded");
-        break;
-    case SGX_QL_QV_RESULT_CONFIG_NEEDED:
-        tcb_status.push_back("UpToDate");
-        tcb_status.push_back("ConfigurationNeeded");
-        break;
-    case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+    case TEE_QV_RESULT_SW_HARDENING_NEEDED:
         tcb_status.push_back("UpToDate");
         tcb_status.push_back("SWHardeningNeeded");
+        break;
+    case TEE_QV_RESULT_CONFIG_NEEDED:
+        tcb_status.push_back("UpToDate");
         tcb_status.push_back("ConfigurationNeeded");
         break;
-    case SGX_QL_QV_RESULT_OUT_OF_DATE:
+    case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        tcb_status.push_back("UpToDate");
+        tcb_status.push_back("SWHardeningNeeded");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_OUT_OF_DATE:
         tcb_status.push_back("OutOfDate");
         break;
-    case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+    case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
         tcb_status.push_back("OutOfDate");
         tcb_status.push_back("ConfigurationNeeded");
         break;
-    case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
+    case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        tcb_status.push_back("TDRelaunchAdvised");
         break;
-    case SGX_QL_QV_RESULT_REVOKED:
+    case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
+        tcb_status.push_back("TDRelaunchAdvised");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_INVALID_SIGNATURE:
+        break;
+    case TEE_QV_RESULT_REVOKED:
         tcb_status.push_back("Revoked");
         break;
-    case SGX_QL_QV_RESULT_UNSPECIFIED:
+    case TEE_QV_RESULT_UNSPECIFIED:
         break;
     default:
         break;
@@ -1183,11 +1190,11 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
     plat_version == NULL || enclave_type == NULL || enclave_version == NULL ||
     request_id == NULL || p_quote_collateral == NULL || p_supplemental_data == NULL)
     {
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     if(quote_ver != intel::sgx::dcap::constants::QUOTE_VERSION_5 && quote_ver != intel::sgx::dcap::constants::QUOTE_VERSION_3)
     {
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     using namespace rapidjson;
     Document JWT;
@@ -1196,7 +1203,7 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
     Document::AllocatorType &allocator = JWT.GetAllocator();
     if(&allocator == NULL)
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
     Value obj_platform(kObjectType);
@@ -1302,7 +1309,7 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
     }
 
     //get fmpsc from quote
-    quote3_error_t ret = SGX_QL_SUCCESS;
+    quote3_error_t ret = TEE_SUCCESS;
     unsigned char fmspc_from_quote[FMSPC_SIZE] = {0};
     unsigned char ca_from_quote[CA_SIZE] = {0};
 
@@ -1313,7 +1320,7 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
         FMSPC_SIZE,
         ca_from_quote,
         CA_SIZE);
-    if(ret == SGX_QL_SUCCESS)
+    if(ret == TEE_SUCCESS)
     {
         Value str_fmspc(kStringType);
         std::string sfmspc((char* )fmspc_from_quote, FMSPC_SIZE);
@@ -1436,7 +1443,7 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
             memcpy(&sgx_report, p_tmp_quote5->body, sizeof(sgx_report_body_t));
         }
         else {
-            return SGX_QL_ERROR_INVALID_PARAMETER;
+            return TEE_ERROR_INVALID_PARAMETER;
         }
         
         Value str_encl(kStringType);
@@ -1507,7 +1514,7 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
     std::string raw_data = str_buff.GetString();
     if(raw_data.empty())
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
 	auto qal_token = jwt::create()
@@ -1518,17 +1525,17 @@ static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
 
     if(qal_token.empty())
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
     *jwt_data = (uint8_t*)malloc(qal_token.length() + 1);
     if (*jwt_data == NULL) {
-        return SGX_QL_ERROR_OUT_OF_MEMORY;
+        return TEE_ERROR_OUT_OF_MEMORY;
     }
     memset(*jwt_data, 0, qal_token.length() + 1);
     memcpy_s(*jwt_data, qal_token.length() + 1, qal_token.c_str(), qal_token.length());
     *jwt_size = (uint32_t)qal_token.length();
-    return SGX_QL_SUCCESS;
+    return TEE_SUCCESS;
 }
 
 static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
@@ -1551,14 +1558,14 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     if(CHECK_MANDATORY_PARAMS(p_quote, quote_size) || quote_size < QUOTE_MIN_SIZE ||
     plat_version == NULL || qe_identity_version == NULL || td_identity_version == NULL || 
     request_id == NULL || p_supplemental_data == NULL || p_quote_collateral == NULL){
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     if(report_type != TDX10_REPORT && report_type != TDX15_REPORT){
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     const sgx_quote4_t *quote4 = reinterpret_cast<const sgx_quote4_t *> (p_quote);
     if(quote4->header.tee_type != intel::sgx::dcap::constants::TEE_TYPE_TDX){
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     using namespace rapidjson;
     Document JWT;
@@ -1567,7 +1574,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     Document::AllocatorType &allocator = JWT.GetAllocator();
     if(&allocator == NULL)
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
 
@@ -1680,7 +1687,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     }
 
     //get fmpsc from quote
-    quote3_error_t ret = SGX_QL_SUCCESS;
+    quote3_error_t ret = TEE_SUCCESS;
     unsigned char fmspc_from_quote[FMSPC_SIZE] = {0};
     unsigned char ca_from_quote[CA_SIZE] = {0};
 
@@ -1691,7 +1698,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
         FMSPC_SIZE,
         ca_from_quote,
         CA_SIZE);
-    if(ret == SGX_QL_SUCCESS)
+    if(ret == TEE_SUCCESS)
     {
         Value str_fmspc(kStringType);
         std::string sfmspc((char* )fmspc_from_quote, FMSPC_SIZE);
@@ -1937,7 +1944,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     std::string raw_data = str_buff.GetString();
     if(raw_data.empty())
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
 	auto qal_token = jwt::create()
@@ -1948,17 +1955,17 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
 
     if(qal_token.empty())
     {
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
     *jwt_data = (uint8_t*)malloc(qal_token.length() + 1);
     if (*jwt_data == NULL) {
-        return SGX_QL_ERROR_OUT_OF_MEMORY;
+        return TEE_ERROR_OUT_OF_MEMORY;
     }
     memset(*jwt_data, 0, qal_token.length() + 1);
     memcpy_s(*jwt_data, qal_token.length() + 1, qal_token.c_str(), qal_token.length());
     *jwt_size = (uint32_t)qal_token.length();
-    return SGX_QL_SUCCESS;
+    return TEE_SUCCESS;
 }
 
 quote3_error_t  tee_verify_quote_qvt(
@@ -1974,7 +1981,7 @@ quote3_error_t  tee_verify_quote_qvt(
     if(CHECK_MANDATORY_PARAMS(p_quote, quote_size) || quote_size < QUOTE_MIN_SIZE ||
         p_verification_result_token_buffer_size == NULL || p_verification_result_token == NULL)
     {
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     time_t current_time = time(NULL);
     uint32_t collateral_expiration_status = 1;
@@ -1984,8 +1991,8 @@ quote3_error_t  tee_verify_quote_qvt(
 
     tee_supp_data_descriptor_t supp_data;
     memset(&supp_data, 0, sizeof(tee_supp_data_descriptor_t));
-    sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
-    quote3_error_t dcap_ret = SGX_QL_ERROR_UNEXPECTED;
+    sgx_ql_qv_result_t quote_verification_result = TEE_QV_RESULT_UNSPECIFIED;
+    quote3_error_t dcap_ret = TEE_ERROR_UNEXPECTED;
     sgx_ql_qve_collateral_t *p_tmp_quote_collateral = NULL;
 
     //get supplemental data size
@@ -1993,7 +2000,7 @@ quote3_error_t  tee_verify_quote_qvt(
                                             quote_size,
                                             &latest_ver.version,
                                             &supp_data.data_size);
-    if (dcap_ret == SGX_QL_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t)) {
+    if (dcap_ret == TEE_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t)) {
         SE_TRACE(SE_TRACE_DEBUG,"\tInfo: tee_get_quote_supplemental_data_version_and_size successfully returned.\n");
         SE_TRACE(SE_TRACE_DEBUG,"\tInfo: latest supplemental data major version: %d, minor version: %d, size: %d\n", latest_ver.major_version, latest_ver.minor_version, supp_data.data_size);
         supp_data.p_data = (uint8_t*)malloc(supp_data.data_size);
@@ -2002,11 +2009,11 @@ quote3_error_t  tee_verify_quote_qvt(
         }
         else {
             SE_TRACE(SE_TRACE_DEBUG,"\tError: Cannot allocate memory for supplemental data.\n");
-            return SGX_QL_ERROR_OUT_OF_MEMORY;
+            return TEE_ERROR_OUT_OF_MEMORY;
         }
     }
     else {
-        if (dcap_ret != SGX_QL_SUCCESS)
+        if (dcap_ret != TEE_SUCCESS)
             SE_TRACE(SE_TRACE_DEBUG,"\tError: tee_get_supplemental_data_version_and_size failed: 0x%04x\n", dcap_ret);
 
         if (supp_data.data_size != sizeof(sgx_ql_qv_supplemental_t))
@@ -2024,7 +2031,7 @@ quote3_error_t  tee_verify_quote_qvt(
             reinterpret_cast<uint8_t **>(&p_tmp_quote_collateral),
             &p_collateral_size);
           
-        if (dcap_ret == SGX_QL_SUCCESS) {
+        if (dcap_ret == TEE_SUCCESS) {
             SE_TRACE(SE_TRACE_DEBUG,"\tInfo: tee_qv_get_collateral successfully returned.\n");
             p_quote_collateral = reinterpret_cast<const sgx_ql_qve_collateral_t *>(p_tmp_quote_collateral);
         }
@@ -2041,22 +2048,24 @@ quote3_error_t  tee_verify_quote_qvt(
             &quote_verification_result,
             p_qve_report_info,
             &supp_data);
-    if (dcap_ret == SGX_QL_SUCCESS) {
+    if (dcap_ret == TEE_SUCCESS) {
         switch (quote_verification_result)
         {
-        case SGX_QL_QV_RESULT_OK:
+        case TEE_QV_RESULT_OK:
             break;
-        case SGX_QL_QV_RESULT_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
-        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_NEEDED:
+        case TEE_QV_RESULT_OUT_OF_DATE:
+        case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case TEE_QV_RESULT_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
             SE_TRACE(SE_TRACE_DEBUG,"\tWarning: Verification completed with Non-terminal result: 0x%04x\n", quote_verification_result);
             break;
         //Will not generate JWT when critical error occurred
-        case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
-        case SGX_QL_QV_RESULT_REVOKED:
-        case SGX_QL_QV_RESULT_UNSPECIFIED:
+        case TEE_QV_RESULT_INVALID_SIGNATURE:
+        case TEE_QV_RESULT_REVOKED:
+        case TEE_QV_RESULT_UNSPECIFIED:
         default:
             SE_TRACE(SE_TRACE_DEBUG,"\tError: Verification completed with Terminal result: 0x%04x\n", quote_verification_result);
             if(p_tmp_quote_collateral != NULL){
@@ -2065,7 +2074,7 @@ quote3_error_t  tee_verify_quote_qvt(
             if(supp_data.p_data != NULL){
                 free(supp_data.p_data);
             }
-            return SGX_QL_ERROR_UNEXPECTED;
+            return TEE_ERROR_UNEXPECTED;
         }
     }
     else {
@@ -2084,7 +2093,7 @@ quote3_error_t  tee_verify_quote_qvt(
     if(!RAND_bytes(rand_nonce, REQUEST_ID_LEN))
     {
         SE_TRACE(SE_TRACE_ERROR,"\tError: Failed to generate random request_id.\n");
-        return SGX_QL_ERROR_UNEXPECTED;
+        return TEE_ERROR_UNEXPECTED;
     }
 
     //parse quote header to get tee type, only support SGX and TDX by now
@@ -2104,7 +2113,7 @@ quote3_error_t  tee_verify_quote_qvt(
             free(supp_data.p_data);
         }
         //quote type is not supported
-        return SGX_QL_ERROR_INVALID_PARAMETER;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
     uint16_t quote_ver = 0;
     uint16_t report_type = 0;
@@ -2169,7 +2178,7 @@ quote3_error_t  tee_verify_quote_qvt(
     }
     catch (...)
     {
-        dcap_ret = SGX_QL_ERROR_UNEXPECTED;
+        dcap_ret = TEE_ERROR_UNEXPECTED;
         SE_TRACE(SE_TRACE_ERROR,"\tError: Failed to generate JWT.\n");
     }
 
@@ -2184,12 +2193,13 @@ quote3_error_t  tee_verify_quote_qvt(
 
 quote3_error_t tee_free_verify_quote_qvt(uint8_t *p_verification_result_token, uint32_t *p_verification_result_token_buffer_size)
 {
-    if(p_verification_result_token == NULL)
+    if(p_verification_result_token == NULL || p_verification_result_token_buffer_size == NULL)
     {
         return SGX_QL_ERROR_INVALID_PARAMETER;
     }
     free(p_verification_result_token);
-    p_verification_result_token_buffer_size = 0;
+    p_verification_result_token = NULL;
+    *p_verification_result_token_buffer_size = 0;
     return SGX_QL_SUCCESS;
 }
 #endif

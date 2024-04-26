@@ -68,10 +68,12 @@ SGX_DEBUG ?= 0
 
 ifndef SERVTD_ATTEST
     ifneq ($(origin SGX_SDK),file)
-      include $(SGX_SDK)/buildenv.mk
-	  else
-$(info You may need to set environment variables if the SGX SDK is installed.)
-$(info Use a command like 'source /opt/intel/sgxsdk/environment')
+        include $(SGX_SDK)/buildenv.mk
+    else
+        ifneq ($(SDK_NOT_REQUIRED), 1)
+            $(info You may need to set environment variables if the SGX SDK is installed.)
+            $(info Use a command like 'source /opt/intel/sgxsdk/environment')
+        endif
     endif
 endif
 

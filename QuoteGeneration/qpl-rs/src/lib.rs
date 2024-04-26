@@ -604,7 +604,8 @@ mod tests {
         level: tee_qpl_log_level,
         message: *const ::std::os::raw::c_char,
     ) {
-        println!("level {level}: {:?}", message);
+        let msg_str = std::ffi::CStr::from_ptr(message).to_str().unwrap();
+        println!("level {level}: {:?}", msg_str);
     }
 
     #[test]

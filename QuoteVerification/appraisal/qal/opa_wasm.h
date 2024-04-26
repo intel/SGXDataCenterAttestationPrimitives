@@ -34,7 +34,7 @@
 
 
 #define DEFAULT_STACK_SIZE 8 * 1024
-#define DEFAULT_HEAP_SIZE 8 * 1024
+#define DEFAULT_HEAP_SIZE 0
 
 class OPAEvaluateEngine
 {
@@ -51,13 +51,8 @@ private:
     OPAEvaluateEngine(const OPAEvaluateEngine &);
     OPAEvaluateEngine &operator=(const OPAEvaluateEngine &);
 
-    int read_wasm_file();
-
     uint32_t m_stack_size;
     uint32_t m_heap_size;
-    wasm_module_t m_wasm_module;
     wasm_module_inst_t m_wasm_module_inst;
     wasm_exec_env_t m_exec_env;
-    uint8_t *m_wasm_file_buf;
-    size_t m_wasm_file_size;
 };

@@ -136,7 +136,9 @@ class PCS:
             store_ctx= crypto.X509StoreContext(store, pycert)
             try:
                 store_ctx.verify_certificate()
-            except crypto.X509StoreContextError:
+            except crypto.X509StoreContextError as e:
+                # Printing or logging the error details
+                print(e)
                 return False
 
         return True
@@ -432,7 +434,6 @@ class PCS:
             return None
     
         # Validate the certificates with signer
-
         chain= parse.unquote(
             response.headers[PCS.HDR_PCK_Certificate_Issuer_Chain]
         )
@@ -558,10 +559,10 @@ class PCS:
 # PCS: Get TCB Info
 #----------------------------------------------------------------------------
 
-    def get_tcb_info(self, fmspc, type, dec=None):
+    def get_tcb_info(self, fmspc, type, update, dec=None):
         self.clear_errors()
         url= self._geturl('tcb', type)
-        url+= "?fmspc={:s}".format(fmspc)
+        url+= "?fmspc={:s}&update={:s}".format(fmspc,update)
 
         response= self._get_request(url, False)
         if response.status_code != 200:
@@ -635,13 +636,14 @@ class PCS:
 # PCS: Get QE/QVE/TD_QE Identity
 #----------------------------------------------------------------------------
 
-    def get_enclave_identity(self, name, dec=None):
+    def get_enclave_identity(self, name, update, dec=None):
         self.clear_errors()
 
         if name == 'tdqe':
             url= self._geturl('qe/identity', 'tdx')
         else:
             url= self._geturl(name + '/identity', 'sgx')
+        url+= "?update={:s}".format(update)
 
         response= self._get_request(url, False)
         if response.status_code != 200:

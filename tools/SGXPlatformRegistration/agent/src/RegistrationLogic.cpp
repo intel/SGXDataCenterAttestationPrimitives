@@ -56,21 +56,23 @@ void RegistrationLogic::registerPlatform() {
     RegistrationService registrationService(conf);
     agent_log_message(MP_REG_LOG_LEVEL_FUNC, "SGX Registration Agent version: %s\n", STRPRODUCTVER);
 
-#ifdef _WIN32
     if (!registrationService.isMultiPackageCapable()) {
+#ifdef _WIN32
         agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Platform doesn't support registration. removing service..\n");
         if (!SvcUninstall()) {
             agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Failed to remove service.\n");
         } else {
             agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Successfully removed windows SGX registration service.\n");
         }
+#else 
+        agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Platform doesn't support registration. \n");
+#endif
         return;
     }
     else {
         agent_log_message(MP_REG_LOG_LEVEL_INFO, "Multi-Package capable.\n");
     }
 
-#endif
 
     agent_log_message(MP_REG_LOG_LEVEL_FUNC, "Starts Registration Agent Flow.\n");
     // Preform registration flow if needed

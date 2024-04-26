@@ -55,7 +55,7 @@ export async function upsertAppraisalPolicy(apJson) {
     await AppraisalPolicy.update(
       { is_default: false },
       {
-        where: { type: apJson.type, fmspc: apJson.fmspc, is_default: true },
+        where: { fmspc: apJson.fmspc, is_default: true },
       }
     );
   }

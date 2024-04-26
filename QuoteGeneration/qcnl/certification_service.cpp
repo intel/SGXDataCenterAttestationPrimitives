@@ -117,7 +117,6 @@ sgx_qcnl_error_t CertificationService::fetch_data(RequestType type, const Reques
         sgx_qcnl_error_t handler_ret = handlerData->handler(&pccs_resp_obj, handlerData->args);
         if (handler_ret == SGX_QCNL_SUCCESS) {
             ret = cacheProvider.set_certification(get_cache_type_of_request(type),
-                                                  (uint32_t)(QcnlConfig::Instance()->getVerifyCollateralExpireHour() * 3600),
                                                   query_str, &pccs_resp_obj); // User query_str for caching key
         }
     }
@@ -289,6 +288,7 @@ sgx_qcnl_error_t CertificationService::build_tcbinfo_options(Request &request,
     if (!concat_string_with_hex_buf(request.params, reinterpret_cast<const uint8_t *>(fmspc), fmspc_size)) {
         return SGX_QCNL_UNEXPECTED_ERROR;
     }
+    request.params.append("&update=").append(QcnlConfig::Instance()->getTcbUpdateType());
     if (!custom_param_.empty()) {
         request.params.append("&").append(get_custom_param_string());
     }
@@ -308,8 +308,9 @@ sgx_qcnl_error_t CertificationService::build_qeidentity_options(Request &request
     }
 
     request.params.append("qe/identity");
+    request.params.append("?update=").append(QcnlConfig::Instance()->getTcbUpdateType());
     if (!custom_param_.empty()) {
-        request.params.append("?").append(get_custom_param_string());
+        request.params.append("&").append(get_custom_param_string());
     }
 
     return SGX_QCNL_SUCCESS;
@@ -319,8 +320,9 @@ sgx_qcnl_error_t CertificationService::build_qveidentity_options(Request &reques
     request.endpoint = QcnlConfig::Instance()->getCollateralServiceUrl();
 
     request.params.append("qve/identity");
+    request.params.append("?update=").append(QcnlConfig::Instance()->getTcbUpdateType());
     if (!custom_param_.empty()) {
-        request.params.append("?").append(get_custom_param_string());
+        request.params.append("&").append(get_custom_param_string());
     }
 
     return SGX_QCNL_SUCCESS;
