@@ -28,9 +28,9 @@ jobs:
       run: QuoteGeneration/download_prebuilt.sh
     - name: download SGXSDK
       run: |
-        curl https://download.01.org/intel-sgx/sgx-linux/2.24/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.24.100.3.bin -o ./sgx_linux_x64_sdk.bin
-        chmod +x ./sgx_linux_x64_sdk.bin
+        wget -r -l1 -np -nd --accept 'sgx_linux_x64_sdk_*.bin' https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/
+        chmod +x ./sgx_linux_x64_sdk_*.bin
     - name: install SGXSDK
-      run: ./sgx_linux_x64_sdk.bin <<< "yes"
+      run: ./sgx_linux_x64_sdk_*.bin <<< "yes"
     - name: build
       run: source ./sgxsdk/environment; make all
