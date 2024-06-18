@@ -83,6 +83,7 @@ def main():
     parser_cache.add_argument("-o", "--output_dir", help="The destination directory for storing the generated cache files")
     parser_cache.add_argument("-s", "--sub_dir", help="Store output cache files in subdirectories named according to QE ID or Platform ID", action="store_true")
     parser_cache.add_argument("-e", "--expire", type=Utils.check_expire_hours, help="How many hours the cache files will be valid for. Default is 2160 hours (90 days).")
+    parser_cache.add_argument("-t", "--tcb_update_type", help="Type of update to TCB info and enclave identities; default: standard", choices=['standard','early'])
     parser_cache.set_defaults(func=pcs_cache)
 
     args = parser.parse_args()
@@ -530,6 +531,7 @@ class CacheCreator:
     def __init__(self, credentials, args):
         self.credentials = credentials
         self.args = args
+        self.tcb_update_type = args.tcb_update_type or 'standard'
         self.sub_dir = bool(args.sub_dir)
 
     @staticmethod
@@ -582,7 +584,7 @@ class CacheCreator:
             return False
 
         fmspc = pckcerts[3]
-        sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', 'ascii')
+        sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', self.tcb_update_type, 'ascii')
         tcbcomponent = self._decompose_cpusvn_components(platform["cpu_svn"], json.loads(sgx_tcbinfo[0])["tcbInfo"]["tcbType"])
         self.write_to_cache_file(platform, output_dir, expire_hours, tcbcomponent, sgx_tcbinfo, pckcerts)
         return True
