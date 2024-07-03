@@ -15,7 +15,7 @@
     "ffi-napi": "^4.0.3",
     "got": "^11.8.6",
     "morgan": "^1.10.0",
-    "mysql2": "^3.9.4",
+    "mysql2": "^3.10.2",
     "node-schedule": "^2.1.1",
     "ref-array-di": "^1.2.2",
     "ref-napi": "^3.0.3",
