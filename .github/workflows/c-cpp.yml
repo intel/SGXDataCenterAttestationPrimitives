@@ -21,7 +21,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get install libcurl4-openssl-dev libboost-dev libboost-system-dev libboost-thread-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install libcurl4-openssl-dev libboost-dev libboost-system-dev libboost-thread-dev
     - name: init submodule
       run: git submodule update --init --recursive
     - name: download prebuilt

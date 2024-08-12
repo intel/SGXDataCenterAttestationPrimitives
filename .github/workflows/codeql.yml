@@ -51,6 +51,7 @@ jobs:
     - name: Build
       if: matrix.build-mode == 'manual'
       run: |
+        sudo apt-get update
         sudo apt-get install libcurl4-openssl-dev libboost-dev libboost-system-dev libboost-thread-dev
         QuoteGeneration/download_prebuilt.sh
         wget -r -l1 -np -nd --accept 'sgx_linux_x64_sdk_*.bin' https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/
