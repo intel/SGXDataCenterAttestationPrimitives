@@ -50,35 +50,7 @@ extern "C" {
 
 #define SGX_QUOTE_TYPE 0x0
 #define TDX_QUOTE_TYPE 0x81
-#define REQUEST_ID_LEN 16
-#define TIME_STR_LEN 24
-
-#define TEE_PALTFORM_TOKEN_UUID "3123ec35-8d38-4ea5-87a5-d6c48b567570"
-#define TEE_ENCLAVE_TOKEN_UUID "bef7cb8c-31aa-42c1-854c-10db005d5c41"
-#define TEE_PLATFORM_TOKEN_VER "1.0"
-#define TEE_ENCLAVE_TOKEN_VER "1.0"
-
-#define TEE_TDX10_PALTFORM_TOKEN_UUID "9eec018b-7481-4b1c-8e1a-9f7c0c8c777f"
-#define TEE_TDX15_PALTFORM_TOKEN_UUID "f708b97f-0fb2-4e6b-8b03-8a5bcd1221d3"
-#define TEE_TDX_QE_IDENTITY_TOKEN_UUID "3769258c-75e6-4bc7-8d72-d2b0e224cad2"
-#define TEE_TDX_TD10_IDENTITY_TOKEN_UUID "a1e4ee9c-a12e-48ac-bed0-e3f89297f687"
-#define TEE_TDX_TD15_IDENTITY_TOKEN_UUID "45b734fc-aa4e-4c3d-ad28-e43d08880e68"
-#define TEE_TDX_PLATFORM_TOKEN_VER "1.0"
-#define TEE_TDX_QE_IDENTITY_TOKEN_VER "1.0"
-#define TEE_TDX_TD_IDENTITY_TOKEN_VER "1.0"
-
-typedef enum {
-    UNKNOWN_REPORT_TYPE = 0,
-    SGX_REPORT,
-    TDX10_REPORT,
-    TDX15_REPORT
-} tee_qv_report_type_t;
-
-typedef enum {
-    SGX_EVIDENCE = 0,
-    TDX_EVIDENCE,
-    UNKNOWN_QUOTE_TYPE
-} tee_evidence_type_t;
+#define USER_DATA_MAX_LEN 128
 
 typedef enum {
     CLASS_SGX_QVL = 0,
@@ -106,6 +78,20 @@ quote3_error_t sgx_qvl_verify_quote(
     sgx_ql_qe_report_info_t *p_qve_report_info,
     uint32_t supplemental_data_size,
     uint8_t *p_supplemental_data);
+
+quote3_error_t  tee_qvl_verify_quote_qvt(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    time_t current_time,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    uint32_t *verification_result_token_buffer_size,
+    uint8_t **p_verification_result_token);
+
+void ocall_qvt_token_malloc(uint64_t verification_result_token_buffer_size,
+    uint8_t **p_verification_result_token);
 
 quote3_error_t sgx_qvl_get_quote_supplemental_data_size(
     uint32_t *p_data_size);

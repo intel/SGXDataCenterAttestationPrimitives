@@ -6,7 +6,7 @@ import future.keywords.if
 import future.keywords.in
 
 #
-# Constant value for each class id
+# Constant value of each class id
 #
 sgx_id := "3123ec35-8d38-4ea5-87a5-d6c48b567570"
 
@@ -60,14 +60,81 @@ report_not_in_policy contains report if {
 }
 
 #
+# Utility rule to get quote hash
+#
+quote_hash contains hash if {
+	some qh in input.qvl_result
+	is_string(qh.quote_hash)
+	is_string(qh.algo)
+	hash := qh
+}
+
+#
+# Utility rule to get optional user data
+#
+optional_ud contains user_data if {
+	some ud in input.qvl_result
+	is_string(ud.user_data)
+	user_data := ud.user_data
+}
+
+#
 # Section 1: Format the final appraisal output
 #
-final_appraisal_result := {
-	"overall_appraisal_result": final_ret,
-	"appraisal_check_date": time.now_ns(),
-	"nonce": rand.intn("appraisal", 1000000000000000),
-	"appraised_reports": appraisal_result,
-	"certification_data": certification_data,
+final_appraisal_result contains output if {
+	count(quote_hash) != 0
+	count(optional_ud) != 0
+	some user_data
+	user_data_str := optional_ud[user_data]
+	output := {
+		"overall_appraisal_result": final_ret,
+		"appraisal_check_date": time.now_ns(),
+		"nonce": rand.intn("appraisal", 1000000000000000),
+		"quote_hash": quote_hash,
+		"user_data": user_data_str,
+		"appraised_reports": appraisal_result,
+		"certification_data": certification_data,
+	}
+}
+
+final_appraisal_result contains output if {
+	count(quote_hash) == 0
+	count(optional_ud) == 0
+	output := {
+		"overall_appraisal_result": final_ret,
+		"appraisal_check_date": time.now_ns(),
+		"nonce": rand.intn("appraisal", 1000000000000000),
+		"appraised_reports": appraisal_result,
+		"certification_data": certification_data,
+	}
+}
+
+final_appraisal_result contains output if {
+	count(quote_hash) != 0
+	count(optional_ud) == 0
+	output := {
+		"overall_appraisal_result": final_ret,
+		"appraisal_check_date": time.now_ns(),
+		"nonce": rand.intn("appraisal", 1000000000000000),
+		"quote_hash": quote_hash,
+		"appraised_reports": appraisal_result,
+		"certification_data": certification_data,
+	}
+}
+
+final_appraisal_result contains output if {
+	count(quote_hash) == 0
+	count(optional_ud) != 0
+	some user_data
+	user_data_str := optional_ud[user_data]
+	output := {
+		"overall_appraisal_result": final_ret,
+		"appraisal_check_date": time.now_ns(),
+		"nonce": rand.intn("appraisal", 1000000000000000),
+		"user_data": user_data_str,
+		"appraised_reports": appraisal_result,
+		"certification_data": certification_data,
+	}
 }
 
 # Get final appraisal return value
@@ -224,7 +291,7 @@ appraisal_result contains appraisal_output if {
 certification_data contains cert_data if {
 	some item in collect_bundle
 
-	cert_data := {"certification_data": item.report.certification_data}
+	cert_data := item.report.certification_data
 }
 
 #
@@ -781,9 +848,24 @@ td_tcb_policy_present(bundle) if {
 default td_attributes_ok(_) := false
 
 td_attributes_ok(bundle) if {
-	is_string(bundle.report.measurement.tdx_attributes)
-	is_string(bundle.policy.reference.tdx_attributes)
-	lower(bundle.report.measurement.tdx_attributes) == lower(bundle.policy.reference.tdx_attributes)
+	not bundle.policy.reference.tdx_attributes
+	not bundle.policy.reference.tdx_attributes_mask
+}
+
+td_attributes_ok(bundle) if {
+	hex2int := {
+		"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+		"8": 8, "9": 9, "A": 10, "B": 11, "C": 12, "D": 13, "E": 14, "F": 15,
+	}
+	value := split(upper(bundle.report.measurement.tdx_attributes), "")
+	policy := split(upper(bundle.policy.reference.tdx_attributes), "")
+	mask := split(upper(bundle.policy.reference.tdx_attributes_mask), "")
+	equal_num := count({i |
+		mask[i]
+		bits.and(hex2int[value[i]], hex2int[mask[i]]) == bits.and(hex2int[policy[i]], hex2int[mask[i]])
+	})
+	orig_num := count(mask)
+	equal_num == orig_num
 }
 
 # Appraise optional guest td xfam
@@ -791,12 +873,23 @@ default td_xfam_ok(_) := false
 
 td_xfam_ok(bundle) if {
 	not bundle.policy.reference.tdx_xfam
+	not bundle.policy.reference.tdx_xfam_mask
 }
 
 td_xfam_ok(bundle) if {
-	is_string(bundle.report.measurement.tdx_xfam)
-	is_string(bundle.policy.reference.tdx_xfam)
-	lower(bundle.report.measurement.tdx_xfam) == lower(bundle.policy.reference.tdx_xfam)
+	hex2int := {
+		"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+		"8": 8, "9": 9, "A": 10, "B": 11, "C": 12, "D": 13, "E": 14, "F": 15,
+	}
+	value := split(upper(bundle.report.measurement.tdx_xfam), "")
+	policy := split(upper(bundle.policy.reference.tdx_xfam), "")
+	mask := split(upper(bundle.policy.reference.tdx_xfam_mask), "")
+	equal_num := count({i |
+		mask[i]
+		bits.and(hex2int[value[i]], hex2int[mask[i]]) == bits.and(hex2int[policy[i]], hex2int[mask[i]])
+	})
+	orig_num := count(mask)
+	equal_num == orig_num
 }
 
 # Appraise guest td tdx_mrconfigid, tdx_mrowner, tdx_mrownerconfig and tdx_mrtd

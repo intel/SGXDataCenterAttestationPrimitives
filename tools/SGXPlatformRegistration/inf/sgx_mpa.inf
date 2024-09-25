@@ -87,8 +87,6 @@ AddService = ,%SPSVCINST_ASSOCSERVICE%
 
 ; -------------- 
 [mpa_service_configuration_reg]
-HKR,,Description,,"Intel(R) SGX Multi-Package Attestation Registration Service"
-HKR,,DependOnService,0x00010000,"Tcpip"
 HKR,,DelayedAutostart,0x00010001,1
 
 [mpa_service_install]
@@ -98,6 +96,8 @@ ServiceType    = 0x00000010      ; SERVICE_WIN32_OWN_PROCESS
 StartType      = 2               ; SERVICE_AUTO_START 
 ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %13%\mpa.exe
+Dependencies   = Tcpip
+Description    = "Intel(R) SGX Multi-Package Attestation Registration Service"
 AddReg         = mpa_service_configuration_reg
 
 [Strings]

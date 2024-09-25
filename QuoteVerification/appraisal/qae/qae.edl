@@ -1,0 +1,54 @@
+/*
+ * Copyright (C) 2019 Intel Corporation.  All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ */
+
+
+enclave {
+    include "sgx_ql_quote.h"
+    include "time.h"
+    include "sgx_dcap_qal.h"
+
+    from "sgx_tstdc.edl" import *;
+
+    from "sgx_pthread.edl" import *;
+
+    trusted {
+        /* define ECALLs here. */
+        public quote3_error_t qae_appraise_quote_result([in, size=wasm_size]uint8_t *wasm_buf, size_t wasm_size,
+                                                    [in, string]const char *p_verification_result_token,
+                                                    [in, count=qaps_count]uint8_t **p_qaps, uint8_t qaps_count,
+                                                    time_t appraisal_check_date,
+                                                    [in, out] sgx_ql_qe_report_info_t *p_qae_report_info,
+                                                    [out]uint32_t *p_appraisal_result_token_buffer_size, [out]uint8_t **p_appraisal_result_token);
+
+        public quote3_error_t qae_authenticate_appraisal_result(
+                                                    [in, size=quote_size]const uint8_t *p_quote,
+                                                    uint32_t quote_size,
+                                                    [in, string]const char *p_appraisal_result_token,
+                                                    [in]const tee_policy_bundle_t *p_policies,
+                                                    [out]tee_policy_auth_result_t *result,
+                                                    [in, out]sgx_ql_qe_report_info_t *p_qae_report_info);
+
+        public quote3_error_t qae_authenticate_policy_owner(
+                                                [in, size=quote_size]const uint8_t *p_quote,
+                                                uint32_t quote_size,
+                                                [in, string]const char *p_appraisal_result_token,
+                                                [in, count=list_size]const uint8_t **policy_key_list, uint32_t list_size,
+                                                [out]tee_policy_auth_result_t *result,
+                                                [in, out]sgx_ql_qe_report_info_t *p_qae_report_info);
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+        int ocall_malloc([out]uint8_t **buf, uint32_t buf_size);
+
+        quote3_error_t ocall_get_default_platform_policy(
+                                    [in, size=fmspc_size]const uint8_t *fmspc,
+                                    uint32_t fmspc_size,
+                                    [out]uint8_t **pp_default_platform_policy,
+                                    [out]uint32_t *default_platform_policy_size);
+
+        quote3_error_t ocall_free_default_platform_policy([user_check]uint8_t *p_default_platform_policy, uint32_t default_policy_size);
+    };
+};

@@ -138,6 +138,7 @@ static bool process_configuration_setting(const char *config_file_name, string& 
             if (name.compare("PCCS_URL") == 0) {
                 if (server_url_string.empty() == true) {
                     url = value;
+                    fprintf(stdout,"the pccs_url setting coming from network_setting.conf, and the value is: %s.\n", value.c_str());
                 }
                 else {
                     url = server_url_string + "/sgx/certification/v4/platforms";
@@ -150,28 +151,33 @@ static bool process_configuration_setting(const char *config_file_name, string& 
                     if (value.compare("FALSE") == 0) {
                         g_use_secure_cert = false;
                     }
+                    fprintf(stdout,"the use_secure_cert setting coming from network_setting.conf, and the value is: %s.\n", value.c_str());
                 }
             }
             else if (name.compare("PROXY_TYPE") == 0) {
                 if(proxy_type_string.empty() == true) {
                     std::transform(value.begin(), value.end(), value.begin(), ::toupper);
-                    proxy_type = value;
+                    proxy_type = value;                    
+                    fprintf(stdout,"the proxy_type setting coming from network_setting.conf, and the value is: %s.\n", value.c_str());
                 } 
             }
             else if (name.compare("PROXY_URL") == 0) {
                 if(proxy_url_string.empty() == true) {
                     proxy_url = value;
+                    fprintf(stdout,"the proxy_url setting coming from network_setting.conf, and the value is: %s.\n", value.c_str());
                 }
             }
             else if (name.compare("USER_TOKEN") == 0) {
                 if(user_token_string.empty() == true) {
                     user_token = value;
+                    fprintf(stdout,"the user_token setting coming from network_setting.conf, and the value is: *** (actual value hidden).\n");
                 }
             }
             else if (name.compare("TCB_UPDATE_TYPE") == 0){
                 if(tcb_update_type_string.empty() == true) {
                     std::transform(value.begin(), value.end(), value.begin(), ::toupper);
                     tcb_update_type_string = value;
+                    fprintf(stdout,"the tcb_update_type setting coming from network_setting.conf, and the value is: %s.\n", value.c_str());
                 }
             }
             else {

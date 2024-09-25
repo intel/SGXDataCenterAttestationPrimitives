@@ -89,13 +89,6 @@ deb_sgx_dcap_quote_verify_pkg: $(CHECK_OPT) qve_wrapper
 deb_sgx_dcap_default_qpl_pkg: qcnl_wrapper qpl_wrapper
 	./installer/linux/deb/libsgx-dcap-default-qpl/build.sh
 
-.PHONY: deb_sgx_dcap_pccs_pkg
-deb_sgx_dcap_pccs_pkg:
-	$(MAKE) -C ../tools/PCKCertSelection/
-	mkdir -p pccs/lib/
-	cp ../tools/PCKCertSelection/out/libPCKCertSelection.so pccs/lib/
-	./installer/linux/deb/sgx-dcap-pccs/build.sh
-
 .PHONY: deb_sgx_ae_qe3_pkg
 deb_sgx_ae_qe3_pkg: $(CHECK_OPT)
 	./installer/linux/deb/libsgx-ae-qe3/build.sh
@@ -160,8 +153,11 @@ deb_tee_appraisal_tool_pkg:
 	./installer/linux/deb/tee-appraisal-tool/build.sh
 
 .PHONY: deb_pkg
-deb_pkg: deb_sgx_pce_logic_pkg deb_sgx_qe3_logic_pkg deb_sgx_dcap_ql_pkg deb_sgx_dcap_quote_verify_pkg deb_sgx_dcap_default_qpl_pkg deb_sgx_dcap_pccs_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_tdqe_pkg deb_sgx_ae_id_enclave_pkg deb_sgx_ae_qve_pkg deb_sgx_tdx_logic_pkg deb_sgx_tdx_qgs_pkg deb_sgx_tdx_attest_pkg deb_sgx_pck_id_retrieval_tool_pkg deb_sgx_ra_service_pkg deb_tee_appraisal_tool_pkg
-	@$(RM) -f ./installer/linux/deb/*.deb ./installer/linux/deb/*.ddeb
+deb_pkg: deb_sgx_pce_logic_pkg deb_sgx_qe3_logic_pkg deb_sgx_dcap_ql_pkg deb_sgx_dcap_quote_verify_pkg \
+         deb_sgx_dcap_default_qpl_pkg deb_sgx_ae_qe3_pkg deb_sgx_ae_tdqe_pkg deb_sgx_ae_id_enclave_pkg \
+         deb_sgx_ae_qve_pkg deb_sgx_tdx_logic_pkg deb_sgx_tdx_qgs_pkg deb_sgx_tdx_attest_pkg \
+         deb_sgx_pck_id_retrieval_tool_pkg deb_sgx_ra_service_pkg deb_tee_appraisal_tool_pkg
+	@$(RM) ./installer/linux/deb/*.deb ./installer/linux/deb/*.ddeb
 	cp `find ./installer/linux/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
 	cp `find ../tools/PCKRetrievalTool/installer/deb/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
 	cp `find ../tools/SGXPlatformRegistration/build/installer/ -name "*.deb" -o -name "*.ddeb"` ./installer/linux/deb/
@@ -173,13 +169,6 @@ rpm_sgx_dcap_ql_pkg: $(CHECK_OPT) pce_logic qe3_logic qve_wrapper
 .PHONY: rpm_sgx_dcap_default_qpl_pkg
 rpm_sgx_dcap_default_qpl_pkg: qcnl_wrapper qpl_wrapper
 	./installer/linux/rpm/libsgx-dcap-default-qpl/build.sh
-
-.PHONY: rpm_sgx_dcap_pccs_pkg
-rpm_sgx_dcap_pccs_pkg:
-	$(MAKE) -C ../tools/PCKCertSelection/
-	mkdir -p pccs/lib/
-	cp ../tools/PCKCertSelection/out/libPCKCertSelection.so pccs/lib/
-	./installer/linux/rpm/sgx-dcap-pccs/build.sh
 
 .PHONY: rpm_sgx_ae_qe3_pkg
 rpm_sgx_ae_qe3_pkg: $(CHECK_OPT)
@@ -236,8 +225,11 @@ rpm_tee_appraisal_tool_pkg:
 	./installer/linux/rpm/tee-appraisal-tool/build.sh
 
 .PHONY: rpm_pkg
-rpm_pkg: rpm_sgx_dcap_ql_pkg rpm_sgx_dcap_default_qpl_pkg rpm_sgx_dcap_pccs_pkg rpm_sgx_ae_qe3_pkg rpm_sgx_ae_tdqe_pkg rpm_sgx_ae_id_enclave_pkg rpm_sgx_ae_qve_pkg rpm_sgx_tdx_logic_pkg rpm_sgx_tdx_qgs_pkg rpm_sgx_tdx_attest_pkg rpm_sgx_dcap_quote_verify_pkg rpm_sgx_pce_logic_pkg rpm_sgx_qe3_logic_pkg rpm_sgx_pck_id_retrieval_tool_pkg rpm_sgx_ra_service_pkg rpm_tee_appraisal_tool_pkg
-	@$(RM) -f ./installer/linux/rpm/*.rpm
+rpm_pkg: rpm_sgx_dcap_ql_pkg rpm_sgx_dcap_default_qpl_pkg rpm_sgx_ae_qe3_pkg rpm_sgx_ae_tdqe_pkg rpm_sgx_ae_id_enclave_pkg \
+         rpm_sgx_ae_qve_pkg rpm_sgx_tdx_logic_pkg rpm_sgx_tdx_qgs_pkg rpm_sgx_tdx_attest_pkg rpm_sgx_dcap_quote_verify_pkg \
+         rpm_sgx_pce_logic_pkg rpm_sgx_qe3_logic_pkg rpm_sgx_pck_id_retrieval_tool_pkg rpm_sgx_ra_service_pkg \
+         rpm_tee_appraisal_tool_pkg
+	@$(RM) ./installer/linux/rpm/*.rpm
 	cp `find ./installer/linux/rpm/ -name "*.rpm"` ./installer/linux/rpm/
 	cp `find ../tools/PCKRetrievalTool/installer/rpm/ -name "*.rpm"` ./installer/linux/rpm/
 	cp `find ../tools/SGXPlatformRegistration/build/installer/ -name "*.rpm"`  ./installer/linux/rpm/
@@ -255,10 +247,10 @@ clean:
 	$(MAKE) -C ../QuoteVerification clean
 	$(MAKE) -C ../tools/PCKRetrievalTool clean
 	$(MAKE) -C ../tools/SGXPlatformRegistration clean
-	@$(RM) -rf ./build/
-	@$(RM) -f ./installer/linux/deb/*.deb
-	@$(RM) -f ./installer/linux/deb/*.ddeb
-	@$(RM) -f ./installer/linux/rpm/*.rpm
+	@$(RM) -r ./build/
+	@$(RM) ./installer/linux/deb/*.deb
+	@$(RM) ./installer/linux/deb/*.ddeb
+	@$(RM) ./installer/linux/rpm/*.rpm
 	./installer/linux/deb/libsgx-dcap-ql/clean.sh
 	./installer/linux/deb/libsgx-dcap-quote-verify/clean.sh
 	./installer/linux/deb/libsgx-ae-qe3/clean.sh
@@ -271,7 +263,6 @@ clean:
 	./installer/linux/deb/tdx-qgs/clean.sh
 	./installer/linux/deb/libtdx-attest/clean.sh
 	./installer/linux/deb/libsgx-dcap-default-qpl/clean.sh
-	./installer/linux/deb/sgx-dcap-pccs/clean.sh
 	../tools/PCKRetrievalTool/installer/deb/sgx-pck-id-retrieval-tool/clean.sh
 	./installer/linux/deb/tee-appraisal-tool/clean.sh
 	./installer/linux/rpm/libsgx-dcap-ql/clean.sh
@@ -286,7 +277,6 @@ clean:
 	./installer/linux/rpm/tdx-qgs/clean.sh
 	./installer/linux/rpm/libtdx-attest/clean.sh
 	./installer/linux/rpm/libsgx-dcap-default-qpl/clean.sh
-	./installer/linux/rpm/sgx-dcap-pccs/clean.sh
 	../tools/PCKRetrievalTool/installer/rpm/sgx-pck-id-retrieval-tool/clean.sh
 	./installer/linux/rpm/tee-appraisal-tool/clean.sh
 

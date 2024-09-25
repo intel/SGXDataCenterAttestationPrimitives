@@ -4,6 +4,7 @@ version = "0.3.0"
 edition = "2021"
 license = "BSD-3-Clause"
 description = "Intel(R) TEE Quote Verification Rust Library"
+documentation = "https://intel.github.io/SGXDataCenterAttestationPrimitives/docs/rust-qvl-doc/intel_tee_quote_verification_rs"
 readme = "README.md"
 homepage = "https://github.com/intel/SGXDataCenterAttestationPrimitives"
 

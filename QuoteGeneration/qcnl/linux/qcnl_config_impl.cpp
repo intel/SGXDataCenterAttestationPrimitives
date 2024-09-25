@@ -40,11 +40,18 @@
 #include <algorithm>
 #include <curl/curl.h>
 #include <fstream>
+#include <cstdlib>
+
+const char* get_config_path() {
+    const char* env_path = std::getenv("QCNL_CONF_PATH");
+    return env_path != nullptr ? env_path : "/etc/sgx_default_qcnl.conf";
+}
 
 sgx_qcnl_error_t QcnlConfigLegacy::load_config() {
     // read configuration File
     bool use_collateral_service = false;
-    ifstream ifs("/etc/sgx_default_qcnl.conf");
+    std::ifstream ifs(get_config_path());
+
     if (ifs.is_open()) {
         string line;
         auto f = [](unsigned char const c) { return std::isspace(c); };
@@ -115,5 +122,5 @@ sgx_qcnl_error_t QcnlConfigLegacy::load_config() {
 }
 
 sgx_qcnl_error_t QcnlConfigJson::load_config() {
-    return this->load_config_json("/etc/sgx_default_qcnl.conf");
+    return this->load_config_json(get_config_path());
 }

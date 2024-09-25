@@ -234,6 +234,7 @@
     <ClCompile Include="..\..\QvE\Enclave\qve.cpp" />
     <ClCompile Include="..\sgx_dcap_quoteverify.cpp" />
     <ClCompile Include="..\sgx_dcap_pcs_com.cpp" />
+    <ClCompile Include="..\sgx_urts_wrapper.cpp" />
     <ClCompile Include="..\tee_qv_class.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="qve_parser.cpp" />

@@ -59,6 +59,19 @@ public:
         uint32_t supplemental_data_size,
         uint8_t *p_supplemental_data) = 0;
 
+#ifndef _MSC_VER
+        virtual quote3_error_t tee_get_verify_token(
+        const uint8_t *p_quote,
+        uint32_t quote_size,
+        time_t current_time,
+        const sgx_ql_qve_collateral_t *p_quote_collateral,
+        sgx_ql_qe_report_info_t *p_qve_report_info,
+        const uint8_t *p_user_data,
+        uint32_t user_data_size,
+        uint32_t *verification_result_token_buffer_size,
+        uint8_t **p_verification_result_token) = 0;
+#endif
+
     virtual quote3_error_t tee_get_supplemental_data_size(uint32_t *p_data_size) = 0;
 
     virtual quote3_error_t tee_get_supplemental_data_version(uint32_t *p_version) = 0;
@@ -114,6 +127,19 @@ public:
         sgx_ql_qe_report_info_t *p_qve_report_info,
         uint32_t supplemental_data_size,
         uint8_t *p_supplemental_data);
+
+#ifndef _MSC_VER
+    virtual quote3_error_t tee_get_verify_token(
+        const uint8_t *p_quote,
+        uint32_t quote_size,
+        time_t current_time,
+        const sgx_ql_qve_collateral_t *p_quote_collateral,
+        sgx_ql_qe_report_info_t *p_qve_report_info,
+        const uint8_t *p_user_data,
+        uint32_t user_data_size,
+        uint32_t *verification_result_token_buffer_size,
+        uint8_t **p_verification_result_token);
+#endif
 
     virtual quote3_error_t tee_get_supplemental_data_size(uint32_t *p_data_size);
 
@@ -171,6 +197,19 @@ public:
         sgx_ql_qe_report_info_t *p_qve_report_info,
         uint32_t supplemental_data_size,
         uint8_t *p_supplemental_data);
+
+#ifndef _MSC_VER
+    virtual quote3_error_t tee_get_verify_token(
+        const uint8_t *p_quote,
+        uint32_t quote_size,
+        time_t current_time,
+        const sgx_ql_qve_collateral_t *p_quote_collateral,
+        sgx_ql_qe_report_info_t *p_qve_report_info,
+        const uint8_t *p_user_data,
+        uint32_t user_data_size,
+        uint32_t *verification_result_token_buffer_size,
+        uint8_t **p_verification_result_token);
+#endif
 
     virtual quote3_error_t tee_get_supplemental_data_size(uint32_t *p_data_size);
 

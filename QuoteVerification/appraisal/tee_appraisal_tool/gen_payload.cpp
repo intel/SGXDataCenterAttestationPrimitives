@@ -1,32 +1,28 @@
-/*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+/**
+ * Copyright (c) 2017-2023, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * modification, are permitted provided that the following conditions are met:
  *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *    * Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *    * Neither the name of Intel Corporation nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include "gen_payload.h"
@@ -298,10 +294,21 @@ std::string CInputTDReport::generate_payload()
         if(m_ftype == TDX_REPORT_V15)
         {
             const tee_info_v1_5_t *tee_info = reinterpret_cast<const tee_info_v1_5_t *>(report->tee_info);
+            tee_attributes_t att = tee_info->attributes;
+            if(ATTRIBUTES_HAS_DEBUG_BIT(att.a[0]))
+            {
+                se_trace(SE_TRACE_ERROR, "\033[0;33m Warning: TD runs in off-TD debug mode. Its VCPU state and private memory are accessible by the host VMM...\n\033[0m");
+            }
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->attributes)), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_attributes", str_v, doc.GetAllocator());
+            uint64_t tmp_mask = TDX_DEFAULT_ATTRIBUTES_MASK;
+            str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&tmp_mask), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
+            ref.AddMember("tdx_attributes_mask", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->xfam)), sizeof(tee_info->xfam)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_xfam", str_v, doc.GetAllocator());
+            tmp_mask = TDX_DEFAULT_XFAM_MASK;
+            str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&tmp_mask), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
+            ref.AddMember("tdx_xfam_mask", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->mr_td)), sizeof(tee_info->mr_td)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_mrtd", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->mr_config_id)), sizeof(tee_info->mr_config_id)).c_str(), doc.GetAllocator());
@@ -327,10 +334,21 @@ std::string CInputTDReport::generate_payload()
         else
         {
             const tee_info_t *tee_info = reinterpret_cast<const tee_info_t *>(report->tee_info);
+            tee_attributes_t att = tee_info->attributes;
+            if(ATTRIBUTES_HAS_DEBUG_BIT(att.a[0]))
+            {
+                se_trace(SE_TRACE_ERROR, "\033[0;33m Warning: TD runs in off-TD debug mode. Its VCPU state and private memory are accessible by the host VMM...\n\033[0m");
+            }
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->attributes)), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_attributes", str_v, doc.GetAllocator());
+            uint64_t tmp_mask = TDX_DEFAULT_ATTRIBUTES_MASK;
+            str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&tmp_mask), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
+            ref.AddMember("tdx_attributes_mask", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->xfam)), sizeof(tee_info->xfam)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_xfam", str_v, doc.GetAllocator());
+            tmp_mask = TDX_DEFAULT_XFAM_MASK;
+            str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&tmp_mask), sizeof(tee_info->attributes)).c_str(), doc.GetAllocator());
+            ref.AddMember("tdx_xfam_mask", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->mr_td)), sizeof(tee_info->mr_td)).c_str(), doc.GetAllocator());
             ref.AddMember("tdx_mrtd", str_v, doc.GetAllocator());
             str_v.SetString(bytes_to_string(reinterpret_cast<const uint8_t *>(&(tee_info->mr_config_id)), sizeof(tee_info->mr_config_id)).c_str(), doc.GetAllocator());

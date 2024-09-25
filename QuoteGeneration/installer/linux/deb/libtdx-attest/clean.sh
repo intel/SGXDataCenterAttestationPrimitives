@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2019 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,14 +34,14 @@
 set -e
 
 SCRIPT_DIR=$(dirname "$0")
-COMMON_DIR="${SCRIPT_DIR}/../../common/libsgx-dcap-ql"
+COMMON_DIR="${SCRIPT_DIR}/../../common/libtdx-attest"
 
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.deb
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.ddeb
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.gz
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.tar.xz
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.dsc
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.changes
-rm -f ${SCRIPT_DIR}/libsgx-dcap-ql*.buildinfo
+rm -f ${SCRIPT_DIR}/libtdx-attest*.deb
+rm -f ${SCRIPT_DIR}/libtdx-attest*.ddeb
+rm -f ${SCRIPT_DIR}/libtdx-attest*.tar.gz
+rm -f ${SCRIPT_DIR}/libtdx-attest*.tar.xz
+rm -f ${SCRIPT_DIR}/libtdx-attest*.dsc
+rm -f ${SCRIPT_DIR}/libtdx-attest*.changes
+rm -f ${SCRIPT_DIR}/libtdx-attest*.buildinfo
 rm -f ${COMMON_DIR}/gen_source.py
 rm -rf ${COMMON_DIR}/output

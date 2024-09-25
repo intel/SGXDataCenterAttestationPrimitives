@@ -1,0 +1,267 @@
+From a98110f5fe2df3920feded2cb3e72b21a1e498c5 Mon Sep 17 00:00:00 2001
+From: "Zhang, Lili Z" <lili.z.zhang@intel.com>
+Date: Wed, 10 Apr 2024 01:39:12 +0800
+Subject: [PATCH] Add a macro to disable time support in jwt for SGX.
+
+Signed-off-by: Zhang, Lili Z <lili.z.zhang@intel.com>
+---
+ include/jwt-cpp/jwt.h                         | 55 ++++++++++++++++---
+ .../jwt-cpp/traits/kazuho-picojson/defaults.h | 11 +++-
+ 2 files changed, 58 insertions(+), 8 deletions(-)
+
+diff --git a/include/jwt-cpp/jwt.h b/include/jwt-cpp/jwt.h
+index 211305e..3b00e2b 100644
+--- a/include/jwt-cpp/jwt.h
++++ b/include/jwt-cpp/jwt.h
+@@ -72,11 +72,12 @@
+  * JWS (JSON Web Signature) from [RFC7515](https://tools.ietf.org/html/rfc7515)
+  */
+ namespace jwt {
++#ifndef SGX_JWT
+ 	/**
+ 	 * Default system time point in UTC
+ 	 */
+ 	using date = std::chrono::system_clock::time_point;
+-
++#endif
+ 	/**
+ 	 * \brief Everything related to error codes issued by the library
+ 	 */
+@@ -2148,8 +2149,10 @@ namespace jwt {
+ 		~basic_claim() = default;
+ 
+ 		JWT_CLAIM_EXPLICIT basic_claim(typename json_traits::string_type s) : val(std::move(s)) {}
++#ifndef SGX_JWT
+ 		JWT_CLAIM_EXPLICIT basic_claim(const date& d)
+ 			: val(typename json_traits::integer_type(std::chrono::system_clock::to_time_t(d))) {}
++#endif
+ 		JWT_CLAIM_EXPLICIT basic_claim(typename json_traits::array_type a) : val(std::move(a)) {}
+ 		JWT_CLAIM_EXPLICIT basic_claim(typename json_traits::value_type v) : val(std::move(v)) {}
+ 		JWT_CLAIM_EXPLICIT basic_claim(const set_t& s) : val(typename json_traits::array_type(s.begin(), s.end())) {}
+@@ -2188,13 +2191,14 @@ namespace jwt {
+ 		 */
+ 		typename json_traits::string_type as_string() const { return json_traits::as_string(val); }
+ 
++#ifndef SGX_JWT
+ 		/**
+ 		 * Get the contained JSON value as a date
+ 		 * \return content as date
+ 		 * \throw std::bad_cast Content was not a date
+ 		 */
+ 		date as_date() const { return std::chrono::system_clock::from_time_t(as_int()); }
+-
++#endif
+ 		/**
+ 		 * Get the contained JSON value as an array
+ 		 * \return content as array
+@@ -2402,6 +2406,7 @@ namespace jwt {
+ 
+ 			return aud.as_set();
+ 		}
++#ifndef SGX_JWT
+ 		/**
+ 		 * Get expires claim
+ 		 * \return expires as a date in utc
+@@ -2423,6 +2428,7 @@ namespace jwt {
+ 		 * \throw std::bad_cast Claim was present but not a date (Should not happen in a valid token)
+ 		 */
+ 		date get_issued_at() const { return get_payload_claim("iat").as_date(); }
++#endif
+ 		/**
+ 		 * Get id claim
+ 		 * \return id as string
+@@ -2780,6 +2786,7 @@ namespace jwt {
+ 		builder& set_audience(typename json_traits::string_type aud) {
+ 			return set_payload_claim("aud", typename json_traits::value_type(aud));
+ 		}
++#ifndef SGX_JWT
+ 		/**
+ 		 * Set expires at claim
+ 		 * \param d Expires time
+@@ -2798,6 +2805,7 @@ namespace jwt {
+ 		 * \return *this to allow for method chaining
+ 		 */
+ 		builder& set_issued_at(const date& d) { return set_payload_claim("iat", basic_claim<json_traits>(d)); }
++#endif
+ 		/**
+ 		 * Set id claim
+ 		 * \param str ID to set
+@@ -2898,10 +2906,15 @@ namespace jwt {
+ 		 */
+ 		template<typename json_traits>
+ 		struct verify_context {
++#ifndef SGX_JWT
+ 			verify_context(date ctime, const decoded_jwt<json_traits>& j, size_t l)
+ 				: current_time(ctime), jwt(j), default_leeway(l) {}
+ 			// Current time, retrieved from the verifiers clock and cached for performance and consistency
+ 			date current_time;
++#else
++		verify_context(const decoded_jwt<json_traits>& j, size_t l)
++				: jwt(j), default_leeway(l) {}
++#endif
+ 			// The jwt passed to the verifier
+ 			const decoded_jwt<json_traits>& jwt;
+ 			// The configured default leeway for this verification
+@@ -2969,6 +2982,7 @@ namespace jwt {
+ 			}
+ 		};
+ 
++#ifndef SGX_JWT
+ 		/**
+ 		 * Checks that the current time is before the time specified in the given
+ 		 * claim. This is identical to how the "exp" check works.
+@@ -3002,7 +3016,7 @@ namespace jwt {
+ 				}
+ 			}
+ 		};
+-
++#endif
+ 		/**
+ 		 * Checks if the given set is a subset of the set inside the token.
+ 		 * If the token value is a string it is traited as a set of a single element.
+@@ -3053,11 +3067,16 @@ namespace jwt {
+ 			}
+ 
+ 			static std::string to_lower_unicode(const std::string& str, const std::locale& loc) {
++#ifndef SGX_JWT
+ 				std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
+ 				auto wide = conv.from_bytes(str);
+ 				auto& f = std::use_facet<std::ctype<wchar_t>>(loc);
+ 				f.tolower(&wide[0], &wide[0] + wide.size());
+ 				return conv.to_bytes(wide);
++#else
++				// TODO - don't lowercase the string as locale support inside enclave is limited
++				return str;	
++#endif
+ 			}
+ 		};
+ 	} // namespace verify_ops
+@@ -3066,7 +3085,11 @@ namespace jwt {
+ 	 * Verifier class used to check if a decoded token contains all claims required by your application and has a valid
+ 	 * signature.
+ 	 */
++#ifndef SGX_JWT	
+ 	template<typename Clock, typename json_traits>
++#else
++	template<typename json_traits>
++#endif
+ 	class verifier {
+ 	public:
+ 		using basic_claim_t = basic_claim<json_traits>;
+@@ -3099,8 +3122,10 @@ namespace jwt {
+ 		std::unordered_map<typename json_traits::string_type, verify_check_fn_t> claims;
+ 		/// Leeway time for exp, nbf and iat
+ 		size_t default_leeway = 0;
++#ifndef SGX_JWT		
+ 		/// Instance of clock type
+ 		Clock clock;
++#endif
+ 		/// Supported algorithms
+ 		std::unordered_map<std::string, std::shared_ptr<algo_base>> algs;
+ 
+@@ -3109,6 +3134,7 @@ namespace jwt {
+ 		 * Constructor for building a new verifier instance
+ 		 * \param c Clock instance
+ 		 */
++#ifndef SGX_JWT
+ 		explicit verifier(Clock c) : clock(c) {
+ 			claims["exp"] = [](const verify_ops::verify_context<json_traits>& ctx, std::error_code& ec) {
+ 				if (!ctx.jwt.has_expires_at()) return;
+@@ -3132,6 +3158,7 @@ namespace jwt {
+ 				}
+ 			};
+ 		}
++#endif
+ 
+ 		/**
+ 		 * Set default leeway to use.
+@@ -3142,6 +3169,7 @@ namespace jwt {
+ 			default_leeway = leeway;
+ 			return *this;
+ 		}
++#ifndef SGX_JWT
+ 		/**
+ 		 * Set leeway for expires at.
+ 		 * If not specified the default leeway will be used.
+@@ -3172,7 +3200,7 @@ namespace jwt {
+ 			claims["iat"] = verify_ops::date_after_claim<json_traits>{leeway};
+ 			return *this;
+ 		}
+-
++#endif
+ 		/**
+ 		 * Set an type to check for.
+ 		 *
+@@ -3294,8 +3322,11 @@ namespace jwt {
+ 			}
+ 			algs.at(algo)->verify(data, sig, ec);
+ 			if (ec) return;
+-
++#ifndef SGX_JWT
+ 			verify_ops::verify_context<json_traits> ctx{clock.now(), jwt, default_leeway};
++#else
++			verify_ops::verify_context<json_traits> ctx{jwt, default_leeway};
++#endif
+ 			for (auto& c : claims) {
+ 				ctx.claim_key = c.first;
+ 				c.second(ctx, ec);
+@@ -3569,7 +3600,7 @@ namespace jwt {
+ 			});
+ 		}
+ 	};
+-
++#ifndef SGX_JWT
+ 	/**
+ 	 * Create a verifier using the given clock
+ 	 * \param c Clock instance to use
+@@ -3596,7 +3627,17 @@ namespace jwt {
+ 	verifier<default_clock, json_traits> verify(default_clock c = {}) {
+ 		return verifier<default_clock, json_traits>(c);
+ 	}
+-
++#else
++	/**
++	 * Create a verifier using the given clock
++	 * \param c Clock instance to use
++	 * \return verifier instance
++	 */
++	template<typename json_traits>
++	verifier<json_traits> verify() {
++		return verifier<json_traits>();
++	}
++#endif
+ 	/**
+ 	 * Return a builder instance to create a new token
+ 	 */
+diff --git a/include/jwt-cpp/traits/kazuho-picojson/defaults.h b/include/jwt-cpp/traits/kazuho-picojson/defaults.h
+index 8b2f6e0..b60712b 100644
+--- a/include/jwt-cpp/traits/kazuho-picojson/defaults.h
++++ b/include/jwt-cpp/traits/kazuho-picojson/defaults.h
+@@ -11,7 +11,7 @@ namespace jwt {
+ 	 * uses the standard template types.
+ 	 */
+ 	using claim = basic_claim<traits::kazuho_picojson>;
+-
++#ifndef SGX_JWT
+ 	/**
+ 	 * Create a verifier using the default clock
+ 	 * \return verifier instance
+@@ -19,6 +19,15 @@ namespace jwt {
+ 	inline verifier<default_clock, traits::kazuho_picojson> verify() {
+ 		return verify<default_clock, traits::kazuho_picojson>(default_clock{});
+ 	}
++#else
++	/**
++	 * Create a verifier
++	 * \return verifier instance
++	 */
++	inline verifier<traits::kazuho_picojson> verify() {
++		return verify<traits::kazuho_picojson>();
++	}	
++#endif
+ 
+ 	/**
+ 	 * Return a builder instance to create a new token
+-- 
+2.25.1
+

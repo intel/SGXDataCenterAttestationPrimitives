@@ -149,7 +149,7 @@ bool PerformBase::perform(const uint8_t *request, const uint16_t &requestSize, u
         }
     } while(retryCnt > 0);
 
-error:
+
     res = m_uefi->setRegistrationStatus(status);
     if (MP_SUCCESS != res) 
     {        

@@ -57,6 +57,7 @@
       <AdditionalIncludeDirectories>inc;..\include;..\include\c_wrapper;..\common\inc;..\uefi\inc;$(SGXSDKInstallPath)include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2022 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,17 +31,20 @@
 
 #ifndef SERVTD_ATTEST
 
+#define _GNU_SOURCE
 #include <sys/socket.h>
 #include <linux/vm_sockets.h>
 #include "qgs_msg_lib.h"
 #include "tdx_attest.h"
 
 #include <assert.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h> // For strtoul
 #include <linux/ioctl.h>
 #include <linux/types.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +57,8 @@
 #define TDX_ATTEST_DEV_PATH "/dev/tdx_guest"
 #define CFG_FILE_PATH "/etc/tdx-attest.conf"
 #define DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV "DCAP_TDX_QUOTE_CONFIGFS_PATH"
+#define QUOTE_CONFIGFS_PATH "/sys/kernel/config/tsm/report"
+#define DEFAULT_DCAP_TDX_QUOTE_CONFIGFS_PATH QUOTE_CONFIGFS_PATH"/com.intel.dcap"
 
 // TODO: Should include kernel header, but the header file are included by
 // different package in differnt distro, and installed in different locations.
@@ -213,6 +218,157 @@ static tdx_attest_error_t get_tdx_report(
     return TDX_ATTEST_SUCCESS;
 }
 
+#define MAX_PATH 260
+
+static int b_mkdir = 1;
+pthread_mutex_t mkdir_mutex;
+
+void __attribute__((constructor)) init_mutex(void) { pthread_mutex_init(&mkdir_mutex, NULL); }
+void __attribute__((destructor)) destroy_mutex(void) { pthread_mutex_destroy(&mkdir_mutex); }
+
+static tdx_attest_error_t prepare_configfs(char **p_configfs_path) {
+    int ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+    char *configfs_path = NULL;
+    do {
+        // Retrive DCAP TDX quote configFS path from environment
+        configfs_path = secure_getenv(DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
+        if (configfs_path == NULL) {
+            syslog(LOG_INFO, "libtdx_attest: env '%s' is not provided - try default path.",
+                   DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
+            break;
+        }
+        if (strnlen(configfs_path, MAX_PATH) >= MAX_PATH - 20) {
+            syslog(LOG_ERR, "libtdx_attest: env '%s' is too long.", DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
+            return ret;
+        }
+
+        // Check whether the configFS directory exists
+        DIR *dir = opendir(configfs_path);
+        if (dir == NULL) {
+            syslog(LOG_ERR, "libtdx_attest: env '%s' is not valid directory.",
+                   DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
+            return ret;
+        }
+        closedir(dir);
+        ret = TDX_ATTEST_SUCCESS;
+    } while (0);
+
+    while (ret != TDX_ATTEST_SUCCESS) {
+        // Default DCAP TDX quote configFS path
+        ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+        configfs_path = DEFAULT_DCAP_TDX_QUOTE_CONFIGFS_PATH;
+        pthread_mutex_lock(&mkdir_mutex);
+        DIR *dir = opendir(configfs_path);
+        if (dir != NULL) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            ret = TDX_ATTEST_SUCCESS;
+            closedir(dir);
+            break;
+        }
+        if (errno == ENOMEM) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+            break;
+        }else if (errno != ENOENT) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            syslog(LOG_ERR, "libtdx_attest: unavailable default configFS.");
+            ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+            break;
+        }
+
+        dir = opendir(QUOTE_CONFIGFS_PATH);
+        if (dir == NULL) {
+            if (errno == ENOENT) {
+                pthread_mutex_unlock(&mkdir_mutex);
+                syslog(LOG_INFO, "libtdx_attest: configFS not supported - fallback to TDcall mode.");
+                ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
+                break;
+            } else if (errno == ENOMEM) {
+                pthread_mutex_unlock(&mkdir_mutex);
+                ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+                break;
+            } else {
+                pthread_mutex_unlock(&mkdir_mutex);
+                syslog(LOG_ERR, "libtdx_attest: unavailable default configFS.");
+                ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+                break;
+            }
+        }
+        closedir(dir);
+
+        // Create default DCAP TDX quote configFS path only once
+        if (!b_mkdir) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            syslog(LOG_ERR, "libtdx_attest: unavailable default configFS.");
+            ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+            break;
+        }
+        b_mkdir = 0;
+
+        if (mkdir(configfs_path, S_IRWXU | S_IRWXG)) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            if (errno == EEXIST && (dir = opendir(configfs_path)) != NULL) {
+                // Another process has just created configfs_path
+                ret = TDX_ATTEST_SUCCESS;
+                closedir(dir);
+                break;
+            }
+            syslog(LOG_ERR, "libtdx_attest: cannot create default configFS.");
+            ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+            break;
+        }
+        char provider_path[MAX_PATH];
+        snprintf(provider_path, sizeof(provider_path), "%s/provider", configfs_path);
+        for (size_t retry = 0; retry < 5; retry++) {
+            // Linux kernel will create provider, generation, inblob, outblob in configfs_path
+            // after configfs_path direcotry created.
+            if (access(provider_path, F_OK) == 0) {
+                ret = TDX_ATTEST_SUCCESS;
+                break;
+            }
+            usleep((useconds_t)retry);
+        }
+        if (ret != TDX_ATTEST_SUCCESS) {
+            pthread_mutex_unlock(&mkdir_mutex);
+            syslog(LOG_ERR, "libtdx_attest: unavailable default configFS.");
+            ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+            break;
+        }
+
+        pthread_mutex_unlock(&mkdir_mutex);
+        ret = TDX_ATTEST_SUCCESS;
+        break;
+    }
+
+    if (ret != TDX_ATTEST_SUCCESS) {
+        //Both configfs path are unavailable
+        return ret;
+    }
+
+    // For Intel TDX, provider is "tdx_guest"
+    char provider_path[MAX_PATH];
+    snprintf(provider_path, sizeof(provider_path), "%s/provider", configfs_path);
+    int fd = open(provider_path, O_RDONLY);
+    if (-1 == fd) {
+        TDX_TRACE;
+        syslog(LOG_ERR, "libtdx_attest: cannot open configFS `%s`.", provider_path);
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    // Read the entire file in one shot
+    char provider[16] = {0};
+    ssize_t byte_size = read(fd, provider, 15);
+    close(fd);
+
+    if (byte_size == -1 || byte_size == 0 ||
+        strncmp(provider, "tdx_guest", sizeof("tdx_guest") - 1)) {
+        syslog(LOG_ERR, "libtdx_attest: configFS unsupported provider.");
+        return TDX_ATTEST_ERROR_QUOTE_FAILURE;
+    }
+    *p_configfs_path = configfs_path;
+    return TDX_ATTEST_SUCCESS;
+}
+
 static tdx_attest_error_t read_configfs_generation(char *generation_path, long* p_generation)
 {
     int fd = open(generation_path, O_RDONLY);
@@ -258,8 +414,390 @@ static tdx_attest_error_t read_configfs_generation(char *generation_path, long* 
     return TDX_ATTEST_SUCCESS;
 }
 
-#define MAX_PATH 260
 #define RETRY_WAIT_TIME_USEC 10000000
+static tdx_attest_error_t configfs_get_quote(
+    const tdx_report_data_t *p_tdx_report_data,
+    uint8_t **pp_quote,
+    uint32_t *p_quote_size)
+{
+    char *configfs_path = NULL;
+    tdx_attest_error_t ret = prepare_configfs(&configfs_path);
+    if (TDX_ATTEST_SUCCESS != ret)
+        return ret;
+
+    char inblob_path[MAX_PATH];
+    snprintf(inblob_path, sizeof(inblob_path), "%s/inblob", configfs_path);
+
+    // Lock `inblob` to avoid other processes accessing it using libtdx_attest
+    // Will unlock it via close()
+    int fd_lock = open(inblob_path, O_WRONLY | O_CLOEXEC);
+    if (-1 == fd_lock) {
+        TDX_TRACE;
+        syslog(LOG_ERR, "libtdx_attest: failed to open configFS inblob.");
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+    if (flock(fd_lock, LOCK_EX)) {
+        TDX_TRACE;
+        close(fd_lock);
+        syslog(LOG_ERR, "libtdx_attest: failed to lock configFS inblob.");
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    /* Read and check generation value before writing inblob, after writing inblob and after
+        reading outblob to make sure that outblob matches inblob */
+    char generation_path[MAX_PATH];
+    snprintf(generation_path, sizeof(generation_path), "%s/generation", configfs_path);
+    long generation1;
+    ret = read_configfs_generation(generation_path, &generation1);
+    if (ret) {
+        close(fd_lock);
+        return ret;
+    }
+
+    // Write TDX report data to inblob
+    int fd_inblob = open(inblob_path, O_WRONLY);
+    if (-1 == fd_inblob) {
+        TDX_TRACE;
+        close(fd_lock);
+        syslog(LOG_ERR, "libtdx_attest: failed to open configFS inblob.");
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    ssize_t byte_size = 0;
+    // Wait and retry when EBUSY; other TDX Quotes are being generating
+    for (int retry = 0; retry < 3; retry++) {
+        errno = 0;
+        byte_size = write(fd_inblob, p_tdx_report_data, sizeof(*p_tdx_report_data));
+        if (errno != EBUSY)
+            break;
+        usleep(RETRY_WAIT_TIME_USEC);
+    }
+    if (byte_size != sizeof(*p_tdx_report_data)) {
+        if (errno == EBUSY) {
+            TDX_TRACE;
+            ret = TDX_ATTEST_ERROR_BUSY;
+        } else {
+            TDX_TRACE;
+            ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        }
+        close(fd_lock);
+        close(fd_inblob);
+        syslog(LOG_ERR, "libtdx_attest: failed to write configFS inblob.");
+        return ret;
+    }
+    close(fd_inblob);
+
+    long generation2;
+    do {
+        ret = read_configfs_generation(generation_path, &generation2);
+        if (ret) {
+            close(fd_lock);
+            return ret;
+        }
+    // In rare cases, generation is not updated
+    } while (generation2 == generation1 && !usleep(0));
+    if (generation2 != generation1 + 1) {
+        // Another TDX quote generation has been triggered
+        close(fd_lock);
+        return TDX_ATTEST_ERROR_BUSY;
+    }
+
+    // Read TDX quote from outblob
+    char outblob_path[MAX_PATH];
+    snprintf(outblob_path, sizeof(outblob_path), "%s/outblob", configfs_path);
+    int fd = open(outblob_path, O_RDONLY);
+    if (-1 == fd) {
+        TDX_TRACE;
+        syslog(LOG_ERR, "libtdx_attest: failed to open configFS outblob.");
+        close(fd_lock);
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    // Allocate memory for the entire file content
+    void* p_quote_buf = malloc(QUOTE_BUF_SIZE);
+    if (p_quote_buf == NULL) {
+        close(fd_lock);
+        close(fd);
+        return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+    }
+#ifdef DEBUG
+    fprintf(stdout, "\nstart to read outblob\n");
+#endif
+    // Read the entire file in one shot
+    for (int retry = 0; retry < 3; retry++) {
+        errno = 0;
+        byte_size = read(fd, p_quote_buf, QUOTE_BUF_SIZE);
+        if (errno == EBUSY) {
+            usleep(RETRY_WAIT_TIME_USEC);
+        } else if (errno != EINTR && errno != ETIMEDOUT)
+            break;
+    }
+    if (byte_size == -1 || byte_size == 0) {
+        if (errno == EBUSY || errno == EINTR || errno == ETIMEDOUT) {
+            TDX_TRACE;
+            ret = TDX_ATTEST_ERROR_BUSY;
+        } else
+            ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
+        close(fd_lock);
+        close(fd);
+        free(p_quote_buf);
+        syslog(LOG_ERR, "libtdx_attest: failed to read configFS outblob.");
+        return ret;
+    }
+    close(fd);
+
+    uint32_t quote_size = (uint32_t)byte_size;
+#ifdef DEBUG
+    fprintf(stdout, "\nquote size: %d\n", quote_size);
+#endif
+    if (quote_size <= QUOTE_MIN_SIZE || quote_size == QUOTE_BUF_SIZE) {
+        close(fd_lock);
+        free(p_quote_buf);
+        syslog(LOG_ERR, "libtdx_attest: failed to get quote in configFS mode.");
+        return TDX_ATTEST_ERROR_QUOTE_FAILURE;
+    }
+
+    long generation3;
+    ret = read_configfs_generation(generation_path, &generation3);
+    close(fd_lock);
+    if (ret) {
+        free(p_quote_buf);
+        return ret;
+    }
+    // Another TDX quote generation is triggered
+    if (generation3 != generation2) {
+        free(p_quote_buf);
+        return TDX_ATTEST_ERROR_BUSY;
+    }
+
+    *pp_quote = realloc(p_quote_buf, quote_size);
+    if (!*pp_quote) {
+        free(p_quote_buf);
+        return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (p_quote_size) {
+        *p_quote_size = quote_size;
+    }
+    return TDX_ATTEST_SUCCESS;
+}
+
+
+static tdx_attest_error_t generate_get_quote_blob(
+    const tdx_report_t *p_tdx_report,
+    struct tdx_quote_hdr *p_get_quote_blob)
+{
+    uint32_t msg_size = 0;
+    qgs_msg_error_t qgs_msg_ret = QGS_MSG_SUCCESS;
+    uint8_t *p_req = NULL;
+    qgs_msg_ret = qgs_msg_gen_get_quote_req((uint8_t*)p_tdx_report, sizeof(*p_tdx_report),
+        NULL, 0, &p_req, &msg_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+#ifdef DEBUG
+        fprintf(stdout, "\nqgs_msg_gen_get_quote_req return 0x%x\n", qgs_msg_ret);
+#endif
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    if (msg_size > REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE) {
+#ifdef DEBUG
+        fprintf(stdout, "\nqmsg_size[%d] is too big\n", msg_size);
+#endif
+        qgs_msg_free(p_req);
+        return TDX_ATTEST_ERROR_NOT_SUPPORTED;
+    }
+
+    uint8_t* p_blob_payload = (uint8_t *)&p_get_quote_blob->data;
+    p_blob_payload[0] = (uint8_t)((msg_size >> 24) & 0xFF);
+    p_blob_payload[1] = (uint8_t)((msg_size >> 16) & 0xFF);
+    p_blob_payload[2] = (uint8_t)((msg_size >> 8) & 0xFF);
+    p_blob_payload[3] = (uint8_t)(msg_size & 0xFF);
+
+    memcpy(p_blob_payload + HEADER_SIZE, p_req, msg_size);
+    qgs_msg_free(p_req);
+
+    p_get_quote_blob->version = 1;
+    p_get_quote_blob->status = 0;
+    p_get_quote_blob->in_len = HEADER_SIZE + msg_size;
+    p_get_quote_blob->out_len = 0;
+    return TDX_ATTEST_SUCCESS;
+}
+
+
+static tdx_attest_error_t extract_quote_from_blob_payload(
+    uint8_t* p_blob_payload,
+    uint32_t payload_body_size,
+    uint8_t **pp_quote,
+    uint32_t *p_quote_size)
+{
+    const uint8_t *p_selected_id_ = NULL;
+    uint32_t id_size_ = 0;
+    const uint8_t *p_quote = NULL;
+    uint32_t quote_size = 0;
+    qgs_msg_error_t qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
+        p_blob_payload + HEADER_SIZE, payload_body_size,
+        &p_selected_id_, &id_size_,
+        &p_quote, &quote_size);
+    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+#ifdef DEBUG
+        fprintf(stdout, "\nqgs_msg_inflate_get_quote_resp return 0x%x", qgs_msg_ret);
+#endif
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+
+    // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
+    qgs_msg_header_t *p_header = (qgs_msg_header_t *)(p_blob_payload + HEADER_SIZE);
+    if (p_header->error_code != 0) {
+#ifdef DEBUG
+        fprintf(stdout, "\nerror code in resp msg is 0x%x", p_header->error_code);
+#endif
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+    *pp_quote = malloc(quote_size);
+    if (!*pp_quote) {
+        return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+    }
+    memcpy(*pp_quote, p_quote, quote_size);
+    if (p_quote_size) {
+        *p_quote_size = quote_size;
+    }
+    return TDX_ATTEST_SUCCESS;
+}
+
+
+static tdx_attest_error_t vsock_get_quote_payload(
+    uint8_t* p_blob_payload,
+    uint32_t blob_payload_size,
+    uint32_t *p_payload_body_size)
+{
+    tdx_attest_error_t ret = TDX_ATTEST_ERROR_UNEXPECTED;
+
+    uint32_t recieved_bytes = 0;
+    uint32_t body_size = 0;
+
+    unsigned int vsock_port = get_vsock_port();
+    if (!vsock_port) {
+        syslog(LOG_INFO, "libtdx_attest: cannot parse sock port - use configfs mode.");
+        return TDX_ATTEST_ERROR_NOT_SUPPORTED;
+    }
+    int s = socket(AF_VSOCK, SOCK_STREAM, 0);
+    if (-1 == s) {
+        syslog(LOG_ERR, "libtdx_attest: cannot create socket.");
+        return TDX_ATTEST_ERROR_VSOCK_FAILURE;
+    }
+
+    struct sockaddr_vm vm_addr;
+    memset(&vm_addr, 0, sizeof(vm_addr));
+    vm_addr.svm_family = AF_VSOCK;
+    vm_addr.svm_reserved1 = 0;
+    vm_addr.svm_port = vsock_port;
+    vm_addr.svm_cid = VMADDR_CID_HOST;
+    if (connect(s, (struct sockaddr *)&vm_addr, sizeof(vm_addr))) {
+        syslog(LOG_ERR, "libtdx_attest: cannot connect socket.");
+        ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
+        goto ret_point;
+    }
+
+    // Write to socket
+    if (blob_payload_size != send(s, p_blob_payload,
+        blob_payload_size, 0)) {
+        TDX_TRACE;
+        ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
+        goto ret_point;
+    }
+
+    // Read the response size header
+    if (HEADER_SIZE != recv(s, p_blob_payload,
+        HEADER_SIZE, 0)) {
+        TDX_TRACE;
+        ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
+        goto ret_point;
+    }
+
+    // decode the size
+    for (unsigned i = 0; i < HEADER_SIZE; ++i) {
+        body_size = body_size * 256 + ((p_blob_payload[i]) & 0xFF);
+    }
+
+    // prepare the buffer and read the reply body
+#ifdef DEBUG
+    fprintf(stdout, "\nReply message body is %u bytes", body_size);
+#endif
+
+    if (REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE < body_size) {
+#ifdef DEBUG
+        fprintf(stdout, "\nReply message body is too big");
+#endif
+        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+        goto ret_point;
+    }
+    while( recieved_bytes < body_size) {
+        int recv_ret = (int)recv(s, p_blob_payload + HEADER_SIZE + recieved_bytes,
+                                    body_size - recieved_bytes, 0);
+        if (recv_ret < 0) {
+            ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
+            goto ret_point;
+        }
+        recieved_bytes += (uint32_t)recv_ret;
+    }
+
+    *p_payload_body_size = body_size;
+#ifdef DEBUG
+    fprintf(stdout, "\nGet %u bytes response from vsock", recieved_bytes);
+#endif
+    ret = TDX_ATTEST_SUCCESS;
+
+ret_point:
+    close(s);
+    return ret;
+}
+
+tdx_attest_error_t tdcall_get_quote_payload(
+    int devfd,
+    struct tdx_quote_hdr *p_get_quote_blob,
+    uint32_t *p_payload_body_size)
+{
+    int ioctl_ret;
+    struct tdx_quote_req arg;
+    arg.buf = (__u64)p_get_quote_blob;
+    arg.len = REQ_BUF_SIZE;
+
+    ioctl_ret = ioctl(devfd, TDX_CMD_GET_QUOTE, &arg);
+    if (EBUSY == ioctl_ret) {
+        TDX_TRACE;
+        return TDX_ATTEST_ERROR_BUSY;
+    } else if (ioctl_ret) {
+        TDX_TRACE;
+        syslog(LOG_ERR, "libtdx_attest: cannot get quote by TD call.");
+        return TDX_ATTEST_ERROR_QUOTE_FAILURE;
+    }
+    if (p_get_quote_blob->status
+        || p_get_quote_blob->out_len <= HEADER_SIZE) {
+        TDX_TRACE;
+        if (GET_QUOTE_IN_FLIGHT == p_get_quote_blob->status) {
+            return TDX_ATTEST_ERROR_BUSY;
+        } else if (GET_QUOTE_SERVICE_UNAVAILABLE == p_get_quote_blob->status) {
+            return TDX_ATTEST_ERROR_NOT_SUPPORTED;
+        } else {
+            return TDX_ATTEST_ERROR_UNEXPECTED;
+        }
+    }
+
+    uint32_t body_size = 0;
+    for (unsigned i = 0; i < HEADER_SIZE; ++i) {
+        body_size = body_size * 256 + ((((uint8_t*)p_get_quote_blob->data)[i]) & 0xFF);
+    }
+    if (body_size != p_get_quote_blob->out_len - HEADER_SIZE) {
+        TDX_TRACE;
+        return TDX_ATTEST_ERROR_UNEXPECTED;
+    }
+    
+    *p_payload_body_size = body_size;
+#ifdef DEBUG
+    fprintf(stdout, "\nGet %u bytes response from tdvmcall", body_size);
+#endif
+    return TDX_ATTEST_SUCCESS;
+}
 
 tdx_attest_error_t tdx_att_get_quote(
     const tdx_report_data_t *p_tdx_report_data,
@@ -270,13 +808,7 @@ tdx_attest_error_t tdx_att_get_quote(
     uint32_t *p_quote_size,
     uint32_t flags)
 {
-    int s = -1;
-    int devfd = -1;
-
-    const uint8_t *p_quote = NULL;
-    uint32_t quote_size = 0;
     tdx_attest_error_t ret = TDX_ATTEST_ERROR_UNEXPECTED;
-    uint8_t *p_blob_payload = NULL;
 
     if ((!p_att_key_id_list && list_size) ||
         (p_att_key_id_list && !list_size)) {
@@ -301,236 +833,21 @@ tdx_attest_error_t tdx_att_get_quote(
 
     *pp_quote = NULL;
 
-    do {
-        // Retrive DCAP TDX quote configFS path from environment
-        char * configfs_path = getenv(DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
-        if (configfs_path == NULL) {
-            syslog(LOG_INFO, "libtdx_attest: env '%s' is not provided - fallback to vsock mode.",
-                   DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
-            break;
-        }
-        if (strnlen(configfs_path, MAX_PATH) >= MAX_PATH - 20) {
-            syslog(LOG_INFO, "libtdx_attest: env '%s' is too long - fallback to vsock mode.",
-                   DCAP_TDX_QUOTE_CONFIGFS_PATH_ENV);
-            break;
-        }
+    struct tdx_quote_hdr *p_get_quote_blob = malloc(REQ_BUF_SIZE);
+    if (!p_get_quote_blob) {
+        return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
+    }
 
-        // Check whether the configFS directory exists
-        struct stat st;
-        if (stat(configfs_path, &st) || !(st.st_mode & S_IFDIR)) {
-            syslog(LOG_INFO, "libtdx_attest: cannot parse configFS `%s` - fallback to vsock mode.",
-                   configfs_path);
-            break;
-        }
-
-        // For Intel TDX, provider is "tdx_guest"
-        char provider_path[MAX_PATH];
-        snprintf(provider_path, sizeof(provider_path), "%s/provider", configfs_path);
-        int fd = open(provider_path, O_RDONLY);
-        if (-1 == fd) {
-            TDX_TRACE;
-            syslog(LOG_ERR, "libtdx_attest: cannot open configFS `%s`.", provider_path);
-            return TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-
-        // Read the entire file in one shot
-        char provider[16] = {0};
-        ssize_t byte_size = read(fd, provider, 15);
-        close(fd);
-
-        if (byte_size == -1
-            || byte_size == 0
-            || strncmp(provider, "tdx_guest", sizeof("tdx_guest") - 1)) {
-            syslog(LOG_ERR, "libtdx_attest: configFS unsupported provider.");
-            return TDX_ATTEST_ERROR_NOT_SUPPORTED;
-        }
-
-        char inblob_path[MAX_PATH];
-        snprintf(inblob_path, sizeof(inblob_path), "%s/inblob", configfs_path);
-
-        // Lock `inblob` to avoid other processes accessing it using libtdx_attest
-        // Will unlock it via close()
-        int fd_lock = open(inblob_path, O_WRONLY | O_CLOEXEC);
-        if (-1 == fd_lock) {
-            TDX_TRACE;
-            syslog(LOG_ERR, "libtdx_attest: failed to open configFS inblob.");
-            return TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-        if (flock(fd_lock, LOCK_EX)) {
-            TDX_TRACE;
-            close(fd_lock);
-            syslog(LOG_ERR, "libtdx_attest: failed to lock configFS inblob.");
-            return TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-
-        /* Read and check generation value before writing inblob, after writing inblob and after
-           reading outblob to make sure that outblob matches inblob */
-        char generation_path[MAX_PATH];
-        snprintf(generation_path, sizeof(generation_path), "%s/generation", configfs_path);
-        long generation1;
-        ret = read_configfs_generation(generation_path, &generation1);
-        if (ret) {
-            close(fd_lock);
-            return ret;
-        }
-
-        // Write TDX report data to inblob
-        int fd_inblob = open(inblob_path, O_WRONLY);
-        if (-1 == fd_inblob) {
-            TDX_TRACE;
-            close(fd_lock);
-            syslog(LOG_ERR, "libtdx_attest: failed to open configFS inblob.");
-            return TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-
-        // Wait and retry when EBUSY; other TDX Quotes are being generating
-        for (int retry = 0; retry < 3; retry++) {
-            errno = 0;
-            byte_size = write(fd_inblob, p_tdx_report_data, sizeof(*p_tdx_report_data));
-            if (errno != EBUSY)
-                break;
-            usleep(RETRY_WAIT_TIME_USEC);
-        }
-        if (byte_size != sizeof(*p_tdx_report_data)) {
-            if (errno == EBUSY) {
-                TDX_TRACE;
-                ret = TDX_ATTEST_ERROR_BUSY;
-            } else {
-                TDX_TRACE;
-                ret = TDX_ATTEST_ERROR_UNEXPECTED;
-            }
-            close(fd_lock);
-            close(fd_inblob);
-            syslog(LOG_ERR, "libtdx_attest: failed to write configFS inblob.");
-            return ret;
-        }
-        close(fd_inblob);
-
-        long generation2;
-        do {
-            ret = read_configfs_generation(generation_path, &generation2);
-            if (ret) {
-                close(fd_lock);
-                return ret;
-            }
-        // In rare cases, generation is not updated
-        } while (generation2 == generation1 && !usleep(0));
-        if (generation2 != generation1 + 1) {
-            // Another TDX quote generation has been triggered
-            close(fd_lock);
-            return TDX_ATTEST_ERROR_BUSY;
-        }
-
-        // Read TDX quote from outblob
-        char outblob_path[MAX_PATH];
-        snprintf(outblob_path, sizeof(outblob_path), "%s/outblob", configfs_path);
-        fd = open(outblob_path, O_RDONLY);
-        if (-1 == fd) {
-            TDX_TRACE;
-            syslog(LOG_ERR, "libtdx_attest: failed to open configFS outblob.");
-            close(fd_lock);
-            return TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-
-        // Allocate memory for the entire file content
-        p_blob_payload = malloc(QUOTE_BUF_SIZE);
-        if (p_blob_payload == NULL) {
-            close(fd_lock);
-            close(fd);
-            return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
-        }
-#ifdef DEBUG
-        fprintf(stdout, "\nstart to read outblob\n");
-#endif
-        // Read the entire file in one shot
-        for (int retry = 0; retry < 3; retry++) {
-            errno = 0;
-            byte_size = read(fd, p_blob_payload, QUOTE_BUF_SIZE);
-            if (errno == EBUSY) {
-                usleep(RETRY_WAIT_TIME_USEC);
-            } else if (errno != EINTR && errno != ETIMEDOUT)
-                break;
-        }
-        if (byte_size == -1 || byte_size == 0) {
-            if (errno == EBUSY || errno == EINTR || errno == ETIMEDOUT) {
-                TDX_TRACE;
-                ret = TDX_ATTEST_ERROR_BUSY;
-            } else
-                ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
-            close(fd_lock);
-            close(fd);
-            free(p_blob_payload);
-            syslog(LOG_ERR, "libtdx_attest: failed to read outblob.");
-            return ret;
-        }
-        close(fd);
-
-        quote_size = (uint32_t)byte_size;
-#ifdef DEBUG
-        fprintf(stdout, "\nquote size: %d\n", quote_size);
-#endif
-        if (quote_size <= QUOTE_MIN_SIZE || quote_size == QUOTE_BUF_SIZE) {
-            close(fd_lock);
-            free(p_blob_payload);
-            return TDX_ATTEST_ERROR_QUOTE_FAILURE;
-        }
-
-        long generation3;
-        ret = read_configfs_generation(generation_path, &generation3);
-        close(fd_lock);
-        if (ret) {
-            free(p_blob_payload);
-            return ret;
-        }
-        // Another TDX quote generation is triggered
-        if (generation3 != generation2) {
-            free(p_blob_payload);
-            return TDX_ATTEST_ERROR_BUSY;
-        }
-
-        *pp_quote = realloc(p_blob_payload, quote_size);
-        if (!*pp_quote) {
-            free(p_blob_payload);
-            return TDX_ATTEST_ERROR_OUT_OF_MEMORY;
-        }
-
-        if (p_quote_size) {
-            *p_quote_size = quote_size;
-        }
-        if (p_att_key_id) {
-            *p_att_key_id = g_intel_tdqe_uuid;
-        }
-        return TDX_ATTEST_SUCCESS;
-    }while(0);
-
-#ifdef DEBUG
-    fprintf(stdout, "\ngoto legacy logic\n");
-#endif
-
-    uint32_t recieved_bytes = 0;
-    uint32_t in_msg_size = 0;
-    unsigned int vsock_port = 0;
-    uint32_t msg_size = 0;
-    qgs_msg_error_t qgs_msg_ret = QGS_MSG_SUCCESS;
-    qgs_msg_header_t *p_header = NULL;
-    uint8_t *p_req = NULL;
-    const uint8_t *p_selected_id = NULL;
-    uint32_t id_size = 0;
+    uint32_t payload_body_size = 0;
 
     tdx_report_t tdx_report;
     memset(&tdx_report, 0, sizeof(tdx_report));
 
-    struct tdx_quote_hdr *p_get_quote_blob = malloc(REQ_BUF_SIZE);
-    if (!p_get_quote_blob) {
-        ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
-        goto ret_point;
-    }
-
-    devfd = open(TDX_ATTEST_DEV_PATH, O_RDWR | O_SYNC);
+    int devfd = open(TDX_ATTEST_DEV_PATH, O_RDWR | O_SYNC);
     if (-1 == devfd) {
         TDX_TRACE;
-        ret = TDX_ATTEST_ERROR_DEVICE_FAILURE;
-        goto ret_point;
+        free(p_get_quote_blob);
+        return TDX_ATTEST_ERROR_DEVICE_FAILURE;
     }
 
     ret = get_tdx_report(devfd, p_tdx_report_data, &tdx_report);
@@ -538,192 +855,42 @@ tdx_attest_error_t tdx_att_get_quote(
         goto ret_point;
     }
 
-    qgs_msg_ret = qgs_msg_gen_get_quote_req(tdx_report.d, sizeof(tdx_report.d),
-        NULL, 0, &p_req, &msg_size);
-    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
+    ret = generate_get_quote_blob(&tdx_report, p_get_quote_blob);
+    if (TDX_ATTEST_SUCCESS != ret) {
+        goto ret_point;
+    }
+
+    ret = vsock_get_quote_payload((uint8_t*)p_get_quote_blob->data, p_get_quote_blob->in_len, &payload_body_size);
+    if (TDX_ATTEST_SUCCESS == ret) {
+        ret = extract_quote_from_blob_payload((uint8_t*)p_get_quote_blob->data, payload_body_size, pp_quote, p_quote_size);
+    }
+    if (TDX_ATTEST_SUCCESS == ret || TDX_ATTEST_ERROR_NOT_SUPPORTED != ret) {
+        goto ret_point;
+    }
+
 #ifdef DEBUG
-        fprintf(stdout, "\nqgs_msg_gen_get_quote_req return 0x%x\n", qgs_msg_ret);
+    fprintf(stdout, "\ngoto configfs logic\n");
 #endif
-        ret = TDX_ATTEST_ERROR_UNEXPECTED;
+
+    ret = configfs_get_quote(p_tdx_report_data, pp_quote, p_quote_size);
+    if (TDX_ATTEST_SUCCESS == ret || TDX_ATTEST_ERROR_NOT_SUPPORTED != ret) {
         goto ret_point;
     }
 
-    if (msg_size > REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE) {
 #ifdef DEBUG
-        fprintf(stdout, "\nqmsg_size[%d] is too big\n", msg_size);
-        #endif
-        ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
-        goto ret_point;
+    fprintf(stdout, "\ngoto legacy logic\n");
+#endif
+
+    ret = tdcall_get_quote_payload(devfd, p_get_quote_blob, &payload_body_size);
+    if (TDX_ATTEST_SUCCESS == ret) {
+        ret = extract_quote_from_blob_payload((uint8_t*)p_get_quote_blob->data, payload_body_size, pp_quote, p_quote_size);
     }
-
-    p_blob_payload = (uint8_t *)&p_get_quote_blob->data;
-    p_blob_payload[0] = (uint8_t)((msg_size >> 24) & 0xFF);
-    p_blob_payload[1] = (uint8_t)((msg_size >> 16) & 0xFF);
-    p_blob_payload[2] = (uint8_t)((msg_size >> 8) & 0xFF);
-    p_blob_payload[3] = (uint8_t)(msg_size & 0xFF);
-
-    memcpy(p_blob_payload + HEADER_SIZE, p_req, msg_size);
-
-    do {
-        vsock_port = get_vsock_port();
-        if (!vsock_port) {
-            syslog(LOG_INFO, "libtdx_attest: cannot parse sock port - fallback to tdvmcall mode.");
-            break;
-        }
-        s = socket(AF_VSOCK, SOCK_STREAM, 0);
-        if (-1 == s) {
-            syslog(LOG_INFO, "libtdx_attest: cannot create socket - fallback to tdvmcall mode.");
-            break;
-        }
-        struct sockaddr_vm vm_addr;
-        memset(&vm_addr, 0, sizeof(vm_addr));
-        vm_addr.svm_family = AF_VSOCK;
-        vm_addr.svm_reserved1 = 0;
-        vm_addr.svm_port = vsock_port;
-        vm_addr.svm_cid = VMADDR_CID_HOST;
-        if (connect(s, (struct sockaddr *)&vm_addr, sizeof(vm_addr))) {
-            syslog(LOG_INFO, "libtdx_attest: cannot connect - fallback to tdvmcall mode.");
-            break;
-        }
-
-        // Write to socket
-        if (HEADER_SIZE + msg_size != send(s, p_blob_payload,
-            HEADER_SIZE + msg_size, 0)) {
-            TDX_TRACE;
-            ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
-            goto ret_point;
-        }
-
-        // Read the response size header
-        if (HEADER_SIZE != recv(s, p_blob_payload,
-            HEADER_SIZE, 0)) {
-            TDX_TRACE;
-            ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
-            goto ret_point;
-        }
-
-        // decode the size
-        for (unsigned i = 0; i < HEADER_SIZE; ++i) {
-            in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
-        }
-
-        // prepare the buffer and read the reply body
-        #ifdef DEBUG
-        fprintf(stdout, "\nReply message body is %u bytes", in_msg_size);
-        #endif
-
-        if (REQ_BUF_SIZE - sizeof(struct tdx_quote_hdr) - HEADER_SIZE < in_msg_size) {
-            #ifdef DEBUG
-            fprintf(stdout, "\nReply message body is too big");
-            #endif
-            ret = TDX_ATTEST_ERROR_UNEXPECTED;
-            goto ret_point;
-        }
-        while( recieved_bytes < in_msg_size) {
-            int recv_ret = (int)recv(s, p_blob_payload + HEADER_SIZE + recieved_bytes,
-                                     in_msg_size - recieved_bytes, 0);
-            if (recv_ret < 0) {
-                ret = TDX_ATTEST_ERROR_VSOCK_FAILURE;
-                goto ret_point;
-            }
-            recieved_bytes += (uint32_t)recv_ret;
-        }
-        #ifdef DEBUG
-        fprintf(stdout, "\nGet %u bytes response from vsock", recieved_bytes);
-        #endif
-
-        goto done;
-    } while (0);
-
-    int ioctl_ret;
-    struct tdx_quote_req arg;
-    p_get_quote_blob->version = 1;
-    p_get_quote_blob->status = 0;
-    p_get_quote_blob->in_len = HEADER_SIZE + msg_size;
-    p_get_quote_blob->out_len = 0;
-    arg.buf = (__u64)p_get_quote_blob;
-    arg.len = REQ_BUF_SIZE;
-
-    ioctl_ret = ioctl(devfd, TDX_CMD_GET_QUOTE, &arg);
-    if (EBUSY == ioctl_ret) {
-        TDX_TRACE;
-        ret = TDX_ATTEST_ERROR_BUSY;
-        goto ret_point;
-    } else if (ioctl_ret) {
-        TDX_TRACE;
-        ret = TDX_ATTEST_ERROR_QUOTE_FAILURE;
-        goto ret_point;
-    }
-    if (p_get_quote_blob->status
-        || p_get_quote_blob->out_len <= HEADER_SIZE) {
-        TDX_TRACE;
-        if (GET_QUOTE_IN_FLIGHT == p_get_quote_blob->status) {
-            ret = TDX_ATTEST_ERROR_BUSY;
-        } else if (GET_QUOTE_SERVICE_UNAVAILABLE == p_get_quote_blob->status) {
-            ret = TDX_ATTEST_ERROR_NOT_SUPPORTED;
-        } else {
-            ret = TDX_ATTEST_ERROR_UNEXPECTED;
-        }
-        goto ret_point;
-    }
-
-    //in_msg_size is the size of serialized response
-    for (unsigned i = 0; i < HEADER_SIZE; ++i) {
-        in_msg_size = in_msg_size * 256 + ((p_blob_payload[i]) & 0xFF);
-    }
-    if (in_msg_size != p_get_quote_blob->out_len - HEADER_SIZE) {
-        TDX_TRACE;
-        ret = TDX_ATTEST_ERROR_UNEXPECTED;
-        goto ret_point;
-    }
-    #ifdef DEBUG
-    fprintf(stdout, "\nGet %u bytes response from tdvmcall", in_msg_size);
-    #endif
-
-done:
-    qgs_msg_ret = qgs_msg_inflate_get_quote_resp(
-        p_blob_payload + HEADER_SIZE, in_msg_size,
-        &p_selected_id, &id_size,
-        &p_quote, &quote_size);
-    if (QGS_MSG_SUCCESS != qgs_msg_ret) {
-        #ifdef DEBUG
-        fprintf(stdout, "\nqgs_msg_inflate_get_quote_resp return 0x%x", qgs_msg_ret);
-        #endif
-        ret = TDX_ATTEST_ERROR_UNEXPECTED;
-        goto ret_point;
-    }
-
-    // We've called qgs_msg_inflate_get_quote_resp, the message type should be GET_QUOTE_RESP
-    p_header = (qgs_msg_header_t *)(p_blob_payload + HEADER_SIZE);
-    if (p_header->error_code != 0) {
-        #ifdef DEBUG
-        fprintf(stdout, "\nerror code in resp msg is 0x%x", p_header->error_code);
-        #endif
-        ret = TDX_ATTEST_ERROR_UNEXPECTED;
-        goto ret_point;
-    }
-    *pp_quote = malloc(quote_size);
-    if (!*pp_quote) {
-        ret = TDX_ATTEST_ERROR_OUT_OF_MEMORY;
-        goto ret_point;
-    }
-    memcpy(*pp_quote, p_quote, quote_size);
-    if (p_quote_size) {
-        *p_quote_size = quote_size;
-    }
-    if (p_att_key_id) {
-        *p_att_key_id = g_intel_tdqe_uuid;
-    }
-    ret = TDX_ATTEST_SUCCESS;
 
 ret_point:
-    if (s >= 0) {
-        close(s);
+    if (TDX_ATTEST_SUCCESS == ret && p_att_key_id) {
+        *p_att_key_id = g_intel_tdqe_uuid;
     }
-    if (-1 != devfd) {
-        close(devfd);
-    }
-    qgs_msg_free(p_req);
+    close(devfd);
     free(p_get_quote_blob);
 
     return ret;

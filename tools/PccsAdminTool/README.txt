@@ -95,3 +95,5 @@ optional arguments:
           -u URL, --url URL     The URL of the Intel PCS service; default: https://api.trustedservices.intel.com/sgx/certification/v4/
           -e EXPIRE_HOURS, --expire EXPIRE_HOURS
                                 How many hours the cache files will be valid for. Default is 2160 hours (90 days) and maximum is 8760.
+          -t {standard,early}, --tcb_update_type {standard,early}
+                                Type of update to TCB info and enclave identities; default: standard

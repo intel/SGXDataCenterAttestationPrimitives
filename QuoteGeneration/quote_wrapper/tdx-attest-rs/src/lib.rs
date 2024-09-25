@@ -92,7 +92,7 @@ pub fn tdx_att_get_quote(
 ) -> (tdx_attest_error_t, Option<Vec<u8>>) {
     let p_tdx_report_data = match tdx_report_data {
         Some(p) => p as *const tdx_report_data_t,
-        None => std::ptr::null_mut(),
+        None => &tdx_report_data_t { d: [0; 64usize] },
     };
     let (p_att_key_id_list, att_key_id_list_size) = match att_key_id_list {
         Some(p) => (p.as_ptr() as *const tdx_uuid_t, p.len() as u32),
@@ -165,7 +165,7 @@ pub fn tdx_att_get_report(
 ) -> tdx_attest_error_t {
     let p_tdx_report_data = match tdx_report_data {
         Some(p) => p as *const tdx_report_data_t,
-        None => std::ptr::null_mut(),
+        None => &tdx_report_data_t { d: [0; 64usize] },
     };
     unsafe { tdx_attest_sys::tdx_att_get_report(p_tdx_report_data, tdx_report) }
 }
@@ -264,6 +264,8 @@ mod tests {
         let mut tdx_report = tdx_report_t { d: [0; 1024usize] };
         let result = tdx_att_get_report(Some(&tdx_report_data), &mut tdx_report);
         assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
+        let result = tdx_att_get_report(None, &mut tdx_report);
+        assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
     }
 
     #[test]
@@ -276,6 +278,8 @@ mod tests {
         match quote {
             q => println!("quote {:?}", q),
         }
+        assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
+        let (result, _quote) = tdx_att_get_quote(None, None, None, 0);
         assert_eq!(result, tdx_attest_error_t::TDX_ATTEST_ERROR_DEVICE_FAILURE);
     }
 
