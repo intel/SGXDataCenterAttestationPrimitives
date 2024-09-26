@@ -37,7 +37,7 @@ Options:
 If option is not specified, it will write the retrieved data to file: pckid_retrieval.csv
 
 
-user can also use the configuration file(network_configuration.conf) to configure these options, but
+user can also use the configuration file(network_setting.conf) to configure these options, but
 command line option has higher priority.
 
 ## Output file

@@ -72,6 +72,7 @@ rm -f %{_specdir}/list-%{name}-devel
 for f in $(find %{?buildroot}/%{name}-dev -type f -o -type l); do
     echo $f | sed -e "s#%{?buildroot}/%{name}-dev##" >> %{_specdir}/list-%{name}-devel
 done
+echo "/opt/intel/tdx-quote-generation-sample" >> %{_specdir}/list-%{name}-devel
 cp -r %{?buildroot}/%{name}-dev/* %{?buildroot}/
 rm -fr %{?buildroot}/%{name}-dev
 

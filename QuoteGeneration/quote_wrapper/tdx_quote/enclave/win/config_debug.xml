@@ -11,4 +11,5 @@
     <StackMaxSize>0x84000</StackMaxSize>
     <HeapMaxSize>0x84000</HeapMaxSize>
     <DisableDebug>0</DisableDebug>
+    <EnableIPPFIPS>1</EnableIPPFIPS>
 </EnclaveConfiguration>

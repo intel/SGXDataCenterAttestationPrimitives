@@ -108,10 +108,26 @@ struct _sgx_ql_qve_collateral_t
                                                [in, out, count=1]sgx_ql_qe_report_info_t *p_qve_report_info,
                                                uint32_t supplemental_data_size,
                                                [in, out, size=supplemental_data_size] uint8_t *p_supplemental_data);
-
-
+#ifdef __GNUC__
+    public quote3_error_t  tee_qve_verify_quote_qvt([in, size=quote_size] const uint8_t *p_quote,
+                                                uint32_t quote_size,
+                                                time_t current_time,
+                                                [in, count=1] const struct _sgx_ql_qve_collateral_t *p_quote_collateral,
+                                                [in, out, count=1] sgx_ql_qe_report_info_t *p_qve_report_info,
+                                                [size = user_data_size, in] const uint8_t *p_user_data,
+                                                uint32_t user_data_size,
+                                                [out, count=1]uint32_t *p_verification_result_token_buffer_size,
+                                                [in, out, count=1] uint8_t **p_verification_result_token);
+#endif
 	};
-
-
+#ifdef __GNUC__
+    /* 
+     * ocall_qvt_token_malloc - invokes OCALL to malloc jwt token memory outside the enclave.
+     */
+    untrusted {
+        void ocall_qvt_token_malloc(uint64_t verification_result_token_buffer_size,
+                            [in, out, count=1] uint8_t **p_verification_result_token);
+    };
+#endif
 
 };

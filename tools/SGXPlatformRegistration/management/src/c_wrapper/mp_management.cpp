@@ -47,21 +47,35 @@ void mp_management_init(const char* path)
     if (!path || g_mpManagement) {
         return;
     }
-	g_mpManagement = new MPManagement(string(path));
+    g_mpManagement = new MPManagement(string(path));
 }
 
 MpResult mp_management_get_package_info_key_blobs(uint8_t *buffer, uint16_t *size) {
     if (!size) {
         return MP_INVALID_PARAMETER;
     }
-	return g_mpManagement->getPackageInfoKeyBlobs(buffer, *size);
+    return g_mpManagement->getPackageInfoKeyBlobs(buffer, *size);
 }
 
 MpResult mp_management_get_platform_manifest(uint8_t *buffer, uint16_t *size) {
     if (!buffer || !size) {
         return MP_INVALID_PARAMETER;
     }
-	return g_mpManagement->getPlatformManifest(buffer, *size);
+    return g_mpManagement->getPlatformManifest(buffer, *size);
+}
+
+MpResult mp_management_get_add_package(uint8_t *buffer, uint16_t *size) {
+    if (!buffer || !size) {
+        return MP_INVALID_PARAMETER;
+    }
+    return g_mpManagement->getAddPackageRequest(buffer, *size);
+}
+
+MpResult mp_management_set_membership_certificates(const uint8_t *membershipCertificates, uint16_t membershipCertificatesSize) {
+    if (!membershipCertificates) {
+        return MP_INVALID_PARAMETER;
+    }
+    return g_mpManagement->setMembershipCertificates(membershipCertificates, membershipCertificatesSize);
 }
 
 MpResult mp_management_get_registration_error_code(RegistrationErrorCode *error_code) {
@@ -91,6 +105,27 @@ MpResult mp_management_set_registration_server_info(uint16_t flags, string url, 
         return MP_INVALID_PARAMETER;
     }
     return g_mpManagement->setRegistrationServerInfo(flags, url, serverId, serverIdSize);
+}
+
+MpResult mp_management_get_registration_server_info(uint16_t *flags, char *outUrlBuffer, uint16_t *outUrlBufferSize, uint8_t *serverId, uint16_t *serverIdSize) {
+    if (!flags || !outUrlBuffer || !outUrlBufferSize || !serverId || !serverIdSize) {
+        return MP_INVALID_PARAMETER;
+    }
+    std::string outUrl;
+    auto retval = g_mpManagement->getRegistrationServerInfo(*flags, outUrl, serverId, *serverIdSize);
+    if(retval == MP_SUCCESS) {
+
+        uint16_t stringOutputBufferSize = *outUrlBufferSize;
+        *outUrlBufferSize = static_cast<uint16_t>(outUrl.size() + 1);  // Set required # of bytes (or bytes written)
+
+        if (stringOutputBufferSize < *outUrlBufferSize) {
+            return MP_USER_INSUFFICIENT_MEM;
+        }
+
+        outUrl.copy(outUrlBuffer, *outUrlBufferSize);
+        outUrlBuffer[outUrl.size()] = '\0';
+    }
+    return retval;
 }
 
 void mp_management_terminate() 

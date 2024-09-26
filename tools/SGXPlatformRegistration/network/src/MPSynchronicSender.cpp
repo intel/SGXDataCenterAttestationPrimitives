@@ -59,7 +59,7 @@ static size_t responseCallback(void *b, size_t size, size_t nmemb, void *useptr)
     uint16_t chunkSize = (uint16_t)(size*nmemb);
     struct Buffer *mem = (struct Buffer*)useptr;
 
-    if (mem->pos + chunkSize < chunkSize) {
+    if ((uint16_t)(mem->pos + chunkSize) < chunkSize) {
         network_log_message_aux(mpNetworkLoglevel, MP_REG_LOG_LEVEL_ERROR, "Integer overflow happens during processing reponse.\n");
         return 0;
     }

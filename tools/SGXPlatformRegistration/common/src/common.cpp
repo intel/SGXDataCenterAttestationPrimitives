@@ -35,6 +35,9 @@
  */
 #ifdef _WIN32
 #include "atlstr.h"
+#elif defined(STANDALONE)
+#include <unistd.h>
+#include <limits.h>
 #endif
 
 #include "MPConfigurations.h"
@@ -46,21 +49,40 @@
 
 string getExeDirectory() {
 #ifdef _WIN32
-	TCHAR szPath[MAX_PATH];
-	if (!GetModuleFileName(NULL, szPath, MAX_PATH))
-	{
-		return "";
-	}
-	string path = szPath;
-	string::size_type pos = path.find_last_of("\\");
-	return path.substr(0, pos + 1);
+    TCHAR szPath[MAX_PATH];
+    if (!GetModuleFileName(NULL, szPath, MAX_PATH))
+    {
+        return "";
+    }
+    string path = szPath;
+    string::size_type pos = path.find_last_of("\\");
+    if(pos == string::npos) {
+        return "";
+    }
+    return path.substr(0, pos + 1);
 #else
-	return string(LINUX_INSTALL_PATH);
+    #ifdef STANDALONE
+        char szPath[PATH_MAX];
+        ssize_t i = readlink("/proc/self/exe", szPath, sizeof(szPath));
+        if (i == -1 || i == PATH_MAX)
+        {
+            return string(LINUX_INSTALL_PATH);
+        }
+        szPath[i] ='\0';
+        string path = szPath;
+        string::size_type pos = path.find_last_of("/");
+        if(pos == string::npos) {
+            return string(LINUX_INSTALL_PATH);
+        }
+        return path.substr(0, pos + 1);
+    #else // non-standalone non-Windows
+        return string(LINUX_INSTALL_PATH);
+    #endif
 #endif
 }
 
 string getConfDirectory() {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(STANDALONE)
 	return getExeDirectory();
 #else
 	return string(MP_REG_CONFIG_FILE);

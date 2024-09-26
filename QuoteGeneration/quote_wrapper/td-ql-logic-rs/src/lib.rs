@@ -85,8 +85,15 @@ pub fn tee_att_create_context(
         Some(p) => p as *const tee_att_att_key_id_t,
         None => std::ptr::null(),
     };
+    let mut c_string = std::ffi::CString::new("").unwrap();
     let p_qe_path = match qe_path {
-        Some(p) => p.as_ptr() as *const i8,
+        Some(path) => match std::ffi::CString::new(path) {
+            Ok(c_str) => {
+                c_string = c_str;
+                c_string.as_ptr() as *const i8
+            }
+            _ => return Err(tee_att_error_t::TEE_ATT_ERROR_INVALID_PARAMETER),
+        },
         None => std::ptr::null(),
     };
     let mut p_config: *mut tee_att_config_t = std::ptr::null_mut();
