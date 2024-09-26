@@ -101,8 +101,9 @@ sgx_status_t load_qve_once(sgx_enclave_id_t *p_qve_eid)
 
             // Retry in case there was a power transition that resulted is losing the enclave.
         } while (SGX_ERROR_ENCLAVE_LOST == sgx_status && enclave_lost_retry_time--);
-
-        SE_TRACE(SE_TRACE_DEBUG, "Info, Load QvE successfully, eid is 0x%llx\n.", *p_qve_eid);
+        if(sgx_status == SGX_SUCCESS) {
+            SE_TRACE(SE_TRACE_DEBUG, "Info, Load QvE successfully, eid is 0x%llx\n.", *p_qve_eid);
+        }
 
     return sgx_status;
 }
@@ -154,6 +155,31 @@ quote3_error_t sgx_qv::tee_verify_evidence(
         supplemental_data_size,
         p_supplemental_data);
 }
+
+#ifndef _MSC_VER
+quote3_error_t sgx_qv::tee_get_verify_token(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    time_t current_time,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    uint32_t *verification_result_token_buffer_size,
+    uint8_t **p_verification_result_token) {
+
+    return tee_qvl_verify_quote_qvt(
+        p_quote,
+        quote_size,
+        current_time,
+        p_quote_collateral,
+        p_qve_report_info,
+        p_user_data,
+        user_data_size,
+        verification_result_token_buffer_size,
+        p_verification_result_token);
+}
+#endif
 
 quote3_error_t sgx_qv::tee_get_supplemental_data_size(uint32_t *p_data_size)
 {
@@ -272,6 +298,49 @@ quote3_error_t sgx_qv_trusted::tee_verify_evidence(
 
     return qv_ret;
 }
+
+#ifndef _MSC_VER
+quote3_error_t sgx_qv_trusted::tee_get_verify_token(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    time_t current_time,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    uint32_t *verification_result_token_buffer_size,
+    uint8_t **p_verification_result_token) {
+
+    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+    quote3_error_t qv_ret = SGX_QL_ERROR_UNEXPECTED;
+
+    if (m_qve_id == 0)
+        return SGX_QL_ERROR_UNEXPECTED;
+
+    ret = tee_qve_verify_quote_qvt(
+        m_qve_id,
+        &qv_ret,
+        p_quote,
+        quote_size,
+        current_time,
+        p_quote_collateral,
+        p_qve_report_info,
+        p_user_data,
+        user_data_size,
+        verification_result_token_buffer_size,
+        p_verification_result_token);
+
+    if (qv_ret == SGX_QL_SUCCESS && ret == SGX_SUCCESS) {
+        SE_TRACE(SE_TRACE_DEBUG, "Info: tee_qve_verify_quote_qvt successfully returned.\n");
+    }
+    else {
+        SE_TRACE(SE_TRACE_DEBUG, "Error: tee_qve_verify_quote_qvt failed. ecall return 0x%04x, \
+            function return 0x%04x\n", ret, qv_ret);
+    }
+
+    return qv_ret;
+}
+#endif
 
 quote3_error_t sgx_qv_trusted::tee_get_supplemental_data_size(uint32_t *p_data_size)
 {

@@ -60,6 +60,7 @@
       <AdditionalIncludeDirectories>inc;..\include;..\include\c_wrapper;..\common\inc; ..\windows\regex-2.7\src</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

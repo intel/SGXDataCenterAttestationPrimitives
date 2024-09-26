@@ -52,6 +52,7 @@
       <AdditionalIncludeDirectories>inc;..\include;..\uefi\inc;..\common\inc;..\common\inc\internal;..\..\..\QuoteGeneration\common\inc\internal</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

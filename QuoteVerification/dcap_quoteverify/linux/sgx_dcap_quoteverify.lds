@@ -21,6 +21,9 @@ global:
     tee_appraise_verification_token;
     tee_free_appraisal_token;
     tee_authenticate_appraisal_result;
+    tee_authenticate_appraisal_result_ex;
+    tee_authenticate_policy_owner;
+    sgx_qae_set_enclave_load_policy;
 local:
     *;
 };

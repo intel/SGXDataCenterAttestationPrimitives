@@ -140,10 +140,12 @@ MpResult MPManagement::getRegistrationStatus(MpTaskStatus &status) {
     return res;
 }
 
-MpResult MPManagement::getPlatformManifest(uint8_t *buffer, uint16_t &buffer_size) {
+MpResult MPManagement::getRequestData(uint8_t *buffer, uint16_t &buffer_size, MpRequestType expectedRequestType) {
     MpRegistrationStatus status;
     MpRequestType type;
     MpResult res = MP_UNEXPECTED_ERROR;
+    string expectedArtifactTypeName = (expectedRequestType == MpRequestType::MP_REQ_REGISTRATION)? "PlatformManifest" : "ADD_REQUEST";
+    string functionName = (expectedRequestType == MpRequestType::MP_REQ_REGISTRATION) ? "getPlatformManifest" : "getAddPackageRequest";
 
     do {
         if (NULL == buffer ) {
@@ -153,57 +155,71 @@ MpResult MPManagement::getPlatformManifest(uint8_t *buffer, uint16_t &buffer_siz
 
         res = m_mpuefi->getRegistrationStatus(status);
         if (MP_SUCCESS != res) {
-            management_log_message(MP_REG_LOG_LEVEL_ERROR, "getPlatformManifest: Platform doesn't support SGX MP Registration.\n");
+            management_log_message(MP_REG_LOG_LEVEL_ERROR, "%s: Platform doesn't support SGX MP Registration.\n", functionName.c_str());
             break;
         }
 
         if (MP_TASK_IN_PROGRESS != status.registrationStatus) {
-            management_log_message(MP_REG_LOG_LEVEL_ERROR, "getPlatformManifest: Registration completed, no pending PlatformManifest.\n");
+            management_log_message(MP_REG_LOG_LEVEL_ERROR, "%s: Registration completed, no pending %s.\n", functionName.c_str(), expectedArtifactTypeName.c_str());
             res = MP_NO_PENDING_DATA;
             break;
         }
-        
+                
         res = m_mpuefi->getRequestType(type);
         if (MP_SUCCESS != res) {
             break;
         }
-        
-        if (MP_REQ_REGISTRATION != type) {
-            management_log_message(MP_REG_LOG_LEVEL_ERROR, "getPlatformManifest: The pending request is not PlatformManifest.\n");
+
+        if (expectedRequestType != type) {
+            management_log_message(MP_REG_LOG_LEVEL_ERROR, "%s: The pending request is not %s.\n", functionName.c_str(), expectedArtifactTypeName.c_str());
             res = MP_NO_PENDING_DATA;
             break;
         }
 
-        uint8_t pManifest[MAX_REQUEST_SIZE];
-        uint16_t size = sizeof(pManifest);
-        memset(&pManifest, 0, sizeof(pManifest));
-        res = m_mpuefi->getRequest((uint8_t*)&pManifest, size);
+        uint8_t requestData[MAX_REQUEST_SIZE];
+        uint16_t size = sizeof(requestData);
+        memset(&requestData, 0, sizeof(requestData));
+        res = m_mpuefi->getRequest((uint8_t*)&requestData, size);
         if (MP_SUCCESS != res) {
             if (MP_NO_PENDING_DATA == res) {
                 res = MP_UEFI_INTERNAL_ERROR;
             }
             break;
         }
-
         if (buffer_size < size) {
             buffer_size = size;
             res = MP_USER_INSUFFICIENT_MEM;
             break;
         }
 
-        memcpy(buffer, &pManifest, size);
+        memcpy(buffer, &requestData, size);
         buffer_size = size;
         status.registrationStatus = MP_TASK_COMPLETED;
         res = m_mpuefi->setRegistrationStatus(status);
         if (MP_SUCCESS != res) {
             break;
         }
-
         res = MP_SUCCESS;
     } while (0);
-
     return res;
 }
+
+MpResult MPManagement::getPlatformManifest(uint8_t *buffer, uint16_t &buffer_size) {
+    return getRequestData(buffer, buffer_size, MP_REQ_REGISTRATION);
+}
+
+MpResult MPManagement::getAddPackageRequest(uint8_t *buffer, uint16_t &buffer_size) {
+    return getRequestData(buffer, buffer_size, MP_REQ_ADD_PACKAGE);
+}
+
+MpResult MPManagement::setMembershipCertificates(const uint8_t *membershipCertificates, uint16_t membershipCertificatesSize) {
+    MpResult res = m_mpuefi->setServerResponse(membershipCertificates, membershipCertificatesSize);
+    if (MP_SUCCESS == res) {
+        management_log_message(MP_REG_LOG_LEVEL_INFO, "Server response have been successfully written to platform.\n");
+    }
+    return res;
+}
+
 
 MpResult MPManagement::getSgxStatus(MpSgxStatus &status) {
     MpResult res = MP_UNEXPECTED_ERROR;
@@ -222,6 +238,16 @@ MpResult MPManagement::getSgxStatus(MpSgxStatus &status) {
     } while (0);
 
     return res;
+}
+
+MpResult MPManagement::getRegistrationServerInfo(uint16_t &flags, string &outUrl, uint8_t *serverId, uint16_t &serverIdSize) {
+    MpResult res = m_mpuefi->getRegistrationServerInfo(flags, outUrl, serverId, serverIdSize); 
+    if (MP_SUCCESS != res) {
+        management_log_message(MP_REG_LOG_LEVEL_ERROR, "getRegistrationServerInfo: Reading the registration server info failed, error: %d\n", res);
+        return MP_UNEXPECTED_ERROR;
+    }
+
+    return MP_SUCCESS;
 }
 
 MpResult MPManagement::setRegistrationServerInfo(const uint16_t &flags, const string &url, const uint8_t *serverId, const uint16_t &serverIdSize) {

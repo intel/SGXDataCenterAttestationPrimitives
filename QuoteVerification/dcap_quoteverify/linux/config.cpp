@@ -88,6 +88,7 @@ sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_
 pthread_create_ocall_func_t p_pthread_create_ocall = NULL;
 pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall = NULL;
 pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func = NULL;
+sgx_get_metadata_func_t p_sgx_urts_get_metadata = NULL;
 
 
 #ifndef MAX_PATH
@@ -173,7 +174,9 @@ bool sgx_dcap_load_qpl()
         p_sgx_qpl_global_init = (sgx_qpl_global_init_func_t)dlsym(g_qpl_handle, "sgx_qpl_global_init");
         if (dlerror() == NULL && p_sgx_qpl_global_init) {
             quote3_error_t ql_ret = p_sgx_qpl_global_init();
-            if (ql_ret != SGX_QL_SUCCESS) {
+            if (ql_ret == SGX_QL_CONFIG_INVALID_JSON)
+                SE_TRACE(SE_TRACE_WARNING, "QCNL has invalid json config file, fallback to legacy config file");
+            else if (ql_ret != SGX_QL_SUCCESS) {
                 SE_TRACE(SE_TRACE_ERROR, "Error returned from the sgx_qpl_global_init API. 0x%04x\n", ql_ret);
                 break;
             }
@@ -425,7 +428,14 @@ bool sgx_dcap_load_urts()
                 SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in urts library %s.\n", SGX_URTS_API_OCALL_PTHREAD_WAKEUP, SGX_URTS_LIB_FILE_NAME);
                 break;
             }
-
+            // search for sgx_get_metadata symbol in urts library
+            p_sgx_urts_get_metadata = (sgx_get_metadata_func_t)dlsym(g_urts_handle, SGX_URTS_API_GET_METADATA);
+            err = dlerror();
+            if (p_sgx_urts_get_metadata == NULL || err != NULL)
+            {
+                SE_TRACE(SE_TRACE_ERROR, "Couldn't locate %s in urts library %s.\n", SGX_URTS_API_GET_METADATA, SGX_URTS_LIB_FILE_NAME);
+                break;
+            }
             ret = true;
 
     } while (0);

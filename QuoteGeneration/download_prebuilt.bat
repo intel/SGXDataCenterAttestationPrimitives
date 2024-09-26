@@ -29,9 +29,9 @@
 
 @echo off
 
-set ae_file_name=prebuilt_windows_dcap_1.21.zip
-set checksum_file=SHA256SUM_prebuilt_windows_dcap_1.21.cfg
-set server_url_path=https://download.01.org/intel-sgx/sgx-dcap/1.21/windows/
+set ae_file_name=prebuilt_windows_dcap_1.22.zip
+set checksum_file=SHA256SUM_prebuilt_windows_dcap_1.22.cfg
+set server_url_path=https://download.01.org/intel-sgx/sgx-dcap/1.22/windows/
 set server_ae_url=%server_url_path%/%ae_file_name%
 set server_checksum_url=%server_url_path%/%checksum_file%
 

@@ -2,7 +2,7 @@
     <IntelSigned>1</IntelSigned>
     <ProvisionKey>1</ProvisionKey>
     <ProdID>0x2</ProdID>
-    <ISVSVN>6</ISVSVN>
+    <ISVSVN>7</ISVSVN>
     <TCSNum>1</TCSNum>
     <TCSPolicy>1</TCSPolicy>
     <HW>0</HW>
@@ -10,4 +10,5 @@
     <StackMinSize>0x44000</StackMinSize>
     <HeapMaxSize>0x24000</HeapMaxSize>
     <DisableDebug>1</DisableDebug>
+    <EnableIPPFIPS>1</EnableIPPFIPS>
 </EnclaveConfiguration>

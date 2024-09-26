@@ -7,8 +7,10 @@
             },
             "reference":{
                 "tdx_attributes":"0000000010000000",
+                "tdx_attributes_mask":"FFFFFFFFFFFFFFFF",
                 "#NOTE": "To make the following configurations take effect, modify the value in the following lines, and uncomment the lines by removing '#' from the key",
                 "#tdx_xfam":"0000000000061AE7",
+                "#tdx_xfam_mask":"FFFFFFFFFFFFFFFF",
                 "#tdx_mrtd":"B3A00908F83729DF749648AD1769EA8F5C1205CEF83A13E23D3F6C33C6F34769B97D5E7FD8780DC36234C8F5823A08AA",
                 "#tdx_mrconfigid":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
                 "#tdx_mrowner":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",

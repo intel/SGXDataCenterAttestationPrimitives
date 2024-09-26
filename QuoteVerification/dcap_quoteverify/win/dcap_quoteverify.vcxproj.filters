@@ -45,6 +45,9 @@
     <ClCompile Include="..\tee_qv_class.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\sgx_urts_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="sgx_dcap_quoteverify.def">

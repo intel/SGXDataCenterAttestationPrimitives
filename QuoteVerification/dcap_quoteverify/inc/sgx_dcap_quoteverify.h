@@ -174,7 +174,9 @@ quote3_error_t sgx_qv_set_path(sgx_qv_path_type_t path_type,
  * @param p_qve_report_info[IN/OUT] - This parameter can be used in 2 ways.
  *        If p_qve_report_info is NOT NULL, the API will use Intel QvE to perform quote verification, and QvE will generate a report using the target_info in sgx_ql_qe_report_info_t structure.
  *        if p_qve_report_info is NULL, the API will use QVL library to perform quote verification, note that the results can not be cryptographically authenticated in this mode.
- * @param p_user_data[IN] - User data.
+ * @param p_user_data[IN] - If not NULL, this points to a buffer holding a null-terminated string for user data. The hash of this string will be verified to match the application enclave SGX reportData held in the input quote. Upon successful verification, the user data will be converted back into JSON format and included in the output VR JWT (instead of the reportData itself). 
+ *         The user data must be less than or equal to 128 bytes in size. 
+ *         This API only supports the SHA384 hashing algorithm, which means the SGX reportData in the quote must be SHA384 hashed. 
  * @param p_verification_result_token_buffer_size[OUT] - Size of the buffer pointed to by verification_result_token (in bytes).
  * @param p_verification_result_token[OUT] - Pointer to the verification_result_token.
  *

@@ -39,6 +39,7 @@
 #define sgx_qve_verify_quote sgx_qvl_verify_quote
 #define sgx_qve_get_quote_supplemental_data_size sgx_qvl_get_quote_supplemental_data_size
 #define sgx_qve_get_quote_supplemental_data_version sgx_qvl_get_quote_supplemental_data_version
+#define tee_qve_verify_quote_qvt tee_qvl_verify_quote_qvt
 #include "sgx_dcap_qv_internal.h"
 #define memset_s(a,b,c,d) memset(a,c,d)
 #define memcpy_s(a,b,c,d) (memcpy(a,c,b) && 0)
@@ -350,26 +351,17 @@ static bool check_hex_crl(char *crl, uint32_t size)
  * Convert char to hex string
  *
  **/
-static std::string bin2hex(char *in, uint32_t size)
+static std::string byte_to_hexstring(const uint8_t* data, size_t len, bool big_endian)
 {
-    std::string result;
-
-    if (in == NULL || size == 0)
-        return result;
-
-    const std::vector<uint8_t> crl(in, std::next(in, size));
-
-    result.reserve(crl.size() * 2);
-
-    static constexpr char hex[] = "0123456789ABCDEF";
-
-    for (const uint8_t c : crl)
-    {
-        result.push_back(hex[c / 16]);
-        result.push_back(hex[c % 16]);
+    if(data == NULL || len == 0){
+       return {};
     }
+    std::vector<uint8_t> tmp_vec(data, data + len);
+    if(big_endian){
+        reverse(tmp_vec.begin(), tmp_vec.end());    //align the endian in the appraisal
+    }
+    return bytesToHexString(tmp_vec);
 
-    return result;
 }
 
 #define TCB_COMPONENT_LEN   16
@@ -1842,7 +1834,7 @@ quote3_error_t sgx_qve_verify_quote(
         if (!check_pem_crl(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size)) {
             if (!check_hex_crl(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size)) {
 
-                root_crl = bin2hex(p_quote_collateral->root_ca_crl, p_quote_collateral->root_ca_crl_size);
+                root_crl = byte_to_hexstring(reinterpret_cast<const uint8_t*>(p_quote_collateral->root_ca_crl), p_quote_collateral->root_ca_crl_size, false);
 
                 if (root_crl.empty())
                     break;
@@ -1854,7 +1846,7 @@ quote3_error_t sgx_qve_verify_quote(
         if (!check_pem_crl(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size)) {
             if (!check_hex_crl(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size)) {
 
-                pck_crl = bin2hex(p_quote_collateral->pck_crl, p_quote_collateral->pck_crl_size);
+                pck_crl = byte_to_hexstring(reinterpret_cast<const uint8_t*>(p_quote_collateral->pck_crl), p_quote_collateral->pck_crl_size, false);
 
                 if (pck_crl.empty())
                     break;
@@ -2150,4 +2142,1288 @@ uint8_t do_verify_quote_integrity(
 			return SGX_TD_VERIFY_ERROR(ret);
 }
 
+#endif
+
+#ifndef _MSC_VER
+#ifndef SERVTD_ATTEST
+#include "jwt-cpp/jwt.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/document.h"
+
+#include "openssl/rand.h"
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <time.h>
+
+#include "QuoteVerification/Quote.h"
+#include "sgx_quote_4.h"
+#include "sgx_quote_5.h"
+#include "OpensslHelpers/Bytes.h"
+#include "sgx_base64.h"
+#include "ec_key.h"
+
+using namespace rapidjson;
+
+/*
+•	SGX_QL_QV_RESULT_OK: “UpToDate”
+•	SGX_QL_QV_RESULT_SW_HARDENING_NEEDED: “UpToDate”, “SWHardeningNeeded”
+•	SGX_QL_QV_RESULT_CONFIG_NEEDED: “UpToDate”, “ConfigurationNeeded”
+•	SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED: “UpToDate”, “SWHardeningNeeded”, “ConfigurationNeeded”
+•	SGX_QL_QV_RESULT_OUT_OF_DATE: “OutOfDate”
+•	SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED: “OutOfDate”, “ConfigurationNeeded”
+•	SGX_QL_QV_RESULT_INVALID_SIGNATURE: No Platform TCB Report Generated
+•	SGX_QL_QV_RESULT_REVOKED: “Revoked”
+•	SGX_QL_QV_RESULT_UNSPECIFIED: No Platform TCB Report Generated
+*/
+
+static void qv_result_tcb_status_map(std::vector<std::string>& tcb_status, sgx_ql_qv_result_t qv_result){
+    switch (qv_result){
+    case TEE_QV_RESULT_OK:
+        tcb_status.push_back("UpToDate");
+        break;
+    case TEE_QV_RESULT_SW_HARDENING_NEEDED:
+        tcb_status.push_back("UpToDate");
+        tcb_status.push_back("SWHardeningNeeded");
+        break;
+    case TEE_QV_RESULT_CONFIG_NEEDED:
+        tcb_status.push_back("UpToDate");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        tcb_status.push_back("UpToDate");
+        tcb_status.push_back("SWHardeningNeeded");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_OUT_OF_DATE:
+        tcb_status.push_back("OutOfDate");
+        break;
+    case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        tcb_status.push_back("OutOfDate");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        tcb_status.push_back("TDRelaunchAdvised");
+        break;
+    case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
+        tcb_status.push_back("TDRelaunchAdvised");
+        tcb_status.push_back("ConfigurationNeeded");
+        break;
+    case TEE_QV_RESULT_INVALID_SIGNATURE:
+        break;
+    case TEE_QV_RESULT_REVOKED:
+        tcb_status.push_back("Revoked");
+        break;
+    case TEE_QV_RESULT_UNSPECIFIED:
+        break;
+    default:
+        break;
+}
+    return;
+}
+
+static void advisory_id_vec(std::vector<std::string>& vec_ad_id, std::string s_ad_id)
+{
+    std::stringstream stream_ad;
+    stream_ad << s_ad_id;
+    std::string temp;
+    
+    while(getline(stream_ad, temp, ','))
+    {
+        vec_ad_id.push_back(temp);
+    }
+    return;
+}
+
+
+
+//time transfer to ISO 8601 standard (YYYY-MM-DDThh:mm:ssZ)
+static void time_to_string(time_t time_before, char* time_str, size_t len)
+{
+    if(time_str==NULL){
+        return;
+    }
+    struct tm *nowtm;
+    //transfer to UTC to gmtime
+    nowtm = intel::sgx::dcap::gmtime(&time_before);
+
+    //transfer to ISO 8601 standard (YYYY-MM-DDThh:mm:ssZ)
+    strftime(time_str, len,"%Y-%m-%dT%H:%M:%SZ", nowtm);
+    return;
+}
+
+static std::string char_to_base64(unsigned char const* raw_char, size_t len)
+{
+    if(raw_char == NULL){
+       return {};
+    }
+
+    std::string s_ret;
+    
+    //remove '\0'
+    if(len == strlen(reinterpret_cast<const char *>(raw_char)) + 1){
+        len--;
+    }
+    char* tmp_str = base64_encode(reinterpret_cast<const char *>(raw_char), (int)len);
+    if(tmp_str == NULL)
+    {
+        return {};
+    }
+    s_ret = tmp_str;
+    free(tmp_str);
+    return s_ret;
+}
+
+static quote3_error_t token_genrator_internal(std::string json_data, uint8_t **jwt_data, uint32_t *jwt_size)
+{
+
+#ifndef SGX_TRUSTED
+	auto token = jwt::create()
+					 .set_issuer("qvl")
+					 .set_type("JWT")
+					 .set_payload_claim("qvl_result", jwt::claim(json_data))
+					 .sign(jwt::algorithm::none());
+#else
+    std::string jwk, priv_key;
+    if(generate_ec384_keys(jwk, priv_key) != 0)
+    {
+        // Retry to generate ec key pair in case key generation fails randomly
+        if(generate_ec384_keys(jwk, priv_key) != 0)
+        {
+            return SGX_QL_ERROR_UNEXPECTED;
+        }
+    }
+
+    auto token = jwt::create()
+                     .set_type("JWT")
+                     .set_issuer("qve")
+                     .set_header_claim("jwk", jwt::claim(jwk))
+                     .set_payload_claim("qvl_result", jwt::claim(json_data))
+                     .sign(jwt::algorithm::es384("", priv_key, "", ""));
+    priv_key.clear();
+#endif
+    if(token.empty())
+    {
+        return TEE_ERROR_UNEXPECTED;
+    }
+
+    *jwt_data = (uint8_t *)malloc(token.length() + 1);
+    if (*jwt_data == NULL) {
+        return TEE_ERROR_OUT_OF_MEMORY;
+    }
+    memset(*jwt_data, 0, token.length() + 1);
+    memcpy_s(*jwt_data, token.length() + 1, token.c_str(), token.length());
+    *jwt_size = (uint32_t)token.length();
+    return TEE_SUCCESS;
+}
+
+static void audit_generator(
+    const char *request_id,
+    time_t verification_date,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    Value obj_plat_audit(kObjectType);
+    Value str_requestid(kStringType);
+
+    std::string s_request_id = char_to_base64((reinterpret_cast<unsigned char const*>(request_id)), REQUEST_ID_LEN);
+    str_requestid.SetString(s_request_id.c_str(), (unsigned int)(s_request_id.length()), allocator);
+    if(str_requestid.GetStringLength() != 0){
+        obj_plat_audit.AddMember("request_id", str_requestid, allocator);
+    }
+
+    char verifytime_str[TIME_STR_LEN] = {0};
+    time_to_string(verification_date, verifytime_str, sizeof(verifytime_str));
+    Value str_ver_date(kStringType);
+    str_ver_date.SetString(verifytime_str, (unsigned int)strlen(verifytime_str), allocator);
+    if(str_ver_date.GetStringLength() != 0){
+        obj_plat_audit.AddMember("verification_time", str_ver_date, allocator);
+    }
+
+    obj.AddMember("audit", obj_plat_audit, allocator);
+    return;
+}
+
+static quote3_error_t quote_hash_generator(
+    const uint8_t *p_quote, 
+    const uint32_t quote_size,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    // generates SHA-384 hash of input QUOTE
+    Value obj_quote_hash(kObjectType);
+    uint8_t quote_hash[SHA384_LEN] = { 0 };
+    if (SHA384((const unsigned char *)p_quote, quote_size, quote_hash) == NULL) {
+            return TEE_ERROR_UNEXPECTED;
+    }
+    Value str_quote_hash(kStringType);
+    std::string s_quote_hash = byte_to_hexstring(quote_hash, SHA384_LEN, true);
+    str_quote_hash.SetString(s_quote_hash.c_str(), (unsigned int)s_quote_hash.length(), allocator);
+    if(str_quote_hash.GetStringLength() != 0){
+        obj_quote_hash.AddMember("quote_hash", str_quote_hash, allocator);
+        std::string hash_algo = QUOTE_HASH_ALGO;
+        Value str_quote_hash_algo(kStringType);
+        str_quote_hash_algo.SetString(hash_algo.c_str(), (unsigned int)hash_algo.length(), allocator);
+        obj_quote_hash.AddMember("algo", str_quote_hash_algo, allocator);
+        obj.PushBack(obj_quote_hash, allocator);
+    }
+    return TEE_SUCCESS;
+}
+
+//generate platform tcb
+static quote3_error_t tee_platform_tcb_generator(
+    const char *plat_type,
+    const char* platform_desc,
+    const char *request_id,
+    sgx_ql_qv_result_t qv_result,
+    time_t verification_date,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    const sgx_ql_qv_supplemental_t *p_supplemental_data,
+    const uint8_t *p_quote,
+    const uint32_t quote_size,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    quote3_error_t dcap_ret = TEE_SUCCESS;
+
+    Value obj_user_data(kObjectType);
+    if(p_user_data != NULL && user_data_size != 0)
+    {
+        Value str_user_val(kStringType);
+        str_user_val.SetString((reinterpret_cast<const char *>(p_user_data)), user_data_size, allocator);
+        if(str_user_val.GetStringLength() != 0){
+            obj_user_data.AddMember("user_data", str_user_val, allocator);
+            obj.PushBack(obj_user_data, allocator);
+        }
+    }
+
+    // generates SHA-384 hash of input QUOTE
+    dcap_ret = quote_hash_generator(p_quote, quote_size, obj, allocator);
+    if(dcap_ret != TEE_SUCCESS){
+        return dcap_ret;
+    }
+    Value obj_platform(kObjectType);
+    Value obj_plat_header(kObjectType);
+
+    //Generate platform_tcb
+    Value str_type_val(kStringType);
+    str_type_val.SetString(plat_type, (unsigned int)strlen(plat_type), allocator);
+    if(str_type_val.GetStringLength() != 0){
+        obj_plat_header.AddMember("class_id", str_type_val, allocator);
+    }
+    str_type_val.SetString(platform_desc, (unsigned int)(strlen(platform_desc)), allocator);
+    if(str_type_val.GetStringLength() != 0){
+        obj_plat_header.AddMember("description", str_type_val, allocator);
+    }
+    
+    obj_platform.AddMember("environment", obj_plat_header, allocator);
+
+    Value obj_plat_tcb(kObjectType);
+    Value tcb_status_array(kArrayType);
+    Value str_tcb_status(kStringType);
+
+    std::vector<std::string> tcb_status;
+    qv_result_tcb_status_map(tcb_status, qv_result);
+    if(!tcb_status.empty())
+    {
+        for(size_t i=0; i<tcb_status.size(); i++){
+            str_tcb_status.SetString(tcb_status[i].c_str(), (unsigned int)(tcb_status[i].length()), allocator);
+            tcb_status_array.PushBack(str_tcb_status, allocator);
+        }
+        obj_plat_tcb.AddMember("tcb_status", tcb_status_array, allocator);
+    }
+
+    if(p_supplemental_data != NULL){
+        char time_str[TIME_STR_LEN] = {0};
+        Value str_date(kStringType);
+        auto Add_Mem = [&](char *str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_date.SetString(str_m, (unsigned int)strlen(str_m), allocator);
+                            if(str_date.GetStringLength() != 0){obj_plat_tcb.AddMember(mem_name, str_date, allocator);}};
+
+        time_to_string(p_supplemental_data->earliest_issue_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "earliest_issue_date");
+
+        time_to_string(p_supplemental_data->latest_issue_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "latest_issue_date");
+
+        time_to_string(p_supplemental_data->earliest_expiration_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "earliest_expiration_date");
+        
+        time_to_string(p_supplemental_data->tcb_level_date_tag, time_str, sizeof(time_str));
+        Add_Mem(time_str, "tcb_level_date_tag");
+
+        obj_plat_tcb.AddMember("pck_crl_num", p_supplemental_data->pck_crl_num, allocator);
+        obj_plat_tcb.AddMember("root_ca_crl_num", p_supplemental_data->root_ca_crl_num, allocator);
+        obj_plat_tcb.AddMember("tcb_eval_num", p_supplemental_data->tcb_eval_ref_num, allocator);
+
+        //TODO
+        //obj_plat_tcb.AddMember("platform_provider_id", , allocator);
+
+        obj_plat_tcb.AddMember("sgx_types", p_supplemental_data->sgx_type, allocator);
+
+        if(p_supplemental_data->dynamic_platform != PCK_FLAG_UNDEFINED){
+            Value dynamic_plat;
+            dynamic_plat.SetBool(p_supplemental_data->dynamic_platform);
+            obj_plat_tcb.AddMember("is_dynamic_platform", dynamic_plat, allocator);
+        }
+
+
+        if(p_supplemental_data->cached_keys != PCK_FLAG_UNDEFINED){
+            Value cached_keys;
+            cached_keys.SetBool(p_supplemental_data->cached_keys);
+            obj_plat_tcb.AddMember("is_cached_keys_policy", cached_keys, allocator);
+        }
+
+        if(p_supplemental_data->smt_enabled != PCK_FLAG_UNDEFINED){
+            Value smt_enabled;
+            smt_enabled.SetBool(p_supplemental_data->smt_enabled);
+            obj_plat_tcb.AddMember("is_smt_enabled", smt_enabled, allocator);
+        }
+
+        Value advisory_id_array(kArrayType);
+        Value str_advisory_id(kStringType);
+        if (p_supplemental_data->version > 3 && strlen(p_supplemental_data->sa_list) > 0) {
+            std::string s_ad_id(p_supplemental_data->sa_list);
+            std::vector<std::string> vec_ad_id;
+            advisory_id_vec(vec_ad_id, s_ad_id);
+            if(!vec_ad_id.empty())
+            {
+                for(size_t i=0; i<vec_ad_id.size(); i++){
+                    str_advisory_id.SetString(vec_ad_id[i].c_str(), (unsigned int)(vec_ad_id[i].length()), allocator);
+                    advisory_id_array.PushBack(str_advisory_id, allocator);
+                }
+            obj_plat_tcb.AddMember("advisory_ids", advisory_id_array, allocator);
+            }
+        }
+        Value str_keyid(kStringType);
+        std::string s_root_key_id = byte_to_hexstring(p_supplemental_data->root_key_id, ROOT_KEY_ID_SIZE, true);
+        str_keyid.SetString(s_root_key_id.c_str(), (unsigned int)(s_root_key_id.length()), allocator);
+        if(str_keyid.GetStringLength() != 0){
+            obj_plat_tcb.AddMember("root_key_id", str_keyid, allocator);
+        }
+    }
+
+    //get fmpsc from quote
+    unsigned char fmspc_from_quote[FMSPC_SIZE] = {0};
+    unsigned char ca_from_quote[CA_SIZE] = {0};
+
+    dcap_ret = get_fmspc_ca_from_quote(
+        p_quote,
+        quote_size,
+        fmspc_from_quote,
+        FMSPC_SIZE,
+        ca_from_quote,
+        CA_SIZE);
+
+    if(dcap_ret == TEE_SUCCESS)
+    {
+        Value str_fmspc(kStringType);
+        std::string sfmspc((char* )fmspc_from_quote, FMSPC_SIZE);
+        std::reverse(sfmspc.begin(), sfmspc.end()); //endian align
+        std::string s_fmspc = byte_to_hexstring((const uint8_t *)sfmspc.c_str(), FMSPC_SIZE, true);
+        str_fmspc.SetString(s_fmspc.c_str(), (unsigned int)s_fmspc.length(), allocator);
+        if(str_fmspc.GetStringLength() != 0)
+        {
+            obj_plat_tcb.AddMember("fmspc", str_fmspc, allocator);
+        }
+    }
+
+    obj_platform.AddMember("measurement", obj_plat_tcb, allocator);
+
+    /*
+    "pck_crl_issuer_chain" : base64 encoding,
+    "root_ca_crl" : base64 encoding,
+    "pck_crl" : base64 encoding,
+    "tcb_info_issuer_chain" : base64 encoding,
+    "tcb_info" : base64 encoding,
+    "qe_identity_issuer_chain" : base64 encoding,
+    "qe_identity" : base64 encoding
+    */
+    //Generate endorsement
+    if(p_quote_collateral != NULL){
+        Value obj_collateral(kObjectType);
+        Value str_collateral(kStringType);
+        auto Add_Mem = [&](std::string str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_collateral.SetString(str_m.c_str(), (unsigned int)(str_m.length()), allocator);
+                            if(str_collateral.GetStringLength() != 0){obj_collateral.AddMember(mem_name, str_collateral, allocator);}};
+        if(p_quote_collateral->pck_crl_issuer_chain != NULL && p_quote_collateral->pck_crl_issuer_chain_size > 0){
+            std::string s_pck_crl_issue_chain = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->pck_crl_issuer_chain)), p_quote_collateral->pck_crl_issuer_chain_size);
+            Add_Mem(s_pck_crl_issue_chain, "pck_crl_issuer_chain");
+        }
+        if(p_quote_collateral->root_ca_crl != NULL && p_quote_collateral->root_ca_crl_size > 0){
+            std::string s_root_ca_crl = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->root_ca_crl)), p_quote_collateral->root_ca_crl_size);
+            Add_Mem(s_root_ca_crl, "root_ca_crl");
+        }
+
+        if(p_quote_collateral->pck_crl != NULL && p_quote_collateral->pck_crl_size > 0){
+            std::string s_pck_crl = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->pck_crl)), p_quote_collateral->pck_crl_size);
+            Add_Mem(s_pck_crl, "pck_crl");
+        }
+
+        if(p_quote_collateral->tcb_info_issuer_chain != NULL && p_quote_collateral->tcb_info_issuer_chain_size > 0){
+            std::string s_tcb_info_issuer_chain = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->tcb_info_issuer_chain)), p_quote_collateral->tcb_info_issuer_chain_size);
+            Add_Mem(s_tcb_info_issuer_chain, "tcb_info_issuer_chain");
+        }
+
+        if(p_quote_collateral->tcb_info != NULL && p_quote_collateral->tcb_info_size > 0){
+            std::string s_tcb_info = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->tcb_info)), p_quote_collateral->tcb_info_size);
+            Add_Mem(s_tcb_info, "tcb_info");
+        }
+
+        if(p_quote_collateral->qe_identity_issuer_chain != NULL && p_quote_collateral->qe_identity_issuer_chain_size > 0){
+            std::string s_qe_identity_issuer_chain = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->qe_identity_issuer_chain)), p_quote_collateral->qe_identity_issuer_chain_size);
+            Add_Mem(s_qe_identity_issuer_chain, "qe_identity_issuer_chain");
+        }
+
+        if(p_quote_collateral->qe_identity != NULL && p_quote_collateral->qe_identity_size > 0){
+            std::string s_qe_identity = char_to_base64((reinterpret_cast<unsigned char const*>(p_quote_collateral->qe_identity)), p_quote_collateral->qe_identity_size);
+            Add_Mem(s_qe_identity, "qe_identity");
+        }
+        obj_platform.AddMember("certification_data", obj_collateral, allocator);
+    }
+
+    audit_generator(request_id, verification_date, obj_platform, allocator);
+
+    obj.PushBack(obj_platform, allocator);
+    return TEE_SUCCESS;
+}
+
+//Generate enclave_tcb
+static quote3_error_t sgx_enclave_tcb_generator(
+    const char *enclave_type,
+    const char *request_id,
+    time_t verification_date,
+    uint16_t quote_ver,
+    const uint8_t *p_quote,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    Value obj_enclave(kObjectType);
+    Value obj_enclave_header(kObjectType);
+    Value obj_enclave_tcb(kObjectType);
+    std::string enclave_desc = TEE_SGX_ENCLAVE_DESCRIPTION;
+
+    Value str_enclave_type_val(kStringType);
+    str_enclave_type_val.SetString(enclave_type, (unsigned int)strlen(enclave_type), allocator);
+    if(str_enclave_type_val.GetStringLength() != 0){
+        obj_enclave_header.AddMember("class_id", str_enclave_type_val, allocator);
+    }
+    str_enclave_type_val.SetString(enclave_desc.c_str(), (unsigned int)(enclave_desc.length()), allocator);
+    if(str_enclave_type_val.GetStringLength() != 0){
+        obj_enclave_header.AddMember("description", str_enclave_type_val, allocator);
+    }
+
+    obj_enclave.AddMember("environment", obj_enclave_header, allocator);
+
+    if(p_quote != NULL){
+        sgx_report_body_t sgx_report;
+        memset(&sgx_report, 0, sizeof(sgx_report_body_t));
+        if(quote_ver == QUOTE_VERSION_3)
+        {
+            const sgx_quote3_t *p_tmp_quote3 = reinterpret_cast<const sgx_quote3_t *> (p_quote);
+            memcpy(&sgx_report, (void *)&(p_tmp_quote3->report_body), sizeof(sgx_report_body_t));
+        }
+        else if(quote_ver == QUOTE_VERSION_5)
+        {
+            const sgx_quote5_t *p_tmp_quote5 = reinterpret_cast<const sgx_quote5_t *> (p_quote);
+            memcpy(&sgx_report, p_tmp_quote5->body, sizeof(sgx_report_body_t));
+        }
+        else {
+            return TEE_ERROR_INVALID_PARAMETER;
+        }
+        
+        Value str_encl(kStringType);
+        auto Add_Mem = [&](std::string str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_encl.SetString(str_m.c_str(), (unsigned int)(str_m.length()), allocator);
+                            if(str_encl.GetStringLength() != 0){obj_enclave_tcb.AddMember(mem_name, str_encl, allocator);}};
+
+        std::string s_miscselect = byte_to_hexstring((uint8_t *) &(sgx_report.misc_select), sizeof(sgx_misc_select_t), true);
+        Add_Mem(s_miscselect, "sgx_miscselect");
+
+        std::string s_attributes = byte_to_hexstring((uint8_t *) &(sgx_report.attributes), sizeof(sgx_attributes_t), true);
+        Add_Mem(s_attributes, "sgx_attributes");
+        
+        std::string s_mrenclave = byte_to_hexstring((uint8_t *) &(sgx_report.mr_enclave.m), sizeof(sgx_measurement_t), true);
+        Add_Mem(s_mrenclave, "sgx_mrenclave");
+
+        std::string s_mrsigner = byte_to_hexstring(sgx_report.mr_signer.m, sizeof(sgx_measurement_t), true);
+        Add_Mem(s_mrsigner, "sgx_mrsigner");
+
+        obj_enclave_tcb.AddMember("sgx_isvprodid", sgx_report.isv_prod_id, allocator);
+        obj_enclave_tcb.AddMember("sgx_isvsvn", sgx_report.isv_svn, allocator);
+
+        std::string s_configid = byte_to_hexstring(sgx_report.config_id, SGX_CONFIGID_SIZE, true);
+        Add_Mem(s_configid, "sgx_configid");
+
+        obj_enclave_tcb.AddMember("sgx_configsvn", sgx_report.config_svn, allocator);
+        
+        std::string s_isvexprodid = byte_to_hexstring(sgx_report.isv_ext_prod_id, SGX_ISVEXT_PROD_ID_SIZE, true);
+        Add_Mem(s_isvexprodid, "sgx_isvextprodid");
+
+        std::string s_isvfamilyid = byte_to_hexstring(sgx_report.isv_family_id, SGX_ISV_FAMILY_ID_SIZE, true);
+        Add_Mem(s_isvfamilyid, "sgx_isvfamilyid");
+
+        std::string s_reportdata = byte_to_hexstring(sgx_report.report_data.d, sizeof(sgx_report_data_t), true);
+        Add_Mem(s_reportdata, "sgx_reportdata");
+
+        obj_enclave.AddMember("measurement", obj_enclave_tcb, allocator);
+    }
+
+    audit_generator(request_id, verification_date, obj_enclave, allocator);
+
+    obj.PushBack(obj_enclave, allocator);
+    return TEE_SUCCESS;
+}
+static quote3_error_t sgx_jwt_generator_internal(const char *plat_type,
+    const char *plat_version,
+    const char *enclave_type,
+    const char *enclave_version,
+    uint16_t quote_ver,
+    const char *request_id,
+    sgx_ql_qv_result_t qv_result,
+    time_t verification_date,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    const sgx_ql_qv_supplemental_t *p_supplemental_data,
+    const uint8_t *p_quote,
+    const uint32_t quote_size,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    uint32_t *jwt_size,
+    uint8_t **jwt_data)
+{
+    if(CHECK_MANDATORY_PARAMS(p_quote, quote_size) || quote_size < QUOTE_MIN_SIZE ||
+    plat_version == NULL || enclave_type == NULL || enclave_version == NULL ||
+    request_id == NULL || p_quote_collateral == NULL || p_supplemental_data == NULL)
+    {
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+    if(quote_ver != QUOTE_VERSION_5 && quote_ver != QUOTE_VERSION_3)
+    {
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+
+    Document JWT;
+    JWT.SetObject();
+    quote3_error_t dcap_ret = TEE_SUCCESS;
+
+    Document::AllocatorType &allocator = JWT.GetAllocator();
+
+    Value sgx_jwt_array(kArrayType);
+
+    dcap_ret = tee_platform_tcb_generator(
+                plat_type,
+                TEE_SGX_PLATFORM_DESCRIPTION,
+                request_id,
+                qv_result,
+                verification_date,
+                p_user_data,
+                user_data_size,
+                p_supplemental_data,
+                p_quote,
+                quote_size,
+                p_quote_collateral,
+                sgx_jwt_array,
+                allocator);
+    if(dcap_ret != TEE_SUCCESS){
+        return dcap_ret;
+    }
+
+    //Generate enclave_tcb
+    dcap_ret = sgx_enclave_tcb_generator(
+                enclave_type,
+                request_id,
+                verification_date,
+                quote_ver,
+                p_quote,
+                sgx_jwt_array,
+                allocator);
+    if(dcap_ret != TEE_SUCCESS){
+        return dcap_ret;
+    }
+
+    JWT.AddMember("qvl_result", sgx_jwt_array, allocator);
+
+    rapidjson::StringBuffer str_buff;
+    rapidjson::Writer<rapidjson::StringBuffer, rapidjson::Document::EncodingType, rapidjson::ASCII<>> writer(str_buff);
+    JWT.Accept(writer);
+    std::string raw_data = str_buff.GetString();
+    if(raw_data.empty())
+    {
+        return TEE_ERROR_UNEXPECTED;
+    }
+
+    dcap_ret = token_genrator_internal(raw_data, jwt_data, jwt_size);
+
+    return dcap_ret;
+}
+
+//genrate qe identity
+static void tdx_qe_identity_generator(
+    const char *request_id,
+    time_t verification_date,
+    const sgx_ql_qv_supplemental_t *p_supplemental_data,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    Value obj_qe_identity(kObjectType);
+    Value obj_qe_iden_header(kObjectType);
+    Value obj_qe_iden_tcb(kObjectType);
+    Value str_qe_type_val(kStringType);
+    std::string identity_desc = TEE_TDX_QE_IDENTITY_DESCRIPTION;
+    str_qe_type_val.SetString(TEE_TDX_QE_IDENTITY_TOKEN_UUID, (unsigned int)strlen(TEE_TDX_QE_IDENTITY_TOKEN_UUID));
+    if(str_qe_type_val.GetStringLength() != 0){
+        obj_qe_iden_header.AddMember("class_id", str_qe_type_val, allocator);
+    }
+    str_qe_type_val.SetString(identity_desc.c_str(), (unsigned int)(identity_desc.length()), allocator);
+    if(str_qe_type_val.GetStringLength() != 0){
+        obj_qe_iden_header.AddMember("Description", str_qe_type_val, allocator);
+    }
+
+    obj_qe_identity.AddMember("environment", obj_qe_iden_header, allocator);
+
+    if(p_supplemental_data != NULL){
+        Value qe_tcb_status_array(kArrayType);
+        Value qe_str_tcb_status(kStringType);
+        std::vector<std::string> qe_tcb_status;
+        qv_result_tcb_status_map(qe_tcb_status, p_supplemental_data->qe_iden_status);
+        if(!qe_tcb_status.empty())
+        {
+            for(size_t i=0; i<qe_tcb_status.size(); i++){
+                qe_str_tcb_status.SetString(qe_tcb_status[i].c_str(), (unsigned int)(qe_tcb_status[i].length()), allocator);
+                qe_tcb_status_array.PushBack(qe_str_tcb_status, allocator);
+            }
+            obj_qe_iden_tcb.AddMember("tcb_status", qe_tcb_status_array, allocator);
+        }
+
+        char time_str[TIME_STR_LEN] = {0};
+        Value str_date(kStringType);
+
+        auto Add_Mem = [&](char *str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_date.SetString(str_m, (unsigned int)strlen(str_m), allocator);
+                            if(str_date.GetStringLength() != 0){obj_qe_iden_tcb.AddMember(mem_name, str_date, allocator);}};
+
+        time_to_string(p_supplemental_data->qe_iden_tcb_level_date_tag, time_str, sizeof(time_str));
+        Add_Mem(time_str, "tcb_level_date_tag");
+    
+        time_to_string(p_supplemental_data->qe_iden_earliest_issue_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "earliest_issue_date");
+
+        time_to_string(p_supplemental_data->qe_iden_latest_issue_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "latest_issue_date");
+
+        time_to_string(p_supplemental_data->qe_iden_earliest_expiration_date, time_str, sizeof(time_str));
+        Add_Mem(time_str, "earliest_expiration_date");
+
+        obj_qe_iden_tcb.AddMember("tcb_eval_num", p_supplemental_data->qe_iden_tcb_eval_ref_num, allocator);
+
+        Value str_keyid(kStringType);
+        std::string s_root_key_id = byte_to_hexstring(p_supplemental_data->root_key_id, ROOT_KEY_ID_SIZE, true);
+        str_keyid.SetString(s_root_key_id.c_str(), (unsigned int)(s_root_key_id.length()), allocator);
+        if(str_keyid.GetStringLength() != 0){
+            obj_qe_iden_tcb.AddMember("root_key_id", str_keyid, allocator);
+        }
+        //root key id, SHA-384 hash of CERT chain root CA's public key
+    }
+
+    obj_qe_identity.AddMember("measurement", obj_qe_iden_tcb, allocator);
+    audit_generator(request_id, verification_date, obj_qe_identity, allocator);
+    obj.PushBack(obj_qe_identity, allocator);
+    return;
+}
+
+//Generate TD report
+static void tdx_td_report_generator(
+    uint16_t quote_ver,
+    uint16_t report_type,
+    const char *request_id,
+    time_t verification_date,
+    const uint8_t *p_quote,
+    rapidjson::Value &obj,
+    rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
+{
+    Value obj_td_report(kObjectType);
+    Value obj_td_rep_header(kObjectType);
+    Value obj_td_rep_tcb(kObjectType);
+
+    Value str_td_type_val(kStringType);
+    std::string tdtcb_desc = TEE_TDX_TD_IDENTITY_DESCRIPTION;
+    if(report_type == TDX10_REPORT)
+        str_td_type_val.SetString(TEE_TDX_TD10_IDENTITY_TOKEN_UUID, (unsigned int)strlen(TEE_TDX_TD10_IDENTITY_TOKEN_UUID), allocator);
+    else
+        str_td_type_val.SetString(TEE_TDX_TD15_IDENTITY_TOKEN_UUID, (unsigned int)strlen(TEE_TDX_TD15_IDENTITY_TOKEN_UUID), allocator);
+    if(str_td_type_val.GetStringLength() != 0){
+        obj_td_rep_header.AddMember("class_id", str_td_type_val, allocator);
+    }
+    str_td_type_val.SetString(tdtcb_desc.c_str(), (unsigned int)(tdtcb_desc.length()), allocator);
+    if(str_td_type_val.GetStringLength() != 0){
+        obj_td_rep_header.AddMember("Description", str_td_type_val, allocator);
+    }
+
+    obj_td_report.AddMember("environment", obj_td_rep_header, allocator);
+
+    if(p_quote != NULL){
+        sgx_report2_body_v1_5_t tmp_report;     //always transfer to tdx1.5 report
+        memset(&tmp_report, 0, sizeof(sgx_report2_body_v1_5_t));
+        if(quote_ver == QUOTE_VERSION_4)
+        {
+            const sgx_quote4_t *tmp_quote4 = reinterpret_cast<const sgx_quote4_t *> (p_quote);
+            memcpy(&tmp_report, (void *)&(tmp_quote4->report_body), sizeof(sgx_report2_body_t));
+        }
+        if(quote_ver == QUOTE_VERSION_5)
+        {
+            const sgx_quote5_t *tmp_quote5 = reinterpret_cast<const sgx_quote5_t *> (p_quote);
+            memcpy(&tmp_report, tmp_quote5->body, sizeof(sgx_report2_body_v1_5_t));
+        }
+
+        Value str_td(kStringType);
+        auto Add_Mem = [&](std::string str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_td.SetString(str_m.c_str(), (unsigned int)(str_m.length()), allocator);
+                            if(str_td.GetStringLength() != 0){obj_td_rep_tcb.AddMember(mem_name, str_td, allocator);}};
+        
+        std::string s_td_attributes = byte_to_hexstring((uint8_t *) &(tmp_report.td_attributes), sizeof(tee_attributes_t), true);
+        Add_Mem(s_td_attributes, "tdx_attributes");
+
+        std::string s_tdx_xfam = byte_to_hexstring((uint8_t *) &(tmp_report.xfam), sizeof(tee_attributes_t), true);
+        Add_Mem(s_tdx_xfam, "tdx_xfam");
+
+        std::string s_tdx_mrconfigid = byte_to_hexstring((uint8_t *) &(tmp_report.mr_config_id), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_mrconfigid, "tdx_mrconfigid");
+
+        std::string s_tdx_mrowner = byte_to_hexstring((uint8_t *) &(tmp_report.mr_owner), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_mrowner, "tdx_mrowner");
+        
+        std::string s_tdx_mrownerconfig = byte_to_hexstring((uint8_t *) &(tmp_report.mr_owner_config), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_mrownerconfig, "tdx_mrownerconfig");
+        
+        std::string s_tdx_mrtd = byte_to_hexstring((uint8_t *) &(tmp_report.mr_td), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_mrtd, "tdx_mrtd");
+
+        std::string s_tdx_rtmr0 = byte_to_hexstring((uint8_t *) &(tmp_report.rt_mr[0]), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_rtmr0, "tdx_rtmr0");
+
+        std::string s_tdx_rtmr1 = byte_to_hexstring((uint8_t *) &(tmp_report.rt_mr[1]), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_rtmr1, "tdx_rtmr1");
+
+        std::string s_tdx_rtmr2 = byte_to_hexstring((uint8_t *) &(tmp_report.rt_mr[2]), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_rtmr2, "tdx_rtmr2");
+
+        std::string s_tdx_rtmr3 = byte_to_hexstring((uint8_t *) &(tmp_report.rt_mr[3]), sizeof(tee_measurement_t), true);
+        Add_Mem(s_tdx_rtmr3, "tdx_rtmr3");
+
+        std::string s_tdx_reportdata  = byte_to_hexstring((uint8_t *) &(tmp_report.report_data), sizeof(tee_report_data_t), true);
+        Add_Mem(s_tdx_reportdata, "tdx_reportdata");
+        //only quote version 5: tdx_mrservicetd
+        if(quote_ver == QUOTE_VERSION_5)
+        {
+            std::string s_mr_servicetd  = byte_to_hexstring((uint8_t *) &(tmp_report.mr_servicetd), sizeof(tee_measurement_t), true);
+            Add_Mem(s_mr_servicetd, "tdx_mrservicetd");
+        }
+    }
+    obj_td_report.AddMember("measurement", obj_td_rep_tcb, allocator);
+    audit_generator(request_id, verification_date, obj_td_report, allocator);
+    obj.PushBack(obj_td_report, allocator);
+    return;
+}
+
+static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
+    uint16_t report_type,
+    const char *plat_version,
+    const char *qe_identity_version,
+    const char *td_identity_version,
+    const char *request_id,
+    sgx_ql_qv_result_t qv_result,
+    time_t verification_date,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    const sgx_ql_qv_supplemental_t *p_supplemental_data,
+    const uint8_t *p_quote,
+    const uint32_t quote_size,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    uint32_t *jwt_size,
+    uint8_t **jwt_data)
+{
+    if(CHECK_MANDATORY_PARAMS(p_quote, quote_size) || quote_size < QUOTE_MIN_SIZE ||
+    plat_version == NULL || qe_identity_version == NULL || td_identity_version == NULL || 
+    request_id == NULL || p_supplemental_data == NULL || p_quote_collateral == NULL){
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+    if(report_type != TDX10_REPORT && report_type != TDX15_REPORT){
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+    const sgx_quote4_t *quote4 = reinterpret_cast<const sgx_quote4_t *> (p_quote);
+    if(quote4->header.tee_type != TEE_TYPE_TDX){
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+
+    Document JWT;
+    JWT.SetObject();
+    quote3_error_t dcap_ret = TEE_SUCCESS;
+
+    Document::AllocatorType &allocator = JWT.GetAllocator();
+
+    Value tdx_jwt_array(kArrayType); 
+
+    if(report_type == TDX10_REPORT){
+        dcap_ret = tee_platform_tcb_generator(
+        TEE_TDX10_PALTFORM_TOKEN_UUID,
+        TEE_SGX_PLATFORM_DESCRIPTION,
+        request_id,
+        qv_result,
+        verification_date,
+        p_user_data,
+        user_data_size,
+        p_supplemental_data,
+        p_quote,
+        quote_size,
+        p_quote_collateral,
+        tdx_jwt_array,
+        allocator);
+    }
+    else{
+        dcap_ret = tee_platform_tcb_generator(
+        TEE_TDX15_PALTFORM_TOKEN_UUID,
+        TEE_SGX_PLATFORM_DESCRIPTION,
+        request_id,
+        qv_result,
+        verification_date,
+        p_user_data,
+        user_data_size,
+        p_supplemental_data,
+        p_quote,
+        quote_size,
+        p_quote_collateral,
+        tdx_jwt_array,
+        allocator);
+    }
+    
+    if(dcap_ret != TEE_SUCCESS){
+        return dcap_ret;
+    }
+
+    //Generate QE Identity
+    tdx_qe_identity_generator(
+        request_id,
+        verification_date,
+        p_supplemental_data,
+        tdx_jwt_array,
+        allocator);
+
+    //Generate TD report
+    tdx_td_report_generator(
+        quote_ver,
+        report_type,
+        request_id,
+        verification_date,
+        p_quote,
+        tdx_jwt_array,
+        allocator);
+
+    JWT.AddMember("qvl_result", tdx_jwt_array, allocator);
+
+    rapidjson::StringBuffer str_buff;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(str_buff);
+    JWT.Accept(writer);
+
+    std::string raw_data = str_buff.GetString();
+    if(raw_data.empty())
+    {
+        return TEE_ERROR_UNEXPECTED;
+    }
+    dcap_ret = token_genrator_internal(raw_data, jwt_data, jwt_size);
+
+    return dcap_ret;
+}
+
+#ifdef SGX_TRUSTED
+/**
+ * Generate enclave report with:
+ * SHA384([jwt || user_data] || 32 - 0x00s)
+ *
+ * @param p_token[IN] - Pointer to a tee JWT token.
+ * @param token_size[IN] - Size of the buffer pointed to by p_token (in bytes).
+ * @param p_user_data[IN] - Pointer to a user data.
+ * @param user_data_size[IN] - Size of the buffer pointed to by p_user_data (in bytes).
+ * @param p_qve_report_info[IN/OUT] - QvE will generate a report using the target_info provided in the sgx_ql_qe_report_info_t structure, and store it in qe_report.
+ *
+ * @return Status code of the operation, one of:
+ *      - SGX_QL_SUCCESS
+ *      - SGX_QL_ERROR_INVALID_PARAMETER
+ *      - SGX_QL_UNABLE_TO_GENERATE_REPORT
+ **/
+static quote3_error_t sgx_qve_token_generate_report(
+    const uint8_t *p_token,
+    uint32_t token_size,
+    sgx_ql_qe_report_info_t *p_qve_report_info)
+{
+
+    //validate parameters
+    //
+    if (p_token == NULL ||
+        token_size == 0) {
+        return SGX_QL_ERROR_INVALID_PARAMETER;
+    }
+
+    sgx_status_t sgx_status = SGX_ERROR_UNEXPECTED;
+    quote3_error_t ret = SGX_QL_UNABLE_TO_GENERATE_REPORT;
+    sgx_sha_state_handle_t sha_handle = NULL;
+    sgx_report_data_t report_data = { 0 };
+
+
+    do {
+        //Create QvE report
+        //
+        //report_data =  SHA384([jwt] || 32 - 0x00s)
+        //
+        sgx_status = sgx_sha384_init(&sha_handle);
+        SGX_ERR_BREAK(sgx_status);
+
+        //jwt token
+        //
+        sgx_status = sgx_sha384_update((p_token), token_size, sha_handle);
+        SGX_ERR_BREAK(sgx_status);
+
+        //get the hashed report_data
+        //
+        sgx_status = sgx_sha384_get_hash(sha_handle, reinterpret_cast<sgx_sha384_hash_t *>(&report_data));
+        SGX_ERR_BREAK(sgx_status);
+
+        //create QVE report with report_data embedded
+        //
+        sgx_status = sgx_create_report(&(p_qve_report_info->app_enclave_target_info), &report_data, &(p_qve_report_info->qe_report));
+        SGX_ERR_BREAK(sgx_status);
+
+        ret = SGX_QL_SUCCESS;
+    } while (0);
+
+    //clear data in report_data (it's a local variable, no need for free).
+    //
+    memset_s(&report_data, sizeof(sgx_report_data_t), 0, sizeof(sgx_report_data_t));
+    if (sha_handle != NULL) {
+        sgx_sha384_close(sha_handle);
+    }
+    return ret;
+}
+#endif //SGX_TRUSTED
+
+static quote3_error_t user_report_verify_internal(
+    const uint8_t *p_quote,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size
+)
+{
+    //parse quote header to get tee type, only support SGX and TDX by now
+    tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
+
+    // check quote type
+    uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
+    if (*p_type == SGX_QUOTE_TYPE)
+        tee_type = SGX_EVIDENCE;
+    else if (*p_type == TDX_QUOTE_TYPE)
+        tee_type = TDX_EVIDENCE;
+    else{
+        //quote type is not supported
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+    uint16_t quote_ver = 0;
+    const uint8_t *p_tmp_quote = p_quote;
+    memcpy(&quote_ver, p_tmp_quote, sizeof(uint16_t));
+   
+    if(tee_type == SGX_EVIDENCE && p_user_data){
+        sgx_report_body_t sgx_report;
+        memset(&sgx_report, 0, sizeof(sgx_report_body_t));
+        if(quote_ver == QUOTE_VERSION_3)
+        {
+            const sgx_quote3_t *p_tmp_quote3 = reinterpret_cast<const sgx_quote3_t *> (p_quote);
+            memcpy(&sgx_report, (void *)&(p_tmp_quote3->report_body), sizeof(sgx_report_body_t));
+        }
+        else if(quote_ver == QUOTE_VERSION_5)
+        {
+            const sgx_quote5_t *p_tmp_quote5 = reinterpret_cast<const sgx_quote5_t *> (p_quote);
+            memcpy(&sgx_report, p_tmp_quote5->body, sizeof(sgx_report_body_t));
+        }
+        else {
+            return TEE_ERROR_INVALID_PARAMETER;
+        }
+        if(strlen(reinterpret_cast<const char*>(sgx_report.report_data.d)) > SHA384_LEN){
+            return TEE_ERROR_REPORT;
+        }
+        uint8_t data_hash[SHA384_LEN] = { 0 };
+        if (SHA384((const unsigned char *)p_user_data, user_data_size, data_hash) == NULL) {
+            return TEE_ERROR_UNEXPECTED;
+        }
+        if (memcmp(&sgx_report.report_data.d, data_hash, SHA384_LEN) != 0) {
+            return TEE_ERROR_REPORT;
+        }
+    }
+
+    return TEE_SUCCESS;
+}
+
+quote3_error_t  tee_qve_verify_quote_qvt(
+    const uint8_t *p_quote,
+    uint32_t quote_size,
+    time_t current_time,
+    const sgx_ql_qve_collateral_t *p_quote_collateral,
+    sgx_ql_qe_report_info_t *p_qve_report_info,
+    const uint8_t *p_user_data,
+    uint32_t user_data_size,
+    uint32_t *p_verification_result_token_buffer_size,
+    uint8_t **p_verification_result_token
+)
+{
+    if( p_quote == NULL ||
+        quote_size < QUOTE_MIN_SIZE ||
+        !sgx_is_within_enclave(p_quote, quote_size) ||
+        p_quote_collateral == NULL ||
+        !sgx_is_within_enclave(p_quote_collateral, sizeof(*p_quote_collateral)) ||
+        !is_collateral_deep_copied(p_quote_collateral) ||
+        current_time <= 0 ||
+        (p_qve_report_info != NULL && !sgx_is_within_enclave(p_qve_report_info, sizeof(*p_qve_report_info))) ||
+        p_verification_result_token_buffer_size == 0 || p_verification_result_token == NULL)
+    {
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+
+    quote3_error_t dcap_ret = TEE_ERROR_UNEXPECTED;
+    if(p_user_data){
+        if (user_data_size == 0 || !sgx_is_within_enclave(p_user_data, user_data_size))
+        {
+            return TEE_ERROR_INVALID_PARAMETER;
+        }
+        dcap_ret = user_report_verify_internal(p_quote, p_user_data, user_data_size);
+        if(dcap_ret != TEE_SUCCESS){
+            return dcap_ret;
+        }
+    }
+
+    uint32_t collateral_expiration_status = 1;
+
+    tee_supp_data_descriptor_t supp_data;
+    memset(&supp_data, 0, sizeof(tee_supp_data_descriptor_t));
+    sgx_ql_qv_result_t quote_verification_result = TEE_QV_RESULT_UNSPECIFIED;
+    
+    //get supplemental data size
+    dcap_ret = sgx_qve_get_quote_supplemental_data_size(&supp_data.data_size);
+
+    if (dcap_ret == TEE_SUCCESS && supp_data.data_size == sizeof(sgx_ql_qv_supplemental_t)) {
+        supp_data.p_data = (uint8_t*)malloc(supp_data.data_size);
+        if (supp_data.p_data != NULL) {
+            memset(supp_data.p_data, 0, supp_data.data_size);
+        }
+        else {
+            return TEE_ERROR_OUT_OF_MEMORY;
+        }
+    }
+    else {
+        if (dcap_ret != TEE_SUCCESS){
+            return dcap_ret;
+        }
+
+        if (supp_data.data_size != sizeof(sgx_ql_qv_supplemental_t)){
+            return SGX_QL_SUPPLEMENTAL_DATA_VERSION_NOT_SUPPORTED;
+        }
+    }
+
+    // set supplemental version if necessary
+    if (supp_data.p_data != NULL && supp_data.data_size > 0) {
+        try {
+            // set version in supplemental data
+            reinterpret_cast<sgx_ql_qv_supplemental_t*> (supp_data.p_data)->major_version = SUPPLEMENTAL_DATA_VERSION;
+            reinterpret_cast<sgx_ql_qv_supplemental_t*> (supp_data.p_data)->minor_version = SUPPLEMENTAL_V3_LATEST_MINOR_VERSION;
+        }
+
+        catch(...) {
+            // cannot access p_supplemental_data field
+            if(supp_data.p_data != NULL){
+                free(supp_data.p_data);
+            }
+            return SGX_QL_ERROR_INVALID_PARAMETER;
+        }
+    }
+    dcap_ret =  sgx_qve_verify_quote(
+    p_quote,
+    quote_size,
+    p_quote_collateral,
+    current_time,
+    &collateral_expiration_status,
+    &quote_verification_result,
+    p_qve_report_info,
+    supp_data.data_size,
+    supp_data.p_data
+    );
+
+    if (dcap_ret == TEE_SUCCESS) {
+        switch (quote_verification_result)
+        {
+        case TEE_QV_RESULT_OK:
+            break;
+        case TEE_QV_RESULT_CONFIG_NEEDED:
+        case TEE_QV_RESULT_OUT_OF_DATE:
+        case TEE_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+        case TEE_QV_RESULT_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED:
+        case TEE_QV_RESULT_TD_RELAUNCH_ADVISED_CONFIG_NEEDED:
+            break;
+        //Will not generate JWT when critical error occurred
+        default:
+            if(supp_data.p_data != NULL){
+                free(supp_data.p_data);
+            }
+            return TEE_ERROR_UNEXPECTED;
+        }
+    }
+    else {
+        if(supp_data.p_data != NULL){
+            free(supp_data.p_data);
+        }
+        return dcap_ret;
+    }
+
+    unsigned char rand_nonce[REQUEST_ID_LEN] = {0};
+    if(!RAND_bytes(rand_nonce, REQUEST_ID_LEN))
+    {
+        if(supp_data.p_data != NULL){
+            free(supp_data.p_data);
+        }
+        return TEE_ERROR_UNEXPECTED;
+    }
+
+    //parse quote header to get tee type, only support SGX and TDX by now
+    tee_evidence_type_t tee_type = UNKNOWN_QUOTE_TYPE;
+
+    // check quote type
+    uint32_t *p_type = (uint32_t *) (p_quote + sizeof(uint16_t) * 2);
+    if (*p_type == SGX_QUOTE_TYPE)
+        tee_type = SGX_EVIDENCE;
+    else if (*p_type == TDX_QUOTE_TYPE)
+        tee_type = TDX_EVIDENCE;
+    else{
+        if(supp_data.p_data != NULL){
+            free(supp_data.p_data);
+        }
+        //quote type is not supported
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+    uint16_t quote_ver = 0;
+    uint16_t report_type = 0;
+    const uint8_t *p_tmp_quote = p_quote;
+    memcpy(&quote_ver, p_tmp_quote, sizeof(uint16_t));
+    if(quote_ver == QUOTE_VERSION_4){
+        sgx_quote4_t *p_tmp_quote4 = (sgx_quote4_t *)p_tmp_quote;
+        uint16_t major_ver = p_tmp_quote4->report_body.tee_tcb_svn.tcb_svn[1];
+        switch (major_ver)
+        {
+            case 0:
+                report_type = TDX10_REPORT;
+                break;
+            case 1:
+                report_type = TDX15_REPORT;
+                break;
+            default:    //tdx2.0 not support yet
+                report_type = UNKNOWN_REPORT_TYPE;
+                break;
+        }
+    }
+    if(quote_ver == QUOTE_VERSION_5)
+    {
+        sgx_quote5_t *p_tmp_quote_5 = (sgx_quote5_t *)p_tmp_quote;
+        report_type = p_tmp_quote_5->type;
+    }
+    uint8_t *tmp_result_token = NULL;
+    try
+    {
+        if(tee_type == SGX_EVIDENCE){
+            dcap_ret = sgx_jwt_generator_internal(
+                TEE_SGX_PALTFORM_TOKEN_UUID, TEE_SGX_PLATFORM_TOKEN_VER,
+                TEE_SGX_ENCLAVE_TOKEN_UUID, TEE_SGX_ENCLAVE_TOKEN_VER,
+                quote_ver,
+                reinterpret_cast<const char*>(rand_nonce),
+                quote_verification_result,
+                current_time,
+                p_user_data,
+                user_data_size,
+                reinterpret_cast<const sgx_ql_qv_supplemental_t*>(supp_data.p_data),
+                p_quote,
+                quote_size,
+                p_quote_collateral,
+                p_verification_result_token_buffer_size,                           
+                &tmp_result_token);
+        }
+        else if(tee_type == TDX_EVIDENCE){
+            dcap_ret = tdx_jwt_generator_internal(
+                quote_ver, report_type,
+                TEE_TDX_PLATFORM_TOKEN_VER,
+                TEE_TDX_QE_IDENTITY_TOKEN_VER,
+                TEE_TDX_TD_IDENTITY_TOKEN_VER,
+                reinterpret_cast<const char*>(rand_nonce),
+                quote_verification_result,
+                current_time,
+                p_user_data,
+                user_data_size,
+                reinterpret_cast<const sgx_ql_qv_supplemental_t*>(supp_data.p_data),
+                p_quote,
+                quote_size,
+                p_quote_collateral,
+                p_verification_result_token_buffer_size,
+                &tmp_result_token);
+        }
+    }
+    catch (...)
+    {
+        if(supp_data.p_data != NULL){
+            free(supp_data.p_data);
+        }
+        if(tmp_result_token != NULL){
+            free(tmp_result_token);
+        }
+        return TEE_ERROR_UNEXPECTED;
+    }
+
+#ifdef SGX_TRUSTED
+    if (p_qve_report_info != NULL && dcap_ret == TEE_SUCCESS) {
+
+        quote3_error_t generate_report_ret = TEE_ERROR_INVALID_PARAMETER;
+        //clear original data
+        memset_s(&(p_qve_report_info->qe_report), sizeof(p_qve_report_info->qe_report), 0, sizeof(p_qve_report_info->qe_report));
+        //generate a report with the verification result and input collaterals
+        //
+        generate_report_ret = sgx_qve_token_generate_report(
+            (const uint8_t *)tmp_result_token,
+            *p_verification_result_token_buffer_size,
+            p_qve_report_info);
+        if (generate_report_ret != TEE_SUCCESS) {
+            dcap_ret = generate_report_ret;
+            memset_s(&(p_qve_report_info->qe_report), sizeof(p_qve_report_info->qe_report), 0, sizeof(p_qve_report_info->qe_report));
+        }
+    }
+
+    if(dcap_ret == TEE_SUCCESS){
+        ocall_qvt_token_malloc(*p_verification_result_token_buffer_size + 1, p_verification_result_token);
+        if(*p_verification_result_token != NULL){
+            memcpy(*p_verification_result_token, tmp_result_token, *p_verification_result_token_buffer_size);
+        }
+        else{
+            if(tmp_result_token != NULL){
+                free(tmp_result_token);
+            }
+            if(supp_data.p_data != NULL){
+                free(supp_data.p_data);
+            }
+            return TEE_ERROR_OUT_OF_MEMORY;
+        }
+    }
+    if(tmp_result_token != NULL){
+        free(tmp_result_token);
+    }
+#else
+    *p_verification_result_token = tmp_result_token;
+#endif //SGX_TRUSTED
+
+    if(supp_data.p_data != NULL){
+        free(supp_data.p_data);
+    }
+    return dcap_ret;
+}
+
+#endif
 #endif

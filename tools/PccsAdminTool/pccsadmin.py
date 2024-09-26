@@ -280,8 +280,8 @@ class PlatformCollector:
                 return
 
             arr = os.listdir(self.csv_dir)
-            if len(arr) < 2:
-                print("At least 2 csv files are needed. Please make sure this is an administrator platform.")
+            if len(arr) < 1:
+                print("At least 1 csv files are needed. Please make sure this is an administrator platform.")
                 return
 
             self.read_csv_files(arr)
@@ -297,7 +297,10 @@ class PlatformCollector:
             if file.endswith(".csv"):
                 with open(os.path.join(self.csv_dir, file), 'r') as csvfile:
                     reader = csv.DictReader(csvfile, self.fieldnames)
-                    self.platform_list.extend(row for row in reader)
+                    for row in reader:
+                        # Add the 'pckid_filename' key to each row with the CSV filename
+                        row['pckid_filename'] = os.path.splitext(file)[0]
+                        self.platform_list.append(row)
 
     def write_to_json(self):
         with open(self.output_file, 'w') as jsonfile:
@@ -585,8 +588,23 @@ class CacheCreator:
 
         fmspc = pckcerts[3]
         sgx_tcbinfo = pcsclient.get_tcb_info(fmspc, 'sgx', self.tcb_update_type, 'ascii')
+        if sgx_tcbinfo is None:
+            print(f"Failed to get TCB info for fmspc: {fmspc}")
+            return False
+
         tcbcomponent = self._decompose_cpusvn_components(platform["cpu_svn"], json.loads(sgx_tcbinfo[0])["tcbInfo"]["tcbType"])
-        self.write_to_cache_file(platform, output_dir, expire_hours, tcbcomponent, sgx_tcbinfo, pckcerts)
+
+        # Check if 'pckid_filename' is in the platform dictionary
+        if 'pckid_filename' in platform:
+            # Create a subdirectory named after the 'pckid_filename' within the output_dir
+            output_subdir = os.path.join(output_dir, platform['pckid_filename'])
+            os.makedirs(output_subdir, exist_ok=True)  # Create the directory if it doesn't exist
+        else:
+            # If 'pckid_filename' is not provided, use the output_dir as is
+            output_subdir = output_dir
+
+        # Write the cache file to the determined directory
+        self.write_to_cache_file(platform, output_subdir, expire_hours, tcbcomponent, sgx_tcbinfo, pckcerts)
         return True
     
     def generate_cache(self):

@@ -61,6 +61,20 @@ class MPManagement {
         // if not, returns an appropriate error (MP_NO_PENDING_DATA). populates buffer_size with the required size in case of insufficient size.
         virtual MpResult getPlatformManifest(uint8_t *buffer, uint16_t &buffer_size); 
 
+        // Retrieves Add Package request.
+        // If SgxRegistrationServerRequest UEFI variable is available and contains a pending Add Package request, copies the ADD_REQUEST to output buffer.
+        // If not, returns an appropriate error (MP_NO_PENDING_DATA). Populates buffer_size with the required size in case of insufficient size.
+        virtual MpResult getAddPackageRequest(uint8_t *buffer, uint16_t &buffer_size); 
+
+        // Sets the SGX Registration Server response to BIOS.
+        // The input buffer should contain the platform membership certificates as-received from the registration server
+        // after a successful "Add Package".
+        virtual MpResult setMembershipCertificates(const uint8_t *membershipCertificates, uint16_t membershipCertificatesSize);
+
+        // Retrieves SGX registration information as configured in the the BIOS.
+        // Pass-through for the UEFI library function getRegistrationServerInfo
+        virtual MpResult getRegistrationServerInfo(uint16_t &flags, string &outUrl, uint8_t *serverId, uint16_t &serverIdSize);
+        
         // Retrieves registration error code.
         // If registration is completed successfully, error_code will be set to 0.
         // If registration process failed, error_code will be set to the relevant last reported error code.
@@ -87,7 +101,7 @@ class MPManagement {
 
         MPManagement& operator=(const MPManagement&) {return *this;}
         MPManagement(const MPManagement& src) {(void) src; }
-
+        MpResult getRequestData(uint8_t *buffer, uint16_t &buffer_size, MpRequestType requestType);
 };
 
 #endif  // #ifndef __MPMANAGEMENT_H

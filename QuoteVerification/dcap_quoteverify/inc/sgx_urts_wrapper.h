@@ -69,6 +69,8 @@ typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const LPCSTR file_name,
 #endif /* !UNICODE */
 
 #elif defined(__GNUC__)
+#include "metadata.h"
+
 #define SGX_URTS_API_CREATE_ENCLAVE "sgx_create_enclave"
 
 typedef sgx_status_t (SGXAPI *sgx_create_enclave_func_t)(const char* file_name,
@@ -90,6 +92,10 @@ extern pthread_create_ocall_func_t p_pthread_create_ocall;
 extern pthread_wait_timeout_ocall_func_t p_pthread_wait_timeout_ocall;
 extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
 
+#define SGX_URTS_API_GET_METADATA "sgx_get_metadata"
+typedef sgx_status_t (SGXAPI *sgx_get_metadata_func_t)(const char* enclave_file, metadata_t *metadata);
+extern sgx_get_metadata_func_t p_sgx_urts_get_metadata;
+
 #endif
 
 #define SGX_URTS_API_DESTROY_ENCLAVE "sgx_destroy_enclave"
@@ -99,7 +105,6 @@ extern pthread_wakeup_ocall_func_t p_pthread_wakeup_ocall_func;
 #define SGX_URTS_API_OCALL_SET_EVENT "sgx_thread_set_untrusted_event_ocall"
 #define SGX_URTS_API_OCALL_WAITSET_EVENT "sgx_thread_setwait_untrusted_events_ocall"
 #define SGX_URTS_API_OCALL_SET_MULTIPLE_EVENT "sgx_thread_set_multiple_untrusted_events_ocall"
-
 
 
 typedef sgx_status_t (SGXAPI* sgx_destroy_enclave_func_t)(const sgx_enclave_id_t enclave_id);
@@ -116,7 +121,6 @@ typedef int (*sgx_thread_setwait_untrusted_events_ocall_func_t)(const void *wait
 
 typedef int (*sgx_thread_set_multiple_untrusted_events_ocall_func_t)(const void **waiters, size_t total);
 
-
 bool sgx_dcap_load_urts();
 
 extern sgx_create_enclave_func_t p_sgx_urts_create_enclave;
@@ -127,7 +131,6 @@ extern sgx_thread_wait_untrusted_event_ocall_func_t p_sgx_thread_wait_untrusted_
 extern sgx_thread_set_untrusted_event_ocall_func_t p_sgx_thread_set_untrusted_event_ocall;
 extern sgx_thread_setwait_untrusted_events_ocall_func_t p_sgx_thread_setwait_untrusted_events_ocall;
 extern sgx_thread_set_multiple_untrusted_events_ocall_func_t p_sgx_thread_set_multiple_untrusted_events_ocall;
-
 
 #if defined(__cplusplus)
 }
