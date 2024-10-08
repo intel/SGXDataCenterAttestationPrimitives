@@ -333,13 +333,13 @@ class PCS:
 # PCS: Get PCK Certificate(s)
 #----------------------------------------------------------------------------
 
-    def get_pck_cert(self, eppid, pceid, cpusvn, pcesvn, dec=None):
+    def get_pck_cert(self, eppid, pceid, cpusvn, pcesvn, dec=None, anonymous=False):
         self.clear_errors()
         url= self._geturl('pckcert')
         url+= "?encrypted_ppid={:s}&pceid={:s}&cpusvn={:s}&pcesvn={:s}".format(
             eppid, pceid, cpusvn, pcesvn)
 
-        response= self._get_request(url, True)
+        response= self._get_request(url, not anonymous)
         if response.status_code != 200:
             print(str(response.content, 'utf-8'))
             if response.status_code == 401:
@@ -401,7 +401,7 @@ class PCS:
             "%0.2X" % tcb['sgxtcbcomp15svn'] + 
             "%0.2X" % tcb['sgxtcbcomp16svn'])
 
-    def get_pck_certs(self, eppid, pceid, platform_manifest, dec=None):
+    def get_pck_certs(self, eppid, pceid, platform_manifest, dec=None, anonymous=False):
         self.clear_errors()
         certs_pem= []
         url= self._geturl('pckcerts')
@@ -410,10 +410,10 @@ class PCS:
             data = {}
             data["pceid"] = pceid
             data["platformManifest"] = platform_manifest
-            response= self._post_request(url, data, True)
+            response= self._post_request(url, data, not anonymous)
         else:
             url+= "?encrypted_ppid={:s}&pceid={:s}".format(eppid, pceid)
-            response= self._get_request(url, True)
+            response= self._get_request(url, not anonymous)
 
         if response.status_code != 200:
             print(str(response.content, 'utf-8'))
