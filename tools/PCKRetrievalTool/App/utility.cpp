@@ -235,9 +235,9 @@ bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
     char enclave_path[MAX_PATH] = "";
 #endif
 
+#if defined(_MSC_VER)
     if (!get_program_path(enclave_path, MAX_PATH - 1))
         return false;
-#if defined(_MSC_VER)    
     if (_tcsnlen(enclave_path, MAX_PATH) + _tcsnlen(enclave_name, MAX_PATH) + sizeof(char) > MAX_PATH)
         return false;
     (void)_tcscat_s(enclave_path, MAX_PATH, enclave_name);
@@ -248,6 +248,16 @@ bool load_enclave(const char* enclave_name, sgx_enclave_id_t* p_eid)
     sgx_create_enclave_func_t p_sgx_create_enclave = (sgx_create_enclave_func_t)FINDFUNCTIONSYM(sgx_urts_handle, "sgx_create_enclavea");
 #endif
 #else
+    if (*SGX_ENCLAVE_PATH) {
+        if ((strlen(SGX_ENCLAVE_PATH) + 1 + 1) > MAX_PATH) {
+            return false;
+        }
+        (void)strcpy(enclave_path, SGX_ENCLAVE_PATH);
+        (void)strcat(enclave_path, "/");
+    } else {
+        if (!get_program_path(enclave_path, MAX_PATH - 1))
+            return false;
+    }
     if (strnlen(enclave_path, MAX_PATH) + strnlen(enclave_name, MAX_PATH) + sizeof(char) > MAX_PATH)
         return false;
     (void)strncat(enclave_path, enclave_name, strnlen(enclave_name, MAX_PATH));
