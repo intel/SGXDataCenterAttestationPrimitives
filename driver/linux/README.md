@@ -13,6 +13,13 @@ incompatibilities, it is recommended that existing solutions using this driver b
 kernel 5.11 or higher. Guidelines for the transition can be found [here](./README.kernel.md).  
 
 
+IMPORTANT
+---------
+This driver is deprecated and no longer maintained by Intel. We recommend the SGX community to use the SGX driver that was upstreamed into the Linux kernel. Note that the kernel driver also requires SGX CPUs with Flexible Launch Control (FLC) support.
+
+For new feature requests/patches, please submit them directly to the [linux-sgx mailing list](http://vger.kernel.org/vger-lists.html#linux-sgx)
+
+
 Documentation
 -------------
 - [Intel(R) SGX for Linux\* OS](https://01.org/intel-softwareguard-extensions) project home page on [01.org](http://01.org)
