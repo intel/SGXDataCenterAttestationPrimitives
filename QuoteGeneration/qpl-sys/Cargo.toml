@@ -8,4 +8,4 @@ links = "dcap_quoteprov"
 
 [dependencies]
 [build-dependencies]
-bindgen = "0.66.1"
+bindgen = "0.70.1"

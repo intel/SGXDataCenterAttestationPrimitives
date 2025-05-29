@@ -37,6 +37,7 @@ typedef enum _ftype_t
     SGX_ENCLAVE,
     TDX_REPORT_V10,
     TDX_REPORT_V15,
+    TDX_REPORT_V20,
 } ftype_t;
 
 #define TEE_TYPE_TDX 0x00000081L

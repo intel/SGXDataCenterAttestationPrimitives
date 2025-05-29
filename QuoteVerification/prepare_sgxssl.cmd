@@ -1,4 +1,3 @@
-
 Rem
 Rem Copyright (C) 2011-2022 Intel Corporation. All rights reserved.
 Rem
@@ -39,17 +38,18 @@ set top_dir=%~dp0
 set sgxssl_dir=%top_dir%\sgxssl
 
 set openssl_out_dir=%sgxssl_dir%\openssl_source
-set openssl_ver_name=openssl-3.0.14
+set openssl_ver_name=openssl-3.1.6
 set sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
-set sgxssl_ver_name=3.0_Rev4
+set sgxssl_ver_name=3.1.6_Rev1
 set sgxssl_ver=%sgxssl_ver_name%
 set build_script=%sgxssl_dir%\Windows\build_package.cmd
 
-set server_url_path=https://www.openssl.org/source/
+@Rem set server_url_path=https://www.openssl.org/source/
+set server_url_path=https://af01p-igk.devtools.intel.com/artifactory/sgxdcapprerequisites-igk-local/prebuilt/ssl
 
 set full_openssl_url=%server_url_path%/%openssl_ver_name%.tar.gz
-set sgxssl_chksum=3ae56df48a56f58fce8d0472ea82cc4380e30442b49b931c027fda9e637cb3fa
-set openssl_chksum=eeca035d4dd4e84fc25846d952da6297484afa0650a6f84c682e39df3a4123ca
+set sgxssl_chksum=8fbacac2612f6117c11d04cd7989f1a035f978683a4626055133b2fbf332d016
+set openssl_chksum=5d2be4036b478ef3cb0a854ca9b353072c3a0e26d8a56f8f0ab9fb6ed32d38d7
 
 if not exist %sgxssl_dir% (
 	mkdir %sgxssl_dir%
@@ -71,7 +71,8 @@ if not exist %build_script% (
 )
 
 if not exist %openssl_out_dir%\%openssl_ver_name%.tar.gz (
-	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+@Rem	call powershell -Command "Invoke-WebRequest -URI %full_openssl_url% -OutFile %openssl_out_dir%\%openssl_ver_name%.tar.gz"
+	call powershell -Command " [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}; (New-Object Net.WebClient).DownloadFile('%full_openssl_url%', '%openssl_out_dir%\%openssl_ver_name%.tar.gz'); exit" > nul
 )
 call powershell -Command " $opensslfilehash = Get-FileHash %openssl_out_dir%\%openssl_ver_name%.tar.gz; Write-Output $opensslfilehash.Hash | out-file -filepath %sgxssl_dir%\check_sum_openssl.txt -encoding ascii"
 findstr /i %openssl_chksum% %sgxssl_dir%\check_sum_openssl.txt>nul
