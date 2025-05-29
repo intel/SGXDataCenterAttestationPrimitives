@@ -274,7 +274,7 @@ std::string CInputTDReport::generate_payload()
     {
         rapidjson::Value str_v(rapidjson::kStringType);
         description = "Application TD TCB";
-        if (m_ftype == TDX_REPORT_V15)
+        if (m_ftype == TDX_REPORT_V15 || m_ftype == TDX_REPORT_V20)
         {
             str_v.SetString(m_class_id_v5.c_str(), (unsigned int)m_class_id_v5.length());
             description += " 1.5";
@@ -291,7 +291,7 @@ std::string CInputTDReport::generate_payload()
     rapidjson::Value ref(rapidjson::kObjectType);
     {
         rapidjson::Value str_v(rapidjson::kStringType);
-        if(m_ftype == TDX_REPORT_V15)
+        if(m_ftype == TDX_REPORT_V15 || m_ftype == TDX_REPORT_V20)
         {
             const tee_info_v1_5_t *tee_info = reinterpret_cast<const tee_info_v1_5_t *>(report->tee_info);
             tee_attributes_t att = tee_info->attributes;
@@ -410,6 +410,7 @@ std::string CPayloadGen::generate_payload()
     break;
     case TDX_REPORT_V10:
     case TDX_REPORT_V15:
+    case TDX_REPORT_V20:
         inst = new CInputTDReport(inbuf, fsize, ft);
         break;
     default:
@@ -455,10 +456,11 @@ ftype_t CPayloadGen::is_tdx_report(const uint8_t *inbuf, size_t bsize)
         report->reserved[0] == 0 &&
         !memcmp(report->reserved, report->reserved + 1, SGX_REPORT2_RESERVED_BYTES - 1))
     {
+        const tee_tcb_info_t *tee_tcb_info = reinterpret_cast<const tee_tcb_info_t *>(report->tee_tcb_info);
+        uint8_t tdx_module_major_svn = tee_tcb_info->tee_tcb_svn.tcb_svn[1];
+
         if (report->report_mac_struct.report_type.version == 0)
         {
-            const tee_tcb_info_t *tee_tcb_info = reinterpret_cast<const tee_tcb_info_t *>(report->tee_tcb_info);
-            uint8_t tdx_module_major_svn = tee_tcb_info->tee_tcb_svn.tcb_svn[1];
             if(tdx_module_major_svn == 0)
             {
                 return TDX_REPORT_V10;
@@ -467,6 +469,10 @@ ftype_t CPayloadGen::is_tdx_report(const uint8_t *inbuf, size_t bsize)
             {
                 return TDX_REPORT_V15;
             }
+            else if(tdx_module_major_svn == 3)
+            {
+                return TDX_REPORT_V20;
+            }
             else
             {
                 return UNKNOWN_FILE;
@@ -474,7 +480,14 @@ ftype_t CPayloadGen::is_tdx_report(const uint8_t *inbuf, size_t bsize)
         }
         else if (report->report_mac_struct.report_type.version == 1)
         {
-            return TDX_REPORT_V15;
+            if (tdx_module_major_svn == 3)
+            {
+                return TDX_REPORT_V20;
+            }
+            else
+            {
+                return TDX_REPORT_V15;
+            }
         }
     }
     return UNKNOWN_FILE;

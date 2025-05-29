@@ -88,6 +88,43 @@
 #include "sgx_qve_header.h"
 #include "sgx_qve_def.h"
 
+#include <openssl/provider.h>
+
+static int SGXSSL_init(void)
+{
+    // Given QvE is single-threaded, this function isn't protected by any
+    // synchronzation mechanism
+
+    static int error_code = 1;
+    if (error_code <= 0)
+        return error_code;
+
+#ifdef SGXSSL_FIPS
+    static const char fips_provider_name[] = "fips";
+
+    auto entry = sgx_get_ossl_fips_sym("OSSL_provider_init");
+    if (!entry)
+        return error_code = -1;
+
+    if (!OSSL_PROVIDER_add_builtin(NULL, fips_provider_name, (OSSL_provider_init_fn*)entry))
+        return error_code = -2;
+
+    if (!OSSL_PROVIDER_available(NULL, fips_provider_name))
+        return error_code = -3;
+
+    auto prov = OSSL_PROVIDER_load(NULL, fips_provider_name);
+    if (!prov)
+        return error_code = -4;
+
+    if (!OSSL_PROVIDER_self_test(prov))
+        return error_code = -5;
+
+    if (!OPENSSL_init_crypto(OPENSSL_INIT_NO_ATEXIT, NULL))
+        return error_code = -6;
+#endif
+
+    return error_code = 0;
+}
 
 using namespace intel::sgx::dcap;
 using namespace intel::sgx::dcap::parser;
@@ -585,6 +622,10 @@ static quote3_error_t extract_chain_from_quote(const uint8_t *p_quote,
 quote3_error_t get_fmspc_ca_from_quote(const uint8_t* p_quote, uint32_t quote_size,
     unsigned char* p_fmsp_from_quote, uint32_t fmsp_from_quote_size,
     unsigned char* p_ca_from_quote, uint32_t ca_from_quote_size) {
+
+    if (SGXSSL_init())
+        return SGX_QL_SERVICE_UNAVAILABLE;
+
     if (p_quote == NULL ||
         quote_size < QUOTE_MIN_SIZE ||
         !sgx_is_within_enclave(p_quote, quote_size) ||
@@ -931,7 +972,7 @@ const TCBLevel getMatchingQETcbLevel(std::unique_ptr<EnclaveIdentityV2>& enclave
 
     const TCBLevel * matchingTCBLevel = NULL;
 
-    // The premise of this code is that the server returns a sequence ordered from top to bottom, and 
+    // The premise of this code is that the server returns a sequence ordered from top to bottom, and
     // we need to find the largest TCB level among the TCB Levels smaller than ours based on ISVSVN.
     for (const auto& tcbLevel : qe_identity_tcb_levels) {
         if (tcbLevel.getIsvsvn() <= quote.getQeReport().isvSvn) {
@@ -1022,11 +1063,11 @@ static quote3_error_t servtd_set_quote_supplemental_data(
             p_servtd_suppl_data->sgx_tcb_components[i] = sgx_svn[i].getSvn();
         }
     }
-    // Get Tdx Module major version 
+    // Get Tdx Module major version
     p_servtd_suppl_data->tdx_module_major_ver = quote.getTeeTcbSvn()[1];
     uint8_t matchedTcbLevel = 0;
     auto ret = getTdxModuleTcblevel(tcb_info_obj, quote, matchedTcbLevel);
-    // For the quote with TDX module major is 0, fill svn with 0 
+    // For the quote with TDX module major is 0, fill svn with 0
     if (ret == 0) {
         p_servtd_suppl_data->tdx_module_svn = matchedTcbLevel;
     }
@@ -1045,7 +1086,7 @@ static quote3_error_t servtd_set_quote_supplemental_data(
                  sizeof(qe_report.attributes)) != 0) {
         return SGX_QL_ERROR_UNEXPECTED;
     }
-    
+
     auto attr_mask = enclaveIdentity->getAttributesMask();
     if(attr_mask.size() == ATTRIBUTESELECTMASK_LEN) {
         std::copy(attr_mask.begin(), attr_mask.end(), p_servtd_suppl_data->attributes_mask);
@@ -1467,6 +1508,9 @@ static quote3_error_t qve_set_quote_supplemental_data(const Quote &quote,
  **/
 quote3_error_t sgx_qve_get_quote_supplemental_data_size(
     uint32_t *p_data_size) {
+    if (SGXSSL_init())
+        return SGX_QL_SERVICE_UNAVAILABLE;
+
     if (p_data_size == NULL ||
         (sgx_is_within_enclave(p_data_size, sizeof(*p_data_size)) == 0)) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
@@ -1486,6 +1530,9 @@ quote3_error_t sgx_qve_get_quote_supplemental_data_size(
  **/
 quote3_error_t sgx_qve_get_quote_supplemental_data_version(
     uint32_t *p_version) {
+    if (SGXSSL_init())
+        return SGX_QL_SERVICE_UNAVAILABLE;
+
     if (p_version == NULL ||
         (sgx_is_within_enclave(p_version, sizeof(*p_version)) == 0)) {
         return SGX_QL_ERROR_INVALID_PARAMETER;
@@ -1673,6 +1720,9 @@ quote3_error_t sgx_qve_verify_quote(
     ) {
 #endif
 
+    if (SGXSSL_init())
+        return SGX_QL_SERVICE_UNAVAILABLE;
+
     //validate result parameter pointers and set default values
     //in case of any invalid result parameter, set outputs_set = 0 and then return invalid (after setting
     //default values of valid result parameters)
@@ -1722,7 +1772,7 @@ quote3_error_t sgx_qve_verify_quote(
         {
             return SGX_QL_ERROR_INVALID_PARAMETER;
         }
-        
+
         tdx_verify_error_t coll_ret = tdx_att_get_collateral((const uint8_t *) fmspc_from_quote, FMSPC_SIZE, (const char *)ca_from_quote, (tdx_ql_qve_collateral_t**)&p_quote_collateral);
         if(coll_ret != TDX_VERIFY_SUCCESS)
         {
@@ -2114,7 +2164,7 @@ uint8_t do_verify_quote_integrity(
 		const uint8_t * root_pub_key,
 		uint32_t root_pub_key_size,
 		uint8_t *p_td_report_body,
-		uint32_t * p_td_report_body_size) { 
+		uint32_t * p_td_report_body_size) {
 
 	uint32_t collateral_expiration_status;
 	sgx_ql_qv_result_t quote_verification_result;
@@ -2123,7 +2173,7 @@ uint8_t do_verify_quote_integrity(
 	if (p_td_report_body == NULL || root_pub_key == NULL || p_td_report_body_size == NULL || (*p_td_report_body_size) < TD_REPORT10_BYTE_LEN || root_pub_key_size < 0)  {
 		return SGX_TD_VERIFY_ERROR(SGX_QL_ERROR_INVALID_PARAMETER);
 	}
-	
+
 
 	quote3_error_t ret = sgx_qve_verify_quote(p_quote,
 			quote_size,
@@ -2229,7 +2279,7 @@ static void advisory_id_vec(std::vector<std::string>& vec_ad_id, std::string s_a
     std::stringstream stream_ad;
     stream_ad << s_ad_id;
     std::string temp;
-    
+
     while(getline(stream_ad, temp, ','))
     {
         vec_ad_id.push_back(temp);
@@ -2261,7 +2311,7 @@ static std::string char_to_base64(unsigned char const* raw_char, size_t len)
     }
 
     std::string s_ret;
-    
+
     //remove '\0'
     if(len == strlen(reinterpret_cast<const char *>(raw_char)) + 1){
         len--;
@@ -2347,7 +2397,7 @@ static void audit_generator(
 }
 
 static quote3_error_t quote_hash_generator(
-    const uint8_t *p_quote, 
+    const uint8_t *p_quote,
     const uint32_t quote_size,
     rapidjson::Value &obj,
     rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator> &allocator)
@@ -2419,7 +2469,7 @@ static quote3_error_t tee_platform_tcb_generator(
     if(str_type_val.GetStringLength() != 0){
         obj_plat_header.AddMember("description", str_type_val, allocator);
     }
-    
+
     obj_platform.AddMember("environment", obj_plat_header, allocator);
 
     Value obj_plat_tcb(kObjectType);
@@ -2451,7 +2501,7 @@ static quote3_error_t tee_platform_tcb_generator(
 
         time_to_string(p_supplemental_data->earliest_expiration_date, time_str, sizeof(time_str));
         Add_Mem(time_str, "earliest_expiration_date");
-        
+
         time_to_string(p_supplemental_data->tcb_level_date_tag, time_str, sizeof(time_str));
         Add_Mem(time_str, "tcb_level_date_tag");
 
@@ -2633,7 +2683,7 @@ static quote3_error_t sgx_enclave_tcb_generator(
         else {
             return TEE_ERROR_INVALID_PARAMETER;
         }
-        
+
         Value str_encl(kStringType);
         auto Add_Mem = [&](std::string str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_encl.SetString(str_m.c_str(), (unsigned int)(str_m.length()), allocator);
                             if(str_encl.GetStringLength() != 0){obj_enclave_tcb.AddMember(mem_name, str_encl, allocator);}};
@@ -2643,7 +2693,7 @@ static quote3_error_t sgx_enclave_tcb_generator(
 
         std::string s_attributes = byte_to_hexstring((uint8_t *) &(sgx_report.attributes), sizeof(sgx_attributes_t), true);
         Add_Mem(s_attributes, "sgx_attributes");
-        
+
         std::string s_mrenclave = byte_to_hexstring((uint8_t *) &(sgx_report.mr_enclave.m), sizeof(sgx_measurement_t), true);
         Add_Mem(s_mrenclave, "sgx_mrenclave");
 
@@ -2657,7 +2707,7 @@ static quote3_error_t sgx_enclave_tcb_generator(
         Add_Mem(s_configid, "sgx_configid");
 
         obj_enclave_tcb.AddMember("sgx_configsvn", sgx_report.config_svn, allocator);
-        
+
         std::string s_isvexprodid = byte_to_hexstring(sgx_report.isv_ext_prod_id, SGX_ISVEXT_PROD_ID_SIZE, true);
         Add_Mem(s_isvexprodid, "sgx_isvextprodid");
 
@@ -2804,7 +2854,7 @@ static void tdx_qe_identity_generator(
 
         time_to_string(p_supplemental_data->qe_iden_tcb_level_date_tag, time_str, sizeof(time_str));
         Add_Mem(time_str, "tcb_level_date_tag");
-    
+
         time_to_string(p_supplemental_data->qe_iden_earliest_issue_date, time_str, sizeof(time_str));
         Add_Mem(time_str, "earliest_issue_date");
 
@@ -2878,7 +2928,7 @@ static void tdx_td_report_generator(
         Value str_td(kStringType);
         auto Add_Mem = [&](std::string str_m, rapidjson::GenericValue<rapidjson::ASCII<> >::StringRefType mem_name){str_td.SetString(str_m.c_str(), (unsigned int)(str_m.length()), allocator);
                             if(str_td.GetStringLength() != 0){obj_td_rep_tcb.AddMember(mem_name, str_td, allocator);}};
-        
+
         std::string s_td_attributes = byte_to_hexstring((uint8_t *) &(tmp_report.td_attributes), sizeof(tee_attributes_t), true);
         Add_Mem(s_td_attributes, "tdx_attributes");
 
@@ -2890,10 +2940,10 @@ static void tdx_td_report_generator(
 
         std::string s_tdx_mrowner = byte_to_hexstring((uint8_t *) &(tmp_report.mr_owner), sizeof(tee_measurement_t), true);
         Add_Mem(s_tdx_mrowner, "tdx_mrowner");
-        
+
         std::string s_tdx_mrownerconfig = byte_to_hexstring((uint8_t *) &(tmp_report.mr_owner_config), sizeof(tee_measurement_t), true);
         Add_Mem(s_tdx_mrownerconfig, "tdx_mrownerconfig");
-        
+
         std::string s_tdx_mrtd = byte_to_hexstring((uint8_t *) &(tmp_report.mr_td), sizeof(tee_measurement_t), true);
         Add_Mem(s_tdx_mrtd, "tdx_mrtd");
 
@@ -2942,11 +2992,11 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     uint8_t **jwt_data)
 {
     if(CHECK_MANDATORY_PARAMS(p_quote, quote_size) || quote_size < QUOTE_MIN_SIZE ||
-    plat_version == NULL || qe_identity_version == NULL || td_identity_version == NULL || 
+    plat_version == NULL || qe_identity_version == NULL || td_identity_version == NULL ||
     request_id == NULL || p_supplemental_data == NULL || p_quote_collateral == NULL){
         return TEE_ERROR_INVALID_PARAMETER;
     }
-    if(report_type != TDX10_REPORT && report_type != TDX15_REPORT){
+    if(report_type < TDX10_REPORT){
         return TEE_ERROR_INVALID_PARAMETER;
     }
     const sgx_quote4_t *quote4 = reinterpret_cast<const sgx_quote4_t *> (p_quote);
@@ -2960,12 +3010,12 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
 
     Document::AllocatorType &allocator = JWT.GetAllocator();
 
-    Value tdx_jwt_array(kArrayType); 
+    Value tdx_jwt_array(kArrayType);
 
     if(report_type == TDX10_REPORT){
         dcap_ret = tee_platform_tcb_generator(
         TEE_TDX10_PALTFORM_TOKEN_UUID,
-        TEE_SGX_PLATFORM_DESCRIPTION,
+        TEE_TDX_PLATFORM_DESCRIPTION,
         request_id,
         qv_result,
         verification_date,
@@ -2981,7 +3031,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
     else{
         dcap_ret = tee_platform_tcb_generator(
         TEE_TDX15_PALTFORM_TOKEN_UUID,
-        TEE_SGX_PLATFORM_DESCRIPTION,
+        TEE_TDX_PLATFORM_DESCRIPTION,
         request_id,
         qv_result,
         verification_date,
@@ -2994,7 +3044,7 @@ static quote3_error_t tdx_jwt_generator_internal(uint16_t quote_ver,
         tdx_jwt_array,
         allocator);
     }
-    
+
     if(dcap_ret != TEE_SUCCESS){
         return dcap_ret;
     }
@@ -3126,7 +3176,7 @@ static quote3_error_t user_report_verify_internal(
     uint16_t quote_ver = 0;
     const uint8_t *p_tmp_quote = p_quote;
     memcpy(&quote_ver, p_tmp_quote, sizeof(uint16_t));
-   
+
     if(tee_type == SGX_EVIDENCE && p_user_data){
         sgx_report_body_t sgx_report;
         memset(&sgx_report, 0, sizeof(sgx_report_body_t));
@@ -3170,6 +3220,9 @@ quote3_error_t  tee_qve_verify_quote_qvt(
     uint8_t **p_verification_result_token
 )
 {
+    if (SGXSSL_init())
+        return SGX_QL_SERVICE_UNAVAILABLE;
+
     if( p_quote == NULL ||
         quote_size < QUOTE_MIN_SIZE ||
         !sgx_is_within_enclave(p_quote, quote_size) ||
@@ -3200,7 +3253,7 @@ quote3_error_t  tee_qve_verify_quote_qvt(
     tee_supp_data_descriptor_t supp_data;
     memset(&supp_data, 0, sizeof(tee_supp_data_descriptor_t));
     sgx_ql_qv_result_t quote_verification_result = TEE_QV_RESULT_UNSPECIFIED;
-    
+
     //get supplemental data size
     dcap_ret = sgx_qve_get_quote_supplemental_data_size(&supp_data.data_size);
 
@@ -3319,7 +3372,10 @@ quote3_error_t  tee_qve_verify_quote_qvt(
             case 1:
                 report_type = TDX15_REPORT;
                 break;
-            default:    //tdx2.0 not support yet
+            case 3:
+                report_type = TDX20_REPORT;
+                break;
+            default:    //others not support yet
                 report_type = UNKNOWN_REPORT_TYPE;
                 break;
         }
@@ -3346,7 +3402,7 @@ quote3_error_t  tee_qve_verify_quote_qvt(
                 p_quote,
                 quote_size,
                 p_quote_collateral,
-                p_verification_result_token_buffer_size,                           
+                p_verification_result_token_buffer_size,
                 &tmp_result_token);
         }
         else if(tee_type == TDX_EVIDENCE){
