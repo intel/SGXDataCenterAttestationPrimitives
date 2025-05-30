@@ -1,4 +1,4 @@
-@REM  Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+@REM  Copyright (C) 2011-2022 Intel Corporation. All rights reserved.
 @REM 
 @REM  Redistribution and use in source and binary forms, with or without
 @REM  modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ if NOT exist %ae_file_name% (
 )
 
 @del /Q %checksum_file% 2>nul
-@powershell "($client = new-object System.Net.WebClient) -and ($client.DownloadFile('%server_ae_url%', '%ae_file_name%')) -and (exit)" >nul
+@powershell "($client = new-object System.Net.WebClient) -and ($client.DownloadFile('%server_checksum_url%', '%checksum_file%')) -and (exit)" >nul
 if NOT exist %checksum_file% (
     echo Fail to download file %server_checksum_url%
     goto :End
@@ -62,8 +62,7 @@ for /f "tokens=1,2,*" %%a in ('type %checksum_file% ') do (
 )
 
 :Unzip
-@powershell "( Expand-Archive -Path '%ae_file_name%'  -DestinationPath '.' -Force )"
-robocopy prebuilt ../prebuilt /E /IS /MOVE
+@powershell "( Expand-Archive -Path '%~dp0%ae_file_name%'  -DestinationPath '%~dp0' -Force )"
 del /Q %ae_file_name% %checksum_file%
 
 :End

@@ -9,4 +9,4 @@ links = "tdx_attest"
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.70.1"
+bindgen = "0.59.1"

@@ -121,8 +121,8 @@ run: all
 
 ######## QVL Library Objects ########
 
-qve_u.h: $(QVE_SRC_PATH)/Enclave/qve.edl $(SGX_EDGER8R)
-	@$(SGX_EDGER8R) --untrusted $< $(addprefix --search-path ,$(QVE_SRC_PATH)/Enclave $(SGX_SDK)/include $(addprefix $(SGXSSL_PACKAGE_PATH)/include/,. $(if $(FIPS),,no)filefunc))
+qve_u.h: $(SGX_EDGER8R) $(QVE_SRC_PATH)/Enclave/qve.edl
+	@$(SGX_EDGER8R) --untrusted $(QVE_SRC_PATH)/Enclave/qve.edl --search-path $(QVE_SRC_PATH)/Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 qve_u.c : qve_u.h
@@ -169,14 +169,14 @@ $(QVL_PARSER_NAME): $(QVL_PARSER_OBJS)
 
 
 $(QVL_VERIFY_LIB_NAME_Dynamic): $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME) $(QVL_LIB_COMMON_OBJS) qal
-	$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QAL_OBJS) $(QVL_LIB_COMMON_OBJS) -L$(SGXSSL_PACKAGE_PATH)/lib64 -lsgx_usgxssl -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(QVL_VERIFY_CPP_OBJS) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QAL_OBJS) $(QVL_LIB_COMMON_OBJS) -shared -Wl,-soname=$@.$(SGX_MAJOR_VER) $(LDUFLAGS) -o $@
 	@ln -sf $(QVL_VERIFY_LIB_NAME_Dynamic) $(QVL_VERIFY_LIB_NAME_Dynamic).1
 
 $(QVL_VERIFY_LIB_NAME_Static): $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_NAME) $(QVL_PARSER_NAME) $(QVL_LIB_COMMON_OBJS)
 	@$(AR) rsD $(QVL_VERIFY_LIB_NAME_Static) $(QVL_VERIFY_CPP_OBJS_STATIC) $(QVL_VERIFY_C_OBJS) $(QVE_CPP_OBJ) $(QVL_LIB_COMMON_OBJS)
 
 .PHONY: qal
-qal:
+qal: 
 	$(MAKE) -C $(QAL_APPRAISAL_DIR) $(QAL_Static_Lib_Name)
 
 force_look:

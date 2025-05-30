@@ -43,7 +43,7 @@ endif
 DCAP_QPL_DIR := $(DCAP_QG_DIR)/qpl
 JWT_CPP_DIR := $(DCAP_EXTERNAL_DIR)/jwt-cpp
 
-QVL_LIB_OBJS := $(QVL_LIB_FILES:.cpp=.o)
+QVL_LIB_OBJS := $(QVL_LIB_FILES:.cpp=.o) 
 QVL_PARSER_OBJS := $(QVL_PARSER_FILES:.cpp=.o)
 ifndef SERVTD_ATTEST
 QVL_LIB_COMMON_OBJS := Enclave/sgx_base64.o Enclave/ec_key.o
@@ -78,8 +78,8 @@ ifdef SERVTD_ATTEST
 else
 	QVE_NAME := qve.so
 endif
-SIGNED_QVE_NAME := libsgx_qve$(if $(FIPS),-fips).signed.so
-QVE_CONFIG_FILE := Enclave/linux/config$(if $(FIPS),.fips).xml
+SIGNED_QVE_NAME := libsgx_qve.signed.so
+QVE_CONFIG_FILE := Enclave/linux/config.xml
 
 QVE_VER:= $(shell awk '$$2 ~ /QVE_VERSION/ { print substr($$3, 2, length($$3) - 2); }' $(DCAP_QG_DIR)/common/inc/internal/se_version.h)
 
@@ -128,7 +128,7 @@ else
 ENCLAVE_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack -fPIC \
 				   -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
 				   -L$(SGX_LIBRARY_PATH) -L$(SGXSSL_PACKAGE_PATH)/lib64 \
-				   -Wl,--whole-archive -l$(TRTS_NAME) $(if $(FIPS),-lsgx_ossl_fips) -l$(SGXSSL_TLIB) -Wl,--no-whole-archive \
+				   -Wl,--whole-archive -l$(TRTS_NAME) -l$(SGXSSL_TLIB) -Wl,--no-whole-archive \
 				   -Wl,--start-group -lsgx_tstdc -lsgx_pthread -lsgx_tcxx -l$(SGXSSL_TCRYPTO) -l$(CRYPTO_LIB_NAME) \
 				   -l$(SERVICE_NAME) -Wl,--end-group \
 				   -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,--gc-sections \
@@ -162,7 +162,7 @@ PREPARE_SGX_SSL:
 ifdef SERVTD_ATTEST
 	@test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a && test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a && test -f $(SGXSSL_HEADER_CHECK) || $(PREPARE_SGXSSL) SERVTD_ATTEST
 else
-	@test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a && test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a && test -f $(SGXSSL_HEADER_CHECK) || $(PREPARE_SGXSSL) $(if $(FIPS),FIPS)
+	@test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TCRYPTO).a && test -f $(SGXSSL_PACKAGE_PATH)/lib64/lib$(SGXSSL_TLIB).a && test -f $(SGXSSL_HEADER_CHECK) || $(PREPARE_SGXSSL)
 endif
 
 $(SGXSSL_HEADER_CHECK): PREPARE_SGX_SSL
@@ -194,8 +194,8 @@ $(QVL_PARSER_OBJS): %.o: %.cpp $(SGXSSL_HEADER_CHECK)
 	@echo "CXX  <=  $<"
 
 ifndef SERVTD_ATTEST
-Enclave/qve_t.h: Enclave/qve.edl $(SGX_EDGER8R)
-	$(SGX_EDGER8R) --trusted $< --trusted-dir $(dir $@) $(addprefix --search-path ,$(SGX_SDK)/include $(addprefix $(SGXSSL_PACKAGE_PATH)/include/,. $(if $(FIPS),,no)filefunc))
+Enclave/qve_t.h: $(SGX_EDGER8R) Enclave/qve.edl
+	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/qve.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 Enclave/qve_t.c: Enclave/qve_t.h
@@ -210,7 +210,7 @@ Enclave/%.o: Enclave/%.cpp $(SGXSSL_HEADER_CHECK)
 else
 Enclave/%.o: Enclave/%.cpp Enclave/qve_t.h $(SGXSSL_HEADER_CHECK)
 endif
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(ENCLAVE_CXXFLAGS) $(if $(FIPS),-DSGXSSL_FIPS) $(QVL_LIB_INC) -I$(QVL_SRC_PATH) -c $< -o $@
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(ENCLAVE_CXXFLAGS) $(QVL_LIB_INC) -I$(QVL_SRC_PATH) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 ifdef SERVTD_ATTEST
@@ -239,8 +239,8 @@ $(QVE_NAME): $(QVE_OBJS) Enclave/qve_t.o $(QVL_PARSER_OBJS) $(QVL_LIB_OBJS) $(QV
 endif
 	@echo "LINK =>  $@"
 
-$(SIGNED_QVE_NAME): $(QVE_NAME) $(QVE_CONFIG_FILE)
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $< -out $@ -config $(QVE_CONFIG_FILE)
+$(SIGNED_QVE_NAME): $(QVE_NAME)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/qve_test_key.pem -enclave $(QVE_NAME) -out $@ -config $(QVE_CONFIG_FILE)
 	@echo "SIGN =>  $@"
 
 print-% : ; @echo $* = $($*)

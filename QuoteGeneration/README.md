@@ -39,7 +39,7 @@ For Windows* OS
 **NOTE**:`sgx_dcap_dev.inf` is for Windows* Server 2016 LTSC and `sgx_dcap.inf` is for Windows* Server 2019 LTSC.
 
 ## How to install
-   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.23/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
+   Refer to the *"Installation Instructions"* section in the [Intel(R) Software Guard Extensions: Data Center Attestation Primitives Installation Guide For Windows* OS](https://download.01.org/intel-sgx/sgx-dcap/1.22/windows/docs/Intel_SGX_DCAP_Windows_SW_Installation_Guide.pdf) to install the right packages on your platform.
 
 
 For Linux* OS

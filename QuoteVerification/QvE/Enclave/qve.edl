@@ -79,7 +79,6 @@ struct _sgx_ql_qve_collateral_t
 	include "sgx_qve_def.h"
 
     from "sgx_tstdc.edl" import *;
-    from "sgx_tsgxssl.edl" import *;
 
 #ifdef __GNUC__
     from "sgx_pthread.edl" import *;
@@ -122,7 +121,7 @@ struct _sgx_ql_qve_collateral_t
 #endif
 	};
 #ifdef __GNUC__
-    /*
+    /* 
      * ocall_qvt_token_malloc - invokes OCALL to malloc jwt token memory outside the enclave.
      */
     untrusted {

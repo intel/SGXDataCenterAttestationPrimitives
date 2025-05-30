@@ -261,7 +261,7 @@ quote3_error_t tee_authenticate_policy_owner(const uint8_t *p_quote,
     {
         return TEE_ERROR_INVALID_PARAMETER;
     }
-    for (uint8_t i = 0; i < list_size; i++)
+    for (uint32_t i = 0; i < list_size; i++)
     {
         if (policy_key_list[i] == NULL)
         {
