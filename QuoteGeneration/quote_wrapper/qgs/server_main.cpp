@@ -73,9 +73,10 @@ int main(int argc, const char* argv[])
     bool no_daemon = false;
     unsigned long int port = 0;
     unsigned long int num_threads = 0;
+    unsigned long int mode = 0;
     char *endptr = NULL;
     if (argc > 4) {
-        cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-n=number_threads]"
+        cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-m=unix_socket_mode] [-n=number_threads]"
              << endl;
         exit(1);
     }
@@ -100,6 +101,19 @@ int main(int argc, const char* argv[])
             }
             cout << "port number [" << port << "] found in cmdline" << endl;
             continue;
+        } else if (strncmp(argv[i], "-m=", 3 ) == 0) {
+            if (strspn(argv[i] + 3, "0123456789") != strlen(argv[i] + 3)) {
+                cout << "Please input valid socket mode" << endl;
+                exit(1);
+            }
+            errno = 0;
+            mode = strtoul(argv[i] + 3, &endptr, 8);
+            if (errno || strlen(endptr) || (mode > UINT_MAX) ) {
+                cout << "Please input valid socket mode" << endl;
+                exit(1);
+            }
+            cout << "socket mode [0" << oct << mode << dec << "] found in cmdline" << endl;
+            continue;
         } else if (strncmp(argv[i], "-n=", 3) == 0) {
             if (strspn(argv[i] + 3, "0123456789") != strlen(argv[i] + 3)) {
                 cout << "Please input valid thread number" << endl;
@@ -114,7 +128,7 @@ int main(int argc, const char* argv[])
             cout << "thread number [" << num_threads << "] found in cmdline" << endl;
             continue;
         } else {
-            cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-n=number_threads]"
+            cout << "Usage: " << argv[0] << "[--no-daemon] [-p=port_number] [-m=unix_socket_mode] [-n=number_threads]"
                 << endl;
             exit(1);
         }
@@ -123,7 +137,7 @@ int main(int argc, const char* argv[])
 
     // Use the port number in QGS_CONFIG_FILE if no valid port number on
     // command line
-    if (port == 0 || num_threads == 0) {
+    if (port == 0 || num_threads == 0 || mode == 0) {
         ifstream config_file(QGS_CONFIG_FILE);
         if (config_file.is_open()) {
             string line;
@@ -152,6 +166,15 @@ int main(int argc, const char* argv[])
                     port = strtoul(value, &endptr, 10);
                     if (errno || strlen(endptr) || (port > UINT_MAX) ) {
                         cout << "Please input valid port number in "
+                             << QGS_CONFIG_FILE << endl;
+                        exit(1);
+                    }
+                } else if (!mode && name.compare("socket_mode") == 0) {
+                    errno = 0;
+                    endptr = NULL;
+                    mode = strtoul(value, &endptr, 8);
+                    if (errno || strlen(endptr) || (mode > UINT_MAX)) {
+                        cout << "Please input valid socket mode in "
                              << QGS_CONFIG_FILE << endl;
                         exit(1);
                     }
@@ -206,6 +229,12 @@ int main(int argc, const char* argv[])
             }
             QGS_LOG_INFO("About to create QgsServer with num_thread = %d\n", (uint8_t)num_threads);
             server = new QgsServer(io_service, ep, (uint8_t)num_threads);
+            /* Allow mode to be determined by umask by default,
+             * overriding only if an explicit mode is requested
+             */
+            if (!port && mode != 0) {
+                chmod(QGS_UNIX_SOCKET_FILE, mode);
+            }
             QGS_LOG_INFO("About to start main loop\n");
             io_service.run();
             QGS_LOG_INFO("Quit main loop\n");
