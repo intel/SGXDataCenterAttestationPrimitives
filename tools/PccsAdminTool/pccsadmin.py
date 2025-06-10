@@ -92,7 +92,6 @@ def main():
         parser.print_help()
         parser.exit()
 
-    print(args)
     # Check mandatory arguments for appraisalpolicy
     if args.command == 'put' and args.url and args.url.endswith("/appraisalpolicy"):
         if not args.fmspc or not args.input_file:
