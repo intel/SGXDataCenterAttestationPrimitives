@@ -39,7 +39,6 @@ sgxssl_github_archive=https://github.com/intel/intel-sgx-ssl/archive
 sgxssl_file_name=3.1.6_Rev1
 build_script=$sgxssl_dir/Linux/build_openssl.sh
 server_url_path=https://www.openssl.org/source/
-#server_url_path=https://af01p-igk.devtools.intel.com/artifactory/sgxdcapprerequisites-igk-local/prebuilt/ssl
 full_openssl_url=$server_url_path/$openssl_ver_name.tar.gz
 full_openssl_url_old=$server_url_path/old/3.0/$openssl_ver_name.tar.gz
 
@@ -76,8 +75,7 @@ if [[ "$*" == *SERVTD_ATTEST* ]];then
 fi
 
 if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
-#  wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
-  wget $full_openssl_url -P $openssl_out_dir --no-check-certificate || exit 1
+  wget $full_openssl_url -P $openssl_out_dir || exit 1
   sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
   grep $openssl_chksum $sgxssl_dir/check_sum_openssl.txt
   if [ $? -ne 0 ]; then
