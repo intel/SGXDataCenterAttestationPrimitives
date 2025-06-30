@@ -59,6 +59,7 @@ def main():
     parser_fetch.add_argument("-p", "--platform", help="Specify what kind of platform you want to fetch FMSPCs and tcbinfos for; default: all", choices=['all','client','E3','E5'])
     parser_fetch.add_argument("-t", "--tcb_update_type", help="Type of update to TCB info and enclave identities; default: standard", choices=['standard','early','all'])
     parser_fetch.add_argument("-c", "--crl", help="Retrieve only the certificate revocation list (CRL). If an input file is provided, this option will be ignored.", action="store_true")
+    parser_fetch.add_argument("-a", "--anonymous", help="Don't provide API authentication token to PCS service", action="store_true")
     parser_fetch.set_defaults(func=pcs_fetch)
 
     #  subparser for collect 
@@ -84,6 +85,7 @@ def main():
     parser_cache.add_argument("-s", "--sub_dir", help="Store output cache files in subdirectories named according to QE ID or Platform ID", action="store_true")
     parser_cache.add_argument("-e", "--expire", type=Utils.check_expire_hours, help="How many hours the cache files will be valid for. Default is 2160 hours (90 days).")
     parser_cache.add_argument("-t", "--tcb_update_type", help="Type of update to TCB info and enclave identities; default: standard", choices=['standard','early'])
+    parser_cache.add_argument("-a", "--anonymous", help="Don't provide API authentication token to PCS service", action="store_true")
     parser_cache.set_defaults(func=pcs_cache)
 
     args = parser.parse_args()
@@ -318,7 +320,7 @@ class CollateralFetcher:
         self.tcb_update_type = args.tcb_update_type or 'standard'
         self.crl_only = bool(args.crl and not args.input_file)
         self.apikey = ""
-        if not self.crl_only:
+        if not self.crl_only and not args.anonymous:
             self.apikey = self.credentials.get_pcs_api_key()
         self.pcsclient = PCS(self.url, self.ApiVersion, self.apikey)
         self.sgxext = SgxPckCertificateExtensions()
@@ -412,7 +414,8 @@ class CollateralFetcher:
             pce_id = platform_id[1]
 
             # get pckcerts from Intel PCS, return value is [certs, certs_not_available, chain, fmspc]
-            pckcerts = self.pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii')
+            pckcerts = self.pcsclient.get_pck_certs(enc_ppid, pce_id, platform_manifest, 'ascii',
+                                                    anonymous=self.args.anonymous)
             if pckcerts == None:
                 print("Failed to get PCK certs for platform enc_ppid:%s, pce_id:%s" %(enc_ppid,pce_id))
                 return False
@@ -580,7 +583,8 @@ class CacheCreator:
             print(f"{output_file} saved successfully.")
 
     def create_platform_cache_file(self, platform, pcsclient, output_dir, expire_hours):
-        pckcerts = pcsclient.get_pck_certs(platform["enc_ppid"], platform["pce_id"], platform["platform_manifest"], 'ascii')
+        pckcerts = pcsclient.get_pck_certs(platform["enc_ppid"], platform["pce_id"], platform["platform_manifest"], 'ascii',
+                                           anonymous=self.args.anonymous)
 
         if pckcerts is None:
             print(f"Failed to get PCK certs for platform enc_ppid: {platform['enc_ppid']}, pce_id: {platform['pce_id']}")
@@ -618,7 +622,9 @@ class CacheCreator:
             input_fullpath = os.path.join(os.getcwd(), input_file)
 
             # Get PCS ApiKey from keyring
-            apikey = self.credentials.get_pcs_api_key()
+            apikey = None
+            if not self.args.anonymous:
+                apikey = self.credentials.get_pcs_api_key()
 
             # Initialize PCS object
             pcsclient = PCS(url, ApiVersion, apikey)
