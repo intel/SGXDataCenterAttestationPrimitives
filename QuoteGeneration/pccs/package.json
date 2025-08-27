@@ -14,7 +14,7 @@
     "express": "^4.21.2",
     "ffi-rs": "^1.0.64",
     "got": "^11.8.6",
-    "morgan": "^1.10.0",
+    "morgan": "^1.10.1",
     "mysql2": "^3.10.1",
     "node-schedule": "^2.1.1",
     "sequelize": "^6.37.3",
