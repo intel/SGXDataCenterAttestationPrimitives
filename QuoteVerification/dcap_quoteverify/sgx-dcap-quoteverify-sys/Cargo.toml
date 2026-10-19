@@ -1,17 +1,31 @@
 [package]
 name = "intel-tee-quote-verification-sys"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 links = "sgx_dcap_quoteverify"
 license = "BSD-3-Clause"
 description = "Intel(R) TEE Quote Verification Rust Library"
-documentation = "https://intel.github.io/confidential-computing.tee.dcap/docs/rust-qvl-doc/intel_tee_quote_verification_sys"
+documentation = "https://docs.rs/intel-tee-quote-verification-sys"
 readme = "README.md"
 homepage = "https://github.com/intel/confidential-computing.tee.dcap"
+# docsrs/prebuilt-bindings.rs is gitignored and generated at publish time
+# (DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build), so list it explicitly to package it.
+# include is exhaustive: any new packaged file must be added here or it won't ship.
+include = [
+    "src/**/*.rs",
+    "build.rs",
+    "bindings.h",
+    "docsrs/prebuilt-bindings.rs",
+    "docsrs/bindings-provenance.txt",
+    "README.md",
+    "CHANGELOG.md",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.70.1"
+# Exact pin: bindgen's version stamp is embedded in the docs.rs fallback, so a
+# drift would trip the stale-bindings publish guard on an otherwise-identical API.
+bindgen = "=0.70.1"

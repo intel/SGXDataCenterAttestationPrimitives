@@ -2,6 +2,19 @@
 
 All notable changes to `intel-tee-quote-verification-sys` are documented here.
 
+## [0.3.1] - DCAP 1.27
+
+### Fixed
+- docs.rs builds no longer fail when the C headers are absent: a prebuilt-bindings
+  fallback (regenerated at publish time via `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo
+  build`) is used in their place, and a self-policing publish guard rejects a
+  missing or stale fallback.
+
+### Added
+- `DCAP_BINDINGS_PROVENANCE` const marking where the FFI bindings came from. For
+  an ordinary build it is always `"local system headers"`; a concrete DCAP dev
+  package version is recorded only for the prebuilt bindings shown on docs.rs.
+
 ## [0.3.0] - DCAP 1.27
 
 ### Changed

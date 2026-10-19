@@ -2,6 +2,12 @@
 
 All notable changes to `intel-tee-quote-verification-rs` are documented here.
 
+## [0.4.1] - DCAP 1.27
+
+### Changed
+- Point the `documentation` link at docs.rs.
+- Require `intel-tee-quote-verification-sys` >= 0.3.1 so the docs.rs build uses its fixed build script.
+
 ## [0.4.0] - DCAP 1.27
 
 ### Changed

@@ -27,3 +27,17 @@ Use the table below to pick the right crate for your installed native library.
 | 0.2.1 | 1.17 – 1.26 |
 | 0.2.0 | 1.16 |
 | 0.1.x | 1.14 – 1.15 |
+
+## Publishing (maintainers)
+
+docs.rs builds without the DCAP headers, so the package ships prebuilt bindings in
+`docsrs/` (gitignored, generated from the installed headers). Regenerate them right
+before every release:
+
+```sh
+DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build
+cargo publish
+```
+
+`cargo package`/`cargo publish` fail if these files are missing or stale; don't bypass
+that with `--no-verify`.

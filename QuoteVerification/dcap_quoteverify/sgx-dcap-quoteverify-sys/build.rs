@@ -30,9 +30,41 @@
  */
 
 use std::env;
-use std::path::PathBuf;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 
 fn main() {
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let prebuilt = manifest_dir.join("docsrs").join("prebuilt-bindings.rs");
+    let provenance_file = manifest_dir.join("docsrs").join("bindings-provenance.txt");
+    let in_package = is_package_verify_dir(&manifest_dir);
+    // Never regenerate inside the verification copy: the publish guard below must check
+    // the files that were actually packaged, not ones rewritten during verification.
+    let update_docsrs = env::var("DCAP_QV_UPDATE_DOCSRS_BINDINGS").is_ok() && !in_package;
+
+    // Env changes must re-run this script, else a cached run takes the wrong branch.
+    println!("cargo:rerun-if-env-changed=DOCS_RS");
+    println!("cargo:rerun-if-env-changed=DCAP_QV_UPDATE_DOCSRS_BINDINGS");
+
+    // docs.rs has no network, so libsgx-dcap-quote-verify-dev (the C headers) and the
+    // shared library are absent; use the bindings shipped in the tarball instead, and
+    // report the dev package they were generated from (recorded in the sidecar).
+    // Not in the package-verification copy, though: the publish guard below must run.
+    if env::var("DOCS_RS").is_ok() && !in_package {
+        println!("cargo:rerun-if-changed=docsrs/prebuilt-bindings.rs");
+        println!("cargo:rerun-if-changed=docsrs/bindings-provenance.txt");
+        std::fs::copy(&prebuilt, out_path.join("bindings.rs")).expect(
+            "Couldn't stage docs.rs fallback docsrs/prebuilt-bindings.rs; regenerate it with \
+             `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build` and republish",
+        );
+        let source = std::fs::read_to_string(&provenance_file)
+            .map(|s| s.trim().to_owned())
+            .unwrap_or_else(|_| "unknown".to_owned());
+        write_provenance(&out_path, &source);
+        return;
+    }
+
     // Tell cargo to tell rustc to link the system
     // sgx-dcap-quoteverify shared library.
     println!("cargo:rustc-link-lib=sgx_dcap_quoteverify");
@@ -91,11 +123,128 @@ fn main() {
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
+        .expect("Unable to generate bindings; is libsgx-dcap-quote-verify-dev (the C headers) installed?");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+
+    // Only query the package manager when regenerating the fallback (release-time);
+    // a normal consumer build just records that it used the local system headers.
+    let source = if update_docsrs {
+        dcap_dev_package()
+    } else {
+        "local system headers".to_owned()
+    };
+    write_provenance(&out_path, &source);
+
+    // Release-only: refresh the gitignored docs.rs fallback (prebuilt bindings plus the
+    // provenance sidecar) from these headers so the packaged tarball rebuilds on docs.rs.
+    if update_docsrs {
+        std::fs::create_dir_all(prebuilt.parent().unwrap())
+            .expect("Couldn't create docsrs/ directory");
+        std::fs::write(&provenance_file, format!("{source}\n"))
+            .expect("Couldn't write docsrs/bindings-provenance.txt");
+        bindings
+            .write_to_file(&prebuilt)
+            .expect("Couldn't write docsrs/prebuilt-bindings.rs");
+        println!("cargo:warning=docs.rs fallback bindings generated from {source}");
+    }
+
+    // Watch the fallback (bindings and provenance sidecar) so deleting/staling either
+    // re-runs this script (else a repeat flag build with an unchanged env sees a fresh
+    // fingerprint and skips regen). Skip a file when it's legitimately absent (normal
+    // dev tree) to avoid perpetual re-runs.
+    if update_docsrs || prebuilt.exists() {
+        println!("cargo:rerun-if-changed=docsrs/prebuilt-bindings.rs");
+    }
+    if update_docsrs || provenance_file.exists() {
+        println!("cargo:rerun-if-changed=docsrs/bindings-provenance.txt");
+    }
+
+    // Self-policing: cargo publish/package builds from an extracted copy, where headers
+    // exist too. Fail there if the shipped fallback is missing or stale.
+    if in_package {
+        let generated = bindings.to_string();
+        match std::fs::read_to_string(&prebuilt) {
+            Err(_) => panic!(
+                "docs.rs fallback docsrs/prebuilt-bindings.rs is missing from the \
+                 package; run `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build` before publishing"
+            ),
+            Ok(packaged) if packaged != generated => panic!(
+                "docs.rs fallback docsrs/prebuilt-bindings.rs is stale; run \
+                 `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build` before publishing"
+            ),
+            Ok(_) => {}
+        }
+        // cargo package ignores an `include` entry that matches nothing, so check the
+        // sidecar too, else docs.rs silently reports provenance "unknown". It must also
+        // name the dev package installed now, i.e. the one the bindings were checked
+        // against above.
+        let expected = dcap_dev_package();
+        match std::fs::read_to_string(&provenance_file) {
+            Ok(s) if s.trim() == expected => {}
+            Ok(s) if !s.trim().is_empty() => panic!(
+                "docs.rs fallback docsrs/bindings-provenance.txt is stale ({:?}, installed: \
+                 {expected:?}); run `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build` before \
+                 publishing",
+                s.trim()
+            ),
+            _ => panic!(
+                "docs.rs fallback docsrs/bindings-provenance.txt is missing or empty; run \
+                 `DCAP_QV_UPDATE_DOCSRS_BINDINGS=1 cargo build` before publishing"
+            ),
+        }
+    }
+}
+
+// cargo package/publish verifies from `<target-dir>/package/<name>-<version>/`; match
+// that layout rather than a literal `target/` so a custom CARGO_TARGET_DIR is covered.
+fn is_package_verify_dir(manifest_dir: &Path) -> bool {
+    let expected = format!(
+        "{}-{}",
+        env::var("CARGO_PKG_NAME").unwrap(),
+        env::var("CARGO_PKG_VERSION").unwrap()
+    );
+    manifest_dir.file_name() == Some(OsStr::new(&expected))
+        && manifest_dir.parent().and_then(Path::file_name) == Some(OsStr::new("package"))
+}
+
+// Emit the crate's DCAP_BINDINGS_PROVENANCE constant into $OUT_DIR.
+fn write_provenance(out_path: &Path, source: &str) {
+    std::fs::write(
+        out_path.join("provenance.rs"),
+        format!(
+            "/// Where the compiled FFI bindings came from. For an ordinary build this is\n\
+             /// always `\"local system headers\"`; a concrete DCAP dev package version only\n\
+             /// appears in the docs.rs documentation, which uses the prebuilt fallback.\n\
+             pub const DCAP_BINDINGS_PROVENANCE: &str = {source:?};\n"
+        ),
+    )
+    .expect("Couldn't write provenance.rs");
+}
+
+// Best-effort: the installed DCAP dev package and version that supplied the C
+// headers. Named `-dev` on Debian/Ubuntu, `-devel` on Fedora/RHEL.
+fn dcap_dev_package() -> String {
+    use std::process::Command;
+    let queries: [(&str, &[&str]); 2] = [
+        (
+            "dpkg-query",
+            &["-W", "-f=${Package} ${Version}", "libsgx-dcap-quote-verify-dev"],
+        ),
+        ("rpm", &["-q", "libsgx-dcap-quote-verify-devel"]),
+    ];
+    for (bin, args) in queries {
+        if let Ok(out) = Command::new(bin).args(args).output() {
+            if out.status.success() {
+                let found = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+                if !found.is_empty() {
+                    return found;
+                }
+            }
+        }
+    }
+    "unknown".to_owned()
 }
